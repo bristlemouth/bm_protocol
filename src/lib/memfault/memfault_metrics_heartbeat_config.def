@@ -1,0 +1,5 @@
+
+MEMFAULT_METRICS_KEY_DEFINE(iridiumTimeEnabled, kMemfaultMetricType_Timer)
+MEMFAULT_METRICS_KEY_DEFINE(sdWriteErrors, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(sdReadErrors, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(gpsDroppedPackets, kMemfaultMetricType_Unsigned)

@@ -1,0 +1,19 @@
+target remote localhost:3333
+
+# Reset command shortcuts!
+define reset
+monitor reset
+end
+
+define rh
+monitor reset halt
+end
+
+# SWO printing config
+define swocfg
+monitor tpiu create stm32l4x.cpu.tpiu -dap stm32l4x.dap -ap-num 0
+monitor stm32l4x.cpu.tpiu configure -protocol uart -traceclk 80000000 -pin-freq 2000000 -output /tmp/swo.out -formatter off
+monitor stm32l4x.cpu.tpiu enable
+monitor itm port 0 on
+printf "Routing SWO output to /tmp/swo.out.\nUse tail -f /tmp/swo.out to view\n"
+end

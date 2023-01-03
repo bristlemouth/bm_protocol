@@ -1,0 +1,43 @@
+#
+# NOTE: Bootloader must be built first so it can be included in
+# unified image for later builds
+#
+- name: bootloader
+  description: Bootloader
+  type: build_fw
+  args:
+    app: bootloader
+    bsp: bootloader
+    build_type: Release
+
+- name: spotter_sunflower
+  description: spotter on sunflower_v3.3 - Debug
+  type: build_fw
+  args:
+    app: spotter
+    bsp: sunflower_v3.3
+    build_type: Debug
+
+- name: spotter_pluteus
+  description: spotter on pluteus_v3.1 - Debug
+  type: build_fw
+  args:
+    app: spotter
+    bsp: pluteus_v3.1
+    build_type: Debug
+
+- name: spotter_sunflower_release
+  description: spotter on sunflower_v3.3 - Release
+  type: build_fw
+  args:
+    app: spotter
+    bsp: sunflower_v3.3
+    build_type: Release
+
+- name: spotter_pluteus_release
+  description: spotter on pluteus_v3.1 - Release
+  type: build_fw
+  args:
+    app: spotter
+    bsp: pluteus_v3.1
+    build_type: Release
