@@ -75,8 +75,7 @@ extern "C" int main(void) {
   // rtcInit();
 
   // Enable hardfault on divide-by-zero
-  // SCB->CCR |= 0x10;
-
+  SCB->CCR |= 0x10;
 
   // Initialize low power manager
   lpmInit();

@@ -56,7 +56,9 @@ Whenever you pull new project changes (specifically those that update environmen
 
 ### Set up Pre-commit
 
-This will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
+TODO: Don't do this just yet!
+
+~This will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
 
 ```
 pre-commit install
@@ -67,7 +69,7 @@ pre-commit run
 ```
 
 Note that if pre-commit modifies your code, you will need to `git add` the files before you commit them.
-If you'd like to force a commit through, use the `git commit --no-verify` flag.
+If you'd like to force a commit through, use the `git commit --no-verify` flag.~
 
 ### Set up environment variables
 The environment variables needed for the project are listed in `.env.example`. You'll need to gather this information and put them in a `.env` file.
@@ -148,6 +150,20 @@ TODO: Update with STM32U5 instructions
 ### Uploading .elf to Memfault
 
 After building the project, run `make memfault_upload`. Make sure your .env file is set up ahead of time!
+
+### Uploading memfault coredump over GDB
+If you're in GDB and a crash occurs, this is how you capture a coredump to upload to memfault (make sure you already ran `make memfault_upload`!) :
+
+In GDB:
+`source ../../../src/third_party/memfault-firmware-sdk/scripts/memfault_gdb.py`
+
+then
+
+`memfault login alvaro.prieto@sofarocean.com <your memfault API key goes here> -o sofar-ocean -p bristlemouth`
+
+finally
+
+`memfault coredump`
 
 ## Building/Flashing - CLion
 
