@@ -5,7 +5,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "io.h"
-#include "stm32l4xx_hal.h"
+#include "stm32u5xx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,6 @@ bool spiInit(SPIInterface_t *interface);
 SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t len, uint8_t *txBuff, uint8_t *rxBuff, uint32_t timeoutMs);
 #define spiTx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, buff, NULL, timeout);
 #define spiRx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, NULL, buff, timeout);
-void spiLoadLogCfg();
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,5 @@
 #include "protected_spi.h"
-#include "log.h"
-
-static Log_t *SPILog;
+#include <stdio.h>
 
 /*!
   Initialize an spi interface
@@ -12,11 +10,6 @@ static Log_t *SPILog;
 bool spiInit(SPIInterface_t *interface) {
   configASSERT(interface != NULL);
 
-  if(SPILog == NULL) {
-    SPILog = logCreate("SPI", "log", LOG_LEVEL_INFO, LOG_DEST_CONSOLE);
-    logInit(SPILog);
-  }
-
   bool rval = SPI_OK;
 
   interface->initFn();
@@ -25,23 +18,6 @@ bool spiInit(SPIInterface_t *interface) {
   configASSERT(interface->mutex != NULL);
 
   return rval;
-}
-
-void spiLoadLogCfg() {
-  if(SPILog != NULL){
-    logLoadCfg(SPILog, "lspi");
-
-    if((SPILog->level == LOG_LEVEL_DEBUG) &&
-        (SPILog->destination & LOG_DEST_FILE)) {
-      // If we're logging SPI by default, use a huge buffer
-      // so we don't blast the SD card
-      logSetBuffSize(SPILog, 4096);
-    }
-
-    if((SPILog->destination & LOG_DEST_FILE) && (SPILog->buff == NULL)) {
-      logSDSetup(SPILog);
-    }
-  }
 }
 
 /*!
@@ -60,13 +36,15 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
 
   if(xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
 
-    logPrint(SPILog, LOG_LEVEL_DEBUG, "%s [%s] ", __func__, interface->name);
+#ifdef SPI_DEBUG
+    printf("%s [%s] ", __func__, interface->name);
     if(txBuff != NULL) {
-      logPrintf(SPILog, LOG_LEVEL_DEBUG, "TX(%u) ", len);
+      printf("TX(%u) ", len);
       for(uint16_t idx = 0; idx < len; idx++) {
-        logPrintf(SPILog, LOG_LEVEL_DEBUG, "%02X ", txBuff[idx]);
+        printf("%02X ", txBuff[idx]);
       }
     }
+#endif
 
     HAL_StatusTypeDef halRval = HAL_ERROR;
 
@@ -107,18 +85,20 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
       }
     }
 
+#ifdef SPI_DEBUG
     if(rxBuff != NULL) {
-      logPrintf(SPILog, LOG_LEVEL_DEBUG, "RX(%u) ", len);
+      printf("RX(%u) ", len);
       for(uint16_t idx = 0; idx < len; idx++) {
-        logPrintf(SPILog, LOG_LEVEL_DEBUG, "%02X ", rxBuff[idx]);
+        printf("%02X ", rxBuff[idx]);
       }
     }
 
     logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
+#endif
 
     xSemaphoreGive(interface->mutex);
   } else {
-    logPrint(SPILog, LOG_LEVEL_WARNING, "%s Error [%s] - Unable to take mutex.\n", __func__, interface->name);
+    printf("%s Error [%s] - Unable to take mutex.\n", __func__, interface->name);
     rval = SPI_MUTEX;
   }
 

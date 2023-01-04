@@ -21,6 +21,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/drivers/protected/protected_spi.c
+    ${SRC_DIR}/lib/drivers/stm32_io.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
@@ -32,6 +34,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/drivers/protected
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/

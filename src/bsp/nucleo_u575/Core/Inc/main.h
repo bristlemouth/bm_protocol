@@ -74,6 +74,8 @@ void SystemPower_Config_ext(void);
 #define USER_BUTTON_GPIO_Port GPIOC
 #define VBUS_SENSE_Pin GPIO_PIN_2
 #define VBUS_SENSE_GPIO_Port GPIOC
+#define ADIN_CS_Pin GPIO_PIN_4
+#define ADIN_CS_GPIO_Port GPIOA
 #define UCPD_FLT_Pin GPIO_PIN_14
 #define UCPD_FLT_GPIO_Port GPIOB
 #define UCPD1_CC2_Pin GPIO_PIN_15

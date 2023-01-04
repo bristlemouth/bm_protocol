@@ -16,11 +16,13 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "serial.h"
-#include "serial_console.h"
 #include "cli.h"
 #include "debug_memfault.h"
 #include "debug_sys.h"
+#include "io.h"
+#include "serial.h"
+#include "serial_console.h"
+#include "bsp.h"
 
 #include <stdio.h>
 
@@ -113,6 +115,8 @@ static void defaultTask( void *parameters ) {
   startCLI();
   serialEnable(&usart1);
 
+  bspInit();
+
   debugSysInit();
   debugMemfaultInit();
 
@@ -121,9 +125,9 @@ static void defaultTask( void *parameters ) {
 
   // uint32_t count = 0;
   while(1) {
-    HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, (GPIO_PinState)1);
+    IOWrite(&LED_BLUE, 1);
     vTaskDelay(2);
-    HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, (GPIO_PinState)0);
+    IOWrite(&LED_BLUE, 0);
     vTaskDelay(998);
   }
 
