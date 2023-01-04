@@ -1,14 +1,12 @@
 #pragma once
 
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void debugSysInit();
+void rebootIntoROMBootloader();
+void enterBootloaderIfNeeded();
 
 #ifdef __cplusplus
 }
 #endif
-

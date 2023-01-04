@@ -8,20 +8,23 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
     ${SRC_DIR}/lib/cli/cli.c
+    ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
+    ${SRC_DIR}/lib/common/enumToStr.c
     ${SRC_DIR}/lib/common/freertos_support.c
+    ${SRC_DIR}/lib/common/lpm_u5.c
+    ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
-    ${SRC_DIR}/lib/common/lpm_u5.c
-    ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
-    ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/debug/debug_sys.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
-    ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
+    ${SRC_DIR}/third_party/printf/printf.c
     )
 
 set(LIB_INCLUDES

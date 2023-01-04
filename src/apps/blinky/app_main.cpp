@@ -20,6 +20,7 @@
 #include "serial_console.h"
 #include "cli.h"
 #include "debug_memfault.h"
+#include "debug_sys.h"
 
 #include <stdio.h>
 
@@ -113,6 +114,7 @@ static void defaultTask( void *parameters ) {
   startCLI();
   serialEnable(&usart1);
 
+  debugSysInit();
   debugMemfaultInit();
 
   // Commenting out while we test usart1

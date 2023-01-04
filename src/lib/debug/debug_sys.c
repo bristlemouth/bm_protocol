@@ -8,49 +8,23 @@
 
 #include <string.h>
 #include <inttypes.h>
-#include "bootloader_helper.h"
 #include "bsp.h"
 #include "debug.h"
 #include "device_info.h"
-#include "log.h"
-#include "pca9535.h"
-#ifdef HAS_REBOOTCTL
-#include "rebootctl.h"
-#endif
 #include "reset_reason.h"
-#include "sd.h"
-#include "stm32_rtc.h"
-#include "stm32l4xx_hal.h"
-#include "sysMon.h"
-#include "uptime.h"
-#ifdef BOD_TEST
-#undef HAS_NOTECARD
-#endif
-#ifdef HAS_NOTECARD
-#include "notecard.h"
-#ifndef NO_HWCFG
-#include "hwcfg.h"
-#endif
-#endif
+#include "bootloader_helper.h"
+#include "stm32u5xx_hal.h"
 
 #ifdef USE_BOOTLOADER
 #include "bootutil/bootutil_public.h"
 #endif
 
 
-#ifndef NO_IRIDIUM
-#include "960x.h"
-#endif
-
 static BaseType_t infoCommand( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString);
 
 static BaseType_t debugCommand(char *writeBuffer,
-                                  size_t writeBufferLen,
-                                  const char *commandString);
-
-static BaseType_t uptimeCommand(char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString);
 
@@ -69,17 +43,6 @@ static const CLI_Command_Definition_t cmdInfo = {
   "info:\n Display device information\n",
   // Command function
   infoCommand,
-  // Number of parameters
-  0
-};
-
-static const CLI_Command_Definition_t cmdUptime = {
-  // Command string
-  "uptime",
-  // Help string
-  "uptime:\n Show system uptime\n",
-  // Command function
-  uptimeCommand,
   // Number of parameters
   0
 };
@@ -130,12 +93,9 @@ static const CLI_Command_Definition_t cmdBootloader = {
 void debugSysInit( ) {
   FreeRTOS_CLIRegisterCommand( &cmdInfo );
   FreeRTOS_CLIRegisterCommand( &cmdDebug );
-  FreeRTOS_CLIRegisterCommand( &cmdUptime );
   FreeRTOS_CLIRegisterCommand( &cmdReset );
   FreeRTOS_CLIRegisterCommand( &cmdBootloader );
 }
-
-extern SD_HandleTypeDef hsd1;
 
 // Check if debugger is attached
 // For info see: https://developer.arm.com/documentation/ddi0403/d/Debug-Architecture/ARMv7-M-Debug/Debug-register-support-in-the-SCS/Debug-Halting-Control-and-Status-Register--DHCSR
@@ -178,31 +138,6 @@ static BaseType_t infoCommand( char *writeBuffer,
 
   printf("Reset Reason: %s\n", getResetReasonString());
 
-#ifdef HAS_REBOOTCTL
-  if(checkResetReason() == RESET_REASON_REBOOTCTL) {
-    printf("RebootCtl Source: %lu\n", (uint32_t)rebootCtlGetLastSource());
-  }
-#endif
-
-  printf("Main Deck HW Version: %02X\n", bspGetHwid());
-  uint8_t udHwid = bspGetUdHwid();
-  printf("Upper Deck HW Version: ");
-  if (udHwid != 0xFF) {
-    printf("%02X\n", udHwid);
-  } else {
-    printf("N/A\n");
-  }
-
-#ifndef NO_IRIDIUM
-  char *imei = iridiumGetIMEI();
-  printf("Iridium IMEI: ");
-  if(imei != NULL) {
-    printf("%s\n", imei);
-  } else {
-    printf("N/A\n");
-  }
-#endif
-
 #ifdef USE_BOOTLOADER
 
   const versionInfo_t *bootloaderInfo = findVersionInfo(FLASH_START, BOOTLOADER_SIZE);
@@ -227,108 +162,12 @@ static BaseType_t infoCommand( char *writeBuffer,
   printf("  Swap Type: %s\n", getSwapTypeStr());
 #endif
 
-#ifdef HAS_NOTECARD
-#ifndef NO_HWCFG
-  const hwCfg_t *config = hwCfgGet();
-  if(config->hasCellular){
-    char *noteimei = NULL;
-    char *notecardSKU = NULL;
-    char *notecardBoardVersion = NULL;
-    char *notecardFirmwareVersion = NULL;
-    notecardGetInfo(&noteimei, &notecardSKU, &notecardBoardVersion, &notecardFirmwareVersion, true);
-    printf("Notecard Information:\n");
-    printf("  Notecard IMEI: ");
-    if(noteimei != NULL) {
-      printf("%s\n", noteimei);
-    } else {
-      printf("N/A\n");
-    }
-    printf("  Notecard sku: ");
-    if(notecardSKU != NULL) {
-      printf("%s\n", notecardSKU);
-    } else {
-      printf("N/A\n");
-    }
-    printf("  Notecard Board Version: ");
-    if(notecardBoardVersion != NULL) {
-      printf("%s\n", notecardBoardVersion);
-    } else {
-      printf("N/A\n");
-    }
-    printf("  Notecard Firmware Version: ");
-    if(notecardFirmwareVersion != NULL) {
-      printf("%s\n", notecardFirmwareVersion);
-    } else {
-      printf("N/A\n");
-    }
-  }
-#endif
-#endif
-
-  if(sdIsMounted()) {
-    printf("SD Card Information:\n");
-    if(hsd1.SdCard.CardType == CARD_SDSC) {
-      printf("  Type: SDSC\n");
-    } else if (hsd1.SdCard.CardType == CARD_SDHC_SDXC) {
-      printf("  Type: SDHC/SDXC\n");
-    } else {
-      printf("  Unknown card type\n");
-    }
-
-    if(hsd1.SdCard.CardVersion == CARD_V2_X) {
-      printf("  CardVersion: 2.x\n");
-    } else {
-      printf("  CardVersion: 1.x\n");
-    }
-    printf("  Class: %" PRIu32 "\n", hsd1.SdCard.Class);
-
-    printf("  Block Size: %" PRIu32 "\n", hsd1.SdCard.BlockSize);
-    printf("  Number of Blocks: %" PRIu32 "\n", hsd1.SdCard.BlockNbr);
-    uint64_t capacity = sdGetCapacity();
-    uint64_t currentCapacity = sdGetCurrentCapacity();
-    uint64_t sdFreeBytes = sdGetFreeBytes();
-    printf("  Size: %0.2fGB\n", capacity/1e9);
-    if (sdFreeBytes/1e9 > 1){
-      printf("  Current Partition: %0.2fGB (%0.02fGB free)\n", currentCapacity/1e9, (double)sdFreeBytes/1e9);
-    }
-    else{
-      printf("  Current Partition: %0.2fMB (%0.02fMB free)\n", currentCapacity/1e6, (double)sdFreeBytes/1e6);
-    }
-  } else {
-    printf("No SD card present.\n");
-  }
-
   // Let user know debugger is attached
   if(debuggerAttached()) {
     printf("Debugger attached!\n");
   }
 
   printf("info end\n"); // terminator for production scripts
-
-  return pdFALSE;
-}
-
-#define SECONDS_IN_HOUR (60 * 60)
-#define SECONDS_IN_DAY (SECONDS_IN_HOUR * 24)
-static BaseType_t uptimeCommand( char *writeBuffer,
-                                  size_t writeBufferLen,
-                                  const char *commandString) {
-
-  // Remove unused argument warnings
-  ( void ) commandString;
-  ( void ) writeBuffer;
-  ( void ) writeBufferLen;
-
-  uint32_t uptime = uptimeGetSeconds();
-  printf("Uptime:");
-  if (uptime >= SECONDS_IN_DAY) {
-    uint32_t days = uptime / SECONDS_IN_DAY;
-    uptime -= (SECONDS_IN_DAY * days);
-    printf(" %" PRIu32 " days", days);
-  }
-
-  float hours = (float)uptime / SECONDS_IN_HOUR;
-  printf(" %0.2f hours\n", hours);
 
   return pdFALSE;
 }
@@ -355,8 +194,14 @@ static BaseType_t getHeapStats() {
 #if configUSE_TRACE_FACILITY == 1
 // Based on https://www.freertos.org/xTaskGetSystemState.html#TaskStatus_t
 
-// Defined in sysMon.c
-extern const char *taskStates[];
+const char *taskStates[] = {
+    "Running",
+    "Ready",
+    "Blocked",
+    "Suspended",
+    "Deleted",
+    "Invalid"
+};
 
 static void getSysStats() {
   TaskStatus_t *taskStatusArray;
