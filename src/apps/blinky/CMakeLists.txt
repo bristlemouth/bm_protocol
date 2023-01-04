@@ -118,6 +118,18 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-unused-parameter -Wno-format -Wno-unused-but-set-variable"
     )
 
+
+set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
+set(LWIP_INCLUDE_DIRS
+    ${LWIP_DIR}/src/include
+    "${LWIP_DIR}/contrib/ports/freertos/include"
+    # "${LWIP_DIR}/contrib"
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+include(${LWIP_DIR}/src/Filelists.cmake)
+# include(${LWIP_DIR}/contrib/Filelists.cmake)
+
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${LIB_FILES}
@@ -132,6 +144,11 @@ set(APP_INCLUDES
     ${FREERTOS_INCLUDES}
     ${MEMFAULT_INCLUDES}
     ${MCUBOOT_INCLUDES}
+    ${LWIP_INCLUDE_DIRS}
+    PARENT_SCOPE)
+
+set(APP_LIBS
+    lwipcore
     PARENT_SCOPE)
 
 set(APP_DEFINES

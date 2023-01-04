@@ -298,6 +298,8 @@ target_include_directories(${EXECUTABLE} PRIVATE
 	${APP_INCLUDES}
 	)
 
+target_link_libraries(${EXECUTABLE} ${APP_LIBS})
+
 target_linker_map(${EXECUTABLE})
 
 # Print executable size
