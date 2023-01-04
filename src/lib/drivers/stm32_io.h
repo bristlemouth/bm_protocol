@@ -2,15 +2,7 @@
 
 #include "FreeRTOS.h"
 #include "io.h"
-
-#ifdef STM32L496xx
-#include "stm32l4xx_ll_gpio.h"
-#endif
-
-#ifdef STM32U575xx
-#include "stm32u5xx_ll_gpio.h"
-
-#endif
+#include "bsp.h"
 
 #ifdef __cplusplus
 extern "C" {

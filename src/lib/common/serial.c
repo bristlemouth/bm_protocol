@@ -5,15 +5,7 @@
 #include "stream_buffer.h"
 #include "queue.h"
 
-#ifdef STM32L496xx
-#include "stm32l4xx_hal.h"
-#include "stm32l4xx_ll_usart.h"
-#endif
-
-#ifdef STM32U575xx
-#include "stm32u5xx_hal.h"
-#include "stm32u5xx_ll_usart.h"
-#endif
+#include "bsp.h"
 
 // #include "log.h"
 #include "serial.h"

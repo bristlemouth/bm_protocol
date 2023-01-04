@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "stm32l4xx_hal.h"
+#include "bsp.h"
 
 #define I2C_WORKAROUND 1
 
@@ -22,7 +22,7 @@ typedef enum {
 
 typedef struct {
 	const char *name;
-	I2C_HandleTypeDef * handle;
+	void *handle;
 	void (*initFn)();
 	SemaphoreHandle_t mutex;
 } I2CInterface_t;

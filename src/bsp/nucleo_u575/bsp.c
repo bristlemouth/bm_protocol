@@ -8,6 +8,8 @@
 
 // Define all GPIO's here
 IOPinHandle_t ADIN_CS = {&STM32PinDriver, &(STM32Pin_t){ADIN_CS_GPIO_Port, ADIN_CS_Pin, NULL, NULL}};
+IOPinHandle_t ADIN_RDY = {&STM32PinDriver, &(STM32Pin_t){ADIN_RDY_GPIO_Port, ADIN_RDY_Pin, NULL, NULL}};
+IOPinHandle_t ADIN_RST = {&STM32PinDriver, &(STM32Pin_t){ADIN_RST_GPIO_Port, ADIN_RST_Pin, NULL, NULL}};
 IOPinHandle_t LED_RED = {&STM32PinDriver, &(STM32Pin_t){LED_RED_GPIO_Port, LED_RED_Pin, NULL, NULL}};
 IOPinHandle_t LED_GREEN = {&STM32PinDriver, &(STM32Pin_t){LED_GREEN_GPIO_Port, LED_GREEN_Pin, NULL, NULL}};
 IOPinHandle_t LED_BLUE = {&STM32PinDriver, &(STM32Pin_t){LED_BLUE_GPIO_Port, LED_BLUE_Pin, NULL, NULL}};

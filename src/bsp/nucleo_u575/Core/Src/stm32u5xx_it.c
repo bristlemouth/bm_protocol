@@ -22,6 +22,8 @@
 #include "stm32u5xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "bsp.h"
+#include "stm32_io.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -84,6 +86,26 @@ void DebugMon_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32u5xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles EXTI Line15 interrupt.
+  */
+void EXTI15_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_IRQn 0 */
+  BaseType_t rval = pdFALSE;
+  /* USER CODE END EXTI15_IRQn 0 */
+  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_15) != RESET)
+  {
+    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_15);
+    /* USER CODE BEGIN LL_EXTI_LINE_15_RISING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)ADIN_RDY.pin);
+    /* USER CODE END LL_EXTI_LINE_15_RISING */
+  }
+  /* USER CODE BEGIN EXTI15_IRQn 1 */
+  portYIELD_FROM_ISR(rval);
+  /* USER CODE END EXTI15_IRQn 1 */
+}
 
 /**
   * @brief This function handles TIM8 Update interrupt.

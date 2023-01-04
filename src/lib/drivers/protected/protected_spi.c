@@ -1,5 +1,6 @@
-#include "protected_spi.h"
 #include <stdio.h>
+#include "protected_spi.h"
+#include "bsp.h"
 
 /*!
   Initialize an spi interface

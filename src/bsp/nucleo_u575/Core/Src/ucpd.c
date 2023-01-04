@@ -43,15 +43,15 @@ void MX_UCPD1_Init(void)
   PB15   ------> UCPD1_CC2
   PA15 (JTDI)   ------> UCPD1_CC1
   */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+  GPIO_InitStruct.Pin = UCPD1_CC2_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  LL_GPIO_Init(UCPD1_CC2_GPIO_Port, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+  GPIO_InitStruct.Pin = UCPD1_CC1_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  LL_GPIO_Init(UCPD1_CC1_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN UCPD1_Init 1 */
 

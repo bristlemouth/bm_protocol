@@ -2,6 +2,7 @@
 
 #define BSP_NAME "nucleo_u575"
 
+#include "main.h"
 #include "stm32u5xx.h"
 #include "protected_spi.h"
 #include "io.h"
@@ -14,6 +15,8 @@ void bspInit();
 
 // Pin definitions
 extern IOPinHandle_t ADIN_CS;
+extern IOPinHandle_t ADIN_RDY;
+extern IOPinHandle_t ADIN_RST;
 extern IOPinHandle_t LED_RED;
 extern IOPinHandle_t LED_GREEN;
 extern IOPinHandle_t LED_BLUE;

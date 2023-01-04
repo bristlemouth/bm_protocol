@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "i2c.h"
 #include "icache.h"
 #include "rtc.h"
 #include "spi.h"
@@ -105,6 +106,7 @@ int main(void)
   MX_RTC_Init();
   MX_ICACHE_Init();
   MX_SPI1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -190,7 +192,6 @@ void SystemClock_Config(void)
   */
 static void SystemPower_Config(void)
 {
-  HAL_PWREx_EnableVddIO2();
 
   /*
    * Switch to SMPS regulator instead of LDO
