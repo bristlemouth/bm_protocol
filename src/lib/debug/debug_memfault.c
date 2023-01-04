@@ -111,48 +111,6 @@ static void print_coredump() {
   }
 }
 
-#define COREDUMP_CHUNK_SIZE 4096
-static void print_coredump() {
-  size_t coredumpSize = 0;
-
-  if(memfault_coredump_has_valid_coredump(&coredumpSize)) {
-    uint8_t *chunkData = (uint8_t *)pvPortMalloc(COREDUMP_CHUNK_SIZE);
-    configASSERT(chunkData);
-
-    // Only get coredump from packetizer
-    memfault_packetizer_set_active_sources(kMfltDataSourceMask_Coredump);
-    size_t buffLen = COREDUMP_CHUNK_SIZE;
-    while(memfault_packetizer_get_chunk(chunkData, &buffLen)) {
-      size_t olen = 0;
-
-      size_t b64Bytes = 0;
-      mbedtls_base64_encode(NULL, 0, &b64Bytes, chunkData, buffLen);
-
-      // Buffer will be freed by serial tx task
-      uint8_t *b64Data = (uint8_t *)pvPortMalloc(b64Bytes + 1);
-      configASSERT(b64Data);
-
-      mbedtls_base64_encode(b64Data, b64Bytes, &olen, chunkData, buffLen);
-      b64Data[olen] = '\n';
-
-      SerialMessage_t encodedMessage = {b64Data, olen + 1, _serialConsoleHandle};
-      if(xQueueSend(serialGetTxQueue(), &encodedMessage, 100) != pdTRUE) {
-        // Free buffer if unable to send
-        vPortFree(encodedMessage.buff);
-      }
-
-      vTaskDelay(5);
-
-      // Reset buffer len
-      buffLen = COREDUMP_CHUNK_SIZE;
-    }
-
-    // Restore active sources
-    memfault_packetizer_set_active_sources(kMfltDataSourceMask_All);
-
-  }
-}
-
 static BaseType_t prvMemfaultCommand(char *pcWriteBuffer,
                                   size_t xWriteBufferLen,
                                   const char *pcCommandString) {
