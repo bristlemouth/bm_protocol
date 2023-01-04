@@ -15,7 +15,7 @@ IOPinHandle_t LED_GREEN = {&STM32PinDriver, &(STM32Pin_t){LED_GREEN_GPIO_Port, L
 IOPinHandle_t LED_BLUE = {&STM32PinDriver, &(STM32Pin_t){LED_BLUE_GPIO_Port, LED_BLUE_Pin, NULL, NULL}};
 IOPinHandle_t USART1_TX = {&STM32PinDriver, &(STM32Pin_t){USART1_TX_GPIO_Port, USART1_TX_Pin, NULL, NULL}};
 IOPinHandle_t USART1_RX = {&STM32PinDriver, &(STM32Pin_t){USART1_RX_GPIO_Port, USART1_RX_Pin, NULL, NULL}};
-
+IOPinHandle_t USER_BUTTON = {&STM32PinDriver, &(STM32Pin_t){USER_BUTTON_GPIO_Port, USER_BUTTON_Pin, NULL, NULL}};
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;

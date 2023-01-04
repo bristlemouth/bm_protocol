@@ -156,6 +156,8 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(LED_BLUE_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
+  NVIC_SetPriority(EXTI13_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
+  NVIC_EnableIRQ(EXTI13_IRQn);
   NVIC_SetPriority(EXTI15_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
   NVIC_EnableIRQ(EXTI15_IRQn);
 

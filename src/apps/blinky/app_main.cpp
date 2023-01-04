@@ -16,13 +16,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "bsp.h"
 #include "cli.h"
 #include "debug_memfault.h"
 #include "debug_sys.h"
+#include "gpioISR.h"
 #include "io.h"
 #include "serial.h"
 #include "serial_console.h"
-#include "bsp.h"
 
 #include <stdio.h>
 
@@ -105,6 +106,14 @@ extern "C" int main(void) {
   while (1){};
 }
 
+bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
+  (void)pinHandle;
+  (void)args;
+
+  printf("Button press! %d\n", value);
+  return false;
+}
+
 
 static void defaultTask( void *parameters ) {
 
@@ -114,6 +123,7 @@ static void defaultTask( void *parameters ) {
   startSerialConsole(&usart1);
   startCLI();
   serialEnable(&usart1);
+  gpioISRStartTask();
 
   bspInit();
 
@@ -122,6 +132,8 @@ static void defaultTask( void *parameters ) {
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
+
+  gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
   // uint32_t count = 0;
   while(1) {

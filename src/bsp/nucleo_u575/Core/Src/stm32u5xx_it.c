@@ -88,6 +88,26 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI Line13 interrupt.
+  */
+void EXTI13_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI13_IRQn 0 */
+  BaseType_t rval = pdFALSE;
+  /* USER CODE END EXTI13_IRQn 0 */
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_13) != RESET)
+  {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_13);
+    /* USER CODE BEGIN LL_EXTI_LINE_13_FALLING */
+        rval |= STM32IOHandleInterrupt((const STM32Pin_t *)USER_BUTTON.pin);
+    /* USER CODE END LL_EXTI_LINE_13_FALLING */
+  }
+  /* USER CODE BEGIN EXTI13_IRQn 1 */
+  portYIELD_FROM_ISR(rval);
+  /* USER CODE END EXTI13_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI Line15 interrupt.
   */
 void EXTI15_IRQHandler(void)

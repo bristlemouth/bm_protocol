@@ -73,6 +73,7 @@ void SystemPower_Config_ext(void);
 /* Private defines -----------------------------------------------------------*/
 #define USER_BUTTON_Pin LL_GPIO_PIN_13
 #define USER_BUTTON_GPIO_Port GPIOC
+#define USER_BUTTON_EXTI_IRQn EXTI13_IRQn
 #define VBUS_SENSE_Pin LL_GPIO_PIN_2
 #define VBUS_SENSE_GPIO_Port GPIOC
 #define ADIN_CS_Pin LL_GPIO_PIN_4
