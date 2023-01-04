@@ -79,11 +79,28 @@ __MemfaultCoreStorageEnd = ORIGIN(COREDUMP_FLASH) + LENGTH(COREDUMP_FLASH);
 /* Sections */
 SECTIONS
 {
+
+#if MCUBOOT_HEADER_SIZE > 0
+/* Take into account MCUBoot signature, which comes before the isr vector */
+  .mcuboot_sig :
+  {
+    . = ALIGN(8);
+    . = . + MCUBOOT_HEADER_SIZE;
+    . = ALIGN(8);
+  } >FLASH__
+#endif
+
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {
     KEEP(*(.isr_vector)) /* Startup code */
   } >FLASH__
+
+  .note.sofar.version :
+  {
+   __start_sofar_version_start = .;
+   KEEP(*(.note.sofar.version))
+  } > FLASH__
 
   /* The program code and other data into "FLASH" Rom type memory */
   .text :
