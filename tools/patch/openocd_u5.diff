@@ -1,0 +1,36 @@
+--- scripts/target/stm32x5x_common.cfg	2022-09-01 11:01:08.000000000 -0700
++++ /Users/alvaro/miniconda3-intel/envs/spotter-intel/xpack-openocd/scripts/target/stm32x5x_common.cfg	2023-01-03 14:48:53.000000000 -0800
+@@ -58,7 +58,9 @@
+ 
+ reset_config srst_nogate
+ 
+-if {![using_hla]} {
++if {[using_hla]} {
++	echo "Warn : The selected adapter does not support debugging this device in secure mode"
++} else {
+ 	# if srst is not fitted use SYSRESETREQ to
+ 	# perform a soft reset
+ 	cortex_m reset_config sysresetreq
+@@ -71,13 +73,18 @@
+ }
+ 
+ proc stm32x5x_ahb_ap_non_secure_access {} {
+-	# SPROT=1=Non Secure access, Priv=1
+-	[[target current] cget -dap] apcsw 0x4B000000 0x4F000000
++	# in HLA mode, non-secure debugging is possible without changing the AP CSW
++	if {![using_hla]} {
++		# SPROT=1=Non Secure access, Priv=1
++		[[target current] cget -dap] apcsw 0x4B000000 0x4F000000
++	}
+ }
+ 
+ proc stm32x5x_ahb_ap_secure_access {} {
+-	# SPROT=0=Secure access, Priv=1
+-	[[target current] cget -dap] apcsw 0x0B000000 0x4F000000
++	if {![using_hla]} {
++		# SPROT=0=Secure access, Priv=1
++		[[target current] cget -dap] apcsw 0x0B000000 0x4F000000
++	}
+ }
+ 
+ $_TARGETNAME configure -event reset-start {

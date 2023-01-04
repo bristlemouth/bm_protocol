@@ -143,13 +143,7 @@ $ make cppcheck
 
 #### USB dfu-util
 
-You can also take advantage of the built-in usb bootloader in the STM32L496 to flash the device. You'll need to have [dfu-util](http://dfu-util.sourceforge.net/) installed. On MacOS just `brew install dfu-util`, on Ubuntu just `apt-get install dfu-util` (I do hope to add it to the conda environment, but it's not a high priority right now.)
-
-~If the device already has this firmware, you can enter the ROM bootloader by using the `debug bootloader` command. Otherwise, you need to short PH3-BOOT0 to 3.3V and push the reset button on the dev board. PH3 is pin 7 on CN11. You can just short it with pin 5 on CN11 and press reset. (This would be the 3rd and 4th pins on the left column of CN11). You can also see the [schematic here](https://www.st.com/content/ccc/resource/technical/layouts_and_diagrams/schematic_pack/group1/5f/60/79/49/87/3f/4d/30/MB1312-L4xxZx-A03_Schematic/files/MB1312-L4xxZx-A03_Schematic.pdf/jcr:content/translations/en.MB1312-L4xxZx-A03_Schematic.pdf).~
-
 TODO: Update with STM32U5 instructions
-
-Once the device is in DFU mode the red LED (LD3) should be on. You can run `dfu-util -l` to see if the device is detected. To flash it with the latest firmware, just run `make dfu_flash`!
 
 ### Uploading .elf to Memfault
 
@@ -208,6 +202,20 @@ If you have more than one STLink debugger connected to your computer, you must t
 To get the serial number on MacOS, you'll have to go to system information and look in the USB device tree for the STLink device. There should be a Serial Number field for each one.
 
 In Linux, use `udevadm info /dev/ttyACM2 | grep ID_SERIAL_SHORT` or `lsusb -v -d 0483:374b | grep iSerial` (on the appropriate device)
+
+#### GDB/openOCD Patch (One time only)
+If you ever see the following error when setting breakpoints in GDB:
+```
+Error executing event halted on target stm32u5x.cpu:
+/Users/alvaro/miniconda3-intel/envs/bristlemouth/xpack-openocd/bin/..//scripts/target/stm32x5x_common.cfg:75: Error:
+in procedure 'stm32x5x_ahb_ap_non_secure_access' called at file "/Users/alvaro/miniconda3-intel/envs/bristlemouth/xpack-openocd/bin/..//scripts/target/stm32x5x_common.cfg", line 105
+at file "/Users/alvaro/miniconda3-intel/envs/bristlemouth/xpack-openocd/bin/..//scripts/target/stm32x5x_common.cfg", line 75
+```
+
+This is due to the openOCD version not having [a fix](https://review.openocd.org/c/openocd/+/6546/7/tcl/target/stm32x5x_common.cfg#b55) for the stm32u5 family. To fix it on your local install, run the following command after installing your conda environment:
+
+`patch $CONDA_PREFIX/xpack-openocd/scripts/target/stm32x5x_common.cfg tools/patch/openocd_u5.diff`
+
 
 ### Uploading .elf to Memfault
 #### Configure CLion to use the conda environment's python version
