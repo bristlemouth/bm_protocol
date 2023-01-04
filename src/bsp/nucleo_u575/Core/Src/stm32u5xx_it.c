@@ -95,12 +95,12 @@ void EXTI15_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_IRQn 0 */
   BaseType_t rval = pdFALSE;
   /* USER CODE END EXTI15_IRQn 0 */
-  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_15) != RESET)
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_15) != RESET)
   {
-    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_15);
-    /* USER CODE BEGIN LL_EXTI_LINE_15_RISING */
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_15);
+    /* USER CODE BEGIN LL_EXTI_LINE_15_FALLING */
     rval |= STM32IOHandleInterrupt((const STM32Pin_t *)ADIN_RDY.pin);
-    /* USER CODE END LL_EXTI_LINE_15_RISING */
+    /* USER CODE END LL_EXTI_LINE_15_FALLING */
   }
   /* USER CODE BEGIN EXTI15_IRQn 1 */
   portYIELD_FROM_ISR(rval);
