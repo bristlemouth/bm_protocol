@@ -16,7 +16,6 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/ucpd.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usb_otg.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Startup/startup_stm32u575zitxq.s
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc_ex.c
@@ -52,6 +51,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_ucpd.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usb.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_utils.c
+        ${COMMON_BSP_DIR}/stm32/startup_stm32u575zitxq.c
         PARENT_SCOPE)
 set(BSP_INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}
