@@ -27,6 +27,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_io.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/printf/printf.c
     )
@@ -38,6 +39,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/protected
     ${SRC_DIR}/lib/memfault
+    ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     )

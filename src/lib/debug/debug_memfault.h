@@ -5,12 +5,13 @@
 #pragma once
 
 #include <stdint.h>
+#include "serial.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void debugMemfaultInit();
+void debugMemfaultInit(SerialHandle_t *serialConsoleHandle);
 
 #ifdef __cplusplus
 }

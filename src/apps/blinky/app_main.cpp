@@ -24,6 +24,8 @@
 #include "io.h"
 #include "serial.h"
 #include "serial_console.h"
+#include "memfault_platform_core.h"
+
 
 #include <stdio.h>
 
@@ -38,7 +40,7 @@ SerialHandle_t usart1 = {
   .rxPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
-  .txBufferSize = 1024,
+  .txBufferSize = 4096,
   .rxBufferSize = 512,
   .rxBytesFromISR = serialGenericRxBytesFromISR,
   .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
@@ -119,16 +121,20 @@ static void defaultTask( void *parameters ) {
 
   (void)parameters;
 
+
   startSerial();
   startSerialConsole(&usart1);
   startCLI();
   serialEnable(&usart1);
   gpioISRStartTask();
 
+  memfault_platform_boot();
+  memfault_platform_start();
+
   bspInit();
 
   debugSysInit();
-  debugMemfaultInit();
+  debugMemfaultInit(&usart1);
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);

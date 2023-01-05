@@ -1,16 +1,9 @@
-//
-// Created by Genton Mo on 1/14/21.
-//
-
 #include <stdio.h>
 #include <string.h>
 #include "memfault_platform_core.h"
 
 #include "bsp.h"
-// #include "debug.h"
 #include "device_info.h"
-// #include "ff.h"
-// #include "log.h"
 #include "memfault/core/build_info.h"
 #include "memfault/core/compiler.h"
 #include "memfault/core/log.h"
@@ -26,19 +19,14 @@
 #include "memfault/ports/freertos.h"
 #include "memfault/ports/reboot_reason.h"
 #include "reset_reason.h"
-// #include "sd.h"
-// #include "stm32_rtc.h"
-// #include "stm32l4xx_hal.h"
-// #include "util.h"
 #include "version.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "printf.h"
 
 // static sMfltCoredumpRegion s_coredump_regions[16];
 static uint8_t s_event_storage[1024];
 static uint8_t s_log_buf_storage[2048];
-
-// Log_t *MFLTLog;
 
 static SemaphoreHandle_t s_memfault_packetizer_mutex;
 
@@ -48,37 +36,34 @@ MEMFAULT_PUT_IN_SECTION(".noinit")
 static uint8_t s_reboot_tracking[MEMFAULT_REBOOT_TRACKING_REGION_SIZE];
 
 void memfault_platform_log(eMemfaultPlatformLogLevel level, const char *fmt, ...) {
-  (void)level;
-  (void)fmt;
-  // LogLevel_t logLevel = LOG_LEVEL_INFO;
-  // switch(level) {
-  //   case kMemfaultPlatformLogLevel_Debug: {
-  //     logLevel = LOG_LEVEL_DEBUG;
-  //     break;
-  //   }
-  //   case kMemfaultPlatformLogLevel_Info: {
-  //     logLevel = LOG_LEVEL_INFO;
-  //     break;
-  //   }
-  //   case kMemfaultPlatformLogLevel_Warning: {
-  //     logLevel = LOG_LEVEL_WARNING;
-  //     break;
-  //   }
-  //   case kMemfaultPlatformLogLevel_Error: {
-  //     logLevel = LOG_LEVEL_ERROR;
-  //     break;
-  //   }
-  //   default: {
-  //     break;
-  //   }
-  // }
-  // if(MFLTLog) {
-  //   va_list args;
-  //   va_start(args, fmt);
-  //   vLogPrintf(MFLTLog, logLevel, true, fmt, args);
-  //   logPrintf(MFLTLog, logLevel, "\n");
-  //   va_end(args);
-  // }
+  printf("MFLT[");
+  switch(level) {
+    case kMemfaultPlatformLogLevel_Debug: {
+      printf("D] ");
+      break;
+    }
+    case kMemfaultPlatformLogLevel_Info: {
+      printf("I] ");
+      break;
+    }
+    case kMemfaultPlatformLogLevel_Warning: {
+      printf("W] ");
+      break;
+    }
+    case kMemfaultPlatformLogLevel_Error: {
+      printf("E] ");
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  printf("\n");
+  va_end(args);
 }
 
 // BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate);
@@ -125,7 +110,8 @@ typedef struct RamRegions {
 static const sRamRegions s_ram_regions[] = {
   {.start_addr = SRAM1_BASE, .length = SRAM1_SIZE},
   {.start_addr = SRAM2_BASE, .length = SRAM2_SIZE},
-  // TODO - add more RAM!!!
+  {.start_addr = SRAM3_BASE, .length = SRAM3_SIZE},
+  {.start_addr = SRAM4_BASE, .length = SRAM4_SIZE},
 };
 
 size_t memfault_platform_sanitize_address_range(void *start_addr, size_t desired_size) {
@@ -276,12 +262,6 @@ int memfault_platform_boot(void) {
 }
 
 int memfault_platform_start(void) {
-  // MFLTLog = logCreate("MFLT", "log", LOG_LEVEL_INFO, LOG_DEST_ALL);
-  // logLoadCfg(MFLTLog, "lmflt");
-  // logSetBuffSize(MFLTLog, 1024);
-  // logSetFlushTimeout(MFLTLog, 1000); // Flush after 1 second
-  // logInit(MFLTLog);
-
   memfault_build_info_dump();
 
   // Save coredump if available

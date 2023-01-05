@@ -63,6 +63,10 @@ void serialConsolePutcharUnbuffered(const char chr) {
   serialPutcharUnbuffered(serialConsoleHandle, chr);
 }
 
+void _putchar(char character) {
+  serialPutcharUnbuffered(serialConsoleHandle, character);
+}
+
 void serialConsolePutchar(char character, void* arg) {
   (void) arg;
   // Only print if the interface is connected

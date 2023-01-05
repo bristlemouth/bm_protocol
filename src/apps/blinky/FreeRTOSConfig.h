@@ -193,7 +193,7 @@ placed into the low power state respectively. */
 #define configRECORD_STACK_HIGH_ADDRESS 1
 
 // Code is responsible for checking for malloc failures
-#define configUSE_MALLOC_FAILED_HOOK 0
+#define configUSE_MALLOC_FAILED_HOOK 1
 
 #define pdTICKS_TO_MS( xTicks )    ( ( uint32_t ) ( ( ( uint64_t ) ( xTicks ) * ( uint32_t ) 1000U ) / ( uint32_t ) configTICK_RATE_HZ ) )
 
