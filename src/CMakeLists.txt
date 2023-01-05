@@ -63,8 +63,9 @@ set(FLASH_START 0x8000000)
 # No Bootloader by default
 set(BOOTLOADER_SIZE 0)
 
-# 703kB Application size (1024kB-320kB for coredump)
-set(APP_SIZE 0xB0000)
+# 1276kB Application size (2048kB-772kB for coredump)
+# TODO - change this when we use 1MB flash part
+set(APP_SIZE 0x13F000)
 
 # No MCUBoot header by default
 set(MCUBOOT_HEADER_SIZE 0)
@@ -101,8 +102,8 @@ if (USE_BOOTLOADER STREQUAL 1 OR APP STREQUAL "bootloader")
 # 32kB Bootloader
 set(BOOTLOADER_SIZE 0x8000)
 
-# 450kB Application size, since we have two slots
-set(APP_SIZE 0x70800)
+# 622kB Application size, since we have two slots
+set(APP_SIZE 0x9B800)
 
 # 64kB scratch size
 set(MCUBOOT_SCRATCH_SIZE 0x10000)

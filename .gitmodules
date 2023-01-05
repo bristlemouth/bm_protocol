@@ -1,3 +1,6 @@
 [submodule "src/third_party/memfault-firmware-sdk"]
 	path = src/third_party/memfault-firmware-sdk
 	url = https://github.com/sofarocean/memfault-firmware-sdk.git
+[submodule "src/third_party/mcuboot"]
+	path = src/third_party/mcuboot
+	url = https://github.com/sofarocean/mcuboot.git
