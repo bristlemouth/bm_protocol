@@ -9,6 +9,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/rtc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/spi.c
+        # ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/syscalls.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_hal_msp.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_hal_timebase_tim.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_it.c
@@ -79,6 +80,7 @@ set_source_files_properties(
 
             ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_pwr.c
             ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_rcc.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/syscalls.c
 
             DIRECTORY ${SRC_DIR}
 

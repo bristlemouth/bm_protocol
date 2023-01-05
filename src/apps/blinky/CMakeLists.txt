@@ -122,8 +122,8 @@ set_source_files_properties(
 set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS
     ${LWIP_DIR}/src/include
-    "${LWIP_DIR}/contrib/ports/freertos/include"
-    # "${LWIP_DIR}/contrib"
+    ${LWIP_DIR}/contrib/ports/freertos/include
+    # ${LWIP_DIR}/contrib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -132,6 +132,8 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
+    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}

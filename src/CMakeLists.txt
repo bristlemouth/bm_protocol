@@ -128,6 +128,40 @@ set(HW_VERSION 0)
 # Include BSP and application CMakeLists.txt files
 # They _should_ be able to override any of the above variables
 add_subdirectory(bsp/${BSP})
+
+set(LWIP_COMPILER_FLAGS
+	-g
+	-ggdb
+
+	# Necessary to prevent newlib's printf from stomping on our definition
+	-fno-builtin-printf
+
+	$<$<CONFIG:Debug>:-Og>
+	$<$<CONFIG:Release>:-O2>
+
+	-ffile-prefix-map=${SRC_DIR}=.
+	-fdebug-prefix-map=${SRC_DIR}=.
+	-fdebug-prefix-map=${CMAKE_BINARY_DIR}=.
+	-fdebug-prefix-map=$ENV{CONDA_PREFIX}=.
+
+	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+
+	-DMEMFAULT_USE_GNU_BUILD_ID=1
+
+	-Wformat=2
+	-Wformat-overflow
+	-Wformat-signedness
+
+# In case we want faster sqrtf, etc
+	# -fno-math-errno
+	# -fsingle-precision-constant
+	# -ffast-math
+
+	${BSP_CPU_FLAGS}
+	)
+
+
 add_subdirectory(apps/${APP})
 set(APP_NAME ${APP})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -299,6 +333,8 @@ target_include_directories(${EXECUTABLE} PRIVATE
 	)
 
 target_link_libraries(${EXECUTABLE} ${APP_LIBS})
+
+
 
 target_linker_map(${EXECUTABLE})
 

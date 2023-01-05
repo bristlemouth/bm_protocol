@@ -29,6 +29,8 @@
 #include "watchdog.h"
 #include "mcuboot_cli.h"
 
+#include "lwip/init.h"
+
 #include <stdio.h>
 
 static void defaultTask(void *parameters);
@@ -116,7 +118,6 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
   return false;
 }
 
-
 static void defaultTask( void *parameters ) {
 
   (void)parameters;
@@ -141,6 +142,8 @@ static void defaultTask( void *parameters ) {
   // lpmPeripheralInactive(LPM_BOOT);
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
+
+  lwip_init();
 
   // uint32_t count = 0;
   while(1) {

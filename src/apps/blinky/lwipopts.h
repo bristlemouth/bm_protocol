@@ -64,7 +64,7 @@
 #define LWIP_SO_RCVTIMEO           1
 #define LWIP_SO_RCVBUF             1
 
-#define LWIP_TCPIP_CORE_LOCKING    1
+#define LWIP_TCPIP_CORE_LOCKING    0
 
 #define LWIP_NETIF_LINK_CALLBACK        1
 #define LWIP_NETIF_STATUS_CALLBACK      1
@@ -306,10 +306,10 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* The following defines must be done even in OPTTEST mode: */
 
-#if !defined(NO_SYS) || !NO_SYS /* default is 0 */
-void sys_check_core_locking(void);
-#define LWIP_ASSERT_CORE_LOCKED()  sys_check_core_locking()
-#endif
+// #if !defined(NO_SYS) || !NO_SYS /* default is 0 */
+// void sys_check_core_locking(void);
+// #define LWIP_ASSERT_CORE_LOCKED()  sys_check_core_locking()
+// #endif
 
 #ifndef LWIP_PLATFORM_ASSERT
 /* Define LWIP_PLATFORM_ASSERT to something to catch missing stdio.h includes */
