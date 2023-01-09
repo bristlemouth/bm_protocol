@@ -8,7 +8,7 @@
 
 #include "mcuboot_config/mcuboot_logging.h"
 
-#include "stm32l496xx.h"
+#include "bsp.h"
 #include "printf.h"
 
 #ifdef IS_BOOTLOADER

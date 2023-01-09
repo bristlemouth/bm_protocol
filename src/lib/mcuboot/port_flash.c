@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bsp.h"
 #include "sysflash/sysflash.h"
 #include "flash_map_backend/flash_map_backend.h"
 #include "mcuboot_config/mcuboot_logging.h"
@@ -19,7 +20,7 @@
 
 // NOTE: FLASH_START, BOOTLOADER_SIZE, APP_SIZE, and SCRATCH_SIZE must be provided
 //        as compile definitions. (See src/CMakelists.txt)
-#define FLASH_SECTOR_SIZE 2048
+#define FLASH_SECTOR_SIZE FLASH_PAGE_SIZE
 #define FLASH_OFFSET FLASH_START
 #define BOOTLOADER_START_ADDRESS 0x0
 #define APPLICATION_PRIMARY_START_ADDRESS (BOOTLOADER_START_ADDRESS + BOOTLOADER_SIZE)

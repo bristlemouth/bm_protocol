@@ -25,7 +25,7 @@ set(MCUBOOT_FILES
 
     ${MCUBOOT_DIR}/ext/fiat/src/curve25519.c
 
-    ${SRC_DIR}/lib/drivers/stm32_flash.c
+    ${SRC_DIR}/lib/drivers/stm32_flash_u5.c
 
     ${SRC_DIR}/lib/mcuboot/port_flash.c
     ${SRC_DIR}/lib/mcuboot/port_misc.c

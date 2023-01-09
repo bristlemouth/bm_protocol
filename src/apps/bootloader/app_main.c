@@ -5,6 +5,7 @@
 // Peripheral
 #include "gpio.h"
 #include "iwdg.h"
+#include "icache.h"
 
 // MCUBoot
 #include "bootutil/bootutil.h"
@@ -23,8 +24,10 @@
 void boot_port_init( void ) {
   HAL_Init();
   SystemClock_Config();
+  SystemPower_Config_ext();
 
   MX_GPIO_Init();
+  MX_ICACHE_Init();
 
   // Enable the watchdog timer
   MX_IWDG_Init();
@@ -35,26 +38,12 @@ void boot_port_init( void ) {
   // Enable null pointer dereference protection
   // memfault_enable_mpu();
 
-  LL_GPIO_SetOutputPin(USER_LED1_R_GPIO_Port, USER_LED1_R_Pin);
-  LL_GPIO_SetOutputPin(USER_LED1_G_GPIO_Port, USER_LED1_G_Pin);
-  LL_GPIO_SetOutputPin(USER_LED2_R_GPIO_Port, USER_LED2_R_Pin);
-  LL_GPIO_SetOutputPin(USER_LED2_G_GPIO_Port, USER_LED2_G_Pin);
+  LL_GPIO_SetOutputPin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+  LL_GPIO_SetOutputPin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+  LL_GPIO_SetOutputPin(LED_RED_GPIO_Port, LED_RED_Pin);
 
-  LL_GPIO_ResetOutputPin(USER_LED1_G_GPIO_Port, USER_LED1_G_Pin);
-  LL_GPIO_ResetOutputPin(USER_LED1_R_GPIO_Port, USER_LED1_R_Pin);
-
-  // We will only go into DFU mode if the following conditions are met:
-  // 1. Switch is powered OFF
-  // 2. USB is CONNECTED
-  // 3. Magnet is present
-  // TODO - maybe also check that the RTC is NOT SET which would prevent
-  // this from happening after a "soft reset"
-  if( (LL_GPIO_IsInputPinSet(SW_DETECT_GPIO_Port, SW_DETECT_Pin) == 1) &&
-      (LL_GPIO_IsInputPinSet(VDC_DETECT_GPIO_Port, VDC_DETECT_Pin) == 0) &&
-      (LL_GPIO_IsInputPinSet(HS_OUT_GPIO_Port, HS_OUT_Pin) == 0)) {
-    // TODO - should we add a timer/debounce just in case?
-    rebootIntoROMBootloader();
-  }
+  LL_GPIO_ResetOutputPin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+  LL_GPIO_ResetOutputPin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 }
 
 static void start_app(uint32_t pc, uint32_t sp) {
