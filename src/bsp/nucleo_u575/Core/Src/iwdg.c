@@ -32,6 +32,10 @@ void MX_IWDG_Init(void)
 
   /* USER CODE END IWDG_Init 0 */
 
+  /* IWDG interrupt Init */
+  NVIC_SetPriority(IWDG_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(IWDG_IRQn);
+
   /* USER CODE BEGIN IWDG_Init 1 */
 
   /* USER CODE END IWDG_Init 1 */

@@ -5,13 +5,11 @@
 #include "task.h"
 #include "iwdg.h"
 #include "task_priorities.h"
-#include "memfault/ports/watchdog.h"
 
 static void iWDGTask( void *parameters );
 
 void startIWDGTask() {
   BaseType_t rval;
-  memfault_software_watchdog_enable();
   rval = xTaskCreate(
               iWDGTask,
               "IWDG",
@@ -24,8 +22,7 @@ void startIWDGTask() {
 }
 
 void watchdogFeed() {
-  HAL_IWDG_Refresh(&hiwdg);
-  memfault_software_watchdog_feed();
+  LL_IWDG_ReloadCounter(IWDG);
 }
 
 //
@@ -49,6 +46,11 @@ static void iWDGTask( void *parameters ) {
 
   for(;;) {
     watchdogFeed();
-    vTaskDelay(10 * 1000);
+    vTaskDelay(2 * 1000);
   }
+}
+
+void IWDG_IRQHandler(void)
+{
+  MEMFAULT_ASSERT_EXTRA_AND_REASON(0, kMfltRebootReason_HardwareWatchdog);
 }

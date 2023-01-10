@@ -29,6 +29,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32u5xx_hal.h"
 
+#include "stm32u5xx_ll_iwdg.h"
 #include "stm32u5xx_ll_ucpd.h"
 #include "stm32u5xx_ll_usart.h"
 #include "stm32u5xx_ll_rcc.h"

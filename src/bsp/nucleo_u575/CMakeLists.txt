@@ -5,6 +5,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/adc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/icache.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/iwdg.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/rtc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/spi.c

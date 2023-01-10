@@ -7,6 +7,7 @@
 #include "adc.h"
 #include "rtc.h"
 #include "icache.h"
+#include "iwdg.h"
 #include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
@@ -25,7 +26,7 @@
 #include "serial.h"
 #include "serial_console.h"
 #include "memfault_platform_core.h"
-
+#include "watchdog.h"
 
 #include <stdio.h>
 
@@ -71,11 +72,9 @@ extern "C" int main(void) {
   MX_USB_OTG_FS_PCD_Init();
   MX_ICACHE_Init();
   MX_RTC_Init();
+  MX_IWDG_Init();
 
   // usbMspInit();
-
-  // Enable the watchdog timer
-  // MX_IWDG_Init();
 
   // rtcInit();
 
@@ -121,7 +120,7 @@ static void defaultTask( void *parameters ) {
 
   (void)parameters;
 
-
+  startIWDGTask();
   startSerial();
   startSerialConsole(&usart1);
   startCLI();
