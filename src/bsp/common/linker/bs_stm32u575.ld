@@ -93,7 +93,12 @@ SECTIONS
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {
+    /* STM32U575 HAS 141 interrupt vectors (16 + 125) = 141 so we need to align to the next power
+        of 2 for the vector table to work */
+    . = ALIGN(256);
+    _vtable = .;
     KEEP(*(.isr_vector)) /* Startup code */
+    . = ALIGN(8);
   } >FLASH__
 
   .note.sofar.version :

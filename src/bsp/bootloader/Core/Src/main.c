@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "icache.h"
 #include "iwdg.h"
 #include "gpio.h"
 

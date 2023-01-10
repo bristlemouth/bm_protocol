@@ -90,6 +90,39 @@ static const CLI_Command_Definition_t cmdBootloader = {
   0
 };
 
+#ifdef USE_BOOTLOADER
+const char *getSwapTypeStr() {
+  int32_t swap_type = boot_swap_type();
+  switch (swap_type) {
+      case BOOT_SWAP_TYPE_NONE: {
+      return "NONE";
+    }
+    case BOOT_SWAP_TYPE_TEST: {
+      return "TEST";
+    }
+    case BOOT_SWAP_TYPE_PERM: {
+      return "PERM";
+    }
+    case BOOT_SWAP_TYPE_REVERT: {
+      return "REVERT";
+    }
+    case BOOT_SWAP_TYPE_FAIL: {
+      return "FAIL";
+    }
+    case BOOT_SWAP_TYPE_PANIC: {
+      return "PANIC";
+    }
+    default: {
+      return "UNKNOWN";
+    }
+  }
+}
+#else
+const char *getSwapTypeStr() {
+  return NULL;
+}
+#endif
+
 void debugSysInit( ) {
   FreeRTOS_CLIRegisterCommand( &cmdInfo );
   FreeRTOS_CLIRegisterCommand( &cmdDebug );

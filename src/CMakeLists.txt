@@ -57,7 +57,7 @@ set(DEBUG_SCRIPTS_PATH ${CMAKE_SOURCE_DIR}/tools/scripts/debug)
 # Linker variables below. Modifiy as necessary here or override
 # in app/bsp CMakeLists.txt files
 #
-# Flash start address for STM32L496
+# Flash start address for STM32U575
 set(FLASH_START 0x8000000)
 
 # No Bootloader by default
@@ -426,14 +426,14 @@ if (USE_BOOTLOADER STREQUAL 1)
 if(ENCRYPT_IMAGES STREQUAL 1)
 # If encryption is enabled and we're flashing to slot 0, we need to flash an unecrypted image
 add_custom_target(flash
-	COMMAND /tmp/openocd/src/openocd -s /tmp/openocd/tcl -f ${DEBUG_SCRIPTS_PATH}/stlink-mod.cfg -f ${DEBUG_SCRIPTS_PATH}/st_nucleo_u5_hardreset.cfg -f ${DEBUG_SCRIPTS_PATH}/utils.cfg -c "program ${EXECUTABLE}.clear.dfu.bin ${APP_FLASH_ADDR} verify reset" -c "detach_swd" -c "exit"
+	COMMAND openocd -f ${DEBUG_SCRIPTS_PATH}/stlink-mod.cfg -f ${DEBUG_SCRIPTS_PATH}/st_nucleo_u5_hardreset.cfg -f ${DEBUG_SCRIPTS_PATH}/utils.cfg -c "program ${EXECUTABLE}.clear.dfu.bin ${APP_FLASH_ADDR} verify reset" -c "detach_swd" -c "exit"
 	DEPENDS ${EXECUTABLE}.clear.dfu.bin
 	COMMENT "Flashing clear image to target..."
 )
 else()
 #If encryption is not enabled and we're flashing to slot 1, we flash the encrypted image
 add_custom_target(flash
-	COMMAND /tmp/openocd/src/openocd -s /tmp/openocd/tcl -f ${DEBUG_SCRIPTS_PATH}/stlink-mod.cfg -f ${DEBUG_SCRIPTS_PATH}/st_nucleo_u5_hardreset.cfg -f ${DEBUG_SCRIPTS_PATH}/utils.cfg -c "program ${EXECUTABLE}.dfu.bin ${APP_FLASH_ADDR} verify reset" -c "detach_swd" -c "exit"
+	COMMAND openocd -f ${DEBUG_SCRIPTS_PATH}/stlink-mod.cfg -f ${DEBUG_SCRIPTS_PATH}/st_nucleo_u5_hardreset.cfg -f ${DEBUG_SCRIPTS_PATH}/utils.cfg -c "program ${EXECUTABLE}.dfu.bin ${APP_FLASH_ADDR} verify reset" -c "detach_swd" -c "exit"
 	DEPENDS ${EXECUTABLE}.dfu.bin
 	COMMENT "Flashing image to target..."
 )
@@ -441,7 +441,7 @@ endif()
 
 # Flash MCUBoot image to secondary slot for testing
 add_custom_target(flash_secondary
-	COMMAND /tmp/openocd/src/openocd -s /tmp/openocd/tcl -f ${DEBUG_SCRIPTS_PATH}/stlink-mod.cfg -f ${DEBUG_SCRIPTS_PATH}/st_nucleo_u5_hardreset.cfg -f ${DEBUG_SCRIPTS_PATH}/utils.cfg -c "program ${EXECUTABLE}.dfu.bin ${APP_IMG2_FLASH_ADDR} verify reset" -c "detach_swd" -c "exit"
+	COMMAND openocd -f ${DEBUG_SCRIPTS_PATH}/stlink-mod.cfg -f ${DEBUG_SCRIPTS_PATH}/st_nucleo_u5_hardreset.cfg -f ${DEBUG_SCRIPTS_PATH}/utils.cfg -c "program ${EXECUTABLE}.dfu.bin ${APP_IMG2_FLASH_ADDR} verify reset" -c "detach_swd" -c "exit"
 	DEPENDS ${EXECUTABLE}.dfu.bin
 	COMMENT "Flashing image to secondary slot"
 )

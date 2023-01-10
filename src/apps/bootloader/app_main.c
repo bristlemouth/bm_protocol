@@ -5,7 +5,6 @@
 // Peripheral
 #include "gpio.h"
 #include "iwdg.h"
-#include "icache.h"
 
 // MCUBoot
 #include "bootutil/bootutil.h"
@@ -27,7 +26,6 @@ void boot_port_init( void ) {
   SystemPower_Config_ext();
 
   MX_GPIO_Init();
-  MX_ICACHE_Init();
 
   // Enable the watchdog timer
   MX_IWDG_Init();

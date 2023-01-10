@@ -35,7 +35,7 @@ extern unsigned long _edata;    /* end address for the .data section. defined in
 extern unsigned long _sbss;     /* start address for the .bss section. defined in linker script */
 extern unsigned long _ebss;     /* end address for the .bss section. defined in linker script */
 
-extern uint32_t __vector_table;
+extern uint32_t _vtable;
 
 extern unsigned long *_estack;        /* init value for the stack pointer. defined in linker script */
 
@@ -344,7 +344,7 @@ void Reset_Handler(void)
   SystemInit();                             /* CMSIS System Initialization */
 
 #ifdef USE_BOOTLOADER
-  SCB->VTOR = (uint32_t)&__vector_table;
+  SCB->VTOR = (uint32_t)&_vtable;
 #endif
 
   uint32_t *pulSrc, *pulDest;
