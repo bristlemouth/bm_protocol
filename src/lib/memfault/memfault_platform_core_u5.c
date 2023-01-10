@@ -23,6 +23,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "printf.h"
+#include "watchdog.h"
 
 // static sMfltCoredumpRegion s_coredump_regions[16];
 static uint8_t s_event_storage[1024];
@@ -337,4 +338,14 @@ bool memfault_threadsafe_packetizer_is_data_available_from_source(uint32_t src_m
   bool ret = memfault_packetizer_data_available();
   xSemaphoreGive(s_memfault_packetizer_mutex);
   return ret;
+}
+
+bool memfault_platform_coredump_save_begin(void) {
+  // Set watchdog prescaler to max to let us finish doing the whole coredump
+  LL_IWDG_EnableWriteAccess(IWDG);
+  LL_IWDG_SetPrescaler(IWDG, LL_IWDG_PRESCALER_1024);
+  while (LL_IWDG_IsReady(IWDG) != 1) {
+  }
+  watchdogFeed();
+  return true;
 }

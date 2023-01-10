@@ -103,6 +103,8 @@ static void print_coredump() {
     // Restore active sources
     memfault_packetizer_set_active_sources(kMfltDataSourceMask_All);
 
+  } else {
+    printf("No coredump available :(\n");
   }
 }
 

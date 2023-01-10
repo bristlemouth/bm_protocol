@@ -29,7 +29,12 @@ void MX_IWDG_Init(void)
 {
 
   /* USER CODE BEGIN IWDG_Init 0 */
-
+  LL_IWDG_EnableWriteAccess(IWDG);
+  LL_IWDG_SetEwiTime(IWDG, 32);
+  while (LL_IWDG_IsReady(IWDG) != 1)
+  {
+  }
+  LL_IWDG_EnableIT_EWI(IWDG);
   /* USER CODE END IWDG_Init 0 */
 
   /* IWDG interrupt Init */
@@ -46,10 +51,9 @@ void MX_IWDG_Init(void)
   while (LL_IWDG_IsReady(IWDG) != 1)
   {
   }
-
   LL_IWDG_ReloadCounter(IWDG);
-  /* USER CODE BEGIN IWDG_Init 2 */
 
+  /* USER CODE BEGIN IWDG_Init 2 */
   /* USER CODE END IWDG_Init 2 */
 
 }
