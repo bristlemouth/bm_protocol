@@ -61,7 +61,7 @@ _estack = 0x20050000 - _noinit_size;    /* end of RAM minus a bit */
 
 /* TODO - change this for 1MB parts*/
 _flash_size = 2048K;
-_memfault_coredump_size = _ram_size + 4K;
+_memfault_coredump_size = _ram_size + 8K;
 
 /* Memories definition */
 MEMORY
