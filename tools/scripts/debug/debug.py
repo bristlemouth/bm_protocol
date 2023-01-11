@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
-import argparse
-import os
-import subprocess
-import git
-import time
-import tempfile
 from dotenv import load_dotenv, find_dotenv
+import argparse
+import git
+import os
 import signal
+import subprocess
+import sys
+import tempfile
+import time
 
 
 def get_project_root():
@@ -38,11 +39,9 @@ def create_coredump_gdb_script():
 
     coredump_script = """
 define coredump
-  set $ram_start = (uint32_t)&_ram_start
-  set $coredump_size =  (uint32_t)&__MemfaultCoreStorageEnd - (uint32_t)&__MemfaultCoreStorageStart
   source {script_path}
   memfault login {username} {password} -o sofar-ocean -p {project}
-  memfault coredump --region $ram_start $coredump_size
+  memfault coredump --region (uint32_t)&_ram_start (uint32_t)&_ram_size
 end
 """.format(
         script_path=memfault_gdb_path,
@@ -79,6 +78,7 @@ def run_openocd(args):
     # https://stackoverflow.com/questions/5045771/python-how-to-prevent-subprocesses-from-receiving-ctrl-c-control-c-sigint
     return subprocess.Popen(
         openocd_cmd,
+        # Comment out the following two lines to print openocd output to console
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
         preexec_fn=os.setpgrp,
@@ -136,6 +136,12 @@ openocd = run_openocd(args)
 
 # Wait for openocd to start up before trying to connect with gdb
 time.sleep(1)
+
+# Make sure openocd actually ran
+openocd_rval = openocd.poll()
+if openocd_rval is not None:
+    print(f"Error starting openocd! ({openocd_rval})")
+    sys.exit(openocd_rval)
 
 # Run GDB to do all the things!
 run_gdb(args)
