@@ -483,21 +483,17 @@ add_custom_target(flash
 endif()
 
 add_custom_target(debug
-	COMMAND bash ${DEBUG_SCRIPTS_PATH}/debug.sh ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
+	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
 	COMMENT "Debugging target"
 )
 
 add_custom_target(debug_rtos
-	COMMAND bash ${DEBUG_SCRIPTS_PATH}/debug_rtos.sh ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
+	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py --rtos ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
 	COMMENT "Debugging target with rtos support"
 )
 
-add_custom_target(debug_reset
-	COMMAND bash ${DEBUG_SCRIPTS_PATH}/debug_reset.sh ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
-)
-
 add_custom_target(debug_tui
-	COMMAND bash ${DEBUG_SCRIPTS_PATH}/debug.sh ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX} -tui
+	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py --tui ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
 )
 
 add_custom_target(dfu_flash
