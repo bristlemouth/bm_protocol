@@ -56,20 +56,10 @@ ResetReason_t checkResetReason() {
 
 static const enumStrLUT_t resetReasonLUT[] = {
     {RESET_REASON_NONE, "No reset"},
-    {RESET_REASON_SD_FORMAT, "SD format reset"},
-    {RESET_REASON_SD_INSERTION, "SD card insertion reset"},
     {RESET_REASON_DEBUG_RESET, "Debug reset"},
-    {RESET_REASON_ENTER_CHARGE_MODE, "Enter charge mode reset"},
-    {RESET_REASON_MEM_FAULT, "mem_fault_reboot reset"},
-    {RESET_REASON_BATT_LOW, "Batter level critical reset"},
+    {RESET_REASON_MEM_FAULT, "memfault reset"},
     {RESET_REASON_BOOTLOADER, "Bootloader reset"},
-    {RESET_REASON_SYSCFG, "sysCfg reset"},
-    {RESET_REASON_REBOOTCTL, "Reboot Controller"},
-    {RESET_REASON_IDLE, "Idle mode"},
-    {RESET_REASON_HWCFG, "hwCfg reset"},
-    {RESET_REASON_UPDATED_CFG, "sysCfg update"},
     {RESET_REASON_MCUBOOT, "MCUBoot reset"},
-    {RESET_REASON_SD_USB, "SD USB Disconnect"},
     {RESET_REASON_INVALID, "Invalid reset or first power on since flashing"},
     // MUST be NULL terminated list otherwise things WILL break
     {0, NULL}

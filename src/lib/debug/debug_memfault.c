@@ -51,6 +51,7 @@ void debugMemfaultInit(SerialHandle_t *serialConsoleHandle) {
 void test_coredump_storage(void) {
   printf("Testing coredump storage\n");
   printf("Test begin ");
+  uint32_t startTime = xTaskGetTickCount();
   if(memfault_coredump_storage_debug_test_begin()) {
     printf("OK\n");
     printf("Test end ");
@@ -62,6 +63,8 @@ void test_coredump_storage(void) {
   } else {
     printf("ERR\n");
   }
+  uint32_t endTime = xTaskGetTickCount();
+  printf("Duration: %lums\n", endTime-startTime);
 }
 
 #define COREDUMP_CHUNK_SIZE 4096
