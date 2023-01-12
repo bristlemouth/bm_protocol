@@ -22,7 +22,7 @@
 //        as compile definitions. (See src/CMakelists.txt)
 #define FLASH_SECTOR_SIZE FLASH_PAGE_SIZE
 #define FLASH_OFFSET FLASH_START
-#define BOOTLOADER_START_ADDRESS 0x8000000
+#define BOOTLOADER_START_ADDRESS 0
 #define APPLICATION_PRIMARY_START_ADDRESS (BOOTLOADER_START_ADDRESS + BOOTLOADER_SIZE)
 #define APPLICATION_SECONDARY_START_ADDRESS (APPLICATION_PRIMARY_START_ADDRESS + APP_SIZE)
 #define SCRATCH_START_ADDRESS (APPLICATION_SECONDARY_START_ADDRESS + APP_SIZE)
@@ -100,7 +100,7 @@ int     flash_area_read(const struct flash_area * area, uint32_t off, void *dst,
   }
 
   // internal flash is memory mapped so just dereference the address
-  void *addr = (void *)(area->fa_off + off);
+  void *addr = (void *)(FLASH_OFFSET + area->fa_off + off);
   memcpy(dst, addr, len);
 
   return 0;
@@ -119,10 +119,10 @@ int     flash_area_write(const struct flash_area *area, uint32_t off,
     return -1;
   }
 
-  const uint32_t addr = area->fa_off + off;
+  const uint32_t addr = FLASH_OFFSET + area->fa_off + off;
   MCUBOOT_LOG_DBG("WR Addr: 0x%08lx Length: %lu", (uint32_t)addr, (uint32_t)len);
 
-  if(!flashWrite(FLASH_OFFSET + addr, src, len)) {
+  if(!flashWrite(addr, src, len)) {
     return -1;
   }
 
@@ -148,11 +148,11 @@ int     flash_area_erase(const struct flash_area *area, uint32_t off, uint32_t l
     return -1;
   }
 
-  const uint32_t start_addr = area->fa_off + off;
+  const uint32_t start_addr = FLASH_OFFSET + area->fa_off + off;
   MCUBOOT_LOG_DBG("ER Addr: 0x%08lx Length: %lu", (uint32_t)start_addr, (uint32_t)len);
 
   // Erase required flash area(s)
-  if(!flashErase(FLASH_OFFSET + start_addr, len)) {
+  if(!flashErase(start_addr, len)) {
     return -1;
   }
 

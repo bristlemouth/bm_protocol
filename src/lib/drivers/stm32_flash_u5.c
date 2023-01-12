@@ -19,7 +19,7 @@ bool flashErase(uint32_t addr, size_t len) {
     }
 
     // Trying to erase past flash boundary
-    if (addr + len > (FLASH_SIZE + 1)) {
+    if (addr + len > (FLASH_BASE + FLASH_SIZE + 1)) {
       break;
     }
 
@@ -33,8 +33,8 @@ bool flashErase(uint32_t addr, size_t len) {
       break;
     }
 
-    if(startAddr < (FLASH_BANK_SIZE + 1)) {
-      const uint32_t endAddr = MIN(startAddr + len, (FLASH_BANK_SIZE + 1));
+    if(startAddr < (FLASH_BASE + FLASH_BANK_SIZE + 1)) {
+      const uint32_t endAddr = MIN(startAddr + len, (FLASH_BASE + FLASH_BANK_SIZE + 1));
       const uint32_t page = (startAddr - FLASH_BASE)/FLASH_PAGE_SIZE;
       const uint32_t numPages = (endAddr - startAddr)/FLASH_PAGE_SIZE;
 

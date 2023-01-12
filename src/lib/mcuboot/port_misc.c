@@ -33,19 +33,30 @@ void port_assert(const uint32_t *pc, const uint32_t *lr) {
   NVIC_SystemReset();
 }
 
+#ifdef MCUBOOT_LOG_ENABLE
 void swoPutchar(char character, void* arg) {
   (void)arg;
   ITM_SendChar(character);
 }
 
+// Using uart since SWO isn't quite working on the U5 yet
+void uartPutChar(char character, void* arg) {
+  (void)arg;
+  while(!LL_USART_IsActiveFlag_TXE_TXFNF(USART1)) {
+    __asm("nop");
+  }
+  LL_USART_TransmitData8(USART1, character);
+}
+
 int vLog(const char* format, ...) {
   va_list va;
   va_start(va, format);
-  int rval = vfctprintf(swoPutchar, NULL, format, va);
+  int rval = vfctprintf(uartPutChar, NULL, format, va);
   va_end(va);
 
   return rval;
 }
+#endif
 
 void boot_port_wdt_feed( void ) {
   LL_IWDG_ReloadCounter(IWDG);

@@ -5,6 +5,7 @@
 // Peripheral
 #include "gpio.h"
 #include "iwdg.h"
+#include "usart.h"
 
 // MCUBoot
 #include "bootutil/bootutil.h"
@@ -29,6 +30,11 @@ void boot_port_init( void ) {
 
   // Enable the watchdog timer
   MX_IWDG_Init();
+
+#ifdef MCUBOOT_LOG_ENABLE
+  // Debug uart
+  MX_USART1_UART_Init();
+#endif
 
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
@@ -59,7 +65,7 @@ void boot_port_startup( struct boot_rsp *rsp ) {
   BOOT_LOG_INF("  Image Start Offset: 0x%x", (int)rsp->br_image_off);
 
   // We run from internal flash. Base address of this medium is 0x0
-  uint32_t vector_table = 0x0 + rsp->br_image_off + rsp->br_hdr->ih_hdr_size;
+  uint32_t vector_table = FLASH_BASE + rsp->br_image_off + rsp->br_hdr->ih_hdr_size;
 
   uint32_t *app_code = (uint32_t *)vector_table;
   uint32_t app_sp = app_code[0];

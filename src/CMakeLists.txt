@@ -102,11 +102,15 @@ if (USE_BOOTLOADER STREQUAL 1 OR APP STREQUAL "bootloader")
 # 32kB Bootloader
 set(BOOTLOADER_SIZE 0x8000)
 
-# 622kB Application size, since we have two slots
-set(APP_SIZE 0x9B800)
+# 616kB Application size, since we have two slots
+# (and want to align to 8kB boundaries for flash erase)
+set(APP_SIZE 0x9A000)
 
 # 64kB scratch size
 set(MCUBOOT_SCRATCH_SIZE 0x10000)
+
+# MCUBOOT can only write flash 16 bytes at a time on the STM32U5
+set(MCUBOOT_BOOT_MAX_ALIGN 16)
 
 # Figure out which flash section we're going to use
 if (APP STREQUAL "bootloader")
@@ -149,6 +153,7 @@ add_compile_definitions(
 	${APP_DEFINES}
 	${LINKER_DEFINES}
 	${BOOTLOADER_DEFINES}
+	MCUBOOT_BOOT_MAX_ALIGN=${MCUBOOT_BOOT_MAX_ALIGN}
 	$<$<CONFIG:Debug>:BUILD_DEBUG=1>
 	$<$<CONFIG:Release>:BUILD_DEBUG=0>
 	APP_NAME="${APP_NAME}"
@@ -370,7 +375,7 @@ endif()
 
 add_custom_command(
 	TARGET ${EXECUTABLE} POST_BUILD
-	COMMAND python3 ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align 8 --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} ${EXECUTABLE}.bin ${EXECUTABLE}.dfu.bin
+	COMMAND python3 ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align ${MCUBOOT_BOOT_MAX_ALIGN} --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} ${EXECUTABLE}.bin ${EXECUTABLE}.dfu.bin
 	BYPRODUCTS ${EXECUTABLE}.dfu.bin
 	COMMENT "Creating MCUBoot image"
 )
@@ -378,7 +383,7 @@ add_custom_command(
 if(ENCRYPT_IMAGES STREQUAL 1)
 add_custom_command(
 	TARGET ${EXECUTABLE} POST_BUILD
-	COMMAND python3 ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align 8 --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} --clear ${EXECUTABLE}.bin ${EXECUTABLE}.clear.dfu.bin
+	COMMAND python3 ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align ${MCUBOOT_BOOT_MAX_ALIGN} --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} --clear ${EXECUTABLE}.bin ${EXECUTABLE}.clear.dfu.bin
 	BYPRODUCTS ${EXECUTABLE}.clear.dfu.bin
 	COMMENT "Creating clear MCUBoot image"
 )
