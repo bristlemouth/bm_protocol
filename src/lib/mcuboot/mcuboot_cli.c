@@ -11,7 +11,10 @@
 #include "mcuboot_cli.h"
 #include "reset_reason.h"
 
+#include "bsp.h"
 #include "bootutil/bootutil_public.h"
+#include "sysflash/sysflash.h"
+#include "flash_map_backend/flash_map_backend.h"
 
 static BaseType_t mcubootCommand( char *writeBuffer,
                                       size_t writeBufferLen,
@@ -31,6 +34,22 @@ static const CLI_Command_Definition_t cmdHWCfg = {
 
 void mcubootCliInit() {
   FreeRTOS_CLIRegisterCommand( &cmdHWCfg );
+}
+
+// Erase last sector in image slot so the boot pending stuff works (this would
+// normally be done by the updater tool)
+void eraseLastSector() {
+  const struct flash_area *fap;
+  if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &fap) == 0) {
+    configASSERT(fap->fa_size >= FLASH_PAGE_SIZE);
+    if(flash_area_erase(fap, fap->fa_size - FLASH_PAGE_SIZE, FLASH_PAGE_SIZE) != 0) {
+      printf("Error erasing last sector\n");
+    } else {
+      printf("OK\n");
+    }
+  } else {
+    printf("Error opening flash area.\n");
+  }
 }
 
 static BaseType_t mcubootCommand(char *writeBuffer,
@@ -60,6 +79,8 @@ static BaseType_t mcubootCommand(char *writeBuffer,
         } else {
           resetSystem(RESET_REASON_MCUBOOT);
         }
+      }else if(strncmp("clr", filename, filenameLen) == 0) {
+        eraseLastSector();
       } else {
         printf("ERR2\n");
       }
