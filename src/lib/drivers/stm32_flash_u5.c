@@ -106,6 +106,12 @@ bool flashWrite(uint32_t addr, const uint8_t * data, uint32_t len) {
         break;
       }
     }
+
+    // Wait for last flash write to complete, otherwise if code
+    // tries to verify a small write immediately after, it will
+    // still read the old value!
+    FLASH_WaitForLastOperation(FLASH_TIMEOUT_VALUE);
+
     HAL_FLASH_Lock();
 
     rval = true;
