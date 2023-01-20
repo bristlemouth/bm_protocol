@@ -242,12 +242,12 @@ void spiCallback(void *pCBParam, uint32_t Event, void *pArg)
             /* Update the dynamic forwarding table */
             if (hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE] != NULL)
             {
-                hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE](hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE](hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
             }
 #endif
             if (hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc)
             {
-                hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
             }
         }
 
@@ -280,7 +280,7 @@ void spiCallback(void *pCBParam, uint32_t Event, void *pArg)
             hDevice->txQueue.pEntries[tail].pBufDesc->refCount--;
             if (hDevice->txQueue.pEntries[tail].pBufDesc->cbFunc && (!hDevice->txQueue.pEntries[tail].pBufDesc->refCount))
             {
-                hDevice->txQueue.pEntries[tail].pBufDesc->cbFunc(hDevice->adinDevice, Event, hDevice->txQueue.pEntries[tail].pBufDesc);
+                hDevice->txQueue.pEntries[tail].pBufDesc->cbFunc(hDevice, hDevice->adinDevice, Event, hDevice->txQueue.pEntries[tail].pBufDesc);
             }
 
             if (!hDevice->pendingCtrl)
@@ -759,7 +759,7 @@ adi_eth_Result_e MAC_RecvFrame(adi_mac_Device_t *hDevice, uint32_t port)
     /* Allow the user to swap in another buffer/buffer descriptor, with a suitable size for the received frame. */
     if (hDevice->cbFunc[ADI_MAC_EVT_RX_FRAME_RDY] != NULL)
     {
-        hDevice->cbFunc[ADI_MAC_EVT_RX_FRAME_RDY](hDevice->adinDevice, rxSize, (void *)hDevice->pRxQueue->pEntries[hDevice->pRxQueue->tail].pBufDesc);
+        hDevice->cbFunc[ADI_MAC_EVT_RX_FRAME_RDY](hDevice, hDevice->adinDevice, rxSize, (void *)hDevice->pRxQueue->pEntries[hDevice->pRxQueue->tail].pBufDesc);
     }
 
     hDevice->pRxQueue->pEntries[hDevice->pRxQueue->tail].pBufDesc->trxSize = rxSize;

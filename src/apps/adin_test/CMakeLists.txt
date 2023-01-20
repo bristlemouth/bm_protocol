@@ -139,6 +139,8 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/bm_l2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${LIB_FILES}
     ${FREERTOS_FILES}

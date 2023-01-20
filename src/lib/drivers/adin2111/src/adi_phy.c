@@ -369,7 +369,7 @@ static void irqCb(void *pCBParam, uint32_t Event, void *pArg)
     hDevice->irqPending = true;
     if (hDevice->cbFunc != NULL)
     {
-        hDevice->cbFunc(hDevice->cbParam, 0, NULL);
+        hDevice->cbFunc(hDevice, hDevice->cbParam, 0, NULL);
     }
 }
 

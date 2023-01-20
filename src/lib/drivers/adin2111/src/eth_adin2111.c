@@ -3,6 +3,7 @@
 
 #include "adi_bsp.h"
 #include "eth_adin2111.h"
+#include "bm_l2.h"
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
@@ -11,11 +12,9 @@
 #include "queue.h"
 
 #include "netif/ethernet.h"
-#include "lwip/ethip6.h"
 #include "lwip/pbuf.h"
 #include "lwip/api.h"
 #include "lwip/debug.h"
-#include "lwip/snmp.h"
 #include "lwip/stats.h"
 #include "lwip/nd6.h"
 
@@ -36,7 +35,7 @@ DMA_BUFFER_ALIGN(static uint8_t rxQueueBuf[QUEUE_NUM_ENTRIES][MAX_FRAME_BUF_SIZE
 static adi_eth_BufDesc_t txBufDesc[QUEUE_NUM_ENTRIES];
 static adi_eth_BufDesc_t rxBufDesc[QUEUE_NUM_ENTRIES];
 
-static void adin2111_main_queue_init(queue_t *pQueue, adi_eth_BufDesc_t bufDesc[QUEUE_NUM_ENTRIES], uint8_t buf[QUEUE_NUM_ENTRIES][MAX_FRAME_BUF_SIZE]);
+static void adin2111_main_queue_init(adin2111_DeviceHandle_t hDevice, queue_t *pQueue, adi_eth_BufDesc_t bufDesc[QUEUE_NUM_ENTRIES], uint8_t buf[QUEUE_NUM_ENTRIES][MAX_FRAME_BUF_SIZE]);
 static uint32_t adin2111_main_queue_available(queue_t *pQueue);
 static bool adin2111_main_queue_is_full(queue_t *pQueue);
 static bool adin2111_main_queue_is_empty(queue_t *pQueue);
@@ -45,25 +44,18 @@ static queue_entry_t *adin2111_main_queue_head(queue_t *pQueue);
 static void adin2111_main_queue_add(queue_t *pQueue, adin2111_Port_e port, adi_eth_BufDesc_t *pBufDesc, adi_eth_Callback_t cbFunc);
 static void adin2111_main_queue_remove(queue_t *pQueue);
 
-static void adin2111_rx_cb(void *pCBParam, uint32_t Event, void *pArg);
-static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg);
-static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg);
+static void adin2111_rx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg);
+static void adin2111_tx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg);
+static void adin2111_link_change_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg);
 
 static void adin2111_service_thread(void *parameters);
 
 static QueueSetHandle_t             queue_set;
-static QueueHandle_t                rx_port_queue, tx_ready_sem;
+static QueueHandle_t                rx_port_queue;
+static SemaphoreHandle_t            tx_ready_sem;
 
 #define RX_PORT_QUEUE_LENGTH        (4)
 #define BINARY_SEMAPHORE_LENGTH	    (1)
-#define IFNAME0                     'e'
-#define IFNAME1                     '0'
-#define ETHERNET_MTU                (1500)
-#define NETIF_LINK_SPEED_IN_BPS     10000000
-
-static adin2111_DeviceStruct_t      dev;
-static adin2111_DeviceHandle_t      hDevice = &dev;
-static struct netif*                eth_if;
 
 /* ====================================================================================================
     Main Queue Functions borrowed from ADIN2111 Example
@@ -80,13 +72,14 @@ static struct netif*                eth_if;
  * @param buf 2D Buffers (either RX or TX)
  * @return none
  */
-static void adin2111_main_queue_init(queue_t *pQueue, adi_eth_BufDesc_t bufDesc[QUEUE_NUM_ENTRIES],
+static void adin2111_main_queue_init(adin2111_DeviceHandle_t hDevice, queue_t *pQueue, adi_eth_BufDesc_t bufDesc[QUEUE_NUM_ENTRIES],
                                       uint8_t buf[QUEUE_NUM_ENTRIES][MAX_FRAME_BUF_SIZE])
 {
     pQueue->head = 0;
     pQueue->tail = 0;
     pQueue->full = false;
     for (uint32_t i = 0; i < QUEUE_NUM_ENTRIES; i++) {
+        pQueue->entries[i].dev = hDevice;
         pQueue->entries[i].pBufDesc = &bufDesc[i];
         pQueue->entries[i].pBufDesc->pBuf = &buf[i][0];
         pQueue->entries[i].pBufDesc->bufSize = MAX_FRAME_BUF_SIZE;
@@ -220,32 +213,35 @@ static void adin2111_main_queue_remove(queue_t *pQueue)
    ====================================================================================================
  */
 
-static void adin2111_rx_cb(void *pCBParam, uint32_t Event, void *pArg)
+static void adin2111_rx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg)
 {
     (void) Event;
     (void) pCBParam;
 
     adi_eth_BufDesc_t *pBufDesc;
-    adin2111_Port_e rx_port;
+    rx_info_t rx_info;
 
     pBufDesc = (adi_eth_BufDesc_t *)pArg;
-    rx_port = (adin2111_Port_e)pBufDesc->port;
+    rx_info.port = pBufDesc->port;
+    rx_info.dev = (adi_mac_Device_t *)hDevice;
 
-    xQueueSend(rx_port_queue, ( void * ) &rx_port, 0);
+    xQueueSend(rx_port_queue, ( void * ) &rx_info, 0);
 }
 
-static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg)
+static void adin2111_tx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg)
 {
     (void) Event;
     (void) pCBParam;
     (void) pArg;
+    (void) hDevice;
 
     // adi_eth_BufDesc_t *pBufDesc;
     // pBufDesc = (adi_eth_BufDesc_t *)pArg;
 }
 
-static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg)
+static void adin2111_link_change_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg)
 {
+    (void) hDevice;
     (void) Event;
     (void) pCBParam;
 
@@ -272,14 +268,16 @@ static void adin2111_service_thread(void *parameters) {
     queue_entry_t *pEntry;
 
     QueueSetMemberHandle_t activated_member;
-    adin2111_Port_e _rx_port;
+    rx_info_t rx_info;
+    uint8_t rx_port_mask;
+    err_t retv;
 
     /* Create the queue set large enough to hold an event for every space in
     every queue and semaphore that is to be added to the set. */
     queue_set = xQueueCreateSet( RX_PORT_QUEUE_LENGTH + BINARY_SEMAPHORE_LENGTH );
 
     /* Create the queues and semaphores that will be contained in the set. */
-    rx_port_queue = xQueueCreate( RX_PORT_QUEUE_LENGTH, sizeof(adin2111_Port_e));
+    rx_port_queue = xQueueCreate( RX_PORT_QUEUE_LENGTH, sizeof(rx_info_t));
 
     /* Create the semaphore that is being added to the set. */
     tx_ready_sem = xSemaphoreCreateBinary();
@@ -302,102 +300,93 @@ static void adin2111_service_thread(void *parameters) {
         /* Perform a different action for each event type. */
         if (activated_member == tx_ready_sem){
             xSemaphoreTake(activated_member, 0);
-            if (!adin2111_main_queue_is_empty(&txQueue)) {
+            
+            /* Changed from if to while, FIXME if needed */
+            while (!adin2111_main_queue_is_empty(&txQueue)) {
                 pEntry = adin2111_main_queue_tail(&txQueue);
                 if ((pEntry != NULL) && (!pEntry->sent)) {
                     pEntry->sent = true;
-                    result = adin2111_SubmitTxBuffer(hDevice, (adin2111_TxPort_e)pEntry->port, pEntry->pBufDesc);
+                    result = adin2111_SubmitTxBuffer(pEntry->dev, (adin2111_TxPort_e)pEntry->port, pEntry->pBufDesc);
                     if (result == ADI_ETH_SUCCESS) {
-                        printf("Submitted TX Buf to ADIN2111\n");
+                        // printf("Submitted TX Buf to ADIN2111\n");
                         adin2111_main_queue_remove(&txQueue);
+                    } else {
+                        /* Failed to submit TX Buffer? */
+                        printf("Unable to submit TX buffer\n");
+                        // configASSERT(0);
+                        break;
                     }
                 }
             }
         } else if (activated_member == rx_port_queue) {
-            xQueueReceive(activated_member, &_rx_port, 0);
+            xQueueReceive(activated_member, &rx_info, 0);
+
             if (!adin2111_main_queue_is_empty(&rxQueue)) {
                 pEntry = adin2111_main_queue_tail(&rxQueue);
 
                 if( !pEntry ) {
-                    //LOG_ERR( "Shouldn't happen: Null adin queue entry" );
-                    configASSERT(0);
+                    printf("Null adin queue entry\n");
                     goto out;
                 }
 
-                struct pbuf* p = pbuf_alloc(PBUF_RAW, MAX_FRAME_BUF_SIZE, PBUF_RAM);
-                if (p == NULL) {
-                    printf("No mem for pbuf in RX pathway\n");
-                    // LOG_ERR("No mem for pbuf allocation");
-                    // configASSERT(0);
-                    goto out;
+                rx_port_mask = (1 << rx_info.port);
+                retv =  bm_l2_rx((void *) rx_info.dev, pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize, rx_port_mask);
+                if (retv != ERR_OK) {
+                    printf("Unable to pass to the L2 layer");
                 }
 
-                // Copy over RX packet contents to a pBuf to submit to L2
-                memcpy(((uint8_t*) p->payload) , pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize);
-
-                /* Submit packet to the L2 Layer */
-                if (eth_if->input(p, eth_if) != ERR_OK) {
-                    LWIP_DEBUGF(NETIF_DEBUG, ("IP input error\r\n"));
-                    pbuf_free(p);
-                    p = NULL;
-                }
 out:
                 /* Put the buffer back into queue and re-submit to the ADIN2111 driver */
                 adin2111_main_queue_remove(&rxQueue);
-                adin2111_main_queue_add(&rxQueue, _rx_port, pEntry->pBufDesc, adin2111_rx_cb);
-                result = adin2111_SubmitRxBuffer(hDevice, pEntry->pBufDesc);
+                adin2111_main_queue_add(&rxQueue, rx_info.port, pEntry->pBufDesc, adin2111_rx_cb);
+                result = adin2111_SubmitRxBuffer(pEntry->dev, pEntry->pBufDesc);
                 if (result != ADI_ETH_SUCCESS) {
-                    configASSERT(0);
+                    printf("Unable to re-submit RX Buffer\n");
                 }
             }
         }
     }
 }
 
-static void adin2111_hw_init(struct netif *netif) {
+adin2111_DeviceHandle_t adin2111_hw_init(void) {
     adi_eth_Result_e result;
-    adi_mac_AddressRule_t addrRule;
+    //adi_mac_AddressRule_t addrRule;
     BaseType_t rval;
+    adin2111_DeviceStruct_t dev;
+    adin2111_DeviceHandle_t hDevice = &dev;
 
-    printf("Initializing ADIN2111\n");
-
-    /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts */
+    /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts 
+       FIXME: Provide a SPI interface? */
     if (adi_bsp_init()) {
-        // LOG_ERR("BSP Init failed");
         configASSERT(0);
     }
 
     /* ADIN2111 Init process */
     result = adin2111_Init(hDevice, &drvConfig);
     if (result != ADI_ETH_SUCCESS) {
-        // LOG_ERR("ADIN2111 failed initialization");
         configASSERT(0);
     }
 
-    /* generate random MAC addresses for each port/phy */
-    addrRule.VALUE16 = 0x0000;
-    addrRule.APPLY2PORT1 = 1;
-    addrRule.APPLY2PORT2 = 1;
-    addrRule.TO_HOST = 1;
+    // addrRule.VALUE16 = 0x0000;
+    // addrRule.APPLY2PORT1 = 1;
+    // addrRule.APPLY2PORT2 = 1;
+    // addrRule.TO_HOST = 1;
 
-    result = adin2111_AddAddressFilter(hDevice, netif->hwaddr, NULL, addrRule);
-    if (result != ADI_ETH_SUCCESS) {
-        // LOG_ERR("ADIN2111 failed to add address filter");
-        configASSERT(0);
-    }
+    // result = adin2111_AddAddressFilter(hDevice, netif->hwaddr, NULL, addrRule);
+    // if (result != ADI_ETH_SUCCESS) {
+    //     configASSERT(0);
+    // }
 
     /* Register Callback for link change */
     result = adin2111_RegisterCallback(hDevice, adin2111_link_change_cb,
                        ADI_MAC_EVT_LINK_CHANGE);
     if (result != ADI_ETH_SUCCESS) {
-        // LOG_ERR("ADIN2111 failed to register Link Change callback");
         configASSERT(0);
-        
     }
 
     /* Prepare Rx buffers */
-    adin2111_main_queue_init(&txQueue, txBufDesc, txQueueBuf);
-    adin2111_main_queue_init(&rxQueue, rxBufDesc, rxQueueBuf);
+    adin2111_main_queue_init(hDevice, &txQueue, txBufDesc, txQueueBuf);
+    adin2111_main_queue_init(hDevice, &rxQueue, rxBufDesc, rxQueueBuf);
     for (uint32_t i = 0; i < (QUEUE_NUM_ENTRIES/2); i++) {
 
         /* Set appropriate RX Callback */
@@ -416,7 +405,6 @@ static void adin2111_hw_init(struct netif *netif) {
     /* Confirm device configuration */
     result = adin2111_SyncConfig(hDevice);
     if (result != ADI_ETH_SUCCESS) {
-        // LOG_ERR("ADIN2111 failed Sync Config");
         configASSERT(0);
     }
 
@@ -430,25 +418,35 @@ static void adin2111_hw_init(struct netif *netif) {
 
     /* This used to be started by zephyr after networking layer got set up, should we enable the ADIN here? */
     adin2111_hw_start(&hDevice);
+
+    return hDevice;
 }
 
-static err_t adin2111_tx(struct netif *netif, struct pbuf *p) {
-    (void) netif;
+err_t adin2111_tx(void* dev_handle, uint8_t* buf, uint16_t buf_len, uint8_t port_mask) {
     queue_entry_t *pEntry;
     err_t retv = ERR_OK;
+    int i;
 
-    if (!adin2111_main_queue_is_full(&txQueue)) {
-        pEntry = adin2111_main_queue_head(&txQueue);
-		pEntry->pBufDesc->trxSize = p->len;
-		memcpy(pEntry->pBufDesc->pBuf, p->payload, pEntry->pBufDesc->trxSize);
+    for(i=0; i <ADIN2111_PORT_NUM; i++) {
+        if (!adin2111_main_queue_is_full(&txQueue)) {
+            pEntry = adin2111_main_queue_head(&txQueue);
+            pEntry->pBufDesc->trxSize = buf_len;
+            memcpy(pEntry->pBufDesc->pBuf, buf, pEntry->pBufDesc->trxSize);
+            pEntry->dev = (adin2111_DeviceHandle_t) dev_handle;
 
-        /* FIXME: Send out of PORT1 for now */
-        adin2111_main_queue_add(&txQueue, ADIN2111_PORT_1, pEntry->pBufDesc, adin2111_tx_cb);
-        xSemaphoreGive(tx_ready_sem);
-    } else {
-        retv = ERR_MEM;
+            if (port_mask & (0x01 << i)) {
+                adin2111_main_queue_add(&txQueue, (adin2111_Port_e) i, pEntry->pBufDesc, adin2111_tx_cb);
+            }
+        } else {
+            retv = ERR_MEM;
+            goto out;
+        }
     }
+    
+    /* Give semaphore after 1 or more buffers have been put onto the queue */
+    xSemaphoreGive(tx_ready_sem);
 
+out:
     return retv;
 }
 
@@ -474,25 +472,4 @@ int adin2111_hw_start(adin2111_DeviceHandle_t* dev) {
  */
 int adin2111_hw_stop(adin2111_DeviceHandle_t* dev) {
     return adin2111_Disable(*dev);
-}
-
-err_t eth_adin2111_init(struct netif *netif) {
-
-    /* Initialize the ADIN Driver */
-    adin2111_hw_init(netif);
-
-    MIB2_INIT_NETIF(netif, snmp_ifType_ethernet_csmacd, NETIF_LINK_SPEED_IN_BPS);
-
-    netif->name[0] = IFNAME0;
-    netif->name[1] = IFNAME1;
-    netif->output_ip6 = ethip6_output;
-    netif->linkoutput = adin2111_tx;
-
-    /* Store netif in local pointer */
-    eth_if = netif;
-
-    netif->mtu = ETHERNET_MTU;
-    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
-
-    return ERR_OK;
 }

@@ -22,7 +22,7 @@
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "bsp.h"
-#include "eth_adin2111.h"
+#include "bm_l2.h"
 #include "printf.h"
 #include "memfault_platform_core.h"
 
@@ -132,7 +132,7 @@ static void udp_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   (void) addr;
   (void) port;
 
-  printf("%s", (char*) p->payload);
+  printf("Received: %s on Port: %d\n", (char*) p->payload, port);
 
   if (p != NULL) {
     /* free the pbuf */
@@ -143,7 +143,7 @@ static void udp_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 static void defaultTask( void *parameters ) {
     (void)parameters;
     struct pbuf* buf = NULL;
-    static uint8_t msg[] = "Hello World\n";
+    static uint8_t msg[] = "Hello World";
     static ip6_addr_t dst_addr;
 
     startSerial();
@@ -184,17 +184,13 @@ static void defaultTask( void *parameters ) {
     ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0x0, 0x0, IPV6_ADDR_LSB);
 
     /* The documentation says to use tcpip_input if we are running with an OS */
-    netif_add(&netif, NULL, eth_adin2111_init, tcpip_input);
+    netif_add(&netif, NULL, bm_l2_init, tcpip_input);
 
     netif_create_ip6_linklocal_address(&netif, 1);
     netif_set_up(&netif);
     netif_ip6_addr_set(&netif, 0, ip_2_ip6(&my_addr));
     netif_ip6_addr_set_state(&netif, 0, IP6_ADDR_VALID);
     netif_set_link_up(&netif);
-
-    /* FIXME: Joining Multicast Group? */
-    // mld6_joingroup_netif(&netif, IPADDR6_INIT_HOST(0xFF020000,0,0,0x01));
-    // mld6_joingroup_netif(&netif, IPADDR6_INIT_HOST(0xFF030000,0,0,0x01));
 
     /* Socket API looks... iffy. Using raw udp tx/rx for now */
     udp_pcb = udp_new_ip_type(IPADDR_TYPE_V6);
