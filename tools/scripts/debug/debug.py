@@ -5,6 +5,7 @@ import argparse
 import git
 import os
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,19 @@ def get_project_root():
 # Don't close python script with Ctrl+C since GDB uses it
 def sig_handler(signum, frame):
     pass
+
+# Try ports in range until one is open
+# Used in case we launch multiple openocd/gdb instances at once
+def get_free_port(port=3333, max_port=4000):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while port <= max_port:
+        try:
+            sock.bind(("", port))
+            sock.close()
+            return port
+        except OSError:
+            port += 1
+    raise IOError("no free ports")
 
 
 # Register alternate SIGINT handler above to ignore Ctrl+C
@@ -57,7 +71,7 @@ end
     return path
 
 
-def run_openocd(args):
+def run_openocd(args, port=3333):
     # OpenOCD config overrides
     part_cfg = "st_nucleo_u5.cfg"
     if args.rtos:
@@ -72,6 +86,12 @@ def run_openocd(args):
         "-f",
         f"{debug_scripts_path}/utils.cfg",
         "-c",
+        "tcl_port disabled",
+        "-c",
+        "telnet_port disabled",
+        "-c",
+        f"gdb_port {port}",
+        "-c",
         "init",
     ]
 
@@ -79,8 +99,8 @@ def run_openocd(args):
     return subprocess.Popen(
         openocd_cmd,
         # Comment out the following two lines to print openocd output to console
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT,
+        # stdout=subprocess.DEVNULL,
+        # stderr=subprocess.STDOUT,
         preexec_fn=os.setpgrp,
     )
 
@@ -88,7 +108,7 @@ def run_openocd(args):
 #
 # Run GDB with all the required scripts
 #
-def run_gdb(args):
+def run_gdb(args, port=3333):
     gdb_cmd = ["gdb"]
 
     for source_dir in args.dirs:
@@ -99,6 +119,8 @@ def run_gdb(args):
 
     # Include debug gdb commands (reset, rh, etc.)
     gdb_cmd += [
+        "-ex",
+        f"target remote localhost:{port}",
         "-x",
         f"{debug_scripts_path}/debug.gdb_cmds",
         "-x",
@@ -131,8 +153,11 @@ args, unknownargs = parser.parse_known_args()
 
 load_dotenv(find_dotenv())
 
+# Get port to use for openocd/gdb
+port = get_free_port()
+
 # Run openocd in the background
-openocd = run_openocd(args)
+openocd = run_openocd(args, port)
 
 # Wait for openocd to start up before trying to connect with gdb
 time.sleep(1)
@@ -144,7 +169,7 @@ if openocd_rval is not None:
     sys.exit(openocd_rval)
 
 # Run GDB to do all the things!
-run_gdb(args)
+run_gdb(args, port)
 
 # Make sure we don't leave openocd running
 openocd.terminate()
