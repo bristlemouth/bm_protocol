@@ -154,13 +154,22 @@ set(APP_INCLUDES
     ${LWIP_INCLUDE_DIRS}
     PARENT_SCOPE)
 
- set(APP_LIBS
+set(APP_LIBS
     lwipcore
     PARENT_SCOPE)
 
 set(APP_DEFINES
 
     )
+
+# Use ALT_DEV as set in cmake command
+if (DEFINED ALT_DEV)
+list(APPEND APP_DEFINES "ALT_DEV=${ALT_DEV}")
+message(STATUS "Using ALT_DEV=${ALT_DEV}")
+else()
+list(APPEND APP_DEFINES "ALT_DEV=0x01")
+message(STATUS "Using default ALT_DEV=0x01")
+endif()
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)

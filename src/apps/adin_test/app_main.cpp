@@ -34,6 +34,9 @@
 
 #include <stdio.h>
 
+// Get IPv6 LSB from CMAKE ALT_DEV define (use 0x01, 0x02, etc...)
+#define IPV6_ADDR_LSB ALT_DEV
+
 static void defaultTask(void *parameters);
 
 static struct udp_pcb   *udp_pcb;
@@ -178,7 +181,7 @@ static void defaultTask( void *parameters ) {
     netif.hwaddr_len = sizeof(netif.hwaddr);
 
     /* FIXME: Let's not hardcode this if possible */
-    ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0x0, 0x0, 0x2);
+    ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0x0, 0x0, IPV6_ADDR_LSB);
 
     /* The documentation says to use tcpip_input if we are running with an OS */
     netif_add(&netif, NULL, eth_adin2111_init, tcpip_input);
