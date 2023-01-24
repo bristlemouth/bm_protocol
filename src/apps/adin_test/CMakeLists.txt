@@ -19,19 +19,25 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/util.c
-    ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/mcuboot/mcuboot_cli.c
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/lib/common/watchdog.c
     )
 
 set(LIB_INCLUDES
@@ -39,8 +45,9 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
-    ${SRC_DIR}/lib/mcuboot
+    ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/printf/
@@ -118,7 +125,6 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-unused-parameter -Wno-format -Wno-unused-but-set-variable"
     )
 
-
 set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS
     ${LWIP_DIR}/src/include
@@ -126,7 +132,7 @@ set(LWIP_INCLUDE_DIRS
     # ${LWIP_DIR}/contrib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
+    
 include(${LWIP_DIR}/src/Filelists.cmake)
 # include(${LWIP_DIR}/contrib/Filelists.cmake)
 
@@ -137,7 +143,6 @@ set(APP_FILES
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}
-    ${MCUBOOT_FILES}
     PARENT_SCOPE)
 
 set(APP_INCLUDES
@@ -156,6 +161,15 @@ set(APP_LIBS
 set(APP_DEFINES
 
     )
+
+# Use ALT_DEV as set in cmake command
+if (DEFINED ALT_DEV)
+list(APPEND APP_DEFINES "ALT_DEV=${ALT_DEV}")
+message(STATUS "Using ALT_DEV=${ALT_DEV}")
+else()
+list(APPEND APP_DEFINES "ALT_DEV=0x01")
+message(STATUS "Using default ALT_DEV=0x01")
+endif()
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)
