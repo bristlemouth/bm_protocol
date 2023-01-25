@@ -16,14 +16,14 @@ extern "C" {
 /* Extra 4 bytes for FCS and 2 bytes for the frame header */
 #define MAX_FRAME_BUF_SIZE  (MAX_FRAME_SIZE + 4 + 2)
 
-typedef struct queue_entry_t{
+typedef struct {
     adin2111_Port_e port;
     adi_eth_BufDesc_t *pBufDesc;
     adin2111_DeviceHandle_t dev;
     bool sent;
 } queue_entry_t;
 
-typedef struct queue_t{
+typedef struct {
     uint32_t head;
     uint32_t tail;
     bool full;

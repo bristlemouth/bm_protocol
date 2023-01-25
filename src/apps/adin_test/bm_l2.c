@@ -3,13 +3,12 @@
 #include "eth_adin2111.h"
 #include "lwip/ethip6.h"
 #include "lwip/snmp.h"
+#include "semphr.h"
 
 #define IFNAME0                     'b'
 #define IFNAME1                     'm'
 #define NETIF_LINK_SPEED_IN_BPS     10000000
 #define ETHERNET_MTU                1500
-#define L2_TX_QUEUE_NUM_ENTRIES     4
-#define L2_RX_QUEUE_NUM_ENTRIES     4
 
 struct device_ctx_t {
     /* Can be changed to uint16_t if necessary*/
@@ -32,6 +31,7 @@ static uint8_t available_port_mask_idx = 0;
 static TaskHandle_t rx_thread = NULL;
 static TaskHandle_t tx_thread = NULL;
 static QueueHandle_t  rx_queue, tx_queue;
+static SemaphoreHandle_t tx_sem;
 
 /* Rx Callback can only get the MAC Handle, not the Device handle itself */
 static int bm_l2_get_device_index(void* device_handle) {
@@ -49,11 +49,11 @@ static int bm_l2_get_device_index(void* device_handle) {
 /* L2 RX Thread */
 static void bm_l2_rx_thread(void *parameters) {
     (void) parameters;
-    l2_queue_element_t rx_data;
+    static l2_queue_element_t rx_data;
     uint8_t new_port_mask = 0;
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = 0;
-    bool is_global_multicast = true;
+    bool is_global_multicast = false;
 
     while (1) {
         if(xQueueReceive(rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
@@ -78,6 +78,7 @@ static void bm_l2_rx_thread(void *parameters) {
                     case BM_NETDEV_NONE:
                     default:
                         /* No device or not supported. How did we get here? */
+                        configASSERT(0);
                         rx_port_mask = 0;
                         break;
                 }
@@ -98,7 +99,8 @@ static void bm_l2_rx_thread(void *parameters) {
 /* L2 TX Thread */
 static void bm_l2_tx_thread(void *parameters) {
     (void) parameters;
-    l2_queue_element_t tx_data;
+    static l2_queue_element_t tx_data;
+
     int i;
     uint8_t mask_idx;
     err_t retv;
@@ -129,22 +131,29 @@ static void bm_l2_tx_thread(void *parameters) {
 /* L2 SEND */
 err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask) {
     err_t retv = ERR_OK;
-    l2_queue_element_t tx_data;
+    static l2_queue_element_t tx_data;
 
-    tx_data.port_mask = port_mask;
-    tx_data.payload_len = p->len;
-    memcpy(tx_data.payload, p->payload, p->len);
+    if(xSemaphoreTake(tx_sem, portMAX_DELAY) == pdTRUE) {
+        tx_data.port_mask = port_mask;
+        tx_data.payload_len = p->len;
+        memcpy(tx_data.payload, p->payload, p->len);
 
-    if(xQueueSend(tx_queue, (void *) &tx_data, 0) != pdTRUE) {
-        retv = ERR_MEM;
+        if(xQueueSend(tx_queue, (void *) &tx_data, 0) != pdTRUE) {
+            retv = ERR_MEM;
+        }
+        xSemaphoreGive(tx_sem);
+    } else {
+        printf("Unable to take BM L2 TX mutex.\n");
+        retv = ERR_TIMEOUT;
     }
+
     return retv;
 }
 
 /* L2 RECV */
 err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask) {
     err_t retv = ERR_OK;
-    l2_queue_element_t rx_data;
+   static l2_queue_element_t rx_data;
 
     rx_data.device_handle = device_handle;
     rx_data.port_mask = port_mask;
@@ -205,9 +214,12 @@ err_t bm_l2_init(struct netif *netif) {
     tx_queue = xQueueCreate( TX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
     rx_queue = xQueueCreate( RX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
 
+    tx_sem = xSemaphoreCreateMutex();
+    configASSERT(tx_sem != NULL);
+
     rval = xTaskCreate(bm_l2_tx_thread,
                        "L2 TX Thread",
-                       8192, // FIXME: Does it need to be this large?
+                       8192,
                        NULL,
                        15,
                        &tx_thread);
@@ -215,7 +227,7 @@ err_t bm_l2_init(struct netif *netif) {
 
     rval = xTaskCreate(bm_l2_rx_thread,
                        "L2 RX Thread",
-                       8192, // FIXME: Does it need to be this large?
+                       8192, 
                        NULL,
                        15,
                        &rx_thread);
