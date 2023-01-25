@@ -244,7 +244,7 @@ static void macCallback(void *pCBParam, uint32_t Event, void *pArg)
         if (hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE] != NULL)
         {
             adi_eth_LinkStatus_e    linkStatus = (adi_eth_LinkStatus_e)status1.P1_LINK_STATUS;
-            hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice, hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&linkStatus);
+            hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&linkStatus);
         }
     }
 #else
@@ -253,7 +253,7 @@ static void macCallback(void *pCBParam, uint32_t Event, void *pArg)
     {
         if (hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE] != NULL)
         {
-            hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice, hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&hDevice->statusRegisters);
+            hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&hDevice->statusRegisters);
         }
     }
 #endif
@@ -279,7 +279,7 @@ static void macCallback(void *pCBParam, uint32_t Event, void *pArg)
             timestampReady.timestampReadyB = (bool)status0Masked.TTSCAB;
             timestampReady.timestampReadyC = (bool)status0Masked.TTSCAC;
 #endif
-            hDevice->cbFunc[ADI_MAC_EVT_TIMESTAMP_RDY](hDevice, hDevice->cbParam[ADI_MAC_EVT_TIMESTAMP_RDY], ADI_MAC_EVT_TIMESTAMP_RDY, (void *)&timestampReady);
+            hDevice->cbFunc[ADI_MAC_EVT_TIMESTAMP_RDY](hDevice->cbParam[ADI_MAC_EVT_TIMESTAMP_RDY], ADI_MAC_EVT_TIMESTAMP_RDY, (void *)&timestampReady);
         }
     }
 
@@ -288,7 +288,7 @@ static void macCallback(void *pCBParam, uint32_t Event, void *pArg)
     {
         if (hDevice->cbFunc[ADI_MAC_EVT_STATUS] != NULL)
         {
-            hDevice->cbFunc[ADI_MAC_EVT_STATUS](hDevice, hDevice->cbParam[ADI_MAC_EVT_STATUS], ADI_MAC_EVT_STATUS, (void *)&hDevice->statusRegisters);
+            hDevice->cbFunc[ADI_MAC_EVT_STATUS](hDevice->cbParam[ADI_MAC_EVT_STATUS], ADI_MAC_EVT_STATUS, (void *)&hDevice->statusRegisters);
         }
     }
 

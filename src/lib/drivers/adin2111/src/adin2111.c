@@ -33,10 +33,9 @@ static uint32_t PhyRead(uint8_t hwAddr, uint32_t regAddr, uint16_t *data)
 }
 
 /* Callback from frame receive, used to update the dynamic forwarding table. */
-static void cbRx(void *dev_handle, void *pCBParam, uint32_t Event, void *pArg)
+static void cbRx(void *pCBParam, uint32_t Event, void *pArg)
 {
     (void) Event;
-    (void) dev_handle;
     adin2111_DeviceHandle_t     hDevice;
     adi_eth_BufDesc_t           *pBufDesc;
 

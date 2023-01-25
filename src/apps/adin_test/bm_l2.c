@@ -10,11 +10,11 @@
 #define NETIF_LINK_SPEED_IN_BPS     10000000
 #define ETHERNET_MTU                1500
 
-struct device_ctx_t {
-    /* Can be changed to uint16_t if necessary*/
+struct bm_netdev_ctx_t {
     uint8_t num_ports;
     void* device_handle;
     uint8_t start_port_idx;
+    bm_netdev_type_t type;
 };
 
 typedef struct l2_queue_element_t {
@@ -25,7 +25,13 @@ typedef struct l2_queue_element_t {
 } __attribute__((packed)) l2_queue_element_t;
 
 static struct netif* net_if;
-static struct device_ctx_t devices[BM_NETDEV_MAX_DEVICES];
+static struct bm_netdev_ctx_t devices[BM_NETDEV_COUNT];
+
+/* TODO: We are only supporting the ADIN2111 net device. Currently assuming we have up to BM_NETDEV_TYPE_MAX ADIN2111s.
+   We want to eventually support new net devices and pre-allocate here before giving to init function */
+static adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX];
+static uint8_t adin_device_counter = 0;
+
 static uint8_t available_ports_mask = 0;
 static uint8_t available_port_mask_idx = 0;
 static TaskHandle_t rx_thread = NULL;
@@ -33,13 +39,14 @@ static TaskHandle_t tx_thread = NULL;
 static QueueHandle_t  rx_queue, tx_queue;
 static SemaphoreHandle_t tx_sem;
 
-/* Rx Callback can only get the MAC Handle, not the Device handle itself */
+/* TODO: ADIN2111-specifc, let's move to ADIN driver.
+   Rx Callback can only get the MAC Handle, not the Device handle itself */
 static int bm_l2_get_device_index(void* device_handle) {
-    int i;
+    int idx;
 
-    for (i=0; i<BM_NETDEV_MAX_DEVICES; i++) {
-        if (device_handle == ((adin2111_DeviceHandle_t) devices[i].device_handle)->pMacDevice){
-            return i;
+    for (idx=0; idx<BM_NETDEV_TYPE_MAX; idx++) {
+        if (device_handle == ((adin2111_DeviceHandle_t) devices[idx].device_handle)){
+            return idx;
         }
     }
 
@@ -53,7 +60,7 @@ static void bm_l2_rx_thread(void *parameters) {
     uint8_t new_port_mask = 0;
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = 0;
-    bool is_global_multicast = false;
+    bool is_global_multicast = true;
 
     while (1) {
         if(xQueueReceive(rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
@@ -71,11 +78,11 @@ static void bm_l2_rx_thread(void *parameters) {
             if (is_global_multicast)
             {
                 device_idx = bm_l2_get_device_index(rx_data.device_handle);
-                switch (bm_net_devices.devices[device_idx]) {
-                    case BM_NETDEV_ADIN:
-                        rx_port_mask = ((rx_data.port_mask & ADIN_PORT_MASK) << devices[device_idx].start_port_idx);
+                switch (devices[device_idx].type) {
+                    case BM_NETDEV_TYPE_ADIN2111:
+                        rx_port_mask = ((rx_data.port_mask & ADIN2111_PORT_MASK) << devices[device_idx].start_port_idx);
                         break;
-                    case BM_NETDEV_NONE:
+                    case BM_NETDEV_TYPE_NONE:
                     default:
                         /* No device or not supported. How did we get here? */
                         configASSERT(0);
@@ -85,6 +92,10 @@ static void bm_l2_rx_thread(void *parameters) {
                 new_port_mask = available_ports_mask & ~(rx_port_mask);
                 bm_l2_tx(p, new_port_mask);
             }
+
+            /* TODO: This is the place where routing and filtering functions would happen, to prevent passing the
+               packet to net_if->input() if unnecessary, as well as forwarding routed multicast data to interested
+               neighbors and user devices. */
 
             /* Submit packet to lwip. User RX Callback is responsible for freeing the packet*/
             if (net_if->input(p, net_if) != ERR_OK) {
@@ -101,24 +112,24 @@ static void bm_l2_tx_thread(void *parameters) {
     (void) parameters;
     static l2_queue_element_t tx_data;
 
-    int i;
+    int idx;
     uint8_t mask_idx;
     err_t retv;
 
     while (1) {
         if(xQueueReceive(tx_queue, &tx_data, portMAX_DELAY) == pdPASS) {
             mask_idx = 0;
-            for (i=0; i<BM_NETDEV_MAX_DEVICES; i++) {
-                switch (bm_net_devices.devices[i]) {
-                    case BM_NETDEV_ADIN:
-                        retv = adin2111_tx(devices[i].device_handle, tx_data.payload, tx_data.payload_len,
-                                           (tx_data.port_mask >> mask_idx) & ADIN_PORT_MASK);
-                        mask_idx += devices[i].num_ports;
+            for (idx=0; idx<BM_NETDEV_TYPE_MAX; idx++) {
+                switch (devices[idx].type) {
+                    case BM_NETDEV_TYPE_ADIN2111:
+                        retv = adin2111_tx((adin2111_DeviceHandle_t) devices[idx].device_handle, tx_data.payload, tx_data.payload_len,
+                                           (tx_data.port_mask >> mask_idx) & ADIN2111_PORT_MASK);
+                        mask_idx += devices[idx].num_ports;
                         if (retv != ERR_OK) {
                             //printf("Failed to submit TX buffer to ADIN");
                         }
                         break;
-                    case BM_NETDEV_NONE:
+                    case BM_NETDEV_TYPE_NONE:
                     default:
                         /* No device or not supported */
                         break;
@@ -176,23 +187,28 @@ err_t bm_l2_link_output(struct netif *netif, struct pbuf *p) {
 
 /* L2 Initialization */
 err_t bm_l2_init(struct netif *netif) {
-    int i;
+    int idx;
     BaseType_t rval;
 
-    for (i=0; i < BM_NETDEV_MAX_DEVICES; i++) {
-        switch (bm_net_devices.devices[i]) {
-            case BM_NETDEV_ADIN:
-                devices[i].device_handle = (void *) adin2111_hw_init();
-                devices[i].num_ports = ADIN2111_PORT_NUM;
-                devices[i].start_port_idx = available_port_mask_idx;
-                available_ports_mask |= (ADIN_PORT_MASK << available_port_mask_idx);
-                available_port_mask_idx += ADIN2111_PORT_NUM;
+    for (idx=0; idx < BM_NETDEV_COUNT; idx++) {
+        devices[idx].type = bm_netdev_config[idx].type;
+        switch (devices[idx].type) {
+            case BM_NETDEV_TYPE_ADIN2111:
+                if (adin2111_hw_init(&adin_devices[adin_device_counter]) == ADI_ETH_SUCCESS) {
+                    devices[idx].device_handle = &adin_devices[adin_device_counter++];
+                    devices[idx].num_ports = ADIN2111_PORT_NUM;
+                    devices[idx].start_port_idx = available_port_mask_idx;
+                    available_ports_mask |= (ADIN2111_PORT_MASK << available_port_mask_idx);
+                    available_port_mask_idx += ADIN2111_PORT_NUM;
+                } else {
+                    printf("Failed to init ADIN2111");
+                }
                 break;
-            case BM_NETDEV_NONE:
+            case BM_NETDEV_TYPE_NONE:
             default:
                 /* No device or not supported */
-                devices[i].device_handle = NULL;
-                devices[i].num_ports = 0;
+                devices[idx].device_handle = NULL;
+                devices[idx].num_ports = 0;
                 break;
         }
     }

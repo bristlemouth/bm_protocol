@@ -11,16 +11,22 @@ extern "C" {
 #endif /* __cplusplus */
 
 typedef enum {
-    BM_NETDEV_NONE,
-    BM_NETDEV_ADIN,
-    BM_NETDEV_MAX_DEVICES
+    BM_NETDEV_TYPE_NONE,
+    BM_NETDEV_TYPE_ADIN2111,
+    BM_NETDEV_TYPE_MAX
 } bm_netdev_type_t;
 
-typedef struct bm_netdev_t {
-    bm_netdev_type_t devices[2];
-} bm_netdev_t;
+typedef struct bm_netdev_config_s {
+    bm_netdev_type_t type;
+    // Additional config can be added here later
+} bm_netdev_config_t;
 
-extern bm_netdev_t bm_net_devices;
+/* Define for actual netdev instance count here, as some of the later code currently iterates devices
+   using BM_NETDEV_MAX_DEVICES (which specifies the number of enum entries, not the actual number of devices).
+   If you added a new enum entry, but didn't change the instance array, the current code would crash. */
+#define BM_NETDEV_COUNT (2)
+
+extern bm_netdev_config_t bm_netdev_config[BM_NETDEV_COUNT];
 
 #ifdef __cplusplus
 }

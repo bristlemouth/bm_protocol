@@ -44,9 +44,9 @@ static queue_entry_t *adin2111_main_queue_head(queue_t *pQueue);
 static void adin2111_main_queue_add(queue_t *pQueue, adin2111_Port_e port, adi_eth_BufDesc_t *pBufDesc, adi_eth_Callback_t cbFunc);
 static void adin2111_main_queue_remove(queue_t *pQueue);
 
-static void adin2111_rx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg);
-static void adin2111_tx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg);
-static void adin2111_link_change_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg);
+static void adin2111_rx_cb(void *pCBParam, uint32_t Event, void *pArg);
+static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg);
+static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg);
 
 static void adin2111_service_thread(void *parameters);
 
@@ -213,35 +213,32 @@ static void adin2111_main_queue_remove(queue_t *pQueue)
    ====================================================================================================
  */
 
-static void adin2111_rx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg)
+static void adin2111_rx_cb(void *pCBParam, uint32_t Event, void *pArg)
 {
     (void) Event;
-    (void) pCBParam;
 
     adi_eth_BufDesc_t *pBufDesc;
     rx_info_t rx_info;
 
     pBufDesc = (adi_eth_BufDesc_t *)pArg;
     rx_info.port = pBufDesc->port;
-    rx_info.dev = (adi_mac_Device_t *)hDevice;
+    rx_info.dev = (adin2111_DeviceHandle_t) pCBParam;
 
     xQueueSend(rx_port_queue, ( void * ) &rx_info, 0);
 }
 
-static void adin2111_tx_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg)
+static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg)
 {
     (void) Event;
     (void) pCBParam;
     (void) pArg;
-    (void) hDevice;
 
     // adi_eth_BufDesc_t *pBufDesc;
     // pBufDesc = (adi_eth_BufDesc_t *)pArg;
 }
 
-static void adin2111_link_change_cb(void *hDevice, void *pCBParam, uint32_t Event, void *pArg)
+static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg)
 {
-    (void) hDevice;
     (void) Event;
     (void) pCBParam;
 
@@ -330,7 +327,7 @@ static void adin2111_service_thread(void *parameters) {
                 }
 
                 rx_port_mask = (1 << rx_info.port);
-                retv =  bm_l2_rx((void *) rx_info.dev, pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize, rx_port_mask);
+                retv =  bm_l2_rx(rx_info.dev, pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize, rx_port_mask);
                 if (retv != ERR_OK) {
                     printf("Unable to pass to the L2 layer");
                 }
@@ -348,81 +345,81 @@ out:
     }
 }
 
-adin2111_DeviceHandle_t adin2111_hw_init(void) {
-    adi_eth_Result_e result;
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice) {
+    adi_eth_Result_e result = ADI_ETH_SUCCESS;
     //adi_mac_AddressRule_t addrRule;
     BaseType_t rval;
-    adin2111_DeviceStruct_t dev;
-    adin2111_DeviceHandle_t hDevice = &dev;
 
-    /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts 
-       FIXME: Provide a SPI interface? */
-    if (adi_bsp_init()) {
-        configASSERT(0);
-    }
+    do {
+        /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts 
+        TODO: Provide a SPI interface? */
+        if (adi_bsp_init()) {
+            result = ADI_ETH_HW_ERROR;
+            break;
+        }
 
-    /* ADIN2111 Init process */
-    result = adin2111_Init(hDevice, &drvConfig);
-    if (result != ADI_ETH_SUCCESS) {
-        configASSERT(0);
-    }
+        /* ADIN2111 Init process */
+        result = adin2111_Init(hDevice, &drvConfig);
+        if (result != ADI_ETH_SUCCESS) {
+            break;
+        }
 
-    // addrRule.VALUE16 = 0x0000;
-    // addrRule.APPLY2PORT1 = 1;
-    // addrRule.APPLY2PORT2 = 1;
-    // addrRule.TO_HOST = 1;
+        // addrRule.VALUE16 = 0x0000;
+        // addrRule.APPLY2PORT1 = 1;
+        // addrRule.APPLY2PORT2 = 1;
+        // addrRule.TO_HOST = 1;
 
-    // result = adin2111_AddAddressFilter(hDevice, netif->hwaddr, NULL, addrRule);
-    // if (result != ADI_ETH_SUCCESS) {
-    //     configASSERT(0);
-    // }
+        // result = adin2111_AddAddressFilter(hDevice, netif->hwaddr, NULL, addrRule);
+        // if (result != ADI_ETH_SUCCESS) {
+        //     configASSERT(0);
+        // }
 
-    /* Register Callback for link change */
-    result = adin2111_RegisterCallback(hDevice, adin2111_link_change_cb,
-                       ADI_MAC_EVT_LINK_CHANGE);
-    if (result != ADI_ETH_SUCCESS) {
-        configASSERT(0);
-    }
+        /* Register Callback for link change */
+        result = adin2111_RegisterCallback(hDevice, adin2111_link_change_cb,
+                        ADI_MAC_EVT_LINK_CHANGE);
+        if (result != ADI_ETH_SUCCESS) {
+            break;
+        }
 
-    /* Prepare Rx buffers */
-    adin2111_main_queue_init(hDevice, &txQueue, txBufDesc, txQueueBuf);
-    adin2111_main_queue_init(hDevice, &rxQueue, rxBufDesc, rxQueueBuf);
-    for (uint32_t i = 0; i < (QUEUE_NUM_ENTRIES/2); i++) {
+        /* Prepare Rx buffers */
+        adin2111_main_queue_init(hDevice, &txQueue, txBufDesc, txQueueBuf);
+        adin2111_main_queue_init(hDevice, &rxQueue, rxBufDesc, rxQueueBuf);
+        for (uint32_t i = 0; i < (QUEUE_NUM_ENTRIES/2); i++) {
 
-        /* Set appropriate RX Callback */
-        rxQueue.entries[(2*i)].pBufDesc->cbFunc = adin2111_rx_cb;
-        rxQueue.entries[(2*i)+1].pBufDesc->cbFunc = adin2111_rx_cb;
+            /* Set appropriate RX Callback */
+            rxQueue.entries[(2*i)].pBufDesc->cbFunc = adin2111_rx_cb;
+            rxQueue.entries[(2*i)+1].pBufDesc->cbFunc = adin2111_rx_cb;
 
-        /* Submit buffers from both PORT1 and PORT2 to RX Queue */
-        adin2111_main_queue_add(&rxQueue, ADIN2111_PORT_1, rxQueue.entries[2*i].pBufDesc, adin2111_rx_cb);
-        adin2111_main_queue_add(&rxQueue, ADIN2111_PORT_2, rxQueue.entries[(2*i)+1].pBufDesc, adin2111_rx_cb);
+            /* Submit buffers from both PORT1 and PORT2 to RX Queue */
+            adin2111_main_queue_add(&rxQueue, ADIN2111_PORT_1, rxQueue.entries[2*i].pBufDesc, adin2111_rx_cb);
+            adin2111_main_queue_add(&rxQueue, ADIN2111_PORT_2, rxQueue.entries[(2*i)+1].pBufDesc, adin2111_rx_cb);
 
-        /* Submit the RX buffer ahead of time */
-        adin2111_SubmitRxBuffer(hDevice, rxQueue.entries[2*i].pBufDesc);
-        adin2111_SubmitRxBuffer(hDevice, rxQueue.entries[(2*i)+1].pBufDesc);
-    }
+            /* Submit the RX buffer ahead of time */
+            adin2111_SubmitRxBuffer(hDevice, rxQueue.entries[2*i].pBufDesc);
+            adin2111_SubmitRxBuffer(hDevice, rxQueue.entries[(2*i)+1].pBufDesc);
+        }
 
-    /* Confirm device configuration */
-    result = adin2111_SyncConfig(hDevice);
-    if (result != ADI_ETH_SUCCESS) {
-        configASSERT(0);
-    }
-
-    rval = xTaskCreate(adin2111_service_thread,
+        /* Confirm device configuration */
+        result = adin2111_SyncConfig(hDevice);
+        if (result != ADI_ETH_SUCCESS) {
+            break;
+        }
+        rval = xTaskCreate(adin2111_service_thread,
                        "ADIN2111 Service Thread",
                        8192,
                        NULL,
                        15,
                        &serviceTask);
-    configASSERT(rval == pdTRUE);
+        configASSERT(rval == pdTRUE);
 
-    /* This used to be started by zephyr after networking layer got set up, should we enable the ADIN here? */
-    adin2111_hw_start(&hDevice);
+        /* This used to be started by zephyr after networking layer got set up, should we enable the ADIN here? */
+        adin2111_hw_start(&hDevice);
+    } while (0);
 
-    return hDevice;
+    return result;
 }
 
-err_t adin2111_tx(void* dev_handle, uint8_t* buf, uint16_t buf_len, uint8_t port_mask) {
+err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask) {
     queue_entry_t *pEntry;
     err_t retv = ERR_OK;
     int i;
@@ -432,7 +429,7 @@ err_t adin2111_tx(void* dev_handle, uint8_t* buf, uint16_t buf_len, uint8_t port
             pEntry = adin2111_main_queue_head(&txQueue);
             pEntry->pBufDesc->trxSize = buf_len;
             memcpy(pEntry->pBufDesc->pBuf, buf, pEntry->pBufDesc->trxSize);
-            pEntry->dev = (adin2111_DeviceHandle_t) dev_handle;
+            pEntry->dev = hDevice;
 
             if (port_mask & (0x01 << i)) {
                 adin2111_main_queue_add(&txQueue, (adin2111_Port_e) i, pEntry->pBufDesc, adin2111_tx_cb);

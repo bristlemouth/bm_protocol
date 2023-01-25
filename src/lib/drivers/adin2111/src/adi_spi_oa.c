@@ -292,12 +292,12 @@ adi_eth_Result_e oaStateMachine(adi_mac_Device_t *hDevice)
                                                 /* If there was an FCS error, it will be passed on via the callback argument, but it will be ignored by the callback. */
                                                 if (hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE] != NULL)
                                                 {
-                                                    hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE](hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                                                    hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE](hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
                                                 }
     #endif
                                                 if (hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc)
                                                 {
-                                                    hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                                                    hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
                                                 }
 
                                                 hDevice->oaRxCurBufByteOffset = 0;
@@ -432,12 +432,12 @@ adi_eth_Result_e oaStateMachine(adi_mac_Device_t *hDevice)
                                             /* If there was an FCS error, it will be passed on via the callback argument, but it will be ignored by the callback. */
                                             if (hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE] != NULL)
                                             {
-                                                hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE](hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                                                hDevice->cbFunc[ADI_MAC_EVT_DYN_TBL_UPDATE](hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
                                             }
 #endif
                                             if (hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc)
                                             {
-                                                hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                                                hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
                                             }
 
                                             hDevice->oaRxCurBufByteOffset = 0;
@@ -465,7 +465,7 @@ adi_eth_Result_e oaStateMachine(adi_mac_Device_t *hDevice)
 
                                             if (hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc)
                                             {
-                                                hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice, hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
+                                                hDevice->pRxQueue->pEntries[tail].pBufDesc->cbFunc(hDevice->adinDevice, Event, hDevice->pRxQueue->pEntries[tail].pBufDesc);
                                             }
 
                                             hDevice->oaRxCurBufByteOffset = 0;
@@ -493,7 +493,7 @@ adi_eth_Result_e oaStateMachine(adi_mac_Device_t *hDevice)
                                 hDevice->txQueue.pEntries[tail].pBufDesc->refCount--;
                                 if (hDevice->txQueue.pEntries[tail].pBufDesc->cbFunc && (!hDevice->txQueue.pEntries[tail].pBufDesc->refCount))
                                 {
-                                    hDevice->txQueue.pEntries[tail].pBufDesc->cbFunc(hDevice, hDevice->adinDevice, Event, hDevice->txQueue.pEntries[tail].pBufDesc);
+                                    hDevice->txQueue.pEntries[tail].pBufDesc->cbFunc(hDevice->adinDevice, Event, hDevice->txQueue.pEntries[tail].pBufDesc);
                                 }
                             }
                         }
@@ -840,7 +840,7 @@ adi_eth_Result_e oaSpiIntHandle(adi_mac_Device_t *hDevice)
         if (hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE] != NULL)
         {
             adi_eth_LinkStatus_e    linkStatus = (adi_eth_LinkStatus_e)(hDevice->statusRegisters.status1 & BITM_MAC_STATUS1_P1_LINK_STATUS);
-            hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice, hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&linkStatus);
+            hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&linkStatus);
         }
     }
 #endif
@@ -866,7 +866,7 @@ adi_eth_Result_e oaSpiIntHandle(adi_mac_Device_t *hDevice)
             timestampReady.timestampReadyB = (bool)status0Masked.TTSCAB;
             timestampReady.timestampReadyC = (bool)status0Masked.TTSCAC;
 #endif
-            hDevice->cbFunc[ADI_MAC_EVT_TIMESTAMP_RDY](hDevice, hDevice->cbParam[ADI_MAC_EVT_TIMESTAMP_RDY], ADI_MAC_EVT_TIMESTAMP_RDY, (void *)&timestampReady);
+            hDevice->cbFunc[ADI_MAC_EVT_TIMESTAMP_RDY](hDevice->cbParam[ADI_MAC_EVT_TIMESTAMP_RDY], ADI_MAC_EVT_TIMESTAMP_RDY, (void *)&timestampReady);
         }
     }
 
@@ -875,7 +875,7 @@ adi_eth_Result_e oaSpiIntHandle(adi_mac_Device_t *hDevice)
     {
         if (hDevice->cbFunc[ADI_MAC_EVT_STATUS] != NULL)
         {
-            hDevice->cbFunc[ADI_MAC_EVT_STATUS](hDevice, hDevice->cbParam[ADI_MAC_EVT_STATUS], ADI_MAC_EVT_STATUS, (void *)&hDevice->statusRegisters);
+            hDevice->cbFunc[ADI_MAC_EVT_STATUS](hDevice->cbParam[ADI_MAC_EVT_STATUS], ADI_MAC_EVT_STATUS, (void *)&hDevice->statusRegisters);
         }
 
 #if defined(CONFIG_ETH_ADIN2111)
@@ -884,7 +884,7 @@ adi_eth_Result_e oaSpiIntHandle(adi_mac_Device_t *hDevice)
         {
             if (hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE] != NULL)
             {
-                hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice, hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&hDevice->statusRegisters);
+                hDevice->cbFunc[ADI_MAC_EVT_LINK_CHANGE](hDevice->cbParam[ADI_MAC_EVT_LINK_CHANGE], ADI_MAC_EVT_LINK_CHANGE, (void *)&hDevice->statusRegisters);
             }
         }
 #endif
