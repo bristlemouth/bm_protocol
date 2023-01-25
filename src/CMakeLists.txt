@@ -50,8 +50,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   )
 endif()
 
+set(SCRIPTS_PATH ${CMAKE_SOURCE_DIR}/tools/scripts)
+
 # Path where custom openocd .cfg files and other debug goodies are located
-set(DEBUG_SCRIPTS_PATH ${CMAKE_SOURCE_DIR}/tools/scripts/debug)
+set(DEBUG_SCRIPTS_PATH ${SCRIPTS_PATH}/debug)
 
 #
 # Linker variables below. Modifiy as necessary here or override
@@ -603,3 +605,7 @@ add_custom_command(
            ${CMAKE_CURRENT_BINARY_DIR}/_version.c
            ${CMAKE_CURRENT_BINARY_DIR}/version_string
     COMMAND ${CMAKE_COMMAND} ${GIT_VERSION_ARGS} -P ${CMAKE_SOURCE_DIR}/cmake/git_version.cmake)
+
+# Always run this command on build to make sure conda env is active
+# See link for more info: https://stackoverflow.com/a/32062884
+add_custom_target(conda_check ALL COMMAND bash ${SCRIPTS_PATH}/util/conda_check.sh)
