@@ -26,7 +26,7 @@ uint32_t adi_bsp_register_irq_callback (adi_cb_t const *intCallback, void * hDev
 uint32_t adi_bsp_spi_write_and_read (uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nbBytes, bool useDma);
 uint32_t adi_bsp_spi_register_callback (adi_cb_t const *pfCallback, void *const pCBParam);
 
-void adi_bsp_hw_reset(bool set);
+void adi_bsp_hw_reset();
 void adi_bsp_int_n_set_pending_irq(void);
 uint32_t adi_bsp_init(void);
 

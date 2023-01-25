@@ -51,8 +51,8 @@ void MX_IWDG_Init(void)
   while (LL_IWDG_IsReady(IWDG) != 1)
   {
   }
-  LL_IWDG_ReloadCounter(IWDG);
 
+  LL_IWDG_ReloadCounter(IWDG);
   /* USER CODE BEGIN IWDG_Init 2 */
   /* USER CODE END IWDG_Init 2 */
 

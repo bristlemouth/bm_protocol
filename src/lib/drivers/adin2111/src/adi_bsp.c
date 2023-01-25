@@ -68,17 +68,16 @@ static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *a
     return true; // TODO: What does this bool mean?
 }
 
-void adi_bsp_hw_reset(bool set) {
-    (void) set;
+void adi_bsp_hw_reset() {
 
     IOWrite(&ADIN_RST, 0);
-    vTaskDelay(RESET_DELAY / portTICK_PERIOD_MS);
-    IOWrite(&ADIN_RST, 0);
-    vTaskDelay(AFTER_RESET_DELAY / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(RESET_DELAY));
+    IOWrite(&ADIN_RST, 1);
+    vTaskDelay(pdMS_TO_TICKS(AFTER_RESET_DELAY));
 }
 
 void adi_bsp_int_n_set_pending_irq(void) {
-    xTaskNotifyGive(gpioTask); 
+    xTaskNotifyGive(gpioTask);
 }
 
 /* SPI transceive wrapper */
@@ -97,30 +96,32 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
 }
 
 /* Setup the Interrupt on the DATA_RDY pin and create two threads to monitor SPI completion and
-   Falling edge on DATA_RDY pin */ 
+   Falling edge on DATA_RDY pin */
 uint32_t adi_bsp_init(void) {
+
+    adi_bsp_hw_reset();
 
     BaseType_t rval;
     rval = xTaskCreate(adin_bsp_spi_thread,
-                       "SPI Thread",
-                       8192,
+                       "ADIN_SPI",
+                       1024,
                        NULL,
                        10,
                        &spiTask);
     configASSERT(rval == pdTRUE);
 
     rval = xTaskCreate(adin_bsp_gpio_thread,
-                       "GPIO Thread",
-                       8192,
+                       "ADIN_IO",
+                       1024,
                        NULL,
                        10,
                        &gpioTask);
     configASSERT(rval == pdTRUE);
 
-    return 0;   
+    return 0;
 }
 
-/* ADIN driver will call this (through the adi_hal layer)  to set up a callback for SPI TX 
+/* ADIN driver will call this (through the adi_hal layer)  to set up a callback for SPI TX
    completion */
 uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback, void *const pCBParam) {
     /* TODO: When we switch to DMA, we need to register the callback */
@@ -130,7 +131,7 @@ uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback, void *const p
     return 0;
 }
 
-/* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY 
+/* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY
    interrupts */
 uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback, void * hDevice) {
     IORegisterCallback(&ADIN_RDY, adin_bsp_gpio_callback, NULL);
