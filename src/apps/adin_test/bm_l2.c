@@ -17,27 +17,35 @@ struct bm_netdev_ctx_t {
     bm_netdev_type_t type;
 };
 
-typedef struct l2_queue_element_t {
+typedef struct l2_queue_element_s {
     void* device_handle;
     uint8_t port_mask;
     uint16_t payload_len;
     uint8_t payload[ETHERNET_MTU];
 } __attribute__((packed)) l2_queue_element_t;
 
-static struct netif* net_if;
-static struct bm_netdev_ctx_t devices[BM_NETDEV_COUNT];
+typedef struct bm_l2_ctx_s{
+    struct netif* net_if;
+    struct bm_netdev_ctx_t devices[BM_NETDEV_COUNT];
 
-/* TODO: We are only supporting the ADIN2111 net device. Currently assuming we have up to BM_NETDEV_TYPE_MAX ADIN2111s.
-   We want to eventually support new net devices and pre-allocate here before giving to init function */
-static adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX];
-static uint8_t adin_device_counter = 0;
+    /* TODO: We are only supporting the ADIN2111 net device. Currently assuming we have up to BM_NETDEV_TYPE_MAX ADIN2111s.
+       We want to eventually support new net devices and pre-allocate here before giving to init function */
+    adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX];
 
-static uint8_t available_ports_mask = 0;
-static uint8_t available_port_mask_idx = 0;
+    uint8_t adin_device_counter;
+    uint8_t available_ports_mask;
+    uint8_t available_port_mask_idx;
+    SemaphoreHandle_t tx_sem;
+    QueueHandle_t rx_queue;
+    QueueHandle_t tx_queue;
+    l2_queue_element_t tx_data;
+    l2_queue_element_t rx_data;
+} bm_l2_ctx_t;
+
 static TaskHandle_t rx_thread = NULL;
 static TaskHandle_t tx_thread = NULL;
-static QueueHandle_t  rx_queue, tx_queue;
-static SemaphoreHandle_t tx_sem;
+static bm_l2_ctx_t bm_l2_ctx;
+
 
 /* TODO: ADIN2111-specifc, let's move to ADIN driver.
    Rx Callback can only get the MAC Handle, not the Device handle itself */
@@ -45,7 +53,7 @@ static int bm_l2_get_device_index(void* device_handle) {
     int idx;
 
     for (idx=0; idx<BM_NETDEV_TYPE_MAX; idx++) {
-        if (device_handle == ((adin2111_DeviceHandle_t) devices[idx].device_handle)){
+        if (device_handle == ((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle)){
             return idx;
         }
     }
@@ -63,7 +71,7 @@ static void bm_l2_rx_thread(void *parameters) {
     bool is_global_multicast = true;
 
     while (1) {
-        if(xQueueReceive(rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
+        if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
 
             struct pbuf* p = pbuf_alloc(PBUF_RAW, rx_data.payload_len, PBUF_RAM);
             if (p == NULL) {
@@ -78,9 +86,9 @@ static void bm_l2_rx_thread(void *parameters) {
             if (is_global_multicast)
             {
                 device_idx = bm_l2_get_device_index(rx_data.device_handle);
-                switch (devices[device_idx].type) {
+                switch (bm_l2_ctx.devices[device_idx].type) {
                     case BM_NETDEV_TYPE_ADIN2111:
-                        rx_port_mask = ((rx_data.port_mask & ADIN2111_PORT_MASK) << devices[device_idx].start_port_idx);
+                        rx_port_mask = ((rx_data.port_mask & ADIN2111_PORT_MASK) << bm_l2_ctx.devices[device_idx].start_port_idx);
                         break;
                     case BM_NETDEV_TYPE_NONE:
                     default:
@@ -89,7 +97,7 @@ static void bm_l2_rx_thread(void *parameters) {
                         rx_port_mask = 0;
                         break;
                 }
-                new_port_mask = available_ports_mask & ~(rx_port_mask);
+                new_port_mask = bm_l2_ctx.available_ports_mask & ~(rx_port_mask);
                 bm_l2_tx(p, new_port_mask);
             }
 
@@ -98,7 +106,7 @@ static void bm_l2_rx_thread(void *parameters) {
                neighbors and user devices. */
 
             /* Submit packet to lwip. User RX Callback is responsible for freeing the packet*/
-            if (net_if->input(p, net_if) != ERR_OK) {
+            if (bm_l2_ctx.net_if->input(p, bm_l2_ctx.net_if) != ERR_OK) {
                 // LWIP_DEBUGF(NETIF_DEBUG, ("IP input error\r\n"));
                 pbuf_free(p);
                 p = NULL;
@@ -117,21 +125,24 @@ static void bm_l2_tx_thread(void *parameters) {
     err_t retv;
 
     while (1) {
-        if(xQueueReceive(tx_queue, &tx_data, portMAX_DELAY) == pdPASS) {
+        if(xQueueReceive(bm_l2_ctx.tx_queue, &tx_data, portMAX_DELAY) == pdPASS) {
             mask_idx = 0;
             for (idx=0; idx<BM_NETDEV_TYPE_MAX; idx++) {
-                switch (devices[idx].type) {
+                switch (bm_l2_ctx.devices[idx].type) {
                     case BM_NETDEV_TYPE_ADIN2111:
-                        retv = adin2111_tx((adin2111_DeviceHandle_t) devices[idx].device_handle, tx_data.payload, tx_data.payload_len,
+                        retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, tx_data.payload, tx_data.payload_len,
                                            (tx_data.port_mask >> mask_idx) & ADIN2111_PORT_MASK);
-                        mask_idx += devices[idx].num_ports;
+                        mask_idx += bm_l2_ctx.devices[idx].num_ports;
                         if (retv != ERR_OK) {
                             //printf("Failed to submit TX buffer to ADIN");
                         }
                         break;
                     case BM_NETDEV_TYPE_NONE:
+                        /* No device */
+                        break;
                     default:
-                        /* No device or not supported */
+                        /* Unsupported device */
+                        configASSERT(0);
                         break;
                 }
             }
@@ -142,17 +153,16 @@ static void bm_l2_tx_thread(void *parameters) {
 /* L2 SEND */
 err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask) {
     err_t retv = ERR_OK;
-    static l2_queue_element_t tx_data;
 
-    if(xSemaphoreTake(tx_sem, portMAX_DELAY) == pdTRUE) {
-        tx_data.port_mask = port_mask;
-        tx_data.payload_len = p->len;
-        memcpy(tx_data.payload, p->payload, p->len);
+    if(xSemaphoreTake(bm_l2_ctx.tx_sem, portMAX_DELAY) == pdTRUE) {
+        bm_l2_ctx.tx_data.port_mask = port_mask;
+        bm_l2_ctx.tx_data.payload_len = p->len;
+        memcpy(bm_l2_ctx.tx_data.payload, p->payload, p->len);
 
-        if(xQueueSend(tx_queue, (void *) &tx_data, 0) != pdTRUE) {
+        if(xQueueSend(bm_l2_ctx.tx_queue, (void *) &bm_l2_ctx.tx_data, 0) != pdTRUE) {
             retv = ERR_MEM;
         }
-        xSemaphoreGive(tx_sem);
+        xSemaphoreGive(bm_l2_ctx.tx_sem);
     } else {
         printf("Unable to take BM L2 TX mutex.\n");
         retv = ERR_TIMEOUT;
@@ -164,14 +174,13 @@ err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask) {
 /* L2 RECV */
 err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask) {
     err_t retv = ERR_OK;
-   static l2_queue_element_t rx_data;
 
-    rx_data.device_handle = device_handle;
-    rx_data.port_mask = port_mask;
-    rx_data.payload_len = payload_len;
-    memcpy(rx_data.payload, payload, payload_len);
+    bm_l2_ctx.rx_data.device_handle = device_handle;
+    bm_l2_ctx.rx_data.port_mask = port_mask;
+    bm_l2_ctx.rx_data.payload_len = payload_len;
+    memcpy(bm_l2_ctx.rx_data.payload, payload, payload_len);
 
-    if(xQueueSend(rx_queue, (void *) &rx_data, 0) != pdTRUE) {
+    if(xQueueSend(bm_l2_ctx.rx_queue, (void *) &bm_l2_ctx.rx_data, 0) != pdTRUE) {
         retv = ERR_MEM;
     }
     return retv;
@@ -182,7 +191,7 @@ err_t bm_l2_link_output(struct netif *netif, struct pbuf *p) {
     (void) netif;
 
     /* Send on all available ports (Multicast) */
-    return bm_l2_tx(p, available_ports_mask);
+    return bm_l2_tx(p, bm_l2_ctx.available_ports_mask);
 }
 
 /* L2 Initialization */
@@ -190,16 +199,21 @@ err_t bm_l2_init(struct netif *netif) {
     int idx;
     BaseType_t rval;
 
+    /* Reset context variables */
+    bm_l2_ctx.adin_device_counter = 0;
+    bm_l2_ctx.available_ports_mask = 0;
+    bm_l2_ctx.available_port_mask_idx = 0;
+
     for (idx=0; idx < BM_NETDEV_COUNT; idx++) {
-        devices[idx].type = bm_netdev_config[idx].type;
-        switch (devices[idx].type) {
+        bm_l2_ctx.devices[idx].type = bm_netdev_config[idx].type;
+        switch (bm_l2_ctx.devices[idx].type) {
             case BM_NETDEV_TYPE_ADIN2111:
-                if (adin2111_hw_init(&adin_devices[adin_device_counter]) == ADI_ETH_SUCCESS) {
-                    devices[idx].device_handle = &adin_devices[adin_device_counter++];
-                    devices[idx].num_ports = ADIN2111_PORT_NUM;
-                    devices[idx].start_port_idx = available_port_mask_idx;
-                    available_ports_mask |= (ADIN2111_PORT_MASK << available_port_mask_idx);
-                    available_port_mask_idx += ADIN2111_PORT_NUM;
+                if (adin2111_hw_init(&bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter]) == ADI_ETH_SUCCESS) {
+                    bm_l2_ctx.devices[idx].device_handle = &bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter++];
+                    bm_l2_ctx.devices[idx].num_ports = ADIN2111_PORT_NUM;
+                    bm_l2_ctx.devices[idx].start_port_idx = bm_l2_ctx.available_port_mask_idx;
+                    bm_l2_ctx.available_ports_mask |= (ADIN2111_PORT_MASK << bm_l2_ctx.available_port_mask_idx);
+                    bm_l2_ctx.available_port_mask_idx += ADIN2111_PORT_NUM;
                 } else {
                     printf("Failed to init ADIN2111");
                 }
@@ -207,8 +221,8 @@ err_t bm_l2_init(struct netif *netif) {
             case BM_NETDEV_TYPE_NONE:
             default:
                 /* No device or not supported */
-                devices[idx].device_handle = NULL;
-                devices[idx].num_ports = 0;
+                bm_l2_ctx.devices[idx].device_handle = NULL;
+                bm_l2_ctx.devices[idx].num_ports = 0;
                 break;
         }
     }
@@ -221,21 +235,21 @@ err_t bm_l2_init(struct netif *netif) {
     netif->linkoutput = bm_l2_link_output;
 
     /* Store netif in local pointer */
-    net_if = netif;
+    bm_l2_ctx.net_if = netif;
 
     netif->mtu = ETHERNET_MTU;
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
 
     /* Create the queues and semaphores that will be contained in the set. */
-    tx_queue = xQueueCreate( TX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
-    rx_queue = xQueueCreate( RX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
+    bm_l2_ctx.tx_queue = xQueueCreate( TX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
+    bm_l2_ctx.rx_queue = xQueueCreate( RX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
 
-    tx_sem = xSemaphoreCreateMutex();
-    configASSERT(tx_sem != NULL);
+    bm_l2_ctx.tx_sem = xSemaphoreCreateMutex();
+    configASSERT(bm_l2_ctx.tx_sem != NULL);
 
     rval = xTaskCreate(bm_l2_tx_thread,
                        "L2 TX Thread",
-                       8192,
+                       2048,
                        NULL,
                        15,
                        &tx_thread);
@@ -243,7 +257,7 @@ err_t bm_l2_init(struct netif *netif) {
 
     rval = xTaskCreate(bm_l2_rx_thread,
                        "L2 RX Thread",
-                       8192, 
+                       2048, 
                        NULL,
                        15,
                        &rx_thread);
