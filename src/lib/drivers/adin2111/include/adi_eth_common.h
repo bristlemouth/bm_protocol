@@ -70,7 +70,6 @@ typedef void (* adi_eth_Callback_t) (
     void      *pCBParam,                /*!< Client-supplied callback parameter. */
     uint32_t   Event,                   /*!< Event ID specific to the Driver/Service. */
     void      *pArg                     /*!< Pointer to the event-specific argument. */
-
     );                   
 #ifdef __cplusplus
 }

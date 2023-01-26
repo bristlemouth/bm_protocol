@@ -10,11 +10,8 @@
 extern "C" {
 #endif
 
-#define ADIN_MAC_ADDR_0 (0x00)
-#define ADIN_MAC_ADDR_1 (0x0A)
-#define ADIN_MAC_ADDR_2 (0x83)
-
-#define QUEUE_NUM_ENTRIES (8)
+#define ADIN2111_PORT_MASK  0x03
+#define QUEUE_NUM_ENTRIES   8
 
 /* Extra 4 bytes for FCS and 2 bytes for the frame header */
 #define MAX_FRAME_BUF_SIZE  (MAX_FRAME_SIZE + 4 + 2)
@@ -22,6 +19,7 @@ extern "C" {
 typedef struct {
     adin2111_Port_e port;
     adi_eth_BufDesc_t *pBufDesc;
+    adin2111_DeviceHandle_t dev;
     bool sent;
 } queue_entry_t;
 
@@ -32,7 +30,13 @@ typedef struct {
     queue_entry_t entries[QUEUE_NUM_ENTRIES];
 } queue_t;
 
-err_t eth_adin2111_init(struct netif *netif);
+typedef struct rx_port_info_t {
+    adin2111_Port_e port;
+    adin2111_DeviceHandle_t dev;
+} rx_info_t;
+
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice);
+err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask);
 int adin2111_hw_start(adin2111_DeviceHandle_t* dev);
 int adin2111_hw_stop(adin2111_DeviceHandle_t* dev);
 
