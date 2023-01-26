@@ -38,6 +38,7 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/printf/printf.c
     ${SRC_DIR}/lib/common/watchdog.c
+    ${SRC_DIR}/lib/bcl/src/bristlemouth.c
     )
 
 set(LIB_INCLUDES
@@ -49,6 +50,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/drivers/protected
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/memfault
+    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
