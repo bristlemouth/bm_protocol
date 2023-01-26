@@ -20,7 +20,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/mcuboot/mcuboot_cli.c
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
@@ -47,6 +46,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     )
 
+if (USE_BOOTLOADER STREQUAL 1)
 #
 # MCUBoot files/includes
 #
@@ -74,6 +74,7 @@ set(MCUBOOT_FILES
 
     ${SRC_DIR}/lib/drivers/stm32_flash_u5.c
 
+    ${SRC_DIR}/lib/mcuboot/mcuboot_cli.c
     ${SRC_DIR}/lib/mcuboot/port_flash.c
     ${SRC_DIR}/lib/mcuboot/port_misc.c
     )
@@ -117,7 +118,7 @@ set_source_files_properties(
     PROPERTIES
     COMPILE_FLAGS "-Wno-unused-parameter -Wno-format -Wno-unused-but-set-variable"
     )
-
+endif() # USE_BOOTLOADER = 1
 
 set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS

@@ -27,7 +27,10 @@
 #include "serial_console.h"
 #include "memfault_platform_core.h"
 #include "watchdog.h"
+
+#ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
+#endif
 
 #include "lwip/init.h"
 
@@ -136,7 +139,10 @@ static void defaultTask( void *parameters ) {
 
   debugSysInit();
   debugMemfaultInit(&usart1);
+
+#ifdef USE_BOOTLOADER
   mcubootCliInit();
+#endif
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
