@@ -73,11 +73,19 @@ typedef struct SerialHandle {
 // Dropped tx characters
 #define SERIAL_FLAG_TXDROP (1 << 1)
 
+// TX In Progress
+#define SERIAL_TX_IN_PROGRESS (1 << 2)
+
 typedef struct {
   uint8_t *buff;
   uint16_t len;
   void *destination;
 } SerialMessage_t;
+
+// Serial handle->device's will be pointing to high memory values
+// USB CDC reuses the device field for the CDC device index
+#define HANDLE_IS_USB(handle) (((uint32_t)handle->device) < 0x0F)
+#define HANDLE_CDC_ITF(handle) ((uint32_t)handle->device & 0x0F)
 
 BaseType_t serialGenericRxBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
 size_t serialGenericGetTxBytes(SerialHandle_t *handle, uint8_t *buffer, size_t len);

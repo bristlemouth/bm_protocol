@@ -13,6 +13,8 @@ extern "C" {
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
+#define VBUS_SENSE_CH ADC_CHANNEL_3
+
 void bspInit();
 
 // Pin definitions
@@ -28,6 +30,9 @@ extern IOPinHandle_t USER_BUTTON;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
+
+uint32_t adcGetSampleMv(uint32_t channel);
+bool usb_is_connected();
 
 #ifdef __cplusplus
 }

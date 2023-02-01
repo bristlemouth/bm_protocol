@@ -9,10 +9,9 @@
 
 // #include "log.h"
 #include "serial.h"
-#include "serial_console.h"
 #include "stm32_io.h"
 #include "task_priorities.h"
-// #include "tusb.h"
+#include "tusb.h"
 #include "util.h"
 
 // Log_t *SerialLog;
@@ -166,35 +165,45 @@ void serialGenericRxTask( void *parameters ) {
 void serialEnable(SerialHandle_t *handle) {
   configASSERT(handle != NULL);
 
-  // Check for and clear any overrun flags
-  if(LL_USART_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
-    LL_USART_ClearFlag_ORE((USART_TypeDef *)handle->device);
-  }
+  // Don't do uart specific stuff for USB :D
+  if(!HANDLE_IS_USB(handle)) {
+    // Check for and clear any overrun flags
+    if(LL_USART_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
+      LL_USART_ClearFlag_ORE((USART_TypeDef *)handle->device);
+    }
 
-  if(handle->txPin) {
-    STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
-    LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
-  }
+    if(handle->txPin) {
+      STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
+      LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
+    }
 
-  // Clear any data that might be in the rx buffer
-  (void)LL_USART_ReceiveData8((USART_TypeDef *)handle->device);
+    // Clear any data that might be in the rx buffer
+    (void)LL_USART_ReceiveData8((USART_TypeDef *)handle->device);
+
+
+    // Enable Uart RX interrupt
+    LL_USART_EnableIT_RXNE((USART_TypeDef *)handle->device);
+  }
 
   handle->enabled = true;
-
-  // Enable Uart RX interrupt
-  LL_USART_EnableIT_RXNE((USART_TypeDef *)handle->device);
 }
 
 void serialDisable(SerialHandle_t *handle) {
-  // Disable Uart RX interrupt
-  LL_USART_DisableIT_RXNE((USART_TypeDef *)handle->device);
+  configASSERT(handle);
+
+  // Don't do uart specific stuff for USB :D
+  if(!HANDLE_IS_USB(handle)) {
+    // Disable Uart RX interrupt
+    LL_USART_DisableIT_RXNE((USART_TypeDef *)handle->device);
+
+
+    if(handle->txPin) {
+      STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
+      LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_INPUT);
+    }
+  }
 
   handle->enabled = false;
-
-  if(handle->txPin) {
-    STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
-    LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_INPUT);
-  }
 }
 
 // Generic interrupt handler for all USART/UART/LPUART peripherals
@@ -287,11 +296,11 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
 
     // Right now, the USB handle is the only one without a device pointer
     // TODO - use some sort of flags instead
-    if(handle->device == NULL){
-      // Start transmitting over USB
-      // if(!serialConsoleUSBTxInProgress()) {
-      //   tud_cdc_tx_complete_cb(0);
-      // }
+    if(HANDLE_IS_USB(handle)){
+      if(!(handle->flags & SERIAL_TX_IN_PROGRESS)) {
+        // Start transmitting over USB
+        tud_cdc_tx_complete_cb(HANDLE_CDC_ITF(handle));
+      }
     } else {
       // Enable transmit interrupt if not already transmitting
       if(!LL_USART_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {

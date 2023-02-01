@@ -3,6 +3,9 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 # Include FreeRTOS
 add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 
+# Include TinyUSB
+add_subdirectory(${SRC_DIR}/lib/usb usb_build)
+
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
@@ -25,6 +28,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
+    ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
@@ -136,11 +140,12 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
-    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+    # ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}
     ${MCUBOOT_FILES}
+    ${TINYUSB_FILES}
     PARENT_SCOPE)
 
 set(APP_INCLUDES
@@ -149,15 +154,16 @@ set(APP_INCLUDES
     ${FREERTOS_INCLUDES}
     ${MEMFAULT_INCLUDES}
     ${MCUBOOT_INCLUDES}
-    ${LWIP_INCLUDE_DIRS}
+    # ${LWIP_INCLUDE_DIRS}
+    ${TINYUSB_INCLUDES}
     PARENT_SCOPE)
 
 set(APP_LIBS
-    lwipcore
+    # lwipcore
     PARENT_SCOPE)
 
 set(APP_DEFINES
-
+    CFG_TUSB_MCU=OPT_MCU_STM32U5
     )
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
