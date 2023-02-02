@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include "FreeRTOS.h"
 #include "device_info.h"
 // #include "stm32l4xx_hal.h"
 #include "stm32u5xx_hal.h"
+#include "fnv.h"
 
 extern uint8_t __start_gnu_build_id_start[];
 const ElfNoteSection_t *g_note_build_id = (ElfNoteSection_t *)__start_gnu_build_id_start;
@@ -145,4 +147,25 @@ size_t getBuildId(const uint8_t **buildId) {
   }
 
   return g_note_build_id->descsz;
+}
+
+/*!
+  Generate 48-bit MAC address from device's UUID.
+  First 16 bits are common to all BM devices (0's for now)
+  Last 32 bits are hashed from the device's UUID
+
+  \param[out] *buff - 6 byte buffer to store MAC address
+  \param[in] size of buffer as a safety check (must be >=)
+*/
+void getMacAddr(uint8_t *buff, size_t len) {
+  // MAC address is exactly 48 bits/6 bytes
+  configASSERT(len >= 6);
+
+  uint32_t hash = fnv_32a_buf((void *)UID, sizeof(uint32_t) * 3, 0);
+  buff[0] = 0x00; // TODO -
+  buff[1] = 0x00;
+  buff[2] = (hash >> 24) & 0xFF;
+  buff[3] = (hash >> 16) & 0xFF;
+  buff[4] = (hash >> 8) & 0xFF;
+  buff[5] = (hash >> 0) & 0xFF;
 }

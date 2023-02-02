@@ -7,24 +7,23 @@ add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
+    ${SRC_DIR}/lib/bcl/src/bristlemouth.c
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
     ${SRC_DIR}/lib/common/enumToStr.c
     ${SRC_DIR}/lib/common/freertos_support.c
+    ${SRC_DIR}/lib/common/gpioISR.c
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/reset_reason.c
-    ${SRC_DIR}/lib/common/gpioISR.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/util.c
+    ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
-    ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
-    ${SRC_DIR}/lib/drivers/protected/protected_spi.c
-    ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -32,28 +31,31 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
+    ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
+    ${SRC_DIR}/lib/drivers/protected/protected_spi.c
+    ${SRC_DIR}/lib/drivers/stm32_io.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/third_party/mbedtls_base64/base64.c
+    ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
+    ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/bcl/src/bristlemouth.c
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/common
+    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/lib/cli
+    ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
-    ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/memfault
-    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/third_party/
-    ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
+    ${SRC_DIR}/third_party/printf/
     )
 
 #

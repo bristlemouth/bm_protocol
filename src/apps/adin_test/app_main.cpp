@@ -4,28 +4,30 @@
 
 // Peripheral
 #include "adc.h"
-#include "rtc.h"
+#include "gpio.h"
 #include "icache.h"
+#include "iwdg.h"
+#include "rtc.h"
 #include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
-#include "gpio.h"
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "serial.h"
-#include "serial_console.h"
+#include "bm_l2.h"
+#include "bristlemouth.h"
+#include "bsp.h"
 #include "cli.h"
 #include "debug_memfault.h"
 #include "debug_sys.h"
 #include "gpioISR.h"
-#include "bsp.h"
-#include "bm_l2.h"
-#include "printf.h"
 #include "memfault_platform_core.h"
-#include "bristlemouth.h"
+#include "printf.h"
+#include "serial.h"
+#include "serial_console.h"
+#include "watchdog.h"
 
 #include <stdio.h>
 
@@ -69,11 +71,9 @@ extern "C" int main(void) {
     MX_USB_OTG_FS_PCD_Init();
     MX_ICACHE_Init();
     MX_RTC_Init();
+    MX_IWDG_Init();
 
     // usbMspInit();
-
-    // Enable the watchdog timer
-    // MX_IWDG_Init();
 
     // rtcInit();
 
@@ -116,6 +116,7 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 static void defaultTask( void *parameters ) {
     (void)parameters;
 
+    startIWDGTask();
     startSerial();
     startSerialConsole(&usart1);
     startCLI();

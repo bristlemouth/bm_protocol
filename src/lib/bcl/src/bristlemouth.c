@@ -4,6 +4,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "device_info.h"
 
 #include "lwip/init.h"
 #include "lwip/tcpip.h"
@@ -79,13 +80,7 @@ void bcl_init(void)
     /* Looks like we don't call lwip_init if we are using a RTOS */
     tcpip_init(NULL, NULL);
 
-    /* FIXME: Use Device ID for MAC addr */
-    netif.hwaddr[0] =	0x00;
-    netif.hwaddr[1] =	0xE0;
-    netif.hwaddr[2] =	0x22;
-    netif.hwaddr[3] =	0xFE;
-    netif.hwaddr[4] =	0xDA;
-    netif.hwaddr[5] =	0xC9;
+    getMacAddr(netif.hwaddr, sizeof(netif.hwaddr));
     netif.hwaddr_len = sizeof(netif.hwaddr);
 
     /* FIXME: Let's not hardcode this if possible */

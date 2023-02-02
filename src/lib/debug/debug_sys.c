@@ -155,6 +155,14 @@ static BaseType_t infoCommand( char *writeBuffer,
 #endif
   printf("UID: %s\n", getUIDStr());
 
+  uint8_t mac[6];
+  getMacAddr(mac, sizeof(mac));
+  printf("MAC: ");
+  for(uint8_t byte=0; byte < sizeof(mac)-1; byte++) {
+    printf("%02x:", mac[byte]);
+  }
+  printf("%02x\n", mac[sizeof(mac)-1]);
+
   printf("FW Version: %s\n", getFWVersionStr());
 
   printf("GIT SHA: %08lX%s\n", getGitSHA(), dirtyStr);
