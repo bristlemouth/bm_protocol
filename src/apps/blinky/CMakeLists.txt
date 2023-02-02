@@ -31,6 +31,7 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/third_party/fnv/hash_32a.c
     )
 
 set(LIB_INCLUDES
@@ -42,8 +43,9 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/mcuboot
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/third_party/
-    ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
+    ${SRC_DIR}/third_party/printf/
     )
 
 if (USE_BOOTLOADER STREQUAL 1)
