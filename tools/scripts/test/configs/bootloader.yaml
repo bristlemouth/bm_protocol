@@ -1,0 +1,17 @@
+# Basic bootloader build (no encryption/signing)
+- name: bootloader
+  type: build_fw
+  args:
+    app: bootloader
+    bsp: bootloader
+    build_type: Release
+
+# TODO
+# # Bootloader with both encryption _and_ signing
+# - name: bootloader (ed25519/x25519)
+#   type: build_fw
+#   args:
+#     app: bootloader
+#     bsp: bootloader
+#     build_type: Release
+#     defines: -DSIGN_IMAGES=1 -DENCRYPT_IMAGES=1

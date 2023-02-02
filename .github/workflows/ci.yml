@@ -1,0 +1,46 @@
+#
+# Workflow to build all relevant firmware configurations to make sure nothing has broken
+#
+name: CI
+
+# Controls when the workflow will run
+on:
+  pull_request:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on:
+      - self-hosted
+      # Uncomment to run on github's infrastructure (and comment out self-hosted above!)
+      # - ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: bristlemouth
+          environment-file: environment_ci.yml
+          auto-activate-base: false
+
+      - name: Checkout submodules
+        run: |
+          git submodule update --init src/third_party/lwip
+          git submodule update --init src/third_party/mcuboot
+          git submodule update --init src/third_party/memfault-firmware-sdk
+
+      - name: Run Tests
+        run: python3 tools/scripts/test/did_i_break_something.py tools/scripts/test/configs
