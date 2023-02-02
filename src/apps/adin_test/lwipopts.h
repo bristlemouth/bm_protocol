@@ -75,6 +75,7 @@
 #define TCPIP_THREAD_STACKSIZE            8192
 #define LWIP_IPV6_MLD                     (LWIP_IPV6)
 #define CHECKSUM_GEN_UDP                  1
+
 /* Need to disable this to get to the rx_cb */
 #define CHECKSUM_CHECK_UDP                1
 
