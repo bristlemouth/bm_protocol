@@ -28,8 +28,9 @@ static QueueHandle_t    bcl_rx_queue;
 /* Define here for now */
 #define BCL_RX_QUEUE_NUM_ENTRIES  5
 
-typedef struct bcl_rx_element_s {\
+typedef struct bcl_rx_element_s {
     struct pbuf* buf;
+    ip_addr_t src;
     //other_info_t other_info;
 } bcl_rx_element_t;
 
@@ -43,6 +44,7 @@ static void bcl_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
     if (p != NULL) {
         rx_data.buf = p;
+        rx_data.src = *addr;
         if(xQueueSend(bcl_rx_queue, &rx_data, 0) != pdTRUE) {
             printf("Error sending to Queue\n");
         }
@@ -56,6 +58,7 @@ static void bcl_rx_thread(void *parameters) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
             if (rx_data.buf != NULL) {
                 printf("Received: %s\n", (char*) rx_data.buf->payload);
+                printf("Src IP Addr = %s\n", ip6addr_ntoa(&(rx_data.src)));
                 /* free the pbuf */
                 pbuf_free(rx_data.buf);
             }
