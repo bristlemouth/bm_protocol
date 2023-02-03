@@ -36,7 +36,7 @@ typedef struct rx_port_info_t {
 } rx_info_t;
 
 adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice);
-err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask);
+err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask, uint8_t port_offset);
 int adin2111_hw_start(adin2111_DeviceHandle_t* dev);
 int adin2111_hw_stop(adin2111_DeviceHandle_t* dev);
 

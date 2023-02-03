@@ -84,7 +84,7 @@ void bcl_init(void)
     netif.hwaddr_len = sizeof(netif.hwaddr);
 
     /* FIXME: Let's not hardcode this if possible */
-    ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0x0, 0x0, IPV6_ADDR_LSB);
+    ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0, 0, IPV6_ADDR_LSB);
 
     inet6_aton("ff02::1", &multicast_ll_addr);
     inet6_aton("ff03::1", &multicast_glob_addr);

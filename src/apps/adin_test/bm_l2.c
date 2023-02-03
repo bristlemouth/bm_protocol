@@ -46,7 +46,6 @@ static TaskHandle_t rx_thread = NULL;
 static TaskHandle_t tx_thread = NULL;
 static bm_l2_ctx_t bm_l2_ctx;
 
-
 /* TODO: ADIN2111-specifc, let's move to ADIN driver.
    Rx Callback can only get the MAC Handle, not the Device handle itself */
 static int bm_l2_get_device_index(void* device_handle) {
@@ -68,7 +67,7 @@ static void bm_l2_rx_thread(void *parameters) {
     uint8_t new_port_mask = 0;
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = 0;
-    bool is_global_multicast = true;
+    bool is_global_multicast = false;
 
     while (1) {
         if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
@@ -82,21 +81,25 @@ static void bm_l2_rx_thread(void *parameters) {
             /* Copy over RX packet contents to a pBuf to submit to lwip */
             memcpy(((uint8_t*) p->payload) , rx_data.payload, rx_data.payload_len);
 
+            device_idx = bm_l2_get_device_index(rx_data.device_handle);
+            switch (bm_l2_ctx.devices[device_idx].type) {
+                case BM_NETDEV_TYPE_ADIN2111:
+                    rx_port_mask = ((rx_data.port_mask & ADIN2111_PORT_MASK) << bm_l2_ctx.devices[device_idx].start_port_idx);
+                    break;
+                case BM_NETDEV_TYPE_NONE:
+                default:
+                    /* No device or not supported. How did we get here? */
+                    configASSERT(0);
+                    rx_port_mask = 0;
+                    break;
+            }
+
+            /* We need to code the RX Port into the IPV6 address passed to lwip */
+            ((uint8_t *) p->payload)[INGRESS_PORT_IDX] = rx_port_mask;
+
             /* TODO: Check if global multicast message. Re-TX on every other port */
             if (is_global_multicast)
             {
-                device_idx = bm_l2_get_device_index(rx_data.device_handle);
-                switch (bm_l2_ctx.devices[device_idx].type) {
-                    case BM_NETDEV_TYPE_ADIN2111:
-                        rx_port_mask = ((rx_data.port_mask & ADIN2111_PORT_MASK) << bm_l2_ctx.devices[device_idx].start_port_idx);
-                        break;
-                    case BM_NETDEV_TYPE_NONE:
-                    default:
-                        /* No device or not supported. How did we get here? */
-                        configASSERT(0);
-                        rx_port_mask = 0;
-                        break;
-                }
                 new_port_mask = bm_l2_ctx.available_ports_mask & ~(rx_port_mask);
                 bm_l2_tx(p, new_port_mask);
             }
@@ -131,7 +134,7 @@ static void bm_l2_tx_thread(void *parameters) {
                 switch (bm_l2_ctx.devices[idx].type) {
                     case BM_NETDEV_TYPE_ADIN2111:
                         retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, tx_data.payload, tx_data.payload_len,
-                                           (tx_data.port_mask >> mask_idx) & ADIN2111_PORT_MASK);
+                                           (tx_data.port_mask >> mask_idx) & ADIN2111_PORT_MASK, bm_l2_ctx.devices[idx].start_port_idx);
                         mask_idx += bm_l2_ctx.devices[idx].num_ports;
                         if (retv != ERR_OK) {
                             //printf("Failed to submit TX buffer to ADIN");

@@ -419,10 +419,11 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice) {
     return result;
 }
 
-err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask) {
+err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask, uint8_t port_offset) {
     queue_entry_t *pEntry;
     err_t retv = ERR_OK;
     int i;
+    uint8_t bm_egress_port = 0;
 
     for(i=0; i <ADIN2111_PORT_NUM; i++) {
         if (!adin2111_main_queue_is_full(&txQueue)) {
@@ -432,6 +433,10 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
             pEntry->dev = hDevice;
 
             if (port_mask & (0x01 << i)) {
+
+                /* We are modifying the IPV6 SRC address to include the egress port */
+                bm_egress_port = (0x01 << i) << port_offset;
+                pEntry->pBufDesc->pBuf[EGRESS_PORT_IDX] = bm_egress_port;
                 adin2111_main_queue_add(&txQueue, (adin2111_Port_e) i, pEntry->pBufDesc, adin2111_tx_cb);
             }
         } else {
