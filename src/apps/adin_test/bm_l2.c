@@ -201,6 +201,7 @@ err_t bm_l2_link_output(struct netif *netif, struct pbuf *p) {
 err_t bm_l2_init(struct netif *netif) {
     int idx;
     BaseType_t rval;
+    err_t retv = ERR_OK;
 
     /* Reset context variables */
     bm_l2_ctx.adin_device_counter = 0;
@@ -229,7 +230,6 @@ err_t bm_l2_init(struct netif *netif) {
                 break;
         }
     }
-
     MIB2_INIT_NETIF(netif, snmp_ifType_ethernet_csmacd, NETIF_LINK_SPEED_IN_BPS);
 
     netif->name[0] = IFNAME0;
@@ -266,5 +266,5 @@ err_t bm_l2_init(struct netif *netif) {
                        &rx_thread);
     configASSERT(rval == pdPASS);
 
-    return ERR_OK;
+    return retv;
 }

@@ -11,15 +11,22 @@
 #include "lwip/udp.h"
 #include "lwip/inet.h"
 #include "lwip/mld6.h"
-#include "lwip/sockets.h"
+
+#include <zcbor_common.h>
+#include <zcbor_decode.h>
+#include <zcbor_encode.h>
+
+#include "bm_zcbor_decode.h"
+#include "bm_zcbor_encode.h"
+#include "bm_usr_msg.h"
+#include "bm_msg_types.h"
+#include "bm_network.h"
 
 #include "bm_l2.h"
 
 static struct netif     netif;
-static struct udp_pcb   *udp_pcb;
+static struct udp_pcb*  udp_pcb;
 static uint16_t         udp_port;
-static ip6_addr_t       multicast_glob_addr;
-static ip6_addr_t       multicast_ll_addr;
 static TaskHandle_t     rx_thread = NULL;
 static QueueHandle_t    bcl_rx_queue;
 
@@ -54,12 +61,41 @@ static void bcl_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
 static void bcl_rx_thread(void *parameters) {
     (void) parameters;
+
     static bcl_rx_element_t rx_data;
     while (1) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
             if (rx_data.buf != NULL) {
-                printf("Received: %s\n", (char*) rx_data.buf->payload);
+                /* We assume that a bm_usr_msg_hdr_t precedes the payload.
+                   Inspect the message type ID */
+                switch (((bm_usr_msg_hdr_t* ) rx_data.buf->payload)->id) {
+                    case MSG_BM_ACK:
+                        printf("Received ACK\n");
+                        break;
+                    case MSG_BM_HEARTBEAT:
+                        printf("Received Heartbeat\n");
+                        break;
+                    case MSG_BM_DISCOVER_NEIGHBORS:
+                        printf("Received Neighbor Discovery\n");
+                        break;
+                    case MSG_BM_DURATION:
+                        printf("Received Duration\n");
+                        break;
+                    case MSG_BM_TIME:
+                        printf("Received Time\n");
+                        break;
+                    case MSG_BM_REQUEST_TABLE:
+                        printf("Received Table Request\n");
+                        break;
+                    case MSG_BM_TABLE_RESPONSE:
+                        printf("Received Table Response\n");
+                        break;
+                    default:
+                        break;
+                }
+
                 printf("Src IP Addr = %s\n", ip6addr_ntoa(&(rx_data.src)));
+
                 /* free the pbuf */
                 pbuf_free(rx_data.buf);
             }
@@ -67,13 +103,10 @@ static void bcl_rx_thread(void *parameters) {
     }
 }
 
-
-void bcl_init(void)
-{
-    struct pbuf* buf = NULL;
-    uint8_t msg[] = "Hello World";
-    err_t mld6_err;
-    int rval;
+void bcl_init(void) {
+    err_t       mld6_err;
+    int         rval;
+    ip6_addr_t  multicast_glob_addr;
 
     printf( "Starting up BCL\n" );
 
@@ -86,7 +119,6 @@ void bcl_init(void)
     /* FIXME: Let's not hardcode this if possible */
     ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0, 0, IPV6_ADDR_LSB);
 
-    inet6_aton("ff02::1", &multicast_ll_addr);
     inet6_aton("ff03::1", &multicast_glob_addr);
 
     /* The documentation says to use tcpip_input if we are running with an OS */
@@ -121,13 +153,13 @@ void bcl_init(void)
     udp_bind(udp_pcb, IP_ANY_TYPE, udp_port);
     udp_recv(udp_pcb, bcl_rx_cb, NULL);
 
-    while(1) {
-        buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(msg), PBUF_RAM);
-        memcpy (buf->payload, msg, sizeof(msg));
-        udp_sendto_if(udp_pcb, buf, &multicast_glob_addr, udp_port, &netif);
-        vTaskDelay(100);
-        pbuf_free(buf);
-    }
+    /* Init and start the bristlemouth network */
+    bm_network_init(my_addr, udp_pcb, udp_port, &netif);
 
+    /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any 
+              messages attempted to be sent withing X ms are not received */
+    vTaskDelay(400);
+
+    bm_network_start();
 }
 

@@ -7,3 +7,6 @@
 [submodule "src/third_party/lwip"]
 	path = src/third_party/lwip
 	url = https://github.com/sofarocean/lwip.git
+[submodule "src/third_party/zcbor"]
+	path = src/third_party/zcbor
+	url = https://github.com/sofarocean/zcbor.git

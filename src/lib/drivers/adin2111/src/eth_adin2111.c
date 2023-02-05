@@ -432,11 +432,15 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
             memcpy(pEntry->pBufDesc->pBuf, buf, pEntry->pBufDesc->trxSize);
             pEntry->dev = hDevice;
 
+            (void) bm_egress_port;
+            (void) port_offset;
+
             if (port_mask & (0x01 << i)) {
 
                 /* We are modifying the IPV6 SRC address to include the egress port */
                 bm_egress_port = (0x01 << i) << port_offset;
                 pEntry->pBufDesc->pBuf[EGRESS_PORT_IDX] = bm_egress_port;
+
                 adin2111_main_queue_add(&txQueue, (adin2111_Port_e) i, pEntry->pBufDesc, adin2111_tx_cb);
             }
         } else {
