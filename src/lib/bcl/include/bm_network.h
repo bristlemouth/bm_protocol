@@ -39,5 +39,6 @@ void bm_network_stop(void);
 void bm_network_request_neighbor_tables(void);
 
 void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack);
+void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr);
 
 #endif /* BM_NETWORK_H__ */

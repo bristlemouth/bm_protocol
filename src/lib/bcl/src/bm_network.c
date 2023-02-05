@@ -68,7 +68,7 @@ static void neighbor_timer_handler(TimerHandle_t tmr){
     int i;
     for (i = 0; i < MAX_NUM_NEIGHBORS; i++) {
         if ( tmr == neighbor_timers[i]) {
-            printf("Neighbor on Port %d is unresponsive", i);
+            printf("Neighbor on Port %d is unresponsive\n", i);
             self_neighbor_table.neighbor[i].reachable = 0;
             break;
         }
@@ -77,7 +77,31 @@ static void neighbor_timer_handler(TimerHandle_t tmr){
 
 static void heartbeat_timer_handler(TimerHandle_t tmr){
     (void) tmr;
-    /* TODO: Send out heartbeats */
+    uint8_t output[128];
+    size_t cbor_len;
+    struct bm_Heartbeat heartbeat_msg;
+
+    ipv6_add_padding(heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint, self_addr.addr);
+    heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint_count = 16;
+
+    bm_usr_msg_hdr_t msg_hdr = {
+        .encoding = BM_ENCODING_CBOR,
+        .set_id = BM_SET_ROS,
+        .id = MSG_BM_HEARTBEAT,
+    };
+
+    if (cbor_encode_bm_Heartbeat(output, sizeof(output), &heartbeat_msg, &cbor_len)) {
+        printf("CBOR encoding error\n");
+    }
+
+    struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
+    memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
+    memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
+    udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
+    pbuf_free(buf);
+
+    /* Re-start heartbeat timer */
+    xTimerStart(tmr, portMAX_DELAY); // what delay do we use?
 }
 
 /********************************************************************************************/
@@ -113,7 +137,7 @@ static void send_discover_neighbors(void)
     };
 
     if (cbor_encode_bm_Discover_Neighbors(output, sizeof(output), &discover_neighbors_msg, &cbor_len)) {
-        printf("CBOR encoding error");
+        printf("CBOR encoding error\n");
     }
 
     struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
@@ -150,13 +174,11 @@ static void send_ack(uint32_t * addr) {
     udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
     pbuf_free(buf);
 }
-
 /********************************************************************************************/
 /*************************** Public CBOR Message API ****************************************/
 /********************************************************************************************/
 
 void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
-
     if (!is_ack) {
         /* Send ack back to neighbor */
         send_ack(addr);
@@ -180,6 +202,18 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
         /* Restart neighbor heartbeat timer */
         xTimerStop(neighbor_timers[port_num], 10); // what delay do we use?
         xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+    }
+}
+
+void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr) {
+    if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) == 0) {
+        printf("Valid Heartbeat received\n");
+        self_neighbor_table.neighbor[port_num].reachable = 1;
+        xTimerStop(neighbor_timers[port_num], 10); // what delay do we use?
+        xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+    } else {
+        printf("New Neighbor sending a Heartbeat. Attempting to re-discover and modify neighbor table\n");
+        send_discover_neighbors();
     }
 }
 

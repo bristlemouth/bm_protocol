@@ -70,7 +70,7 @@ static void bcl_rx_thread(void *parameters) {
     /* Available message types */
     struct bm_Ack ack_msg;
     struct bm_Discover_Neighbors bm_discover_neighbors_msg;
-    //struct bm_Heartbeat heartbeat_msg;
+    struct bm_Heartbeat heartbeat_msg;
 
     while (1) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
@@ -96,11 +96,14 @@ static void bcl_rx_thread(void *parameters) {
                         printf("Received ACK\n");
                         break;
                     case MSG_BM_HEARTBEAT:
-                        printf("Received Heartbeat\n");
+                        if(cbor_decode_bm_Heartbeat(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &heartbeat_msg, &decode_len)) {
+                            printf("CBOR Decode error\n");
+                        }
+                        bm_network_heartbeat_received(dst_port_num, rx_data.src.addr);
                         break;
                     case MSG_BM_DISCOVER_NEIGHBORS:
                         if(cbor_decode_bm_Discover_Neighbors(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_discover_neighbors_msg, &decode_len)) {
-                            printf("CBOR Decode error");
+                            printf("CBOR Decode error\n");
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, false);
                         break;
