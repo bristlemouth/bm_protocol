@@ -38,4 +38,6 @@ void bm_network_start(void);
 void bm_network_stop(void);
 void bm_network_request_neighbor_tables(void);
 
+void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack);
+
 #endif /* BM_NETWORK_H__ */

@@ -61,22 +61,48 @@ static void bcl_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
 static void bcl_rx_thread(void *parameters) {
     (void) parameters;
-
     static bcl_rx_element_t rx_data;
+    uint16_t payload_length = 0;
+    size_t decode_len;
+    uint8_t dst_port_num = 0;
+    // uint8_t src_port_num = 0;
+
+    /* Available message types */
+    struct bm_Ack ack_msg;
+    struct bm_Discover_Neighbors bm_discover_neighbors_msg;
+    //struct bm_Heartbeat heartbeat_msg;
+
     while (1) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
+            //src_port_num = ((rx_data.src.addr[2] >> 16) & 0xFF);
+            dst_port_num = ((rx_data.src.addr[2] >> 24) & 0xFF);
+
+            /* Clear Ingress/Egress ports from IPv6 address
+               FIXME: Change magic numbers to #defines */
+            rx_data.src.addr[2] &= ~(0xFF << 16);
+            rx_data.src.addr[2] &= ~(0xFF << 24);
+
             if (rx_data.buf != NULL) {
+                payload_length = rx_data.buf->len - sizeof(bm_usr_msg_hdr_t);
                 /* We assume that a bm_usr_msg_hdr_t precedes the payload.
                    Inspect the message type ID */
                 switch (((bm_usr_msg_hdr_t* ) rx_data.buf->payload)->id) {
                     case MSG_BM_ACK:
+                        if(cbor_decode_bm_Ack(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &ack_msg, &decode_len)) {
+                            printf("CBOR Decode error\n");
+                        }
+                        bm_network_store_neighbor(dst_port_num, rx_data.src.addr, true);
+                        break;
                         printf("Received ACK\n");
                         break;
                     case MSG_BM_HEARTBEAT:
                         printf("Received Heartbeat\n");
                         break;
                     case MSG_BM_DISCOVER_NEIGHBORS:
-                        printf("Received Neighbor Discovery\n");
+                        if(cbor_decode_bm_Discover_Neighbors(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_discover_neighbors_msg, &decode_len)) {
+                            printf("CBOR Decode error");
+                        }
+                        bm_network_store_neighbor(dst_port_num, rx_data.src.addr, false);
                         break;
                     case MSG_BM_DURATION:
                         printf("Received Duration\n");
@@ -93,8 +119,6 @@ static void bcl_rx_thread(void *parameters) {
                     default:
                         break;
                 }
-
-                printf("Src IP Addr = %s\n", ip6addr_ntoa(&(rx_data.src)));
 
                 /* free the pbuf */
                 pbuf_free(rx_data.buf);

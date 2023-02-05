@@ -94,7 +94,7 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
 // }
 
 /********************************************************************************************/
-/********************************************************************************************/
+/*************************** Private CBOR Message API ***************************************/
 /********************************************************************************************/
 
 static void send_discover_neighbors(void)
@@ -119,8 +119,68 @@ static void send_discover_neighbors(void)
     struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
     memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
     memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-    udp_sendto_if(pcb, buf, &multicast_glob_addr, port, netif);
+    udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
     pbuf_free(buf);
+}
+
+static void send_ack(uint32_t * addr) {
+
+    uint8_t output[70];
+    size_t cbor_len;
+    struct bm_Ack ack_msg;
+
+    ipv6_add_padding(ack_msg._bm_Ack_dst_ipv6_addr_uint, addr);
+    ack_msg._bm_Ack_dst_ipv6_addr_uint_count = 16;
+    ipv6_add_padding(ack_msg._bm_Ack_src_ipv6_addr_uint, self_addr.addr);
+    ack_msg._bm_Ack_src_ipv6_addr_uint_count = 16;
+
+    bm_usr_msg_hdr_t msg_hdr = {
+        .encoding = BM_ENCODING_CBOR,
+        .set_id = BM_SET_ROS,
+        .id = MSG_BM_ACK,
+    };
+
+    if(cbor_encode_bm_Ack(output, sizeof(output), &ack_msg, &cbor_len)) {
+        printf("CBOR encoding error\n");
+    }
+
+    struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
+    memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
+    memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
+    udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
+    pbuf_free(buf);
+}
+
+/********************************************************************************************/
+/*************************** Public CBOR Message API ****************************************/
+/********************************************************************************************/
+
+void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
+
+    if (!is_ack) {
+        /* Send ack back to neighbor */
+        send_ack(addr);
+    }
+
+    /* Check if we already have this Node IPV6 addr in our neighbor table */
+    if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) != 0) {
+        printf("Storing Neighbor in Port Num: %d\n", port_num);
+        memcpy(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16);
+        self_neighbor_table.neighbor[port_num].reachable = 1;
+
+        /* Kickoff Heartbeat Timer? */
+        xTimerStart(heartbeat_timer, portMAX_DELAY); // what delay do we use?
+        
+        /* Kickoff Neighbor Heartbeat Timeout Timer */
+        xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+    } else {
+        printf("Already have this node, reset its heartbeat timeout timer\n");
+        self_neighbor_table.neighbor[port_num].reachable = 1;
+
+        /* Restart neighbor heartbeat timer */
+        xTimerStop(neighbor_timers[port_num], 10); // what delay do we use?
+        xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+    }
 }
 
 /********************************************************************************************/
