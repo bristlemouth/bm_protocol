@@ -74,6 +74,9 @@
 #define TCPIP_MBOX_SIZE                   10
 #define TCPIP_THREAD_STACKSIZE            8192
 #define LWIP_IPV6_MLD                     (LWIP_IPV6)
+
+/* Disabling because we are modifying the SRC IPV6 address to hold the ingress port before 
+   passing the payload to lwip. This will cause the packet to fail the CRC */
 #define CHECKSUM_GEN_UDP                  0
 #define CHECKSUM_CHECK_UDP                0
 

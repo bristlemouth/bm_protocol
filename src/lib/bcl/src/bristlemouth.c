@@ -82,6 +82,11 @@ static void bcl_rx_thread(void *parameters) {
             rx_data.src.addr[2] &= ~(0xFF << 16);
             rx_data.src.addr[2] &= ~(0xFF << 24);
 
+            if (rx_data.buf->len < sizeof(bm_usr_msg_hdr_t)) {
+                printf("Received a message too small to decode. Discarding.\n");
+                continue;
+            }
+
             if (rx_data.buf != NULL) {
                 payload_length = rx_data.buf->len - sizeof(bm_usr_msg_hdr_t);
                 /* We assume that a bm_usr_msg_hdr_t precedes the payload.
@@ -90,20 +95,22 @@ static void bcl_rx_thread(void *parameters) {
                     case MSG_BM_ACK:
                         if(cbor_decode_bm_Ack(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &ack_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
+                            break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, true);
-                        break;
                         printf("Received ACK\n");
                         break;
                     case MSG_BM_HEARTBEAT:
                         if(cbor_decode_bm_Heartbeat(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &heartbeat_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
+                            break;
                         }
                         bm_network_heartbeat_received(dst_port_num, rx_data.src.addr);
                         break;
                     case MSG_BM_DISCOVER_NEIGHBORS:
                         if(cbor_decode_bm_Discover_Neighbors(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_discover_neighbors_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
+                            break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, false);
                         break;
@@ -120,6 +127,7 @@ static void bcl_rx_thread(void *parameters) {
                         printf("Received Table Response\n");
                         break;
                     default:
+                        printf("Unexpected Message received\n");
                         break;
                 }
 
@@ -186,7 +194,6 @@ void bcl_init(void) {
     /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any 
               messages attempted to be sent withing X ms are not received */
     vTaskDelay(400);
-
     bm_network_start();
 }
 

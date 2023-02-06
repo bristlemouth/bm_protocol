@@ -44,13 +44,6 @@ static ip6_addr_t       multicast_ll_addr;
 
 /* CDDL isn't perfect... it treats an array of 16 uint8_t (ipv6 address) as an array of 16 uint32_t. 
    lwip IPv6 treats addresses as an array of 4 uint32_t... */
-   
-// static void ipv6_trim_padding(uint32_t * dest_buf, uint32_t * src_buf) {
-//     int i;
-//     for (i = 0; i < 16; i++) {
-//         dest_buf[i/4] |= ((src_buf[i] & 0xFF) << (i%4));
-//     }
-// }
 
 static void ipv6_add_padding(uint32_t * dest_buf, uint32_t * src_buf) {
     int i;
@@ -77,7 +70,7 @@ static void neighbor_timer_handler(TimerHandle_t tmr){
 
 static void heartbeat_timer_handler(TimerHandle_t tmr){
     (void) tmr;
-    uint8_t output[128];
+    static uint8_t output[128];
     size_t cbor_len;
     struct bm_Heartbeat heartbeat_msg;
 
@@ -92,6 +85,7 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
 
     if (cbor_encode_bm_Heartbeat(output, sizeof(output), &heartbeat_msg, &cbor_len)) {
         printf("CBOR encoding error\n");
+        return;
     }
 
     struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
@@ -101,21 +95,8 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
     pbuf_free(buf);
 
     /* Re-start heartbeat timer */
-    xTimerStart(tmr, portMAX_DELAY); // what delay do we use?
+    configASSERT(xTimerStart(tmr, 10));
 }
-
-/********************************************************************************************/
-/******************************* Private Debugging Tools ************************************/
-/********************************************************************************************/
-
-// static void print_node_address(struct bm_network_node_t * node) {
-//     if (node) {
-//         printf("%02x%02x:%02x%02x ", (uint8_t) ((node->ip_addr.addr[3] >> 12) & 0xFF),
-//                                      (uint8_t) ((node->ip_addr.addr[3] >> 8) & 0xFF),
-//                                      (uint8_t) ((node->ip_addr.addr[3] >> 4) & 0xFF),
-//                                      (uint8_t) (node->ip_addr.addr[3] & 0xFF));
-//     }
-// }
 
 /********************************************************************************************/
 /*************************** Private CBOR Message API ***************************************/
@@ -123,7 +104,7 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
 
 static void send_discover_neighbors(void)
 {
-    uint8_t output[128];
+    static uint8_t output[128];
     size_t cbor_len;
     struct bm_Discover_Neighbors discover_neighbors_msg;
 
@@ -138,6 +119,7 @@ static void send_discover_neighbors(void)
 
     if (cbor_encode_bm_Discover_Neighbors(output, sizeof(output), &discover_neighbors_msg, &cbor_len)) {
         printf("CBOR encoding error\n");
+        return;
     }
 
     struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
@@ -149,7 +131,7 @@ static void send_discover_neighbors(void)
 
 static void send_ack(uint32_t * addr) {
 
-    uint8_t output[70];
+    static uint8_t output[70];
     size_t cbor_len;
     struct bm_Ack ack_msg;
 
@@ -166,6 +148,7 @@ static void send_ack(uint32_t * addr) {
 
     if(cbor_encode_bm_Ack(output, sizeof(output), &ack_msg, &cbor_len)) {
         printf("CBOR encoding error\n");
+        return;
     }
 
     struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
@@ -191,17 +174,17 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
         self_neighbor_table.neighbor[port_num].reachable = 1;
 
         /* Kickoff Heartbeat Timer? */
-        xTimerStart(heartbeat_timer, portMAX_DELAY); // what delay do we use?
+        configASSERT(xTimerStart(heartbeat_timer, 10));
         
         /* Kickoff Neighbor Heartbeat Timeout Timer */
-        xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+        configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
         printf("Already have this node, reset its heartbeat timeout timer\n");
         self_neighbor_table.neighbor[port_num].reachable = 1;
 
         /* Restart neighbor heartbeat timer */
-        xTimerStop(neighbor_timers[port_num], 10); // what delay do we use?
-        xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+        configASSERT(xTimerStop(neighbor_timers[port_num], 10));
+        configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     }
 }
 
@@ -209,8 +192,8 @@ void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr) {
     if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) == 0) {
         printf("Valid Heartbeat received\n");
         self_neighbor_table.neighbor[port_num].reachable = 1;
-        xTimerStop(neighbor_timers[port_num], 10); // what delay do we use?
-        xTimerStart(neighbor_timers[port_num], portMAX_DELAY); // what delay do we use?
+        configASSERT(xTimerStop(neighbor_timers[port_num], 10));
+        configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
         printf("New Neighbor sending a Heartbeat. Attempting to re-discover and modify neighbor table\n");
         send_discover_neighbors();
@@ -261,11 +244,12 @@ int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port,
         timer_name[str_len-1] = i + '0';
         neighbor_timers[i] = xTimerCreate(timer_name, (BM_NEIGHBOR_TIMEOUT_MS / portTICK_RATE_MS),
                                        pdTRUE, (void *) &tmr_id, neighbor_timer_handler);
+        configASSERT(neighbor_timers[i]);
     }
 
     /* TODO: Initialize timer to send out heartbeats to neighbors */
     heartbeat_timer = xTimerCreate("heartbeatTmr", (BM_HEARTBEAT_TIME_MS / portTICK_RATE_MS),
                                    pdTRUE, (void *) &tmr_id, heartbeat_timer_handler);
-
+    configASSERT(heartbeat_timer);
     return 0;
 }

@@ -10,6 +10,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* These are the indices of the payload that contain bytes 5 and 6 of the payload's src IPV6 address. 
+   This is where we store the ingress port for the RX device and the egress port of the TX device. */
 #define EGRESS_PORT_IDX     32
 #define INGRESS_PORT_IDX    33
 
