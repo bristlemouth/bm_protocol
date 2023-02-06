@@ -1,5 +1,5 @@
 /*
- * Generated using zcbor version 0.5.99
+ * Generated using zcbor version 0.6.99
  * https://github.com/NordicSemiconductor/zcbor
  * Generated with a --default-max-qty of 3
  */
@@ -11,8 +11,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
-#include "zcbor_encode.h"
 #include "bm_zcbor_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if DEFAULT_MAX_QTY != 3
 #error "The type file was generated with a different default_max_qty than this file"
@@ -78,5 +81,9 @@ int cbor_encode_bm_Temperature(
 		const struct bm_Temperature *input,
 		size_t *payload_len_out);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BM_ZCBOR_ENCODE_H__ */

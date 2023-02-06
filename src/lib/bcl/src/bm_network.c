@@ -39,20 +39,6 @@ static ip6_addr_t       multicast_glob_addr;
 static ip6_addr_t       multicast_ll_addr;
 
 /********************************************************************************************/
-/******************************* CDDL Helper Functions **************************************/
-/********************************************************************************************/
-
-/* CDDL isn't perfect... it treats an array of 16 uint8_t (ipv6 address) as an array of 16 uint32_t. 
-   lwip IPv6 treats addresses as an array of 4 uint32_t... */
-
-static void ipv6_add_padding(uint32_t * dest_buf, uint32_t * src_buf) {
-    int i;
-    for (i = 0; i < 16; i++) {
-        dest_buf[i] = (src_buf[(i/4)] >> (i%4)) & 0xFF;
-    }
-}
-
-/********************************************************************************************/
 /******************************* Timer Handlers *********************************************/
 /********************************************************************************************/
 
@@ -74,8 +60,8 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
     size_t cbor_len;
     struct bm_Heartbeat heartbeat_msg;
 
-    ipv6_add_padding(heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint, self_addr.addr);
-    heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint_count = 16;
+    memcpy(heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint, self_addr.addr, sizeof(heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint));
+    heartbeat_msg._bm_Heartbeat_src_ipv6_addr_uint_count = 4;
 
     bm_usr_msg_hdr_t msg_hdr = {
         .encoding = BM_ENCODING_CBOR,
@@ -108,8 +94,8 @@ static void send_discover_neighbors(void)
     size_t cbor_len;
     struct bm_Discover_Neighbors discover_neighbors_msg;
 
-    ipv6_add_padding(discover_neighbors_msg._bm_Discover_Neighbors_src_ipv6_addr_uint, self_addr.addr);
-    discover_neighbors_msg._bm_Discover_Neighbors_src_ipv6_addr_uint_count = 16;
+    memcpy(discover_neighbors_msg._bm_Discover_Neighbors_src_ipv6_addr_uint, self_addr.addr, sizeof(discover_neighbors_msg._bm_Discover_Neighbors_src_ipv6_addr_uint));
+    discover_neighbors_msg._bm_Discover_Neighbors_src_ipv6_addr_uint_count = 4;
 
     bm_usr_msg_hdr_t msg_hdr = {
         .encoding = BM_ENCODING_CBOR,
@@ -135,10 +121,10 @@ static void send_ack(uint32_t * addr) {
     size_t cbor_len;
     struct bm_Ack ack_msg;
 
-    ipv6_add_padding(ack_msg._bm_Ack_dst_ipv6_addr_uint, addr);
-    ack_msg._bm_Ack_dst_ipv6_addr_uint_count = 16;
-    ipv6_add_padding(ack_msg._bm_Ack_src_ipv6_addr_uint, self_addr.addr);
-    ack_msg._bm_Ack_src_ipv6_addr_uint_count = 16;
+    memcpy(ack_msg._bm_Ack_dst_ipv6_addr_uint, addr, sizeof(ack_msg._bm_Ack_dst_ipv6_addr_uint));
+    ack_msg._bm_Ack_dst_ipv6_addr_uint_count = 4;
+    memcpy(ack_msg._bm_Ack_src_ipv6_addr_uint, self_addr.addr, sizeof(ack_msg._bm_Ack_src_ipv6_addr_uint));
+    ack_msg._bm_Ack_src_ipv6_addr_uint_count = 4;
 
     bm_usr_msg_hdr_t msg_hdr = {
         .encoding = BM_ENCODING_CBOR,
@@ -199,12 +185,6 @@ void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr) {
         send_discover_neighbors();
     }
 }
-
-/********************************************************************************************/
-/******************************* Public Debugging Tools *************************************/
-/********************************************************************************************/
-
-
 
 /********************************************************************************************/
 /******************************* Public BM Network API **************************************/

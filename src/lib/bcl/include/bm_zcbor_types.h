@@ -1,5 +1,5 @@
 /*
- * Generated using zcbor version 0.5.99
+ * Generated using zcbor version 0.6.99
  * https://github.com/NordicSemiconductor/zcbor
  * Generated with a --default-max-qty of 3
  */
@@ -10,8 +10,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <string.h>
-#include "zcbor_encode.h"
+#include <zcbor_common.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Which value for --default-max-qty this file was created with.
  *
@@ -23,12 +26,12 @@
 #define DEFAULT_MAX_QTY 3
 
 struct bm_Discover_Neighbors {
-	uint32_t _bm_Discover_Neighbors_src_ipv6_addr_uint[16];
+	uint32_t _bm_Discover_Neighbors_src_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Discover_Neighbors_src_ipv6_addr_uint_count;
 };
 
 struct bm_Neighbor_Info {
-	uint32_t _bm_Neighbor_Info_ipv6_addr_uint[16];
+	uint32_t _bm_Neighbor_Info_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Neighbor_Info_ipv6_addr_uint_count;
 	uint32_t _bm_Neighbor_Info_reachable;
 	uint32_t _bm_Neighbor_Info_port;
@@ -45,28 +48,28 @@ struct bm_Duration {
 };
 
 struct bm_Ack {
-	uint32_t _bm_Ack_src_ipv6_addr_uint[16];
+	uint32_t _bm_Ack_src_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Ack_src_ipv6_addr_uint_count;
-	uint32_t _bm_Ack_dst_ipv6_addr_uint[16];
+	uint32_t _bm_Ack_dst_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Ack_dst_ipv6_addr_uint_count;
 };
 
 struct bm_Heartbeat {
-	uint32_t _bm_Heartbeat_src_ipv6_addr_uint[16];
+	uint32_t _bm_Heartbeat_src_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Heartbeat_src_ipv6_addr_uint_count;
 };
 
 struct bm_Request_Table {
-	uint32_t _bm_Request_Table_src_ipv6_addr_uint[16];
+	uint32_t _bm_Request_Table_src_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Request_Table_src_ipv6_addr_uint_count;
 };
 
 struct bm_Table_Response {
 	struct bm_Neighbor_Info _bm_Table_Response_neighbors__bm_Neighbor_Info[3];
 	uint_fast32_t _bm_Table_Response_neighbors__bm_Neighbor_Info_count;
-	uint32_t _bm_Table_Response_src_ipv6_addr_uint[16];
+	uint32_t _bm_Table_Response_src_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Table_Response_src_ipv6_addr_uint_count;
-	uint32_t _bm_Table_Response_dst_ipv6_addr_uint[16];
+	uint32_t _bm_Table_Response_dst_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Table_Response_dst_ipv6_addr_uint_count;
 };
 
@@ -81,5 +84,8 @@ struct bm_Temperature {
 	struct bm_Time _bm_Temperature_timestamp;
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BM_ZCBOR_TYPES_H__ */

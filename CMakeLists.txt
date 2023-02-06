@@ -15,6 +15,10 @@ include(cmake/CheckAndApplyFlags.cmake)
 
 include(BuildOptions.cmake)
 
+execute_process (
+    COMMAND bash -c "${CMAKE_SOURCE_DIR}/tools/scripts/cddl/cddl_code_gen.sh"
+)
+
 ##################
 # Compiler Flags #
 ##################
