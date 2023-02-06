@@ -8,6 +8,9 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
     ${SRC_DIR}/lib/bcl/src/bristlemouth.c
+    ${SRC_DIR}/lib/bcl/src/bm_network.c
+    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
+    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
@@ -40,6 +43,9 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
     )
 
 set(LIB_INCLUDES
@@ -52,10 +58,33 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
     ${SRC_DIR}/lib/memfault
+    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/third_party/zcbor/include
+    )
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
+    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
+    
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-type-limits
+    )
+
+set_source_files_properties(
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
+    
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS "-Wno-unused-parameter -Wno-sign-compare"
     )
 
 #

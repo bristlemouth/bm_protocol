@@ -10,6 +10,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* These are the indices of the payload that contain bytes 5 and 6 of the payload's src IPV6 address. 
+   This is where we store the ingress port for the RX device and the egress port of the TX device. */
+#define EGRESS_PORT_IDX     32
+#define INGRESS_PORT_IDX    33
+
 err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask);
 err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask);
 err_t bm_l2_link_output(struct netif *netif, struct pbuf *p);
