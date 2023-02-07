@@ -30,6 +30,8 @@ dependencies:
       - intelhex
       - click
       - cbor2
+      - pyros-genmsg
+      - regex
 
   # - lcov=1.15
   - clang-tools=11.0.0

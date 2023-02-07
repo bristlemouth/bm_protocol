@@ -1,5 +1,5 @@
 /*
- * Generated using zcbor version 0.5.99
+ * Generated using zcbor version 0.6.99
  * https://github.com/NordicSemiconductor/zcbor
  * Generated with a --default-max-qty of 3
  */
@@ -41,7 +41,7 @@ static bool decode_repeated_bm_Discover_Neighbors_src_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -55,7 +55,7 @@ static bool decode_repeated_bm_Neighbor_Info_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -69,7 +69,7 @@ static bool decode_repeated_bm_Ack_src_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -83,7 +83,7 @@ static bool decode_repeated_bm_Ack_dst_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -97,7 +97,7 @@ static bool decode_repeated_bm_Heartbeat_src_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -111,7 +111,7 @@ static bool decode_repeated_bm_Request_Table_src_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -125,7 +125,7 @@ static bool decode_repeated_bm_Table_Response_src_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -139,7 +139,7 @@ static bool decode_repeated_bm_Table_Response_dst_ipv6_addr_uint(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_uint32_decode(state, (&(*result))))
-	&& ((((*result) <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
+	&& ((((*result) <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -153,7 +153,7 @@ static bool decode_bm_Temperature(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_uint32_decode(state, (&(*result)._bm_Temperature_temp)))
-	&& ((((*result)._bm_Temperature_temp <= 4294967295)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
+	&& ((((*result)._bm_Temperature_temp <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
 	&& ((decode_bm_Time(state, (&(*result)._bm_Temperature_timestamp))))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
@@ -167,7 +167,7 @@ static bool decode_bm_Request_Table(
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Request_Table_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Request_Table_src_ipv6_addr_uint, state, (&(*result)._bm_Request_Table_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Request_Table_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Request_Table_src_ipv6_addr_uint, state, (&(*result)._bm_Request_Table_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -180,7 +180,7 @@ static bool decode_bm_Heartbeat(
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Heartbeat_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Heartbeat_src_ipv6_addr_uint, state, (&(*result)._bm_Heartbeat_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Heartbeat_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Heartbeat_src_ipv6_addr_uint, state, (&(*result)._bm_Heartbeat_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -194,7 +194,7 @@ static bool decode_bm_Header(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_uint32_decode(state, (&(*result)._bm_Header_seq)))
-	&& ((((*result)._bm_Header_seq <= 4294967295)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
+	&& ((((*result)._bm_Header_seq <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
 	&& ((decode_bm_Time(state, (&(*result)._bm_Header_stamp))))
 	&& ((zcbor_tstr_decode(state, (&(*result)._bm_Header_frame_id)))
 	&& ((((*result)._bm_Header_frame_id.len >= 2)
@@ -211,8 +211,8 @@ static bool decode_bm_Ack(
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Ack_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Ack_src_ipv6_addr_uint, state, (&(*result)._bm_Ack_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
-	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Ack_dst_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Ack_dst_ipv6_addr_uint, state, (&(*result)._bm_Ack_dst_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Ack_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Ack_src_ipv6_addr_uint, state, (&(*result)._bm_Ack_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
+	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Ack_dst_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Ack_dst_ipv6_addr_uint, state, (&(*result)._bm_Ack_dst_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -227,9 +227,9 @@ static bool decode_bm_Duration(
 
 	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_int32_decode(state, (&(*result)._bm_Duration_sec)))
 	&& ((((*result)._bm_Duration_sec >= -2147483647)
-	&& ((*result)._bm_Duration_sec <= 2147483647)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
+	&& ((*result)._bm_Duration_sec <= INT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
 	&& ((zcbor_uint32_decode(state, (&(*result)._bm_Duration_nanosec)))
-	&& ((((*result)._bm_Duration_nanosec <= 4294967295)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	&& ((((*result)._bm_Duration_nanosec <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -243,8 +243,8 @@ static bool decode_bm_Table_Response(
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 3, &(*result)._bm_Table_Response_neighbors__bm_Neighbor_Info_count, (zcbor_decoder_t *)decode_bm_Neighbor_Info, state, (&(*result)._bm_Table_Response_neighbors__bm_Neighbor_Info), sizeof(struct bm_Neighbor_Info))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
-	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Table_Response_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Table_Response_src_ipv6_addr_uint, state, (&(*result)._bm_Table_Response_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
-	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Table_Response_dst_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Table_Response_dst_ipv6_addr_uint, state, (&(*result)._bm_Table_Response_dst_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Table_Response_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Table_Response_src_ipv6_addr_uint, state, (&(*result)._bm_Table_Response_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
+	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Table_Response_dst_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Table_Response_dst_ipv6_addr_uint, state, (&(*result)._bm_Table_Response_dst_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -259,9 +259,9 @@ static bool decode_bm_Time(
 
 	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_int32_decode(state, (&(*result)._bm_Time_sec)))
 	&& ((((*result)._bm_Time_sec >= -2147483647)
-	&& ((*result)._bm_Time_sec <= 2147483647)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
+	&& ((*result)._bm_Time_sec <= INT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
 	&& ((zcbor_uint32_decode(state, (&(*result)._bm_Time_nanosec)))
-	&& ((((*result)._bm_Time_nanosec <= 4294967295)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	&& ((((*result)._bm_Time_nanosec <= UINT32_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -274,11 +274,11 @@ static bool decode_bm_Neighbor_Info(
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Neighbor_Info_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Neighbor_Info_ipv6_addr_uint, state, (&(*result)._bm_Neighbor_Info_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
+	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Neighbor_Info_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Neighbor_Info_ipv6_addr_uint, state, (&(*result)._bm_Neighbor_Info_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
 	&& ((zcbor_uint32_decode(state, (&(*result)._bm_Neighbor_Info_reachable)))
-	&& ((((*result)._bm_Neighbor_Info_reachable <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
+	&& ((((*result)._bm_Neighbor_Info_reachable <= UINT8_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))
 	&& ((zcbor_uint32_decode(state, (&(*result)._bm_Neighbor_Info_port)))
-	&& ((((*result)._bm_Neighbor_Info_port <= 255)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	&& ((((*result)._bm_Neighbor_Info_port <= UINT8_MAX)) || (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
@@ -291,7 +291,7 @@ static bool decode_bm_Discover_Neighbors(
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 16, &(*result)._bm_Discover_Neighbors_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Discover_Neighbors_src_ipv6_addr_uint, state, (&(*result)._bm_Discover_Neighbors_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
+	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Discover_Neighbors_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Discover_Neighbors_src_ipv6_addr_uint, state, (&(*result)._bm_Discover_Neighbors_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 
 	if (!tmp_result)
 		zcbor_trace();
