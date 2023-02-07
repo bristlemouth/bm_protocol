@@ -299,3 +299,8 @@ To add the build target, to the CMake preferences (**Build,Execution,Deployment-
 Select the Test configuration from the configuration dropdown. You should see an **All CTest | Test** target. If you do, you can just run that. If you don't, you can go to the **Edit Configurations** menu and add a new configuration. Add a new **CTest Application**. It should default name to **"All Tests"** and targets to **All targets**. You can now select it and run it to run all the unit tests!
 
 If you run into a `CMake 3.18 or high is required` error, go back to CMake preferences (**Build,Execution,Deployment->Toolchains**), create a new toolchain named **bristlemouth_tests**, and only change the CMake path to the one in your conda env. Then change the **Test** CMake profile's toolchain to use **bristlemouth_tests**.
+
+## Updating CDDL/CBOR message files
+
+If you want to change any of the message types encoded/decoded in the Bristlemouth client library, you will need to modify the .msg files
+found in ```$PROJ_BASE/tools/scripts/cddl/msgs```. You will then need to run ```cddl_code_gen.sh``` found in ```$PROJ_BASE/tools/scripts/cddl```

@@ -1,13 +1,17 @@
 #!/bin/sh
 
-echo ${PWD}
+PROJ_BASE=`git rev-parse --show-toplevel`
+
+CDDL_DIR=$PROJ_BASE/tools/scripts/cddl
+ZCBOR_DIR=$PROJ_BASE/src/third_party/zcbor
 
 # Convert ROS2 to CDDL file
-BM_TYPES=$(python3 ../../tools/scripts/cddl/bm_msg_main.py -i ../../tools/scripts/cddl/msgs -o ../../tools/scripts/cddl/msgs -p bm -f bm_out.cddl)
+BM_TYPES=$(python $CDDL_DIR/bm_msg_main.py -i $CDDL_DIR/msgs -o $CDDL_DIR/msgs -p bm -f bm_out.cddl)
+echo $BM_TYPES
 
 # Generate .c/.h from generated CDDL file
-python3 ../../src/third_party/zcbor/zcbor/zcbor.py code -c ../../tools/scripts/cddl/msgs/bm_out.cddl -e -d -t $BM_TYPES --oc bm_zcbor.c --oh bm_zcbor.h
+python3 $ZCBOR_DIR/zcbor/zcbor.py code -c $CDDL_DIR/msgs/bm_out.cddl -e -d -t $BM_TYPES --oc bm_zcbor.c --oh bm_zcbor.h
 
 # Move generated files to bristlemouth application 
-mv *.c ../../src/lib/bcl/src
-mv *.h ../../src/lib/bcl/include
+mv *.c $PROJ_BASE/src/lib/bcl/src
+mv *.h $PROJ_BASE/src/lib/bcl/include
