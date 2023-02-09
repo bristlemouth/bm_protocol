@@ -34,7 +34,6 @@ static QueueHandle_t dfu_node_queue;
 static SemaphoreHandle_t dfu_rx_sem;
 
 static void bm_dfu_send_nop_event(void);
-static void bm_dfu_process_rx_byte(void *hSerial, uint8_t byte);
 static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state);
 static void bm_dfu_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, u16_t port);
 
@@ -128,6 +127,7 @@ static void bm_dfu_send_nop_event(void) {
     }
 }
 
+#if BM_DFU_HOST
 static void bm_dfu_process_rx_byte(void *hSerial, uint8_t byte) {
     static bool await_alignment = true;
     static uint8_t magic_num_idx = 0;
@@ -189,6 +189,7 @@ static void bm_dfu_process_rx_byte(void *hSerial, uint8_t byte) {
         }
     }
 }
+#endif
 
 static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state){
     if (dfu_ctx.pending_state_change) {
@@ -688,15 +689,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
     udp_bind(dfu_ctx.pcb, IP_ANY_TYPE, dfu_ctx.port);
     udp_recv(dfu_ctx.pcb, bm_dfu_rx_cb, NULL);
 
-    /* Setup processing RX Bytes */
-    hSerial->processByte = bm_dfu_process_rx_byte;
-    hSerial->txStreamBuffer = xStreamBufferCreate(hSerial->txBufferSize, 1);
-    configASSERT(hSerial->txStreamBuffer != NULL);
-    hSerial->rxStreamBuffer = xStreamBufferCreate(hSerial->rxBufferSize, 1);
-    configASSERT(hSerial->rxStreamBuffer != NULL);
-
     /* Store relevant variables from bristlemouth.c */
-    dfu_ctx.hSerial = hSerial;
     dfu_ctx.self_addr = _self_addr;
     dfu_ctx.netif = _netif;
 
@@ -708,8 +701,8 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
     /* Set initial state of DFU State Machine*/
     libSmInit(dfu_ctx.sm_ctx, dfu_states[BM_DFU_STATE_INIT], bm_dfu_check_transitions);
 
-    dfu_node_queue = xQueueCreate( 5, sizeof(bcl_rx_element_t)); 
-    dfu_event_queue = xQueueCreate( 5, sizeof(bm_dfu_event_t)); 
+    dfu_node_queue = xQueueCreate( 5, sizeof(bcl_rx_element_t));
+    dfu_event_queue = xQueueCreate( 5, sizeof(bm_dfu_event_t));
 
     dfu_rx_sem = xSemaphoreCreateBinary();
     configASSERT(dfu_rx_sem != NULL);
@@ -739,6 +732,20 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        NULL);
     configASSERT(retval == pdPASS);
 
+    // hSerial currently required for DFU host
+    configASSERT(hSerial);
+
+    /* Setup processing RX Bytes */
+    hSerial->processByte = bm_dfu_process_rx_byte;
+    hSerial->txBufferSize = 2048;
+    hSerial->txStreamBuffer = xStreamBufferCreate(hSerial->txBufferSize, 1);
+    configASSERT(hSerial->txStreamBuffer != NULL);
+    hSerial->rxBufferSize = 2048;
+    hSerial->rxStreamBuffer = xStreamBufferCreate(hSerial->rxBufferSize, 1);
+    configASSERT(hSerial->rxStreamBuffer != NULL);
+
+    dfu_ctx.hSerial = hSerial;
+
     retval = xTaskCreate(serialGenericRxTask,
                         "DFU Serial",
                         512,
@@ -748,12 +755,14 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
     configASSERT(retval == pdTRUE);
 
     bm_dfu_host_init(_self_addr, dfu_ctx.pcb, dfu_ctx.port, _netif);
+#else
+    (void)hSerial;
 #endif // BM_DFU_HOST
     bm_dfu_client_init(_self_addr, dfu_ctx.pcb, dfu_ctx.port, _netif);
 
     evt.type = DFU_EVENT_INIT_SUCCESS;
     evt.pbuf = NULL;
-    
+
     if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
         printf("Message could not be added to Queue\n");
     }

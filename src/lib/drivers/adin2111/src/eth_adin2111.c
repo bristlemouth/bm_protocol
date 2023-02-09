@@ -18,6 +18,8 @@
 #include "lwip/stats.h"
 #include "lwip/nd6.h"
 
+#include "pcap.h"
+
 static TaskHandle_t serviceTask = NULL;
 static uint8_t dev_mem[ADIN2111_DEVICE_SIZE];
 
@@ -225,6 +227,8 @@ static void adin2111_rx_cb(void *pCBParam, uint32_t Event, void *pArg)
     rx_info.dev = (adin2111_DeviceHandle_t) pCBParam;
 
     xQueueSend(rx_port_queue, ( void * ) &rx_info, 0);
+
+    pcapTxPacket(pBufDesc->pBuf, pBufDesc->trxSize);
 }
 
 static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg)
@@ -439,6 +443,8 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
                 /* We are modifying the IPV6 SRC address to include the egress port */
                 bm_egress_port = (0x01 << i) << port_offset;
                 pEntry->pBufDesc->pBuf[EGRESS_PORT_IDX] = bm_egress_port;
+
+                pcapTxPacket(pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize);
 
                 adin2111_main_queue_add(&txQueue, (adin2111_Port_e) i, pEntry->pBufDesc, adin2111_tx_cb);
             }

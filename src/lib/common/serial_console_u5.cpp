@@ -28,7 +28,7 @@ void startSerialConsole(SerialHandle_t *handle) {
   configASSERT(handle);
 
   serialConsoleHandle = handle;
-  serialConsoleHandle->processByte = processConsoleRxByte,
+  serialConsoleHandle->processByte = processConsoleRxByte;
 
   // Single byte trigger level for fast response time
   serialConsoleHandle->txStreamBuffer = xStreamBufferCreate(serialConsoleHandle->txBufferSize, 1);
