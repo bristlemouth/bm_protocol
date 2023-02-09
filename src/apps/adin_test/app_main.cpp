@@ -71,7 +71,7 @@ SerialHandle_t usbCLI   = {
   .flags = 0,
 };
 
-// "bristlemouth" USB serial - Use TBD
+// "bristlemouth" USB serial - Use DFU
 SerialHandle_t usbBM   = {
   .device = (void *)1, // Using CDC 1
   .name = "vcp-bm",
@@ -79,8 +79,8 @@ SerialHandle_t usbBM   = {
   .rxPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
-  .txBufferSize = 1024,
-  .rxBufferSize = 512,
+  .txBufferSize = 2048,
+  .rxBufferSize = 2048,
   .rxBytesFromISR = NULL,
   .getTxBytesFromISR = NULL,
   .processByte = NULL,
@@ -178,6 +178,7 @@ static void defaultTask( void *parameters ) {
     usbInit();
 
     debugSysInit();
+    // debugDFUInit();
     debugMemfaultInit(&usart1);
 
     // Commenting out while we test usart1
@@ -187,7 +188,7 @@ static void defaultTask( void *parameters ) {
 
     printf("Hello from the Default task\n");
 
-    bcl_init();
+    bcl_init(&usbBM);
 
     while(1) {
         /* Do nothing */

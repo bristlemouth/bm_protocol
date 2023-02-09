@@ -298,7 +298,6 @@ static void adin2111_service_thread(void *parameters) {
         if (activated_member == tx_ready_sem){
             xSemaphoreTake(activated_member, 0);
             
-            /* Changed from if to while, FIXME if needed */
             while (!adin2111_main_queue_is_empty(&txQueue)) {
                 pEntry = adin2111_main_queue_tail(&txQueue);
                 if ((pEntry != NULL) && (!pEntry->sent)) {

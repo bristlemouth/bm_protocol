@@ -75,6 +75,7 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
     }
 
     struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
+    configASSERT(buf);
     memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
     memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
     udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
@@ -155,17 +156,14 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
 
     /* Check if we already have this Node IPV6 addr in our neighbor table */
     if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) != 0) {
-        printf("Storing Neighbor in Port Num: %d\n", port_num);
+        //printf("Storing Neighbor in Port Num: %d\n", port_num);
         memcpy(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16);
         self_neighbor_table.neighbor[port_num].reachable = 1;
-
-        /* Kickoff Heartbeat Timer? */
-        configASSERT(xTimerStart(heartbeat_timer, 10));
         
         /* Kickoff Neighbor Heartbeat Timeout Timer */
         configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
-        printf("Already have this node, reset its heartbeat timeout timer\n");
+        //printf("Already have this node, reset its heartbeat timeout timer\n");
         self_neighbor_table.neighbor[port_num].reachable = 1;
 
         /* Restart neighbor heartbeat timer */
@@ -176,12 +174,12 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
 
 void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr) {
     if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) == 0) {
-        printf("Valid Heartbeat received\n");
+        //printf("Valid Heartbeat received\n");
         self_neighbor_table.neighbor[port_num].reachable = 1;
         configASSERT(xTimerStop(neighbor_timers[port_num], 10));
         configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
-        printf("New Neighbor sending a Heartbeat. Attempting to re-discover and modify neighbor table\n");
+        //printf("New Neighbor sending a Heartbeat. Attempting to re-discover and modify neighbor table\n");
         send_discover_neighbors();
     }
 }
@@ -227,9 +225,10 @@ int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port,
         configASSERT(neighbor_timers[i]);
     }
 
-    /* TODO: Initialize timer to send out heartbeats to neighbors */
+    /* Initialize timer to send out heartbeats to neighbors */
     heartbeat_timer = xTimerCreate("heartbeatTmr", (BM_HEARTBEAT_TIME_MS / portTICK_RATE_MS),
                                    pdTRUE, (void *) &tmr_id, heartbeat_timer_handler);
     configASSERT(heartbeat_timer);
+    configASSERT(xTimerStart(heartbeat_timer, 10));
     return 0;
 }

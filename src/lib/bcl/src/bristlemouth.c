@@ -21,7 +21,7 @@
 #include "bm_usr_msg.h"
 #include "bm_msg_types.h"
 #include "bm_network.h"
-
+#include "bm_dfu.h"
 #include "bm_l2.h"
 
 static struct netif     netif;
@@ -36,13 +36,7 @@ static QueueHandle_t    bcl_rx_queue;
 /* Define here for now */
 #define BCL_RX_QUEUE_NUM_ENTRIES  5
 
-typedef struct bcl_rx_element_s {
-    struct pbuf* buf;
-    ip_addr_t src;
-    //other_info_t other_info;
-} bcl_rx_element_t;
-
-static void bcl_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
+static void bcl_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *buf,
                  const ip_addr_t *addr, u16_t port) {
     (void) arg;
     (void) upcb;
@@ -50,12 +44,15 @@ static void bcl_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     (void) port;
     static bcl_rx_element_t rx_data;
 
-    if (p != NULL) {
-        rx_data.buf = p;
+    if (buf != NULL) {
+        rx_data.buf = buf;
         rx_data.src = *addr;
+        pbuf_ref(buf);
         if(xQueueSend(bcl_rx_queue, &rx_data, 0) != pdTRUE) {
+            pbuf_free(buf);
             printf("Error sending to Queue\n");
         }
+        pbuf_free(buf);
     }
 }
 
@@ -84,6 +81,8 @@ static void bcl_rx_thread(void *parameters) {
 
             if (rx_data.buf->len < sizeof(bm_usr_msg_hdr_t)) {
                 printf("Received a message too small to decode. Discarding.\n");
+                /* free the pbuf */
+                pbuf_free(rx_data.buf);
                 continue;
             }
 
@@ -98,7 +97,7 @@ static void bcl_rx_thread(void *parameters) {
                             break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, true);
-                        printf("Received ACK\n");
+                        //printf("Received ACK\n");
                         break;
                     case MSG_BM_HEARTBEAT:
                         if(cbor_decode_bm_Heartbeat(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &heartbeat_msg, &decode_len)) {
@@ -130,7 +129,6 @@ static void bcl_rx_thread(void *parameters) {
                         printf("Unexpected Message received\n");
                         break;
                 }
-
                 /* free the pbuf */
                 pbuf_free(rx_data.buf);
             }
@@ -138,7 +136,7 @@ static void bcl_rx_thread(void *parameters) {
     }
 }
 
-void bcl_init(void) {
+void bcl_init(SerialHandle_t* hSerial) {
     err_t       mld6_err;
     int         rval;
     ip6_addr_t  multicast_glob_addr;
@@ -151,7 +149,7 @@ void bcl_init(void) {
     getMacAddr(netif.hwaddr, sizeof(netif.hwaddr));
     netif.hwaddr_len = sizeof(netif.hwaddr);
 
-    /* FIXME: Let's not hardcode this if possible */
+    /* FIXME: We are changing IPV6 address assignment */
     ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0, 0, IPV6_ADDR_LSB);
 
     inet6_aton("ff03::1", &multicast_glob_addr);
@@ -190,6 +188,9 @@ void bcl_init(void) {
 
     /* Init and start the bristlemouth network */
     bm_network_init(my_addr, udp_pcb, udp_port, &netif);
+
+    /* Start DFU service here */
+    bm_dfu_init(hSerial, my_addr, &netif);
 
     /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any 
               messages attempted to be sent withing X ms are not received */

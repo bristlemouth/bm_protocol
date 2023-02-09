@@ -1,5 +1,4 @@
-#ifndef BM_MSG_TYPES_H__
-#define BM_MSG_TYPES_H__
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,5 +17,3 @@ enum {
 	MSG_BM_REQUEST_TABLE,
 	MSG_BM_TEMPERATURE,
 };
-
-#endif /* BM_MSG_TYPES_H__ */
