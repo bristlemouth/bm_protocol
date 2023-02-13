@@ -3,6 +3,9 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 # Include FreeRTOS
 add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 
+# Include TinyUSB
+add_subdirectory(${SRC_DIR}/lib/usb usb_build)
+
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
@@ -36,6 +39,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
+    ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
@@ -171,22 +175,24 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_l2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
-    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
-    ${LIB_FILES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/bm_l2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
     ${FREERTOS_FILES}
+    ${LIB_FILES}
+    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MEMFAULT_SOURCES}
+    ${TINYUSB_FILES}
     PARENT_SCOPE)
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${LIB_INCLUDES}
     ${FREERTOS_INCLUDES}
-    ${MEMFAULT_INCLUDES}
-    ${MCUBOOT_INCLUDES}
+    ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
+    ${MCUBOOT_INCLUDES}
+    ${MEMFAULT_INCLUDES}
+    ${TINYUSB_INCLUDES}
     PARENT_SCOPE)
 
 set(APP_LIBS
@@ -194,7 +200,7 @@ set(APP_LIBS
     PARENT_SCOPE)
 
 set(APP_DEFINES
-
+    CFG_TUSB_MCU=OPT_MCU_STM32U5
     )
 
 # Use ALT_DEV as set in cmake command

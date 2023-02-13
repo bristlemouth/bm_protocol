@@ -27,27 +27,66 @@
 #include "printf.h"
 #include "serial.h"
 #include "serial_console.h"
+#include "usb.h"
 #include "watchdog.h"
+
 
 #include <stdio.h>
 
 static void defaultTask(void *parameters);
 
+// Serial console (when no usb present)
 SerialHandle_t usart1 = {
-    .device = USART1,
-    .name = "usart1",
-    .txPin = NULL,
-    .rxPin = NULL,
-    .txStreamBuffer = NULL,
-    .rxStreamBuffer = NULL,
-    .txBufferSize = 1024,
-    .rxBufferSize = 512,
-    .rxBytesFromISR = serialGenericRxBytesFromISR,
-    .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-    .processByte = NULL,
-    .data = NULL,
-    .enabled = false,
-    .flags = 0,
+  .device = USART1,
+  .name = "usart1",
+  .txPin = NULL,
+  .rxPin = NULL,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 1024,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = serialGenericRxBytesFromISR,
+  .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
+};
+
+// Serial console USB device
+SerialHandle_t usbCLI   = {
+  .device = (void *)0, // Using CDC 0
+  .name = "vcp-cli",
+  .txPin = NULL,
+  .rxPin = NULL,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 1024,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = NULL,
+  .getTxBytesFromISR = NULL,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
+};
+
+// "bristlemouth" USB serial - Use TBD
+SerialHandle_t usbBM   = {
+  .device = (void *)1, // Using CDC 1
+  .name = "vcp-bm",
+  .txPin = NULL,
+  .rxPin = NULL,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 1024,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = NULL,
+  .getTxBytesFromISR = NULL,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
 };
 
 extern "C" void USART1_IRQHandler(void) {
@@ -65,7 +104,6 @@ extern "C" int main(void) {
 
     SystemPower_Config_ext();
     MX_GPIO_Init();
-    MX_ADC1_Init();
     MX_UCPD1_Init();
     MX_USART1_UART_Init();
     MX_USB_OTG_FS_PCD_Init();
@@ -73,7 +111,7 @@ extern "C" int main(void) {
     MX_RTC_Init();
     MX_IWDG_Init();
 
-    // usbMspInit();
+    usbMspInit();
 
     // rtcInit();
 
@@ -118,7 +156,16 @@ static void defaultTask( void *parameters ) {
 
     startIWDGTask();
     startSerial();
-    startSerialConsole(&usart1);
+    // Use USB for serial console if USB is connected on boot
+    // Otherwise use ST-Link serial port
+    if(usb_is_connected()) {
+      startSerialConsole(&usbCLI);
+      // Serial device will be enabled automatically when console connects
+      // so no explicit serialEnable is required
+    } else {
+      startSerialConsole(&usart1);
+      serialEnable(&usart1);
+    }
     startCLI();
     serialEnable(&usart1);
     gpioISRStartTask();
@@ -127,6 +174,8 @@ static void defaultTask( void *parameters ) {
     memfault_platform_start();
 
     bspInit();
+
+    usbInit();
 
     debugSysInit();
     debugMemfaultInit(&usart1);

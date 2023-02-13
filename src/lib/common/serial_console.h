@@ -22,8 +22,6 @@ size_t usbCDCRxBytesFromISR(uint8_t* buffer, size_t len);
 size_t usbCDCGetTxBytes(uint8_t *buffer, size_t len);
 size_t usbCDCGetTxBytesFromISR(uint8_t *buffer, size_t len);
 
-bool serialConsoleUSBTxInProgress();
-
 void usbCDCConnectedFromISR();
 void usbCDCDisconnectedFromISR();
 void serialConsoleDisable();

@@ -2,9 +2,13 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "adc.h"
+#include "io.h"
+#include "io_adc.h"
 #include "main.h"
 #include "spi.h"
 #include "stm32_io.h"
+
 
 // Define all GPIO's here
 IOPinHandle_t ADIN_CS = {&STM32PinDriver, &(STM32Pin_t){ADIN_CS_GPIO_Port, ADIN_CS_Pin, NULL, NULL}};
@@ -53,4 +57,35 @@ void bspInit() {
   HAL_SuspendTick();
 
   spiInit(&spi1);
+}
+
+// Helper function for sampling ADC on STM32
+uint32_t adcGetSampleMv(uint32_t channel) {
+  int32_t result = 0;
+
+  ADC_ChannelConfTypeDef config = {};
+
+  config.Rank = ADC_REGULAR_RANK_1;
+  config.SamplingTime = ADC_SAMPLETIME_814CYCLES;
+  config.SingleDiff = ADC_SINGLE_ENDED;
+  config.OffsetNumber = ADC_OFFSET_NONE;
+  config.Offset = 0;
+
+  config.Channel = channel;
+  IOAdcChannelConfig(&hadc1, &config);
+
+  IOAdcReadMv(&hadc1, &result);
+  return ((uint32_t)result);
+}
+
+bool usb_is_connected() {
+  IOAdcInit(&hadc1);
+  const float vbus_raw = (float)adcGetSampleMv(VBUS_SENSE_CH)/1000.0;
+
+  // NUCLEO-U5 board has a 330kOhm | 49.9kOhm resistor divider on the
+  // VBUS_SENSE signal.
+  const float vbus = vbus_raw * (330.0 + 49.9)/49.9;
+  IOAdcDeInit(&hadc1);
+
+  return vbus > 4.0;
 }

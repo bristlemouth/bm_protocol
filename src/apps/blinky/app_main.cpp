@@ -23,23 +23,23 @@
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "io.h"
+#include "memfault_platform_core.h"
 #include "serial.h"
 #include "serial_console.h"
-#include "memfault_platform_core.h"
+#include "usb.h"
 #include "watchdog.h"
 
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
 
-#include "lwip/init.h"
+// #include "lwip/init.h"
 
 #include <stdio.h>
 
 static void defaultTask(void *parameters);
 
-// static void defaultTask( void *parameters );
-
+// Serial console (when no usb present)
 SerialHandle_t usart1 = {
   .device = USART1,
   .name = "usart1",
@@ -51,6 +51,42 @@ SerialHandle_t usart1 = {
   .rxBufferSize = 512,
   .rxBytesFromISR = serialGenericRxBytesFromISR,
   .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
+};
+
+// Serial console USB device
+SerialHandle_t usbCLI   = {
+  .device = (void *)0, // Using CDC 0
+  .name = "vcp-cli",
+  .txPin = NULL,
+  .rxPin = NULL,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 1024,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = NULL,
+  .getTxBytesFromISR = NULL,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
+};
+
+// "bristlemouth" USB serial - Use TBD
+SerialHandle_t usbBM   = {
+  .device = (void *)1, // Using CDC 1
+  .name = "vcp-bm",
+  .txPin = NULL,
+  .rxPin = NULL,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 1024,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = NULL,
+  .getTxBytesFromISR = NULL,
   .processByte = NULL,
   .data = NULL,
   .enabled = false,
@@ -72,7 +108,6 @@ extern "C" int main(void) {
 
   SystemPower_Config_ext();
   MX_GPIO_Init();
-  MX_ADC1_Init();
   MX_UCPD1_Init();
   MX_USART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
@@ -80,7 +115,7 @@ extern "C" int main(void) {
   MX_RTC_Init();
   MX_IWDG_Init();
 
-  // usbMspInit();
+  usbMspInit();
 
   // rtcInit();
 
@@ -118,6 +153,7 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
   (void)args;
 
   printf("Button press! %d\n", value);
+  usb_is_connected();
   return false;
 }
 
@@ -127,15 +163,28 @@ static void defaultTask( void *parameters ) {
 
   startIWDGTask();
   startSerial();
-  startSerialConsole(&usart1);
+
   startCLI();
-  serialEnable(&usart1);
+
+  // Use USB for serial console if USB is connected on boot
+  // Otherwise use ST-Link serial port
+  if(usb_is_connected()) {
+    startSerialConsole(&usbCLI);
+    // Serial device will be enabled automatically when console connects
+    // so no explicit serialEnable is required
+  } else {
+    startSerialConsole(&usart1);
+    serialEnable(&usart1);
+  }
+
   gpioISRStartTask();
 
   memfault_platform_boot();
   memfault_platform_start();
 
   bspInit();
+
+  usbInit();
 
   debugSysInit();
   debugMemfaultInit(&usart1);
@@ -149,7 +198,7 @@ static void defaultTask( void *parameters ) {
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
-  lwip_init();
+  // lwip_init();
 
   // uint32_t count = 0;
   while(1) {

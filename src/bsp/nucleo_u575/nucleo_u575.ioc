@@ -1,8 +1,16 @@
 #MicroXplorer Configuration settings - do not modify
+ADC1.Channel-0\#ChannelRegularConversion=ADC_CHANNEL_3
+ADC1.ClockPrescaler=ADC_CLOCK_ASYNC_DIV8
 ADC1.CommonPathInternal=null|null|null|null
-ADC1.IPParameters=master,NbrOfConversion,Resolution,CommonPathInternal
+ADC1.EnableRegularConversion=ENABLE
+ADC1.IPParameters=master,NbrOfConversion,Resolution,ClockPrescaler,EnableRegularConversion,Rank-0\#ChannelRegularConversion,Channel-0\#ChannelRegularConversion,SamplingTime-0\#ChannelRegularConversion,OffsetNumber-0\#ChannelRegularConversion,MonitoredBy-0\#ChannelRegularConversion,NbrOfConversionFlag,CommonPathInternal
+ADC1.MonitoredBy-0\#ChannelRegularConversion=__NULL
 ADC1.NbrOfConversion=1
+ADC1.NbrOfConversionFlag=1
+ADC1.OffsetNumber-0\#ChannelRegularConversion=ADC_OFFSET_NONE
+ADC1.Rank-0\#ChannelRegularConversion=1
 ADC1.Resolution=ADC_RESOLUTION_14B
+ADC1.SamplingTime-0\#ChannelRegularConversion=ADC_SAMPLETIME_5CYCLE
 ADC1.master=1
 CORTEX_M33_NS.userName=CORTEX_M33
 File.Version=6
@@ -87,7 +95,7 @@ NVIC.HardFault_IRQn=true\:0\:0\:false\:false\:false\:false\:false\:false
 NVIC.IWDG_IRQn=true\:0\:0\:false\:false\:false\:true\:true\:true
 NVIC.MemoryManagement_IRQn=true\:0\:0\:false\:false\:false\:false\:false\:false
 NVIC.NonMaskableInt_IRQn=true\:0\:0\:false\:false\:false\:false\:false\:false
-NVIC.OTG_FS_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
+NVIC.OTG_FS_IRQn=true\:6\:0\:true\:false\:false\:true\:true\:true
 NVIC.PendSV_IRQn=true\:0\:0\:false\:false\:false\:false\:false\:false
 NVIC.PriorityGroup=NVIC_PRIORITYGROUP_3
 NVIC.SVCall_IRQn=true\:0\:0\:false\:false\:false\:false\:false\:false

@@ -12,7 +12,6 @@
 
 // Enable echo
 const bool bEcho = true;
-volatile bool txInProgress;
 
 static void processConsoleRxByte(void *serialHandle, uint8_t byte);
 
@@ -164,7 +163,6 @@ static void processConsoleRxByte(void *serialHandle, uint8_t byte) {
 void serialConsoleEnable() {
   serialConsoleHandle->enabled = true;
   ulConsoleBuffIdx = 0;
-  txInProgress = false;
   xStreamBufferReset(serialConsoleHandle->rxStreamBuffer);
   xStreamBufferReset(serialConsoleHandle->txStreamBuffer);
 }
