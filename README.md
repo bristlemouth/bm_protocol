@@ -219,20 +219,6 @@ To get the serial number on MacOS, you'll have to go to system information and l
 
 In Linux, use `udevadm info /dev/ttyACM2 | grep ID_SERIAL_SHORT` or `lsusb -v -d 0483:374b | grep iSerial` (on the appropriate device)
 
-#### GDB/openOCD Patch (One time only)
-If you ever see the following error when setting breakpoints in GDB:
-```
-Error executing event halted on target stm32u5x.cpu:
-/Users/alvaro/miniconda3-intel/envs/bristlemouth/xpack-openocd/bin/..//scripts/target/stm32x5x_common.cfg:75: Error:
-in procedure 'stm32x5x_ahb_ap_non_secure_access' called at file "/Users/alvaro/miniconda3-intel/envs/bristlemouth/xpack-openocd/bin/..//scripts/target/stm32x5x_common.cfg", line 105
-at file "/Users/alvaro/miniconda3-intel/envs/bristlemouth/xpack-openocd/bin/..//scripts/target/stm32x5x_common.cfg", line 75
-```
-
-This is due to the openOCD version not having [a fix](https://review.openocd.org/c/openocd/+/6546/7/tcl/target/stm32x5x_common.cfg#b55) for the stm32u5 family. To fix it on your local install, run the following command after installing your conda environment:
-
-`patch $CONDA_PREFIX/xpack-openocd/scripts/target/stm32x5x_common.cfg tools/patch/openocd_u5.diff`
-
-
 ### Uploading .elf to Memfault
 #### Configure CLion to use the conda environment's python version
 Open the preferences window (**⌘ + ,**) and go to **Build, Execution, Deployment->Python Interpreter**. Click the gear in the top right corner of the window and select **Add**. On the list on the left, select **Conda Environment->Existing environment**. For the interpreter, we'll want to point to the path of the python3 within the bristlemouth environment. If you installed conda at the default directory, that path should be `~/miniconda/envs/bristlemouth/bin/python3`. **Conda executable** should point to `~/miniconda/bin/conda`. Click OK and make sure the **Python Interpreter** is filled in and is pointing to the correct path.
