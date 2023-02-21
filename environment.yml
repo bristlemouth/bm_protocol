@@ -13,7 +13,7 @@ dependencies:
   # Change src/CMakeLists.txt
   - arm-none-eabi-gcc=10.3_2021.10
   - multi-arch-gdb=11.2
-  - openocd-xpack=0.11.0_5
+  - openocd-xpack=0.12.0_1
   - cmake-xpack=3.20.6_2
   - make=4.2.1
   - python=3.8.6
