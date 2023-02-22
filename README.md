@@ -56,8 +56,6 @@ Whenever you pull new project changes (specifically those that update environmen
 
 ### Set up Pre-commit
 
-TODO: Don't do this just yet!
-
 ~This will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
 
 ```
