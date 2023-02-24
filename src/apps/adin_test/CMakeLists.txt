@@ -20,6 +20,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/enumToStr.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
+    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/reset_reason.c
@@ -30,6 +31,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
+    ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
+    ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -43,6 +47,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_io.c
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/third_party/crc16/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
@@ -57,6 +62,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
+    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
@@ -64,6 +70,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/third_party/
+    ${SRC_DIR}/third_party/crc16
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
@@ -178,6 +185,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_l2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
+    ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
@@ -210,6 +218,18 @@ message(STATUS "Using ALT_DEV=${ALT_DEV}")
 else()
 list(APPEND APP_DEFINES "ALT_DEV=0x01")
 message(STATUS "Using default ALT_DEV=0x01")
+endif()
+
+if (DFU_HOST  STREQUAL 1)
+list(APPEND APP_DEFINES "BM_DFU_HOST=1")
+message(STATUS "DFU HOST AND CLIENT")
+else()
+list(APPEND APP_DEFINES "BM_DFU_HOST=0")
+message(STATUS "DFU CLIENT ONLY")
+endif()
+
+if (NOT ${USE_BOOTLOADER})
+     message(SEND_ERROR "USE_BOOTLOADER is not set.")
 endif()
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the

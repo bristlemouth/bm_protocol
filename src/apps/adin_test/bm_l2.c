@@ -67,7 +67,7 @@ static void bm_l2_rx_thread(void *parameters) {
     uint8_t new_port_mask = 0;
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = 0;
-    bool is_global_multicast = false;
+    bool is_global_multicast = true;
 
     while (1) {
         if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
@@ -243,7 +243,6 @@ err_t bm_l2_init(struct netif *netif) {
     netif->mtu = ETHERNET_MTU;
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
 
-    /* Create the queues and semaphores that will be contained in the set. */
     bm_l2_ctx.tx_queue = xQueueCreate( TX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
     bm_l2_ctx.rx_queue = xQueueCreate( RX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
 

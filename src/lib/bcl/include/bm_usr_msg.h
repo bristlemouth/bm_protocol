@@ -1,5 +1,4 @@
-#ifndef BM_USR_MSG_H__
-#define BM_USR_MSG_H__
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -24,5 +23,3 @@ enum {
     BM_SET_ROS,
     BM_SET_DEFAULT,
 };
-
-#endif /* BM_USR_MSG_H__ */
