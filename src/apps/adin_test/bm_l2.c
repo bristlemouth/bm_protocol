@@ -20,8 +20,7 @@ struct bm_netdev_ctx_t {
 typedef struct l2_queue_element_s {
     void* device_handle;
     uint8_t port_mask;
-    uint16_t payload_len;
-    uint8_t payload[ETHERNET_MTU];
+    struct pbuf* pbuf;
 } __attribute__((packed)) l2_queue_element_t;
 
 typedef struct bm_l2_ctx_s{
@@ -71,16 +70,6 @@ static void bm_l2_rx_thread(void *parameters) {
 
     while (1) {
         if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
-
-            struct pbuf* p = pbuf_alloc(PBUF_RAW, rx_data.payload_len, PBUF_RAM);
-            if (p == NULL) {
-                printf("No mem for pbuf in RX pathway\n");
-                continue;
-            }
-
-            /* Copy over RX packet contents to a pBuf to submit to lwip */
-            memcpy(((uint8_t*) p->payload) , rx_data.payload, rx_data.payload_len);
-
             device_idx = bm_l2_get_device_index(rx_data.device_handle);
             switch (bm_l2_ctx.devices[device_idx].type) {
                 case BM_NETDEV_TYPE_ADIN2111:
@@ -95,13 +84,13 @@ static void bm_l2_rx_thread(void *parameters) {
             }
 
             /* We need to code the RX Port into the IPV6 address passed to lwip */
-            ((uint8_t *) p->payload)[INGRESS_PORT_IDX] = rx_port_mask;
+            ((uint8_t *) rx_data.pbuf->payload)[INGRESS_PORT_IDX] = rx_port_mask;
 
             /* TODO: Check if global multicast message. Re-TX on every other port */
             if (is_global_multicast)
             {
                 new_port_mask = bm_l2_ctx.available_ports_mask & ~(rx_port_mask);
-                bm_l2_tx(p, new_port_mask);
+                bm_l2_tx(rx_data.pbuf, new_port_mask);
             }
 
             /* TODO: This is the place where routing and filtering functions would happen, to prevent passing the
@@ -109,10 +98,8 @@ static void bm_l2_rx_thread(void *parameters) {
                neighbors and user devices. */
 
             /* Submit packet to lwip. User RX Callback is responsible for freeing the packet*/
-            if (bm_l2_ctx.net_if->input(p, bm_l2_ctx.net_if) != ERR_OK) {
-                // LWIP_DEBUGF(NETIF_DEBUG, ("IP input error\r\n"));
-                pbuf_free(p);
-                p = NULL;
+            if (bm_l2_ctx.net_if->input(rx_data.pbuf, bm_l2_ctx.net_if) != ERR_OK) {
+                pbuf_free(rx_data.pbuf);
             }
         }
     }
@@ -133,11 +120,11 @@ static void bm_l2_tx_thread(void *parameters) {
             for (idx=0; idx<BM_NETDEV_TYPE_MAX; idx++) {
                 switch (bm_l2_ctx.devices[idx].type) {
                     case BM_NETDEV_TYPE_ADIN2111:
-                        retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, tx_data.payload, tx_data.payload_len,
+                        retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, tx_data.pbuf->payload, tx_data.pbuf->len,
                                            (tx_data.port_mask >> mask_idx) & ADIN2111_PORT_MASK, bm_l2_ctx.devices[idx].start_port_idx);
                         mask_idx += bm_l2_ctx.devices[idx].num_ports;
                         if (retv != ERR_OK) {
-                            //printf("Failed to submit TX buffer to ADIN");
+                            printf("Failed to submit TX buffer to ADIN");
                         }
                         break;
                     case BM_NETDEV_TYPE_NONE:
@@ -149,20 +136,22 @@ static void bm_l2_tx_thread(void *parameters) {
                         break;
                 }
             }
+            pbuf_free(tx_data.pbuf);
         }
     }
 }
 
 /* L2 SEND */
-err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask) {
+err_t bm_l2_tx(struct pbuf *pbuf, uint8_t port_mask) {
     err_t retv = ERR_OK;
 
     if(xSemaphoreTake(bm_l2_ctx.tx_sem, portMAX_DELAY) == pdTRUE) {
         bm_l2_ctx.tx_data.port_mask = port_mask;
-        bm_l2_ctx.tx_data.payload_len = p->len;
-        memcpy(bm_l2_ctx.tx_data.payload, p->payload, p->len);
+        bm_l2_ctx.tx_data.pbuf = pbuf;
 
+        pbuf_ref(pbuf);
         if(xQueueSend(bm_l2_ctx.tx_queue, (void *) &bm_l2_ctx.tx_data, 0) != pdTRUE) {
+            pbuf_free(pbuf);
             retv = ERR_MEM;
         }
         xSemaphoreGive(bm_l2_ctx.tx_sem);
@@ -170,7 +159,6 @@ err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask) {
         printf("Unable to take BM L2 TX mutex.\n");
         retv = ERR_TIMEOUT;
     }
-
     return retv;
 }
 
@@ -180,21 +168,33 @@ err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint
 
     bm_l2_ctx.rx_data.device_handle = device_handle;
     bm_l2_ctx.rx_data.port_mask = port_mask;
-    bm_l2_ctx.rx_data.payload_len = payload_len;
-    memcpy(bm_l2_ctx.rx_data.payload, payload, payload_len);
 
-    if(xQueueSend(bm_l2_ctx.rx_queue, (void *) &bm_l2_ctx.rx_data, 0) != pdTRUE) {
-        retv = ERR_MEM;
-    }
+    do {
+        bm_l2_ctx.rx_data.pbuf = pbuf_alloc(PBUF_RAW, payload_len, PBUF_RAM);
+        if (bm_l2_ctx.rx_data.pbuf == NULL) {
+            printf("No mem for pbuf in RX pathway\n");
+            pbuf_free(bm_l2_ctx.rx_data.pbuf);
+            retv = ERR_MEM;
+            break;
+        }
+        bm_l2_ctx.rx_data.pbuf->len = payload_len;
+        memcpy(bm_l2_ctx.rx_data.pbuf->payload, payload, payload_len);
+
+        if(xQueueSend(bm_l2_ctx.rx_queue, (void *) &bm_l2_ctx.rx_data, 0) != pdTRUE) {
+            pbuf_free(bm_l2_ctx.rx_data.pbuf);
+            retv = ERR_MEM;
+            break;
+        }
+    } while (0);
     return retv;
 }
 
 /* LWIP OUTPUT (acts as a wrapper for bm_l2_tx) */
-err_t bm_l2_link_output(struct netif *netif, struct pbuf *p) {
+err_t bm_l2_link_output(struct netif *netif, struct pbuf *pbuf) {
     (void) netif;
 
     /* Send on all available ports (Multicast) */
-    return bm_l2_tx(p, bm_l2_ctx.available_ports_mask);
+    return bm_l2_tx(pbuf, bm_l2_ctx.available_ports_mask);
 }
 
 /* L2 Initialization */
