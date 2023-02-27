@@ -98,11 +98,9 @@ static void bm_l2_rx_thread(void *parameters) {
                neighbors and user devices. */
 
             /* Submit packet to lwip. User RX Callback is responsible for freeing the packet*/
-            pbuf_ref(rx_data.pbuf);
             if (bm_l2_ctx.net_if->input(rx_data.pbuf, bm_l2_ctx.net_if) != ERR_OK) {
                 pbuf_free(rx_data.pbuf);
             }
-            pbuf_free(rx_data.pbuf);
         }
     }
 }
@@ -171,19 +169,23 @@ err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint
     bm_l2_ctx.rx_data.device_handle = device_handle;
     bm_l2_ctx.rx_data.port_mask = port_mask;
 
-    bm_l2_ctx.rx_data.pbuf = pbuf_alloc(PBUF_RAW, payload_len, PBUF_RAM);
-    if (bm_l2_ctx.rx_data.pbuf == NULL) {
-        printf("No mem for pbuf in RX pathway\n");
-    }
-    bm_l2_ctx.rx_data.pbuf->len = payload_len;
-    memcpy(bm_l2_ctx.rx_data.pbuf->payload, payload, payload_len);
+    do {
+        bm_l2_ctx.rx_data.pbuf = pbuf_alloc(PBUF_RAW, payload_len, PBUF_RAM);
+        if (bm_l2_ctx.rx_data.pbuf == NULL) {
+            printf("No mem for pbuf in RX pathway\n");
+            pbuf_free(bm_l2_ctx.rx_data.pbuf);
+            retv = ERR_MEM;
+            break;
+        }
+        bm_l2_ctx.rx_data.pbuf->len = payload_len;
+        memcpy(bm_l2_ctx.rx_data.pbuf->payload, payload, payload_len);
 
-    pbuf_ref(bm_l2_ctx.rx_data.pbuf);
-    if(xQueueSend(bm_l2_ctx.rx_queue, (void *) &bm_l2_ctx.rx_data, 0) != pdTRUE) {
-        pbuf_free(bm_l2_ctx.rx_data.pbuf);
-        retv = ERR_MEM;
-    }
-    pbuf_free(bm_l2_ctx.rx_data.pbuf);
+        if(xQueueSend(bm_l2_ctx.rx_queue, (void *) &bm_l2_ctx.rx_data, 0) != pdTRUE) {
+            pbuf_free(bm_l2_ctx.rx_data.pbuf);
+            retv = ERR_MEM;
+            break;
+        }
+    } while (0);
     return retv;
 }
 
