@@ -164,6 +164,7 @@ set(APP_LIBS
 
 set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
+    NO_NETWORK
     )
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the

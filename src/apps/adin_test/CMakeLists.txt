@@ -211,15 +211,6 @@ set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
     )
 
-# Use ALT_DEV as set in cmake command
-if (DEFINED ALT_DEV)
-list(APPEND APP_DEFINES "ALT_DEV=${ALT_DEV}")
-message(STATUS "Using ALT_DEV=${ALT_DEV}")
-else()
-list(APPEND APP_DEFINES "ALT_DEV=0x01")
-message(STATUS "Using default ALT_DEV=0x01")
-endif()
-
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")
 message(STATUS "DFU HOST AND CLIENT")

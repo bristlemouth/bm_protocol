@@ -30,9 +30,6 @@ static uint16_t         udp_port;
 static TaskHandle_t     rx_thread = NULL;
 static QueueHandle_t    bcl_rx_queue;
 
-// Get IPv6 LSB from CMAKE ALT_DEV define (use 0x01, 0x02, etc...)
-#define IPV6_ADDR_LSB ALT_DEV
-
 /* Define here for now */
 #define BCL_RX_QUEUE_NUM_ENTRIES  5
 
@@ -149,8 +146,13 @@ void bcl_init(SerialHandle_t* hSerial) {
     getMacAddr(netif.hwaddr, sizeof(netif.hwaddr));
     netif.hwaddr_len = sizeof(netif.hwaddr);
 
-    /* FIXME: We are changing IPV6 address assignment */
-    ip_addr_t my_addr = IPADDR6_INIT_HOST(0x20010db8, 0, 0, IPV6_ADDR_LSB);
+    // Generate IPv6 address using EUI-64 format derived from mac address
+    ip_addr_t my_addr = IPADDR6_INIT_HOST(
+            0x20010db8,
+            0,
+            (netif.hwaddr[0] << 24 | netif.hwaddr[1] << 16 | netif.hwaddr[2] << 8 | 0xFF),
+            (0xFE << 24 | netif.hwaddr[3] << 16 | netif.hwaddr[4] << 8 | netif.hwaddr[5])
+        );
 
     inet6_aton("ff03::1", &multicast_glob_addr);
 
@@ -196,5 +198,17 @@ void bcl_init(SerialHandle_t* hSerial) {
               messages attempted to be sent withing X ms are not received */
     vTaskDelay(400);
     bm_network_start();
+
 }
 
+/*!
+  Get string representation of IP address.
+  NOTE: returns ptr to static buffer; not reentrant! (from ip6addr_ntoa)
+
+  \param[in] ip IP address index (Since there are up to LWIP_IPV6_NUM_ADDRESSES)
+  \return pointer to string with ip address
+*/
+const char *bcl_get_ip_str(uint8_t ip) {
+    configASSERT(ip < LWIP_IPV6_NUM_ADDRESSES);
+    return(ip6addr_ntoa(netif_ip6_addr(&netif, ip)));
+}
