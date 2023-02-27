@@ -205,7 +205,8 @@ void s_host_req_update_run(void)
         host_ctx.ack_retry_num++;
 
         /* Wait for ack until max retries is reached */
-        if (host_ctx.ack_retry_num >= BM_DFU_MAX_CHUNK_RETRIES) {
+        if (host_ctx.ack_retry_num >= BM_DFU_MAX_ACK_RETRIES) {
+            configASSERT(xTimerStop(host_ctx.ack_timer, 10));
             bm_dfu_send_ack(BM_DESKTOP, NULL, 0, BM_DFU_ERR_TIMEOUT);
             bm_dfu_set_error(BM_DFU_ERR_TIMEOUT);
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
