@@ -156,7 +156,6 @@ err_t bm_l2_tx(struct pbuf *pbuf, uint8_t port_mask) {
             pbuf_free(pbuf);
             retv = ERR_MEM;
         }
-        pbuf_free(pbuf);
         xSemaphoreGive(bm_l2_ctx.tx_sem);
     } else {
         printf("Unable to take BM L2 TX mutex.\n");
