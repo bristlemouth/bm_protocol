@@ -1,6 +1,7 @@
 #include "bm_l2.h"
 #include "bm_config.h"
 #include "eth_adin2111.h"
+#include "task_priorities.h"
 #include "lwip/ethip6.h"
 #include "lwip/snmp.h"
 #include "semphr.h"
@@ -259,7 +260,7 @@ err_t bm_l2_init(struct netif *netif) {
                        "L2 TX Thread",
                        2048,
                        NULL,
-                       15,
+                       L2_TX_TASK_PRIORITY,
                        &tx_thread);
     configASSERT(rval == pdPASS);
 
@@ -267,7 +268,7 @@ err_t bm_l2_init(struct netif *netif) {
                        "L2 RX Thread",
                        2048, 
                        NULL,
-                       15,
+                       L2_RX_TASK_PRIORITY,
                        &rx_thread);
     configASSERT(rval == pdPASS);
 

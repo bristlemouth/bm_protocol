@@ -23,6 +23,7 @@
 #include "bm_network.h"
 #include "bm_dfu.h"
 #include "bm_l2.h"
+#include "task_priorities.h"
 
 static struct netif     netif;
 static struct udp_pcb*  udp_pcb;
@@ -195,7 +196,7 @@ void bcl_init(SerialHandle_t* hSerial) {
                        "BCL RX Thread",
                        2048,
                        NULL,
-                       15,
+                       BM_NETWORK_TASK_PRIORITY,
                        &rx_thread);
     configASSERT(rval == pdPASS);
 

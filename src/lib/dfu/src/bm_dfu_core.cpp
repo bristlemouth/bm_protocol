@@ -5,6 +5,7 @@
 #include "bm_dfu_host.h"
 #include "lib_state_machine.h"
 #include "serial.h"
+#include "task_priorities.h"
 
 #include "semphr.h"
 
@@ -716,7 +717,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        "DFU Node",
                        512,
                        NULL,
-                       15,
+                       BM_DFU_NODE_TASK_PRIORITY,
                        NULL);
     configASSERT(retval == pdPASS);
 
@@ -724,7 +725,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        "DFU Event",
                        512,
                        NULL,
-                       14,
+                       BM_DFU_EVENT_TASK_PRIORITY,
                        NULL);
     configASSERT(retval == pdPASS);
 
@@ -733,7 +734,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        "DFU Desktop",
                        512,
                        NULL,
-                       15,
+                       BM_DFU_DESKTOP_TASK_PRIORITY,
                        NULL);
     configASSERT(retval == pdPASS);
 
@@ -755,7 +756,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                         "DFU Serial",
                         512,
                         hSerial,
-                        3,
+                        BM_DFU_SERIAL_RX_TASK_PRIORITY,
                         NULL);
     configASSERT(retval == pdTRUE);
 

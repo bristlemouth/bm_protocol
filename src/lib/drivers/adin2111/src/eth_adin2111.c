@@ -4,6 +4,7 @@
 #include "adi_bsp.h"
 #include "eth_adin2111.h"
 #include "bm_l2.h"
+#include "task_priorities.h"
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
@@ -314,7 +315,6 @@ static void adin2111_service_thread(void *parameters) {
                     } else {
                         /* Failed to submit TX Buffer? */
                         printf("Unable to submit TX buffer\n");
-                        // configASSERT(0);
                         break;
                     }
                 }
@@ -412,7 +412,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice) {
                        "ADIN2111 Service Thread",
                        8192,
                        NULL,
-                       15,
+                       ADIN_SERVICE_TASK_PRIORITY,
                        &serviceTask);
         configASSERT(rval == pdTRUE);
 
