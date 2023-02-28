@@ -14,6 +14,9 @@
 #include "reset_reason.h"
 #include "bootloader_helper.h"
 #include "stm32u5xx_hal.h"
+#ifndef NO_NETWORK
+#include "bristlemouth.h"
+#endif
 
 #ifdef USE_BOOTLOADER
 #include "bootutil/bootutil_public.h"
@@ -162,6 +165,10 @@ static BaseType_t infoCommand( char *writeBuffer,
     printf("%02x:", mac[byte]);
   }
   printf("%02x\n", mac[sizeof(mac)-1]);
+
+#ifndef NO_NETWORK
+  printf("IP: %s\n", bcl_get_ip_str(0));
+#endif
 
   printf("FW Version: %s\n", getFWVersionStr());
 

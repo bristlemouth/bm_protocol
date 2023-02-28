@@ -20,6 +20,7 @@ typedef struct bcl_rx_element_s {
 } bcl_rx_element_t;
 
 void bcl_init(SerialHandle_t* hSerial);
+const char *bcl_get_ip_str(uint8_t ip);
 
 #ifdef __cplusplus
 }
