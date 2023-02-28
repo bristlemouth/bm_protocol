@@ -19,7 +19,8 @@ static const CLI_Command_Definition_t cmdGpio = {
   "bm",
   // Help string
   "bm:\n"
-  " * bm neighbors - show neighbors + liveliness\n",
+  " * bm neighbors - show neighbors + liveliness\n"
+  " * bm topo - print network topology\n",
   // Command function
   neighborsCommand,
   // Number of parameters (variable)
@@ -54,6 +55,10 @@ static BaseType_t neighborsCommand( char *writeBuffer,
 
         if (strncmp("neighbors", parameter,parameterStringLength) == 0) {
             bm_network_print_neighbor_table();
+        } else if (strncmp("topo", parameter,parameterStringLength) == 0) {
+            bm_network_request_neighbor_tables();
+            vTaskDelay(10);
+            bm_network_print_topology(NULL, NULL, 0);
         } else {
             printf("ERR Invalid paramters\n");
             break;

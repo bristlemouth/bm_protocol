@@ -33,7 +33,6 @@ static uint16_t         udp_port;
 static TaskHandle_t     rx_thread = NULL;
 static QueueHandle_t    bcl_rx_queue;
 
-
 /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
     the bristlemouth protocol spec */
 #define CLEAR_PORTS(x) (x[IPV6_ADDR_DWORD_1] &= (~(0xFFFFU)))
@@ -70,11 +69,14 @@ static void bcl_rx_thread(void *parameters) {
     uint8_t dst_port_num = 0;
     // uint8_t src_port_bitmask = 0;
     // uint8_t src_port_num = 0;
+    const ip6_addr_t* self_addr = netif_ip6_addr(&netif, 0);
 
     /* Available message types */
     struct bm_Ack ack_msg;
     struct bm_Discover_Neighbors bm_discover_neighbors_msg;
     struct bm_Heartbeat heartbeat_msg;
+    struct bm_Request_Table bm_request_table_msg;
+    struct bm_Table_Response bm_table_response_msg;
     int index;
 
     while (1) {
@@ -137,10 +139,20 @@ static void bcl_rx_thread(void *parameters) {
                         printf("Received Time\n");
                         break;
                     case MSG_BM_REQUEST_TABLE:
-                        printf("Received Table Request\n");
+                        if(cbor_decode_bm_Request_Table(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_request_table_msg, &decode_len)) {
+                            printf("CBOR Decode error\n");
+                            break;
+                        }
+                        bm_network_process_table_request(bm_request_table_msg._bm_Request_Table_src_ipv6_addr_uint);
                         break;
                     case MSG_BM_TABLE_RESPONSE:
-                        printf("Received Table Response\n");
+                        if(cbor_decode_bm_Table_Response(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_table_response_msg, &decode_len)) {
+                            printf("CBOR Decode error\n");
+                            break;
+                        }
+                        if (memcmp(bm_table_response_msg._bm_Table_Response_dst_ipv6_addr_uint, self_addr->addr, sizeof(self_addr->addr)) == 0) {
+                            bm_network_store_neighbor_table(&bm_table_response_msg, bm_table_response_msg._bm_Table_Response_src_ipv6_addr_uint);
+                        }
                         break;
                     default:
                         printf("Unexpected Message received\n");

@@ -23,7 +23,6 @@ enum {
     IPV6_ADDR_DWORD_3
 };
 
-
 err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask);
 err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask);
 err_t bm_l2_link_output(struct netif *netif, struct pbuf *p);
