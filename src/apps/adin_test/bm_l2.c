@@ -91,7 +91,7 @@ static void bm_l2_rx_thread(void *parameters) {
             }
 
             /* We need to code the RX Port into the IPV6 address passed to lwip */
-            ((uint8_t *) rx_data.pbuf->payload)[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + INGRESS_PORT_IDX] = rx_port_mask;
+            ADD_INGRESS_PORT(((uint8_t *) rx_data.pbuf->payload),rx_port_mask);
 
             /* TODO: Check if global multicast message. Re-TX on every other port */
             if (is_global_multicast)

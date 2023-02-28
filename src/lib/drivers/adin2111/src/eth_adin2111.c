@@ -443,7 +443,7 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
 
                 /* We are modifying the IPV6 SRC address to include the egress port */
                 bm_egress_port = (0x01 << i) << port_offset;
-                pEntry->pBufDesc->pBuf[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + EGRESS_PORT_IDX] = bm_egress_port;
+                ADD_EGRESS_PORT(pEntry->pBufDesc->pBuf, bm_egress_port);
 
                 pcapTxPacket(pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize);
 
