@@ -48,6 +48,7 @@ static void neighbor_timer_handler(TimerHandle_t tmr){
     for (i = 0; i < MAX_NUM_NEIGHBORS; i++) {
         if ( tmr == neighbor_timers[i]) {
             printf("Neighbor on Port %d is unresponsive\n", i);
+            configASSERT(xTimerStop(tmr, 10));
             self_neighbor_table.neighbor[i].reachable = 0;
             break;
         }
@@ -156,30 +157,24 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
 
     /* Check if we already have this Node IPV6 addr in our neighbor table */
     if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) != 0) {
-        //printf("Storing Neighbor in Port Num: %d\n", port_num);
         memcpy(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16);
         self_neighbor_table.neighbor[port_num].reachable = 1;
         
         /* Kickoff Neighbor Heartbeat Timeout Timer */
         configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
-        //printf("Already have this node, reset its heartbeat timeout timer\n");
         self_neighbor_table.neighbor[port_num].reachable = 1;
 
         /* Restart neighbor heartbeat timer */
-        configASSERT(xTimerStop(neighbor_timers[port_num], 10));
         configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     }
 }
 
 void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr) {
     if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, 16) == 0) {
-        //printf("Valid Heartbeat received\n");
         self_neighbor_table.neighbor[port_num].reachable = 1;
-        configASSERT(xTimerStop(neighbor_timers[port_num], 10));
         configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
-        //printf("New Neighbor sending a Heartbeat. Attempting to re-discover and modify neighbor table\n");
         send_discover_neighbors();
     }
 }
@@ -187,6 +182,17 @@ void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr) {
 /********************************************************************************************/
 /******************************* Public BM Network API **************************************/
 /********************************************************************************************/
+
+void bm_network_print_neighbor_table(void) {
+    int i;
+    printf("Neighbor Table\n");
+    for (i=0; i < MAX_NUM_NEIGHBORS; i++)
+    {
+        printf("Port %d | ", i);
+        printf("IPv6 Address: %s | ", ip6addr_ntoa(&self_neighbor_table.neighbor[i].ip_addr));
+        printf("Reachable: %d\n", (self_neighbor_table.neighbor[i].reachable == 1));
+    }
+}
 
 void bm_network_request_neighbor_tables(void) {
     /* TODO: Send out request for neighbor tables over multicast */

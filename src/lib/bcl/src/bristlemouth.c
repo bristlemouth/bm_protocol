@@ -30,6 +30,11 @@ static uint16_t         udp_port;
 static TaskHandle_t     rx_thread = NULL;
 static QueueHandle_t    bcl_rx_queue;
 
+
+/* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
+    the bristlemouth protocol spec */
+#define CLEAR_PORTS(x) (x[IPV6_ADDR_DWORD_1] &= (~(0xFFFFU)))
+
 /* Define here for now */
 #define BCL_RX_QUEUE_NUM_ENTRIES  5
 
@@ -58,23 +63,36 @@ static void bcl_rx_thread(void *parameters) {
     static bcl_rx_element_t rx_data;
     uint16_t payload_length = 0;
     size_t decode_len;
+    uint8_t dst_port_bitmask = 0;
     uint8_t dst_port_num = 0;
+    // uint8_t src_port_bitmask = 0;
     // uint8_t src_port_num = 0;
 
     /* Available message types */
     struct bm_Ack ack_msg;
     struct bm_Discover_Neighbors bm_discover_neighbors_msg;
     struct bm_Heartbeat heartbeat_msg;
+    int index;
 
     while (1) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
-            //src_port_num = ((rx_data.src.addr[2] >> 16) & 0xFF);
-            dst_port_num = ((rx_data.src.addr[2] >> 24) & 0xFF);
 
-            /* Clear Ingress/Egress ports from IPv6 address
-               FIXME: Change magic numbers to #defines */
-            rx_data.src.addr[2] &= ~(0xFF << 16);
-            rx_data.src.addr[2] &= ~(0xFF << 24);
+            /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
+               the bristlemouth protocol spec */
+            //src_port_bitmask = ((rx_data.src.addr[IPV6_ADDR_DWORD_1]) & 0xFF);
+            dst_port_bitmask = ((rx_data.src.addr[IPV6_ADDR_DWORD_1] >> 8) & 0xFF);
+
+            dst_port_num = 0xFF;
+            for (index=0; index < 8; index++) {
+                if (dst_port_bitmask & (0x1 << index)){
+                    dst_port_num = index;
+                    break;
+                }
+            }
+            configASSERT(dst_port_num != 0xFF);
+
+            /* Remove the ingress/egress ports before storing in neighbor table */
+            CLEAR_PORTS(rx_data.src.addr);
 
             if (rx_data.buf->len < sizeof(bm_usr_msg_hdr_t)) {
                 printf("Received a message too small to decode. Discarding.\n");
@@ -94,7 +112,6 @@ static void bcl_rx_thread(void *parameters) {
                             break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, true);
-                        //printf("Received ACK\n");
                         break;
                     case MSG_BM_HEARTBEAT:
                         if(cbor_decode_bm_Heartbeat(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &heartbeat_msg, &decode_len)) {

@@ -20,6 +20,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
+#include "debug_bm.h"
 #include "debug_memfault.h"
 #include "debug_sys.h"
 #include "gpioISR.h"
@@ -192,8 +193,8 @@ static void defaultTask( void *parameters ) {
     usbInit();
 
     debugSysInit();
-    // debugDFUInit();
     debugMemfaultInit(&usart1);
+    debugBMInit();
 
     // Commenting out while we test usart1
     // lpmPeripheralInactive(LPM_BOOT);
