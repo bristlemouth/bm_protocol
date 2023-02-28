@@ -71,8 +71,11 @@ static void bcl_rx_thread(void *parameters) {
 
     while (1) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
-            //src_port_bitmask = ((rx_data.src.addr[2] >> 16) & 0xFF);
-            dst_port_bitmask = ((rx_data.src.addr[2] >> 24) & 0xFF);
+
+            /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
+               the bristlemouth protocol spec */
+            //src_port_bitmask = ((rx_data.src.addr[1]) & 0xFF);
+            dst_port_bitmask = ((rx_data.src.addr[1] >> 8) & 0xFF);
 
             dst_port_num = 0xFF;
             for (index=0; index < 8; index++) {
@@ -83,10 +86,9 @@ static void bcl_rx_thread(void *parameters) {
             }
             configASSERT(dst_port_num != 0xFF);
 
-            /* Clear Ingress/Egress ports from IPv6 address
-               FIXME: Change magic numbers to #defines */
-            rx_data.src.addr[2] &= ~(0xFF << 16);
-            rx_data.src.addr[2] &= ~(0xFF << 24);
+            /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
+               the bristlemouth protocol spec */
+            rx_data.src.addr[1] &= ~(0xFFFF);
 
             if (rx_data.buf->len < sizeof(bm_usr_msg_hdr_t)) {
                 printf("Received a message too small to decode. Discarding.\n");

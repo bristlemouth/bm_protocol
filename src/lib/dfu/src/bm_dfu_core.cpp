@@ -212,7 +212,12 @@ static void bm_dfu_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *buf,
 
     if (buf != NULL) {
         rx_data.buf = buf;
-        rx_data.src = *addr;
+
+        /* FIXME: Need to modify address to remove Ingress/Egress port, but is const. 
+           We are currently not using this */
+        // addr->addr[1] &= ~(0xFFFF);
+        // rx_data.src = *addr;
+
         pbuf_ref(buf);
         if(xQueueSend(dfu_node_queue, &rx_data, 0) != pdTRUE) {
             pbuf_free(buf);
