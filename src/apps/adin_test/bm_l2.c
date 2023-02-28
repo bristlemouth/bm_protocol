@@ -259,7 +259,7 @@ err_t bm_l2_init(struct netif *netif) {
                        "L2 TX Thread",
                        2048,
                        NULL,
-                       15,
+                       13,
                        &tx_thread);
     configASSERT(rval == pdPASS);
 
@@ -267,7 +267,7 @@ err_t bm_l2_init(struct netif *netif) {
                        "L2 RX Thread",
                        2048, 
                        NULL,
-                       15,
+                       13,
                        &rx_thread);
     configASSERT(rval == pdPASS);
 

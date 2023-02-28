@@ -106,7 +106,7 @@ uint32_t adi_bsp_init(void) {
                        "ADIN_SPI",
                        1024,
                        NULL,
-                       10,
+                       15,
                        &spiTask);
     configASSERT(rval == pdTRUE);
 
@@ -114,7 +114,7 @@ uint32_t adi_bsp_init(void) {
                        "ADIN_IO",
                        1024,
                        NULL,
-                       10,
+                       15,
                        &gpioTask);
     configASSERT(rval == pdTRUE);
 

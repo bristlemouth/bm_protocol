@@ -195,7 +195,7 @@ void bcl_init(SerialHandle_t* hSerial) {
                        "BCL RX Thread",
                        2048,
                        NULL,
-                       15,
+                       10,
                        &rx_thread);
     configASSERT(rval == pdPASS);
 

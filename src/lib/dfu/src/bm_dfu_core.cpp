@@ -716,7 +716,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        "DFU Node",
                        512,
                        NULL,
-                       15,
+                       12,
                        NULL);
     configASSERT(retval == pdPASS);
 
@@ -724,7 +724,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        "DFU Event",
                        512,
                        NULL,
-                       14,
+                       11,
                        NULL);
     configASSERT(retval == pdPASS);
 
@@ -733,7 +733,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                        "DFU Desktop",
                        512,
                        NULL,
-                       15,
+                       12,
                        NULL);
     configASSERT(retval == pdPASS);
 
