@@ -66,7 +66,7 @@ static void bm_l2_rx_thread(void *parameters) {
     uint8_t new_port_mask = 0;
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = 0;
-    bool is_global_multicast = true;
+    volatile bool is_global_multicast = false;
 
     while (1) {
         if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
@@ -81,6 +81,11 @@ static void bm_l2_rx_thread(void *parameters) {
                     configASSERT(0);
                     rx_port_mask = 0;
                     break;
+            }
+
+            /* Check the Destination address 2 most significant bytes. If ff03, then global multicast, if ff02, link local */
+            if (((uint8_t *) rx_data.pbuf->payload)[DST_ADDR_MSB] == 0xff && ((uint8_t *) rx_data.pbuf->payload)[DST_ADDR_MSB + 1] == 0x03) {
+                is_global_multicast = true;
             }
 
             /* We need to code the RX Port into the IPV6 address passed to lwip */

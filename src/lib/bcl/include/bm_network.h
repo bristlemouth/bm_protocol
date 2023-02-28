@@ -36,6 +36,7 @@ int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port,
 void bm_network_start(void);
 void bm_network_stop(void);
 void bm_network_request_neighbor_tables(void);
+void bm_network_print_neighbor_table(void);
 
 void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack);
 void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr);

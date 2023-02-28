@@ -58,18 +58,30 @@ static void bcl_rx_thread(void *parameters) {
     static bcl_rx_element_t rx_data;
     uint16_t payload_length = 0;
     size_t decode_len;
+    uint8_t dst_port_bitmask = 0;
     uint8_t dst_port_num = 0;
+    // uint8_t src_port_bitmask = 0;
     // uint8_t src_port_num = 0;
 
     /* Available message types */
     struct bm_Ack ack_msg;
     struct bm_Discover_Neighbors bm_discover_neighbors_msg;
     struct bm_Heartbeat heartbeat_msg;
+    int index;
 
     while (1) {
         if(xQueueReceive(bcl_rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
-            //src_port_num = ((rx_data.src.addr[2] >> 16) & 0xFF);
-            dst_port_num = ((rx_data.src.addr[2] >> 24) & 0xFF);
+            //src_port_bitmask = ((rx_data.src.addr[2] >> 16) & 0xFF);
+            dst_port_bitmask = ((rx_data.src.addr[2] >> 24) & 0xFF);
+
+            dst_port_num = 0xFF;
+            for (index=0; index < 8; index++) {
+                if (dst_port_bitmask & (0x1 << index)){
+                    dst_port_num = index;
+                    break;
+                }
+            }
+            configASSERT(dst_port_num != 0xFF);
 
             /* Clear Ingress/Egress ports from IPv6 address
                FIXME: Change magic numbers to #defines */
@@ -94,7 +106,6 @@ static void bcl_rx_thread(void *parameters) {
                             break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, true);
-                        //printf("Received ACK\n");
                         break;
                     case MSG_BM_HEARTBEAT:
                         if(cbor_decode_bm_Heartbeat(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &heartbeat_msg, &decode_len)) {
