@@ -24,6 +24,7 @@ size_t usbCDCGetTxBytesFromISR(uint8_t *buffer, size_t len);
 
 void usbCDCConnectedFromISR();
 void usbCDCDisconnectedFromISR();
+void serialConsoleEnable();
 void serialConsoleDisable();
 
 #ifdef __cplusplus

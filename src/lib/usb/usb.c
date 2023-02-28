@@ -1,12 +1,14 @@
+#include "bsp.h"
+#include "device/dcd.h"
 #include "FreeRTOS.h"
+#include "main.h"
+#include "pcap.h"
+#include "serial.h"
+#include "serial_console.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "tusb.h"
 #include "usb.h"
-#include "main.h"
-#include "device/dcd.h"
-#include "bsp.h"
-#include "serial.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -76,7 +78,7 @@ static uint8_t usbRxBuff[2048];
 // TODO - put these in a central spot and have accessor functions
 // such as serialHandleFromITF()
 extern SerialHandle_t usbCLI;
-extern SerialHandle_t usbBM;
+extern SerialHandle_t usbPcap;
 
 SerialHandle_t * serialHandleFromItf(uint8_t itf) {
   SerialHandle_t *handle;
@@ -86,7 +88,7 @@ SerialHandle_t * serialHandleFromItf(uint8_t itf) {
       break;
     }
     case 1: {
-      handle = &usbBM;
+      handle = &usbPcap;
       break;
     }
     default: {
@@ -264,17 +266,34 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 
   SerialHandle_t *handle = serialHandleFromItf(itf);
   configASSERT(handle);
-  if ( dtr ) {
-    // Terminal connected
-    // serialConsoleEnable();
-    serialEnable(handle);
-    printf("Serial console connected %u\n", itf);
-  } else {
-    // Terminal disconnected
-    // serialConsoleDisable();
-    serialDisable(handle);
-    printf("Serial console disconnected %u\n", itf);
+  switch(itf) {
+    case 0: {
+      if ( dtr ) {
+        // Terminal connected
+        serialConsoleEnable();
+      } else {
+        // Terminal disconnected
+        serialConsoleDisable();
+      }
+      break;
+    }
+
+    case 1: {
+      if ( dtr ) {
+        // Enable packet dumps
+        pcapEnable();
+      } else {
+        // Disable packet dumps
+        pcapDisable();
+      }
+      break;
+    }
+
+    default:
+      configASSERT(0);
   }
+
+
 }
 
 // Invoked when usb bus is suspended

@@ -76,15 +76,15 @@ SerialHandle_t usbCLI   = {
 };
 
 // "bristlemouth" USB serial - Use TBD
-SerialHandle_t usbBM   = {
+SerialHandle_t usbPcap   = {
   .device = (void *)1, // Using CDC 1
   .name = "vcp-bm",
   .txPin = NULL,
   .rxPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
-  .txBufferSize = 1024,
-  .rxBufferSize = 512,
+  .txBufferSize = 2048,
+  .rxBufferSize = 64,
   .rxBytesFromISR = NULL,
   .getTxBytesFromISR = NULL,
   .processByte = NULL,
@@ -92,6 +92,7 @@ SerialHandle_t usbBM   = {
   .enabled = false,
   .flags = 0,
 };
+
 
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);

@@ -24,6 +24,7 @@
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
+#include "pcap.h"
 #include "printf.h"
 #include "serial.h"
 #include "serial_console.h"
@@ -71,8 +72,8 @@ SerialHandle_t usbCLI   = {
   .flags = 0,
 };
 
-// "bristlemouth" USB serial - Use DFU
-SerialHandle_t usbBM   = {
+
+SerialHandle_t usbPcap   = {
   .device = (void *)1, // Using CDC 1
   .name = "vcp-bm",
   .txPin = NULL,
@@ -80,7 +81,7 @@ SerialHandle_t usbBM   = {
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 2048,
-  .rxBufferSize = 2048,
+  .rxBufferSize = 64,
   .rxBytesFromISR = NULL,
   .getTxBytesFromISR = NULL,
   .processByte = NULL,
@@ -153,6 +154,7 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 
 static void defaultTask( void *parameters ) {
     (void)parameters;
+    SerialHandle_t *dfuSerial = NULL;
 
     startIWDGTask();
     startSerial();
@@ -162,11 +164,23 @@ static void defaultTask( void *parameters ) {
       startSerialConsole(&usbCLI);
       // Serial device will be enabled automatically when console connects
       // so no explicit serialEnable is required
+
+#if BM_DFU_HOST
+      dfuSerial = &usart1;
+      serialEnable(&usart1);
+#endif
+
     } else {
       startSerialConsole(&usart1);
-      serialEnable(&usart1);
+
+#if BM_DFU_HOST
+      printf("WARNING: USB must be connected to use DFU mode. This serial port will be used by the serial console instead.\n");
+#endif
+
+      printf("WARNING: PCAP support requires USB connection.\n");
     }
     startCLI();
+    pcapInit(&usbPcap);
     serialEnable(&usart1);
     gpioISRStartTask();
 
@@ -186,9 +200,7 @@ static void defaultTask( void *parameters ) {
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
-    printf("Hello from the Default task\n");
-
-    bcl_init(&usbBM);
+    bcl_init(dfuSerial);
 
     while(1) {
         /* Do nothing */
