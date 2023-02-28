@@ -66,7 +66,7 @@ static void bm_l2_rx_thread(void *parameters) {
     uint8_t new_port_mask = 0;
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = 0;
-    volatile bool is_global_multicast = false;
+    bool is_global_multicast = false;
 
     while (1) {
         if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
