@@ -85,8 +85,7 @@ static void bm_l2_rx_thread(void *parameters) {
             }
 
             /* Check the Destination address 2 most significant bytes. If ff03, then global multicast, if ff02, link local */
-            if (((uint8_t *) rx_data.pbuf->payload)[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest)] == 0xff &&
-                ((uint8_t *) rx_data.pbuf->payload)[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest) + 1] == 0x03) {
+            if (IS_GLOBAL_MULTICAST(rx_data.pbuf->payload)) {
                 is_global_multicast = true;
             }
 

@@ -31,6 +31,8 @@ err_t bm_l2_init(struct netif *netif);
 
 #define ADD_EGRESS_PORT(addr, port) (addr[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + EGRESS_PORT_IDX] = port)
 #define ADD_INGRESS_PORT(addr, port) (addr[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + INGRESS_PORT_IDX] = port)
+#define IS_GLOBAL_MULTICAST(addr) ( ( (uint8_t *) addr )[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest)] == 0xFFU && \
+                                    ( (uint8_t *) addr )[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest) + 1] == 0x03U )
 
 #ifdef __cplusplus
 }
