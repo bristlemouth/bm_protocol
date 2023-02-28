@@ -12,6 +12,7 @@
 #include "io.h"
 #include "bsp.h"
 #include "protected_spi.h"
+#include "task_priorities.h"
 
 #define RESET_DELAY       (1)
 #define AFTER_RESET_DELAY (100)
@@ -106,7 +107,7 @@ uint32_t adi_bsp_init(void) {
                        "ADIN_SPI",
                        1024,
                        NULL,
-                       15,
+                       ADIN_SPI_TASK_PRIORITY,
                        &spiTask);
     configASSERT(rval == pdTRUE);
 
@@ -114,7 +115,7 @@ uint32_t adi_bsp_init(void) {
                        "ADIN_IO",
                        1024,
                        NULL,
-                       15,
+                       ADIN_GPIO_TASK_PRIORITY,
                        &gpioTask);
     configASSERT(rval == pdTRUE);
 
