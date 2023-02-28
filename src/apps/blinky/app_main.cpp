@@ -5,9 +5,13 @@
 // Peripheral
 #include "main.h"
 #include "adc.h"
-#include "rtc.h"
+#include "gpdma.h"
+#include "i2c.h"
 #include "icache.h"
 #include "iwdg.h"
+#include "rtc.h"
+#include "sai.h"
+#include "spi.h"
 #include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
@@ -21,6 +25,7 @@
 #include "cli.h"
 #include "debug_memfault.h"
 #include "debug_sys.h"
+#include "debug_mic.h"
 #include "gpioISR.h"
 #include "io.h"
 #include "memfault_platform_core.h"
@@ -98,6 +103,8 @@ extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
 
+extern SAI_HandleTypeDef hsai_BlockA1;
+
 extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
@@ -115,6 +122,7 @@ extern "C" int main(void) {
   MX_ICACHE_Init();
   MX_RTC_Init();
   MX_IWDG_Init();
+  MX_GPDMA1_Init();
 
   usbMspInit();
 
@@ -188,6 +196,7 @@ static void defaultTask( void *parameters ) {
   usbInit();
 
   debugSysInit();
+  debugMicInit(&hsai_BlockA1);
   debugMemfaultInit(&usart1);
 
 #ifdef USE_BOOTLOADER

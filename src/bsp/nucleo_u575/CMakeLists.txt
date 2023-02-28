@@ -3,11 +3,13 @@ set(COMMON_BSP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../common)
 set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/bsp.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/adc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpdma.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/icache.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/iwdg.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/rtc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/sai.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/spi.c
         # ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/syscalls.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_hal_msp.c
@@ -40,6 +42,8 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_rcc_ex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_rtc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_rtc_ex.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_sai.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_sai_ex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_spi.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_spi_ex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_tim.c
