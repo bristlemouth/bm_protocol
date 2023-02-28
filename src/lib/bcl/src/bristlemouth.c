@@ -30,6 +30,11 @@ static uint16_t         udp_port;
 static TaskHandle_t     rx_thread = NULL;
 static QueueHandle_t    bcl_rx_queue;
 
+
+/* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
+    the bristlemouth protocol spec */
+#define CLEAR_PORTS(x) (x[IPV6_ADDR_DWORD_1] &= (~(0xFFFFU)))
+
 /* Define here for now */
 #define BCL_RX_QUEUE_NUM_ENTRIES  5
 
@@ -74,8 +79,8 @@ static void bcl_rx_thread(void *parameters) {
 
             /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
                the bristlemouth protocol spec */
-            //src_port_bitmask = ((rx_data.src.addr[1]) & 0xFF);
-            dst_port_bitmask = ((rx_data.src.addr[1] >> 8) & 0xFF);
+            //src_port_bitmask = ((rx_data.src.addr[IPV6_ADDR_DWORD_1]) & 0xFF);
+            dst_port_bitmask = ((rx_data.src.addr[IPV6_ADDR_DWORD_1] >> 8) & 0xFF);
 
             dst_port_num = 0xFF;
             for (index=0; index < 8; index++) {
@@ -86,9 +91,8 @@ static void bcl_rx_thread(void *parameters) {
             }
             configASSERT(dst_port_num != 0xFF);
 
-            /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
-               the bristlemouth protocol spec */
-            rx_data.src.addr[1] &= ~(0xFFFF);
+            /* Remove the ingress/egress ports before storing in neighbor table */
+            CLEAR_PORTS(rx_data.src.addr);
 
             if (rx_data.buf->len < sizeof(bm_usr_msg_hdr_t)) {
                 printf("Received a message too small to decode. Discarding.\n");

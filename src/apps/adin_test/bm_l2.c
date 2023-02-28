@@ -4,6 +4,7 @@
 #include "lwip/ethip6.h"
 #include "lwip/snmp.h"
 #include "semphr.h"
+#include "lwip/prot/ethernet.h"
 
 #define IFNAME0                     'b'
 #define IFNAME1                     'm'
@@ -84,12 +85,13 @@ static void bm_l2_rx_thread(void *parameters) {
             }
 
             /* Check the Destination address 2 most significant bytes. If ff03, then global multicast, if ff02, link local */
-            if (((uint8_t *) rx_data.pbuf->payload)[DST_ADDR_MSB] == 0xff && ((uint8_t *) rx_data.pbuf->payload)[DST_ADDR_MSB + 1] == 0x03) {
+            if (((uint8_t *) rx_data.pbuf->payload)[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest)] == 0xff &&
+                ((uint8_t *) rx_data.pbuf->payload)[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest) + 1] == 0x03) {
                 is_global_multicast = true;
             }
 
             /* We need to code the RX Port into the IPV6 address passed to lwip */
-            ((uint8_t *) rx_data.pbuf->payload)[INGRESS_PORT_IDX] = rx_port_mask;
+            ((uint8_t *) rx_data.pbuf->payload)[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + INGRESS_PORT_IDX] = rx_port_mask;
 
             /* TODO: Check if global multicast message. Re-TX on every other port */
             if (is_global_multicast)
