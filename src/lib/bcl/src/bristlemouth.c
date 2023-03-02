@@ -23,6 +23,8 @@
 #include "bm_network.h"
 #include "bm_dfu.h"
 #include "bm_l2.h"
+
+#include "middleware.h"
 #include "task_priorities.h"
 
 static struct netif     netif;
@@ -211,6 +213,9 @@ void bcl_init(SerialHandle_t* hSerial) {
 
     /* Start DFU service here */
     bm_dfu_init(hSerial, my_addr, &netif);
+
+
+    bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
 
     /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any 
               messages attempted to be sent withing X ms are not received */
