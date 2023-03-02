@@ -242,7 +242,7 @@ static bool decode_bm_Table_Response(
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 3, &(*result)._bm_Table_Response_neighbors__bm_Neighbor_Info_count, (zcbor_decoder_t *)decode_bm_Neighbor_Info, state, (&(*result)._bm_Table_Response_neighbors__bm_Neighbor_Info), sizeof(struct bm_Neighbor_Info))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
+	bool tmp_result = (((zcbor_list_start_decode(state) && ((((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 2, &(*result)._bm_Table_Response_neighbors__bm_Neighbor_Info_count, (zcbor_decoder_t *)decode_bm_Neighbor_Info, state, (&(*result)._bm_Table_Response_neighbors__bm_Neighbor_Info), sizeof(struct bm_Neighbor_Info))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
 	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Table_Response_src_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Table_Response_src_ipv6_addr_uint, state, (&(*result)._bm_Table_Response_src_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))
 	&& ((zcbor_list_start_decode(state) && ((zcbor_multi_decode(0, 4, &(*result)._bm_Table_Response_dst_ipv6_addr_uint_count, (zcbor_decoder_t *)decode_repeated_bm_Table_Response_dst_ipv6_addr_uint, state, (&(*result)._bm_Table_Response_dst_ipv6_addr_uint), sizeof(uint32_t))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state)))) || (zcbor_list_map_end_force_decode(state), false)) && zcbor_list_end_decode(state))));
 

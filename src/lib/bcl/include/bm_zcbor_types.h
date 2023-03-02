@@ -65,7 +65,7 @@ struct bm_Request_Table {
 };
 
 struct bm_Table_Response {
-	struct bm_Neighbor_Info _bm_Table_Response_neighbors__bm_Neighbor_Info[3];
+	struct bm_Neighbor_Info _bm_Table_Response_neighbors__bm_Neighbor_Info[2];
 	uint_fast32_t _bm_Table_Response_neighbors__bm_Neighbor_Info_count;
 	uint32_t _bm_Table_Response_src_ipv6_addr_uint[4];
 	uint_fast32_t _bm_Table_Response_src_ipv6_addr_uint_count;
