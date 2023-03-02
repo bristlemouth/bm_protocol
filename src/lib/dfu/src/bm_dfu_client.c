@@ -1,5 +1,6 @@
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
+#include "bm_util.h"
 
 #include "stm32_flash.h"
 #include "reset_reason.h"
@@ -34,7 +35,6 @@ typedef struct dfu_client_ctx_t {
     struct netif* netif;
     struct udp_pcb* pcb;
     uint16_t port;
-    ip6_addr_t multicast_glob_addr;
     ip6_addr_t host_addr;
 } dfu_client_ctx_t;
 
@@ -62,7 +62,7 @@ static void bm_dfu_client_abort(void) {
     bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf->payload;
     evtPtr->type = BM_DFU_ABORT;
 
-    udp_sendto_if(client_ctx.pcb, buf, &client_ctx.multicast_glob_addr, client_ctx.port, client_ctx.netif);
+    udp_sendto_if(client_ctx.pcb, buf, &multicast_global_addr, client_ctx.port, client_ctx.netif);
     pbuf_free(buf);
 }
 
@@ -87,8 +87,8 @@ static void chunk_timer_handler(TimerHandle_t tmr) {
 /**
  * @brief Write received chunks to flash
  *
- * @note Stores bytes in a local buffer until a page-worth of bytes can be written to flash. 
- * 
+ * @note Stores bytes in a local buffer until a page-worth of bytes can be written to flash.
+ *
  * @param man_decode_len    Length of received decoded payload
  * @param man_decode_buf    Buffer of decoded payload
  * @return int32_t 0 on success, non-0 on error
@@ -121,7 +121,7 @@ static int32_t bm_dfu_process_payload(uint16_t len, uint8_t * buf)
             uint16_t _remaining_page_length = BM_IMG_PAGE_LENGTH - client_ctx.img_page_byte_counter;
             memcpy(&client_ctx.img_page_buf[client_ctx.img_page_byte_counter], buf, _remaining_page_length);
             client_ctx.img_page_byte_counter += _remaining_page_length;
-            
+
             if (client_ctx.img_page_byte_counter == BM_IMG_PAGE_LENGTH) {
                 client_ctx.img_page_byte_counter = 0;
 
@@ -134,7 +134,7 @@ static int32_t bm_dfu_process_payload(uint16_t len, uint8_t * buf)
                     client_ctx.img_flash_offset += BM_IMG_PAGE_LENGTH;
                 }
             }
-            
+
             /* Memcpy the remaining bytes to next page */
             memcpy(&client_ctx.img_page_buf[client_ctx.img_page_byte_counter], &buf[ _remaining_page_length], (len - _remaining_page_length) );
             client_ctx.img_page_byte_counter += (len - _remaining_page_length);
@@ -173,7 +173,7 @@ static int32_t bm_dfu_process_end(void) {
  * @brief Process a DFU request from the Host
  *
  * @note Client confirms that the update is possible and necessary based on size and version numbers
- * 
+ *
  * @return none
  */
 void bm_dfu_client_process_request(void) {
@@ -209,14 +209,14 @@ void bm_dfu_client_process_request(void) {
     if (1) {
         client_ctx.image_size = image_size;
 
-        /* We calculating the number of chunks that the client will be requesting based on the 
+        /* We calculating the number of chunks that the client will be requesting based on the
            size of each chunk and the total size of the image. */
         if (image_size % chunk_size) {
             client_ctx.num_chunks = ( image_size / chunk_size ) + 1;
         } else {
             client_ctx.num_chunks = ( image_size / chunk_size );
         }
-        client_ctx.crc16 = img_info_evt->img_info.crc16;   
+        client_ctx.crc16 = img_info_evt->img_info.crc16;
 
             /* Open the secondary image slot */
         if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &client_ctx.fa) != 0) {
@@ -225,7 +225,7 @@ void bm_dfu_client_process_request(void) {
             }
             bm_dfu_set_error(BM_DFU_ERR_FLASH_ACCESS);
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-            
+
         } else {
 
             if(client_ctx.fa->fa_size > image_size) {
@@ -243,7 +243,7 @@ void bm_dfu_client_process_request(void) {
                     }
                     bm_dfu_set_error(BM_DFU_ERR_FLASH_ACCESS);
                     bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-                    
+
                 } else {
                     if (!client_ctx.self_update) {
                         bm_dfu_send_ack(BM_NODE, &client_ctx.host_addr, 1, BM_DFU_ERR_NONE);
@@ -254,14 +254,14 @@ void bm_dfu_client_process_request(void) {
                         bm_dfu_send_ack(BM_DESKTOP, NULL, 1, BM_DFU_ERR_NONE);
                     }
                     bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_RECEIVING);
-                    
+
                 }
             } else {
                 if (!client_ctx.self_update) {
                     bm_dfu_send_ack(BM_NODE, &client_ctx.host_addr, 0, BM_DFU_ERR_TOO_LARGE);
                 }
                 bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
-                
+
             }
         }
     } else {
@@ -269,7 +269,7 @@ void bm_dfu_client_process_request(void) {
             bm_dfu_send_ack(BM_NODE, &client_ctx.host_addr, 0, BM_DFU_ERR_SAME_VER);
         }
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
-        
+
     }
 }
 
@@ -282,7 +282,7 @@ void s_client_activating_run(void) {}
  * @brief Entry Function for the Client Receiving State
  *
  * @note Client will send the first request for image chunk 0 from the host and kickoff a Chunk timeout timer
- * 
+ *
  * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
@@ -308,14 +308,14 @@ void s_client_receiving_entry(void) {
 /**
  * @brief Run Function for the Client Receiving State
  *
- * @note Client will periodically request specific image chunks from the Host 
- * 
+ * @note Client will periodically request specific image chunks from the Host
+ *
  * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_client_receiving_run(void) {
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
-    
+
     if (curr_evt.type == DFU_EVENT_IMAGE_CHUNK) {
         configASSERT(curr_evt.pbuf);
         bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.pbuf->payload;
@@ -323,7 +323,7 @@ void s_client_receiving_run(void) {
 
         /* Stop Chunk Timer */
         configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
-        
+
         /* Get Chunk Length and Chunk */
         client_ctx.chunk_length = image_chunk_evt->payload_length;
 
@@ -334,7 +334,7 @@ void s_client_receiving_run(void) {
         if (bm_dfu_process_payload(client_ctx.chunk_length, image_chunk_evt->payload_buf)) {
             bm_dfu_set_error(BM_DFU_ERR_BM_FRAME);
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-            
+
         }
 
         /* Request Next Chunk */
@@ -353,7 +353,7 @@ void s_client_receiving_run(void) {
             if (bm_dfu_process_end()) {
                 bm_dfu_set_error(BM_DFU_ERR_BM_FRAME);
                 bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-                
+
             } else {
                 bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_VALIDATING);
             }
@@ -368,7 +368,7 @@ void s_client_receiving_run(void) {
             }
             bm_dfu_set_error(BM_DFU_ERR_TIMEOUT);
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-            
+
         } else {
             if (client_ctx.self_update) {
                 bm_dfu_req_next_chunk(BM_DESKTOP, NULL, client_ctx.current_chunk);
@@ -378,7 +378,7 @@ void s_client_receiving_run(void) {
             configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
         }
     }
-    /* TODO: (IMPLEMENT THIS PERIODICALLY ON HOST SIDE) 
+    /* TODO: (IMPLEMENT THIS PERIODICALLY ON HOST SIDE)
        If host is still waiting for chunk, it will send a heartbeat to client */
     else if (curr_evt.type == DFU_EVENT_HEARTBEAT) {
         configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
@@ -405,7 +405,7 @@ void s_client_validating_entry(void)
         }
         bm_dfu_set_error(BM_DFU_ERR_MISMATCH_LEN);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-        
+
     } else {
         /* Verify CRC. If ok, then move to Activating state */
         if (client_ctx.crc16 == client_ctx.running_crc16) {
@@ -417,7 +417,7 @@ void s_client_validating_entry(void)
             }
 
             bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_ACTIVATING);
-            
+
         } else {
             printf("Expected Image CRC: %d | Calculated Image CRC: %d\n", client_ctx.crc16, client_ctx.running_crc16);
             if (client_ctx.self_update) {
@@ -427,7 +427,6 @@ void s_client_validating_entry(void)
             }
             bm_dfu_set_error(BM_DFU_ERR_BAD_CRC);
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
-            
         }
     }
 }
@@ -470,8 +469,6 @@ void bm_dfu_client_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _p
     client_ctx.pcb = _pcb;
     client_ctx.port = _port;
     client_ctx.netif = _netif;
-
-    inet6_aton("ff03::1", &client_ctx.multicast_glob_addr);
 
     /* Get DFU Subsystem Queue */
     client_ctx.dfu_event_queue = bm_dfu_get_event_queue();

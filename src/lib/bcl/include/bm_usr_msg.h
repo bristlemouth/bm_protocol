@@ -6,6 +6,10 @@
 #include <string.h>
 #include "zcbor_encode.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct bm_usr_msg_hdr_t {
     uint8_t     encoding;
     uint8_t     set_id;
@@ -23,3 +27,7 @@ enum {
     BM_SET_ROS,
     BM_SET_DEFAULT,
 };
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include <bm_dfu.h>
-#include <bm_dfu_host.h>
+#include "bm_dfu.h"
+#include "bm_dfu_host.h"
+#include "bm_util.h"
 
 typedef struct dfu_host_ctx_t {
     QueueHandle_t dfu_event_queue;
@@ -15,7 +16,6 @@ typedef struct dfu_host_ctx_t {
     struct netif* netif;
     struct udp_pcb* pcb;
     uint16_t port;
-    ip6_addr_t multicast_glob_addr;
     ip6_addr_t client_addr;
 } dfu_host_ctx_t;
 
@@ -80,7 +80,7 @@ static void bm_dfu_host_req_update(bool self_update) {
     update_req_evt.img_info = host_ctx.img_info;
     memcpy(update_req_evt.addresses.src_addr, host_ctx.self_addr.addr, sizeof(update_req_evt.addresses.src_addr));
     memcpy(update_req_evt.addresses.dst_addr, host_ctx.client_addr.addr, sizeof(update_req_evt.addresses.dst_addr));
-    
+
     if (self_update) {
         bm_dfu_event_t evt = {DFU_EVENT_RECEIVED_UPDATE_REQUEST, NULL};
         evt.pbuf = pbuf_alloc(PBUF_TRANSPORT, sizeof(bm_dfu_event_img_info_t) + sizeof(bm_dfu_frame_header_t), PBUF_RAM);
@@ -89,7 +89,7 @@ static void bm_dfu_host_req_update(bool self_update) {
         evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
 
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)evt.pbuf->payload;
-        header->frame_type = BM_DFU_START; 
+        header->frame_type = BM_DFU_START;
         memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
 
@@ -109,7 +109,7 @@ static void bm_dfu_host_req_update(bool self_update) {
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
 
-        udp_sendto_if(host_ctx.pcb, buf, &host_ctx.multicast_glob_addr, host_ctx.port, host_ctx.netif);
+        udp_sendto_if(host_ctx.pcb, buf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
         pbuf_free(buf);
     }
 }
@@ -129,7 +129,7 @@ static void bm_dfu_host_send_chunk(void) {
     memcpy(chunk_evt->addresses.src_addr, host_ctx.self_addr.addr, sizeof(host_ctx.self_addr.addr));
     memcpy(chunk_evt->addresses.dst_addr, host_ctx.client_addr.addr, sizeof(host_ctx.client_addr.addr));
 
-    udp_sendto_if(host_ctx.pcb, evt.pbuf, &host_ctx.multicast_glob_addr, host_ctx.port, host_ctx.netif);
+    udp_sendto_if(host_ctx.pcb, evt.pbuf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
 }
 
 /**
@@ -154,9 +154,9 @@ void s_host_req_update_entry(void) {
 
     memcpy(host_ctx.client_addr.addr, img_info_evt->addresses.dst_addr, sizeof(img_info_evt->addresses.dst_addr));
 
-    printf("DFU Client IPv6 Address: %08lx:%08lx:%08lx:%08lx\n", host_ctx.client_addr.addr[0], 
-                                                             host_ctx.client_addr.addr[1], 
-                                                             host_ctx.client_addr.addr[2], 
+    printf("DFU Client IPv6 Address: %08lx:%08lx:%08lx:%08lx\n", host_ctx.client_addr.addr[0],
+                                                             host_ctx.client_addr.addr[1],
+                                                             host_ctx.client_addr.addr[2],
                                                              host_ctx.client_addr.addr[3]);
 
     /* Check if Host is being updated */
@@ -166,7 +166,7 @@ void s_host_req_update_entry(void) {
     } else {
         host_ctx.ack_retry_num = 0;
         /* Request Client Firmware Update */
-        bm_dfu_host_req_update(false);  
+        bm_dfu_host_req_update(false);
 
         /* Kickoff ACK timeout */
         configASSERT(xTimerStart(host_ctx.ack_timer, 10));
@@ -243,7 +243,7 @@ void s_host_update_run(void) {
     if (curr_evt.pbuf) {
         frame = (bm_dfu_frame_t *) curr_evt.pbuf->payload;
     }
-    
+
     if (curr_evt.type == DFU_EVENT_CHUNK_REQUEST) {
         configASSERT(frame);
         bm_dfu_event_chunk_request_t* chunk_req_evt = (bm_dfu_event_chunk_request_t*) &((uint8_t *)frame)[1];
@@ -253,7 +253,7 @@ void s_host_update_run(void) {
         /* Request Next Chunk */
         bm_dfu_req_next_chunk(BM_DESKTOP, NULL, chunk_req_evt->seq_num);
 
-        /* Send Heartbeat to Client 
+        /* Send Heartbeat to Client
             TODO: Make this a periodic heartbeat in case it takes a while to grab chunk from external host
         */
         bm_dfu_send_heartbeat(&host_ctx.client_addr);
@@ -295,9 +295,6 @@ void bm_dfu_host_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _por
     host_ctx.pcb = _pcb;
     host_ctx.port = _port;
     host_ctx.netif = _netif;
-
-    inet6_aton("ff03::1", &host_ctx.multicast_glob_addr);
-
 
     /* Get DFU Subsystem Queue */
     host_ctx.dfu_event_queue = bm_dfu_get_event_queue();

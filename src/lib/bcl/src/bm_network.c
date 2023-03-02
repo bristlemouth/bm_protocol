@@ -13,11 +13,12 @@
 #include <zcbor_decode.h>
 #include <zcbor_encode.h>
 
-#include "bm_zcbor_decode.h"
-#include "bm_zcbor_encode.h"
-#include "bm_usr_msg.h"
 #include "bm_msg_types.h"
 #include "bm_network.h"
+#include "bm_usr_msg.h"
+#include "bm_util.h"
+#include "bm_zcbor_decode.h"
+#include "bm_zcbor_encode.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/inet.h"
@@ -36,10 +37,8 @@ static ip6_addr_t       self_addr;
 static struct netif*    netif;
 static struct udp_pcb*  pcb;
 static uint16_t         port;
-static ip6_addr_t       multicast_glob_addr;
-static ip6_addr_t       multicast_ll_addr;
 
-/*  Linked List Mapping of Network Nodes 
+/*  Linked List Mapping of Network Nodes
     Currently using stack memory but can eventually switch to using heap */
 static struct bm_network_node_t network_map[MAX_NUM_NETWORK_NODES];
 static uint8_t network_map_idx = 0;
@@ -204,7 +203,7 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack) {
     if (memcmp(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, sizeof(self_neighbor_table.neighbor[port_num].ip_addr.addr)) != 0) {
         memcpy(self_neighbor_table.neighbor[port_num].ip_addr.addr, addr, sizeof(self_neighbor_table.neighbor[port_num].ip_addr.addr));
         self_neighbor_table.neighbor[port_num].reachable = 1;
-        
+
         /* Kickoff Neighbor Heartbeat Timeout Timer */
         configASSERT(xTimerStart(neighbor_timers[port_num], 10));
     } else {
@@ -235,7 +234,7 @@ void bm_network_process_table_request(uint32_t* addr) {
     /* Store Neighbors */
     for (int neighbor=0; neighbor < MAX_NUM_NEIGHBORS; neighbor++) {
         if (self_neighbor_table.neighbor[neighbor].reachable) {
-            memcpy(response_msg._bm_Table_Response_neighbors__bm_Neighbor_Info[neighbor]._bm_Neighbor_Info_ipv6_addr_uint, self_neighbor_table.neighbor[neighbor].ip_addr.addr, sizeof(self_neighbor_table.neighbor[neighbor].ip_addr.addr));            
+            memcpy(response_msg._bm_Table_Response_neighbors__bm_Neighbor_Info[neighbor]._bm_Neighbor_Info_ipv6_addr_uint, self_neighbor_table.neighbor[neighbor].ip_addr.addr, sizeof(self_neighbor_table.neighbor[neighbor].ip_addr.addr));
             response_msg._bm_Table_Response_neighbors__bm_Neighbor_Info[neighbor]._bm_Neighbor_Info_ipv6_addr_uint_count = 4;
             response_msg._bm_Table_Response_neighbors__bm_Neighbor_Info[neighbor]._bm_Neighbor_Info_reachable = self_neighbor_table.neighbor[neighbor].reachable;
             response_msg._bm_Table_Response_neighbors__bm_Neighbor_Info[neighbor]._bm_Neighbor_Info_port = neighbor;
@@ -245,7 +244,7 @@ void bm_network_process_table_request(uint32_t* addr) {
         }
     }
     response_msg._bm_Table_Response_neighbors__bm_Neighbor_Info_count = MAX_NUM_NEIGHBORS;
-    
+
     /* Store Destination IPv6 (already in uint32_t array format so no conversion needed ) */
     memcpy(response_msg._bm_Table_Response_dst_ipv6_addr_uint, addr, sizeof(response_msg._bm_Table_Response_dst_ipv6_addr_uint));
     response_msg._bm_Table_Response_dst_ipv6_addr_uint_count = 4;
@@ -258,7 +257,7 @@ void bm_network_process_table_request(uint32_t* addr) {
 
     uint8_t* output = (uint8_t *) pvPortMalloc(TABLE_RESPONSE_ENCODE_BUF_LEN);
     configASSERT(output);
-    
+
     do {
         if(cbor_encode_bm_Table_Response(output, TABLE_RESPONSE_ENCODE_BUF_LEN, &response_msg, &cbor_len)) {
             printf("CBOR encoding error\n");
@@ -268,7 +267,7 @@ void bm_network_process_table_request(uint32_t* addr) {
         struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_glob_addr, port, netif);
+        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
         pbuf_free(buf);
     } while (0);
     vPortFree(output);
@@ -365,7 +364,7 @@ void bm_network_request_neighbor_tables(void) {
     for (int neighbor = 0; neighbor < MAX_NUM_NEIGHBORS; neighbor++) {
         if (self_neighbor_table.neighbor[neighbor].reachable) {
             network_map_idx++;
-            memcpy(network_map[network_map_idx].ip_addr.addr, self_neighbor_table.neighbor[neighbor].ip_addr.addr, sizeof(self_neighbor_table.neighbor[neighbor].ip_addr.addr)); 
+            memcpy(network_map[network_map_idx].ip_addr.addr, self_neighbor_table.neighbor[neighbor].ip_addr.addr, sizeof(self_neighbor_table.neighbor[neighbor].ip_addr.addr));
             network_map[root_idx].ports[neighbor] = &network_map[network_map_idx];
         }
     }
@@ -376,7 +375,7 @@ void bm_network_request_neighbor_tables(void) {
 
     memcpy(request_msg._bm_Request_Table_src_ipv6_addr_uint, self_addr.addr, sizeof(self_addr.addr));
     request_msg._bm_Request_Table_src_ipv6_addr_uint_count = 4;
-    
+
     bm_usr_msg_hdr_t msg_hdr = {
         .encoding = BM_ENCODING_CBOR,
         .set_id = BM_SET_ROS,
@@ -392,7 +391,7 @@ void bm_network_request_neighbor_tables(void) {
         struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_glob_addr, port, netif);
+        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
         pbuf_free(buf);
     } while(0);
     vPortFree(output);
@@ -445,7 +444,7 @@ void bm_network_print_topology(struct bm_network_node_t* node, struct bm_network
                 printf(" : %d | ", neighbor );
                 num_children++;
                 bm_network_print_topology(curr_node->ports[neighbor], curr_node, space_count + 7); // Adding size of " : %d | "
-                
+
                 for (int space=0; space < space_count; space++) {
                     printf(" ");
                 }
@@ -476,9 +475,6 @@ int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port,
     pcb = _pcb;
     port = _port;
     netif = _netif;
-
-    inet6_aton("ff02::1", &multicast_ll_addr);
-    inet6_aton("ff03::1", &multicast_glob_addr);
 
     /* Initialize timers for all potential neighbors */
     for (int neighbor=0; neighbor < MAX_NUM_NEIGHBORS; neighbor++) {

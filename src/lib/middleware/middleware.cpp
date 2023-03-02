@@ -7,12 +7,9 @@
 #include "middleware.h"
 #include "semphr.h"
 #include "task_priorities.h"
+#include "bm_util.h"
 
 #define NET_QUEUE_LEN 64
-
-// TODO - make these global and use everywhere
-const ip6_addr_t global_multicast_addr = {{0x3FF,0x0,0x0,0x1000000}, 0};
-const ip6_addr_t ll_multicast_addr = {{0x3FF,0x0,0x0,0x1000000}, 0};
 
 typedef struct {
     struct netif* netif;
@@ -69,7 +66,7 @@ void bm_middleware_init(struct netif* netif, uint16_t port) {
 */
 int32_t middleware_net_tx(struct pbuf *pbuf) {
   // TODO - Do we always send global multicast or link local?
-  return udp_sendto_if(_ctx.pcb, pbuf, &global_multicast_addr, BM_MIDDLEWARE_PORT, _ctx.netif);
+  return udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, BM_MIDDLEWARE_PORT, _ctx.netif);
 }
 
 /*!
