@@ -31,6 +31,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/mic.cpp
+    ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
