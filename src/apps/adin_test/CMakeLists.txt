@@ -52,6 +52,7 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/third_party/crc16/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c

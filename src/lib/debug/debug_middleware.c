@@ -5,7 +5,8 @@
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
 
-#include "middleware.h"
+#include "debug_middleware.h"
+#include "bm_pubsub.h"
 
 #include <string.h>
 
@@ -18,7 +19,10 @@ static const CLI_Command_Definition_t cmdGpio = {
   "mw",
   // Help string
   "mw:\n"
-  " * mw\n",
+  " * mw sub <topic>\n"
+  " * mw unsub <topic>\n"
+  " * mw pub <topic> <data>\n"
+  " * mw print",
   // Command function
   middlewareCommand,
   // Number of parameters (variable)
@@ -33,25 +37,106 @@ void debugMiddlewareInit(void) {
 static BaseType_t middlewareCommand( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString) {
+    BaseType_t parameterStringLength;
 
-  // Remove unused argument warnings
-  ( void ) commandString;
-  ( void ) writeBuffer;
-  ( void ) writeBufferLen;
+    // Remove unused argument warnings
+    ( void ) commandString;
+    ( void ) writeBuffer;
+    ( void ) writeBufferLen;
 
-  do {
-    struct pbuf *pbuf = pbuf_alloc(PBUF_TRANSPORT, MESSAGE_SIZE, PBUF_RAM);
-    configASSERT(pbuf);
-    memset(pbuf->payload, 0, MESSAGE_SIZE);
-    snprintf(pbuf->payload, MESSAGE_SIZE, "hello middleware!\n");
-    if (middleware_net_tx(pbuf) != 0){
-      printf("Error sending middleware message\n");
-      pbuf_free(pbuf);
-    } else {
-      printf("Sent!\n");
-    }
+    do {
+        const char *parameter = FreeRTOS_CLIGetParameter(
+                    commandString,
+                    1, // Get the first parameter (command)
+                    &parameterStringLength);
 
-  } while(0);
+        if(parameter == NULL) {
+            printf("ERR Invalid paramters\n");
+            break;
+        }
 
-  return pdFALSE;
+        if (strncmp("sub", parameter,parameterStringLength) == 0) {
+            const char *topic = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR topic required\n");
+                break;
+            }
+
+            bm_sub_t subscription;
+            subscription.topic_len = parameterStringLength;
+            subscription.topic = pvPortMalloc(subscription.topic_len);
+            configASSERT(subscription.topic);
+            memcpy(subscription.topic, topic, subscription.topic_len);
+            subscription.has_local_sub = true;
+            subscription.has_payload_sub = false;
+
+            bm_pubsub_subscribe(&subscription);
+            vPortFree(subscription.topic);
+
+        } else if (strncmp("unsub", parameter,parameterStringLength) == 0) {
+            const char *topic = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR topic required\n");
+                break;
+            }
+
+            bm_sub_t subscription;
+            subscription.topic_len = parameterStringLength;
+            subscription.topic = pvPortMalloc(subscription.topic_len);
+            configASSERT(subscription.topic);
+            memcpy(subscription.topic, topic, subscription.topic_len);
+            subscription.has_local_sub = true;
+            subscription.has_payload_sub = false;
+
+            bm_pubsub_unsubscribe(&subscription);
+            vPortFree(subscription.topic);
+
+        } else if (strncmp("pub", parameter,parameterStringLength) == 0) {
+            const char *topic = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR topic required\n");
+                break;
+            }
+
+            bm_pub_t publication;
+            publication.topic_len = parameterStringLength;
+            publication.topic = pvPortMalloc(publication.topic_len);
+            configASSERT(publication.topic);
+            memcpy(publication.topic, topic, publication.topic_len);
+
+            const char *data = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            3,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR data required\n");
+                break;
+            }
+
+            publication.data_len = parameterStringLength;
+            publication.data = pvPortMalloc(publication.data_len);
+            configASSERT(publication.data);
+            memcpy(publication.data, data, publication.data_len);
+
+            bm_pubsub_publish(&publication);
+            vPortFree(publication.topic);
+            vPortFree(publication.data);
+        } else if (strncmp("print", parameter,parameterStringLength) == 0) {
+            bm_pubsub_print_subs();
+        }
+    } while(0);
+    return pdFALSE;
 }
