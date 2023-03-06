@@ -11,6 +11,7 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
     ${SRC_DIR}/lib/bcl/src/bm_network.c
+    ${SRC_DIR}/lib/bcl/src/bm_util.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
     ${SRC_DIR}/lib/bcl/src/bristlemouth.c
@@ -85,7 +86,7 @@ set(LIB_INCLUDES
 set_source_files_properties(
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
-    
+
     DIRECTORY ${SRC_DIR}
 
     PROPERTIES
@@ -96,7 +97,7 @@ set_source_files_properties(
     ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
     ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
     ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-    
+
     DIRECTORY ${SRC_DIR}
 
     PROPERTIES
@@ -181,7 +182,7 @@ set(LWIP_INCLUDE_DIRS
     # ${LWIP_DIR}/contrib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
-    
+
 include(${LWIP_DIR}/src/Filelists.cmake)
 # include(${LWIP_DIR}/contrib/Filelists.cmake)
 

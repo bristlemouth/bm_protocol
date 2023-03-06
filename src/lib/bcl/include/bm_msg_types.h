@@ -1,5 +1,8 @@
-#ifndef BM_MSG_TYPES_H__
-#define BM_MSG_TYPES_H__
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -19,4 +22,6 @@ enum {
 	MSG_BM_TEMPERATURE,
 };
 
-#endif /* BM_MSG_TYPES_H__ */
+#ifdef __cplusplus
+}
+#endif

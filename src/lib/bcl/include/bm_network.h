@@ -9,6 +9,10 @@
 #include "lwip/ip6.h"
 #include "bm_zcbor_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BM_NEIGHBOR_TIMEOUT_MS      15000UL /* Time to wait for a heartbeat from neighbor */
 #define BM_HEARTBEAT_TIME_MS        5000UL /* Time to wait before sending heartbeat to neighbor */
 
@@ -44,3 +48,7 @@ void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack);
 void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr);
 void bm_network_process_table_request(uint32_t* addr);
 void bm_network_store_neighbor_table(struct bm_Table_Response* table_resp, uint32_t* ip_addr);
+
+#ifdef __cplusplus
+}
+#endif

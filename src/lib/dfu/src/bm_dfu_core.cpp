@@ -3,6 +3,7 @@
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
+#include "bm_util.h"
 #include "lib_state_machine.h"
 #include "serial.h"
 #include "task_priorities.h"
@@ -20,7 +21,6 @@ typedef struct dfu_core_ctx_t {
     bm_dfu_err_t error;
     /* LWIP Specific */
     ip6_addr_t self_addr;
-    ip6_addr_t multicast_glob_addr;
     struct netif* netif;
     struct udp_pcb* pcb;
     uint16_t port;
@@ -214,7 +214,7 @@ static void bm_dfu_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *buf,
     if (buf != NULL) {
         rx_data.buf = buf;
 
-        /* FIXME: Need to modify address to remove Ingress/Egress port, but is const. 
+        /* FIXME: Need to modify address to remove Ingress/Egress port, but is const.
            We are currently not using this */
         // addr->addr[1] &= ~(0xFFFF);
         // rx_data.src = *addr;
@@ -454,7 +454,7 @@ static void bm_dfu_desktop_thread(void*) {
  * @brief Get DFU Subsystem Event Queue
  *
  * @note Used by DFU host and client contexts to put events into the Subsystem Queue
- * 
+ *
  * @param none
  * @return QueueHandle_t to DFU Subsystem Zephyr Message Queue
  */
@@ -466,7 +466,7 @@ QueueHandle_t bm_dfu_get_event_queue(void) {
  * @brief Get latest DFU event
  *
  * @note Get the event currently stored in the DFU Core context
- * 
+ *
  * @param none
  * @return bm_dfu_event_t Latest DFU Event enum
  */
@@ -478,7 +478,7 @@ bm_dfu_event_t bm_dfu_get_current_event(void) {
  * @brief Set DFU Core Error
  *
  * @note Set the error of the DFU context which will be used by the Error State logic
- * 
+ *
  * @param error  Specific DFU Error value
  * @return none
  */
@@ -513,7 +513,7 @@ void bm_dfu_send_ack(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, bm
     if (dst_addr) {
         memcpy(ack_evt.addresses.src_addr, dfu_ctx.self_addr.addr, sizeof(ack_evt.addresses.src_addr));
         memcpy(ack_evt.addresses.dst_addr, dst_addr->addr, sizeof(ack_evt.addresses.dst_addr));
-    } 
+    }
 
     payload_len = sizeof(bm_dfu_event_result_t) + sizeof(bm_dfu_frame_header_t);
 
@@ -527,7 +527,7 @@ void bm_dfu_send_ack(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, bm
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &ack_evt, sizeof(ack_evt));
 
-        udp_sendto_if(dfu_ctx.pcb, buf, &dfu_ctx.multicast_glob_addr, dfu_ctx.port, dfu_ctx.netif);
+        udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
         pbuf_free(buf);
     } else if (dev_type == BM_DESKTOP) {
         uint8_t* ser_buf = (uint8_t *) pvPortMalloc(sizeof(bm_dfu_serial_header_t) + payload_len);
@@ -548,9 +548,9 @@ void bm_dfu_send_ack(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, bm
 
 /**
  * @brief Send Chunk Request
- * 
+ *
  * @note Stuff Chunk Request bm_frame with chunk number and put into BM Serial TX Queue
- * 
+ *
  * @param dev_type      Recipient Device (Desktop or End Device)
  * @param chunk_num     Image Chunk number requested
  * @return none
@@ -580,7 +580,7 @@ void bm_dfu_req_next_chunk(uint8_t dev_type, ip6_addr_t* dst_addr, uint16_t chun
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &chunk_req_evt, sizeof(chunk_req_evt));
 
-        udp_sendto_if(dfu_ctx.pcb, buf, &dfu_ctx.multicast_glob_addr, dfu_ctx.port, dfu_ctx.netif);
+        udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
         pbuf_free(buf);
     } else if (dev_type == BM_DESKTOP) {
         uint8_t* ser_buf = (uint8_t *) pvPortMalloc(sizeof(bm_dfu_serial_header_t) + payload_len);
@@ -634,7 +634,7 @@ void bm_dfu_update_end(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, 
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &update_end_evt, sizeof(update_end_evt));
 
-        udp_sendto_if(dfu_ctx.pcb, buf, &dfu_ctx.multicast_glob_addr, dfu_ctx.port, dfu_ctx.netif);
+        udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
         pbuf_free(buf);
     } else if (dev_type == BM_DESKTOP) {
         uint8_t* ser_buf = (uint8_t *) pvPortMalloc(sizeof(bm_dfu_serial_header_t) + payload_len);
@@ -681,7 +681,7 @@ void bm_dfu_send_heartbeat(ip6_addr_t* dst_addr) {
     bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
     memcpy(&header[1], &heartbeat_evt, sizeof(heartbeat_evt));
 
-    udp_sendto_if(dfu_ctx.pcb, buf, &dfu_ctx.multicast_glob_addr, dfu_ctx.port, dfu_ctx.netif);
+    udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
     pbuf_free(buf);
 }
 
@@ -698,8 +698,6 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
     /* Store relevant variables from bristlemouth.c */
     dfu_ctx.self_addr = _self_addr;
     dfu_ctx.netif = _netif;
-
-    inet6_aton("ff03::1", &dfu_ctx.multicast_glob_addr);
 
     /* Initialize pbuf to NULL */
     dfu_ctx.current_event = {DFU_EVENT_NONE, NULL};
