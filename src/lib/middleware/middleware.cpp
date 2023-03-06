@@ -9,6 +9,7 @@
 #include "task_priorities.h"
 #include "bm_util.h"
 #include "bm_pubsub.h"
+#include "bm_ports.h"
 
 #define NET_QUEUE_LEN 64
 
@@ -124,7 +125,7 @@ static void middleware_net_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *b
 static void middleware_net_task( void *parameters ) {
   // Don't warn about unused parameters
   (void) parameters;
-  
+
   _ctx.pcb = udp_new_ip_type(IPADDR_TYPE_V6);
   udp_bind(_ctx.pcb, IP_ANY_TYPE, _ctx.port);
   udp_recv(_ctx.pcb, middleware_net_rx_cb, NULL);

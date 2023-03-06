@@ -21,7 +21,6 @@ extern "C"
 {
 #endif
 
-#define BM_DFU_SOCKET_PORT          3333
 #define BM_DFU_MAX_FRAME_SIZE       600 // Max DFU Chunk size is 512
 #define BM_DFU_MAX_CHUNK_RETRIES    5
 
