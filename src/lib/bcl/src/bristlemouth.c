@@ -23,6 +23,7 @@
 #include "bm_network.h"
 #include "bm_dfu.h"
 #include "bm_l2.h"
+#include "bm_ports.h"
 
 #include "middleware.h"
 #include "task_priorities.h"
@@ -216,7 +217,7 @@ void bcl_init(SerialHandle_t* hSerial) {
 
     /* Using raw udp tx/rx for now */
     udp_pcb = udp_new_ip_type(IPADDR_TYPE_V6);
-    udp_port = 2222;
+    udp_port = BM_BCL_PORT;
     udp_bind(udp_pcb, IP_ANY_TYPE, udp_port);
     udp_recv(udp_pcb, bcl_rx_cb, NULL);
 

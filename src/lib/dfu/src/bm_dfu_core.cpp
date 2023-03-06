@@ -4,6 +4,7 @@
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
 #include "bm_util.h"
+#include "bm_ports.h"
 #include "lib_state_machine.h"
 #include "serial.h"
 #include "task_priorities.h"
