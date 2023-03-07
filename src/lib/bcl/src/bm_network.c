@@ -9,10 +9,11 @@
 #include "queue.h"
 #include "timers.h"
 
-#include <zcbor_common.h>
-#include <zcbor_decode.h>
-#include <zcbor_encode.h>
+#include "zcbor_common.h"
+#include "zcbor_decode.h"
+#include "zcbor_encode.h"
 
+#include "bm_info.h"
 #include "bm_msg_types.h"
 #include "bm_network.h"
 #include "bm_usr_msg.h"
@@ -456,10 +457,83 @@ void bm_network_print_topology(struct bm_network_node_t* node, struct bm_network
     }
 }
 
+// Keep a copy of the address we're expecting fw info from
+// since we might get it from two different units due to lack
+// of unicast messages
+static ip_addr_t info_addr;
+
+/*!
+  Send firmware info request
+
+  \param[in] *addr - unused until multicast works
+  \return None
+*/
+void bm_network_request_fw_info(const ip_addr_t *addr) {
+    bm_usr_msg_hdr_t msg_hdr = {
+        .encoding = BM_ENCODING_CBOR,
+        .set_id = BM_SET_DEFAULT,
+        .id = MSG_BM_REQUEST_FW_INFO,
+    };
+
+    struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(msg_hdr), PBUF_RAM);
+    configASSERT(buf);
+    memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
+
+    if(udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif) == ERR_OK) {
+        ip_addr_copy(info_addr, *addr);
+    }
+    pbuf_free(buf);
+}
+
+/*!
+  Get address we're expecting firmware info from
+  \return address
+*/
+ip_addr_t *bm_network_get_fw_info_ip() {
+    return &info_addr;
+}
+
+#define DEV_INFO_BUf_LEN 1024
+/*!
+  Send firmware information
+
+  \param[in] *addr - unused until multicast works
+  \return None
+*/
+void bm_network_send_fw_info(const ip_addr_t * addr) {
+    bm_usr_msg_hdr_t msg_hdr = {
+        .encoding = BM_ENCODING_CBOR,
+        .set_id = BM_SET_DEFAULT,
+        .id = MSG_BM_FW_INFO,
+    };
+
+    // Unicast isn't working right now :'(
+    (void)addr;
+
+    uint8_t* payload = (uint8_t *) pvPortMalloc(DEV_INFO_BUf_LEN);
+    configASSERT(payload);
+
+    do {
+        uint32_t payload_len = DEV_INFO_BUf_LEN;
+        if(!bm_info_get_cbor(payload, &payload_len)) {
+            printf("Error encoding device info\n");
+            break;
+        }
+
+        struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(msg_hdr) + payload_len, PBUF_RAM);
+        configASSERT(buf);
+        memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
+        memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], payload, payload_len);
+
+        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+        pbuf_free(buf);
+    } while(0);
+    vPortFree(payload);
+}
+
 void bm_network_stop(void) {
     /* TODO: Stop Heartbeat + Neighbor Timers */
 }
-
 
 void bm_network_start(void) {
     send_discover_neighbors();

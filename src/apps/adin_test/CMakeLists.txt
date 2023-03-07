@@ -10,6 +10,7 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
+    ${SRC_DIR}/lib/bcl/src/bm_info.c
     ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
