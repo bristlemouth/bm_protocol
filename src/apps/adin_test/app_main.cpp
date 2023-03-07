@@ -32,6 +32,7 @@
 #include "usb.h"
 #include "watchdog.h"
 #include "debug_middleware.h"
+#include "bm_pubsub.h"
 
 
 #include <stdio.h>

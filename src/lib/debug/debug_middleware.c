@@ -29,6 +29,11 @@ static const CLI_Command_Definition_t cmdGpio = {
   -1
 };
 
+static void print_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+    printf("Received data on topic: %.*s\n", topic_len, topic);
+    printf("Data: %.*s\n", data_len, data);
+}
+
 void debugMiddlewareInit(void) {
   FreeRTOS_CLIRegisterCommand( &cmdGpio );
 }
@@ -71,8 +76,7 @@ static BaseType_t middlewareCommand( char *writeBuffer,
             subscription.topic = pvPortMalloc(subscription.topic_len);
             configASSERT(subscription.topic);
             memcpy(subscription.topic, topic, subscription.topic_len);
-            subscription.has_local_sub = true;
-            subscription.has_payload_sub = false;
+            subscription.cb = print_subscriptions;
 
             bm_pubsub_subscribe(&subscription);
             vPortFree(subscription.topic);
@@ -93,8 +97,7 @@ static BaseType_t middlewareCommand( char *writeBuffer,
             subscription.topic = pvPortMalloc(subscription.topic_len);
             configASSERT(subscription.topic);
             memcpy(subscription.topic, topic, subscription.topic_len);
-            subscription.has_local_sub = true;
-            subscription.has_payload_sub = false;
+            subscription.cb = NULL;
 
             bm_pubsub_unsubscribe(&subscription);
             vPortFree(subscription.topic);

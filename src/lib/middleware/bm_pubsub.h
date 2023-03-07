@@ -10,19 +10,12 @@
 extern "C" {
 #endif
 
-// typedef void (*bm_pubsub_cb_t)(char* topic, char* data);
-
-// typedef struct mw_cb_s {
-//     sub_cb_t cb;
-//     bm_pubsub_cb_t* next;
-// } bm_pubsub_cb_t;
+typedef void (*bm_pubsub_cb_t)(char* topic, uint16_t topic_len, char* data, uint16_t data_len);
 
 typedef struct bm_sub_s {
     char *topic;
     uint16_t topic_len;
-    bool has_local_sub;
-    bool has_payload_sub;
-    //bm_pubsub_cb_t callback_list;
+    bm_pubsub_cb_t cb;
 } bm_sub_t;
 
 typedef struct bm_pub_s {
