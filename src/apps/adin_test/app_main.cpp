@@ -36,6 +36,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 
 static void defaultTask(void *parameters);
 
@@ -150,9 +151,33 @@ extern "C" int main(void) {
 bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
+    (void) value;
 
-    printf("Button press! %d\n", value);
+    bm_pub_t publication;
+    const char topic[] = "button";
+    const char data[] = "on";
+
+    publication.topic = (char *) topic;
+    publication.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
+    publication.data = (char *) data;
+    publication.data_len = sizeof(data) - 1; // Don't care about Null terminator
+    bm_pubsub_publish(&publication);
+
     return false;
+}
+
+void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+    (void) data;
+    (void) data_len;
+    if (strncmp("button", topic, topic_len) == 0) {
+        IOWrite(&LED_BLUE, 1);
+        vTaskDelay(2000);
+        IOWrite(&LED_BLUE, 0);
+        vTaskDelay(500);
+    } else {
+        printf("Topic: %.*s\n", topic_len, topic);
+        printf("Data: %.*s\n", data_len, data);
+    }
 }
 
 static void defaultTask( void *parameters ) {
@@ -205,6 +230,14 @@ static void defaultTask( void *parameters ) {
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
     bcl_init(dfuSerial);
+
+    bm_sub_t subscription;
+    const char topic[] = "button";
+
+    subscription.topic = (char *) topic;
+    subscription.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
+    subscription.cb = handle_sensor_subscriptions;
+    bm_pubsub_subscribe(&subscription);
 
     while(1) {
         /* Do nothing */
