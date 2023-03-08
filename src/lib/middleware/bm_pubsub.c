@@ -12,7 +12,6 @@ typedef struct bm_sub_node_s {
 } bm_sub_node_t;
 
 typedef struct {
-    // other_stuff_t other
     bm_sub_node_t* subscription_list;
 } pubsubContext_t;
 
@@ -38,10 +37,9 @@ bool bm_pubsub_subscribe(bm_sub_t* sub) {
 
         if (_ctx.subscription_list) {
             bm_sub_node_t* ptr = get_sub(sub->topic, sub->topic_len);
-            /* Subscription already exists, update */
+            /* Subscription already exists, update the callback */
             if (ptr) {
-                ptr->sub.has_local_sub |= sub->has_local_sub;
-                ptr->sub.has_payload_sub |= sub->has_payload_sub;
+                ptr->sub.cb = sub->cb;
             /* Need to add new node to subscription list */
             } else {
                 ptr = get_last_sub();
@@ -58,8 +56,7 @@ bool bm_pubsub_subscribe(bm_sub_t* sub) {
                 }
                 memcpy(ptr->next->sub.topic, sub->topic, sub->topic_len);
                 ptr->next->sub.topic_len = sub->topic_len;
-                ptr->next->sub.has_local_sub = sub->has_local_sub;
-                ptr->next->sub.has_payload_sub = sub->has_payload_sub;
+                ptr->next->sub.cb = sub->cb;
             }
         /* Empty subscription list */
         } else {
@@ -76,8 +73,7 @@ bool bm_pubsub_subscribe(bm_sub_t* sub) {
             }
             memcpy(_ctx.subscription_list->sub.topic, sub->topic, sub->topic_len);
             _ctx.subscription_list->sub.topic_len = sub->topic_len;
-            _ctx.subscription_list->sub.has_local_sub = sub->has_local_sub;
-            _ctx.subscription_list->sub.has_payload_sub = sub->has_payload_sub;
+            _ctx.subscription_list->sub.cb = sub->cb;
         }
     } while(0);
 
@@ -104,8 +100,7 @@ bool bm_pubsub_unsubscribe(bm_sub_t* sub) {
             bm_sub_node_t* ptr = get_sub(sub->topic, sub->topic_len);
             /* Subscription already exists, update */
             if (ptr) {
-                ptr->sub.has_local_sub &= !sub->has_local_sub;
-                ptr->sub.has_payload_sub &= !sub->has_payload_sub;
+                ptr->sub.cb = NULL;
                 retv = true;
             }
         }
@@ -162,7 +157,7 @@ bool bm_pubsub_publish(bm_pub_t* pub) {
 }
 
 /*!
-  Print topic and data if node is subscribed to it
+  Handle incoming data that we are subscribed to.
   \param[in] *pbuf - pbuf with incoming data
   \param[in] *delim_ptr - address of delimiter in payload
   \return None
@@ -174,13 +169,8 @@ void bm_pubsub_handle_msg(struct pbuf *pbuf, char* delim_ptr) {
     char * data = delim_ptr + 1;
     bm_sub_node_t* ptr = get_sub((char *)pbuf->payload, topic_len);
 
-    if (ptr) {
-        if (ptr->sub.has_local_sub) {
-            printf("Topic: %.*s\n", topic_len, topic);
-            printf("Data: %.*s\n", data_len, data);
-        } else if (ptr->sub.has_payload_sub) {
-            /* Send to client */
-        }
+    if (ptr && ptr->sub.cb) {
+        ptr->sub.cb(topic, topic_len, data, data_len);
     }
 }
 
@@ -193,9 +183,7 @@ void bm_pubsub_print_subs(void) {
     bm_sub_node_t* node = _ctx.subscription_list;
 
     while(node != NULL) {
-        printf("Node: %.*s, Local Sub:%d, Payload Sub:%d\n", node->sub.topic_len, node->sub.topic,
-                node->sub.has_local_sub, node->sub.has_payload_sub);
-
+        printf("Node: %.*s\n", node->sub.topic_len, node->sub.topic);
         node = node->next;
     }
 }
