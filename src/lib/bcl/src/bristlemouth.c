@@ -12,18 +12,19 @@
 #include "lwip/inet.h"
 #include "lwip/mld6.h"
 
-#include <zcbor_common.h>
-#include <zcbor_decode.h>
-#include <zcbor_encode.h>
+#include "zcbor_common.h"
+#include "zcbor_decode.h"
+#include "zcbor_encode.h"
 
-#include "bm_zcbor_decode.h"
-#include "bm_zcbor_encode.h"
-#include "bm_usr_msg.h"
+#include "bm_dfu.h"
+#include "bm_info.h"
+#include "bm_l2.h"
 #include "bm_msg_types.h"
 #include "bm_network.h"
-#include "bm_dfu.h"
-#include "bm_l2.h"
 #include "bm_ports.h"
+#include "bm_usr_msg.h"
+#include "bm_zcbor_decode.h"
+#include "bm_zcbor_encode.h"
 
 #include "middleware.h"
 #include "task_priorities.h"
@@ -111,42 +112,49 @@ static void bcl_rx_thread(void *parameters) {
                 payload_length = rx_data.buf->len - sizeof(bm_usr_msg_hdr_t);
                 /* We assume that a bm_usr_msg_hdr_t precedes the payload.
                    Inspect the message type ID */
+
                 switch (((bm_usr_msg_hdr_t* ) rx_data.buf->payload)->id) {
-                    case MSG_BM_ACK:
+                    case MSG_BM_ACK: {
                         if(cbor_decode_bm_Ack(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &ack_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
                             break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, true);
                         break;
-                    case MSG_BM_HEARTBEAT:
+                    }
+                    case MSG_BM_HEARTBEAT: {
                         if(cbor_decode_bm_Heartbeat(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &heartbeat_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
                             break;
                         }
                         bm_network_heartbeat_received(dst_port_num, rx_data.src.addr);
                         break;
-                    case MSG_BM_DISCOVER_NEIGHBORS:
+                    }
+                    case MSG_BM_DISCOVER_NEIGHBORS: {
                         if(cbor_decode_bm_Discover_Neighbors(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_discover_neighbors_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
                             break;
                         }
                         bm_network_store_neighbor(dst_port_num, rx_data.src.addr, false);
                         break;
-                    case MSG_BM_DURATION:
+                    }
+                    case MSG_BM_DURATION: {
                         printf("Received Duration\n");
                         break;
-                    case MSG_BM_TIME:
+                    }
+                    case MSG_BM_TIME: {
                         printf("Received Time\n");
                         break;
-                    case MSG_BM_REQUEST_TABLE:
+                    }
+                    case MSG_BM_REQUEST_TABLE: {
                         if(cbor_decode_bm_Request_Table(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_request_table_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
                             break;
                         }
                         bm_network_process_table_request(bm_request_table_msg._bm_Request_Table_src_ipv6_addr_uint);
                         break;
-                    case MSG_BM_TABLE_RESPONSE:
+                    }
+                    case MSG_BM_TABLE_RESPONSE: {
                         if(cbor_decode_bm_Table_Response(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length, &bm_table_response_msg, &decode_len)) {
                             printf("CBOR Decode error\n");
                             break;
@@ -155,9 +163,27 @@ static void bcl_rx_thread(void *parameters) {
                             bm_network_store_neighbor_table(&bm_table_response_msg, bm_table_response_msg._bm_Table_Response_src_ipv6_addr_uint);
                         }
                         break;
-                    default:
+                    }
+                    case MSG_BM_REQUEST_FW_INFO: {
+                        bm_network_send_fw_info(&rx_data.src);
+                        break;
+                    }
+                    case MSG_BM_FW_INFO: {
+                        ip_addr_t *info_addr = bm_network_get_fw_info_ip();
+                        if(ip_addr_eq(info_addr, &rx_data.src)) {
+                            printf("FW info for %s\n", ip6addr_ntoa(&rx_data.src));
+                            bm_info_print_from_cbor(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length);
+
+                            // Clear address now that we've received data from it
+                            ip_addr_set_zero(info_addr);
+                        }
+
+                        break;
+                    }
+                    default: {
                         printf("Unexpected Message received\n");
                         break;
+                    }
                 }
                 /* free the pbuf */
                 pbuf_free(rx_data.buf);
@@ -230,7 +256,7 @@ void bcl_init(SerialHandle_t* hSerial) {
 
     bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
 
-    /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any 
+    /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any
               messages attempted to be sent withing X ms are not received */
     vTaskDelay(400);
     bm_network_start();

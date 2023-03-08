@@ -44,10 +44,14 @@ void bm_network_request_neighbor_tables(void);
 void bm_network_print_neighbor_table(void);
 void bm_network_print_topology(struct bm_network_node_t* node, struct bm_network_node_t *prev, uint8_t space_count);
 
+void bm_network_send_fw_info(const ip_addr_t* addr);
+void bm_network_request_fw_info(const ip_addr_t* addr);
 void bm_network_store_neighbor(uint8_t port_num, uint32_t* addr, bool is_ack);
 void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr);
 void bm_network_process_table_request(uint32_t* addr);
 void bm_network_store_neighbor_table(struct bm_Table_Response* table_resp, uint32_t* ip_addr);
+
+ip_addr_t *bm_network_get_fw_info_ip();
 
 #ifdef __cplusplus
 }
