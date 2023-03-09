@@ -10,7 +10,9 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
+    ${SRC_DIR}/lib/bcl/src/bm_config.c
     ${SRC_DIR}/lib/bcl/src/bm_info.c
+    ${SRC_DIR}/lib/bcl/src/bm_l2.c
     ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
@@ -50,21 +52,22 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
-    # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
+    ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
+    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/crc16/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
     ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
     ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
     )
 
 set(LIB_INCLUDES
+    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
@@ -74,9 +77,9 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
+    ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
-    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/crc16
     ${SRC_DIR}/third_party/fnv/
@@ -181,6 +184,7 @@ set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS
     ${LWIP_DIR}/src/include
     ${LWIP_DIR}/contrib/ports/freertos/include
+    ${SRC_DIR}/lib/lwip
     # ${LWIP_DIR}/contrib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -190,9 +194,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_l2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}

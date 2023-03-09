@@ -36,20 +36,21 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
-    # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
+    ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/third_party/mbedtls_base64/base64.c
-    ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
-    ${SRC_DIR}/third_party/printf/printf.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
+    ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
+    ${SRC_DIR}/third_party/mbedtls_base64/base64.c
+    ${SRC_DIR}/third_party/printf/printf.c
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/cli
+    ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/protected
+    ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/mcuboot
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/third_party/
@@ -136,6 +137,7 @@ set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS
     ${LWIP_DIR}/src/include
     ${LWIP_DIR}/contrib/ports/freertos/include
+    ${SRC_DIR}/lib/lwip
     # ${LWIP_DIR}/contrib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -145,8 +147,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lwip_support.c
-    # ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}

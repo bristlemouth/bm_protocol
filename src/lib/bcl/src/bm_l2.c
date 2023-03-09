@@ -259,7 +259,7 @@ err_t bm_l2_init(struct netif *netif) {
 
     rval = xTaskCreate(bm_l2_rx_thread,
                        "L2 RX Thread",
-                       2048, 
+                       2048,
                        NULL,
                        L2_RX_TASK_PRIORITY,
                        &rx_thread);

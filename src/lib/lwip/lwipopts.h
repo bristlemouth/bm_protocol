@@ -32,43 +32,53 @@
 #ifndef LWIP_LWIPOPTS_H
 #define LWIP_LWIPOPTS_H
 
-#define LWIP_IPV4                  0
-#define LWIP_IPV6                  1
+#define LWIP_IPV4                         0
+#define LWIP_IPV6                         1
 
-#define NO_SYS                     0
-#define LWIP_SOCKET                (NO_SYS==0)
-#define LWIP_NETCONN               (NO_SYS==0)
-#define LWIP_NETIF_API             (NO_SYS==0)
+#define NO_SYS                            0
+#define LWIP_SOCKET                       (NO_SYS==0)
+#define LWIP_NETCONN                      (NO_SYS==0)
+#define LWIP_NETIF_API                    (NO_SYS==0)
 
-#define LWIP_IGMP                  LWIP_IPV4
-#define LWIP_ICMP                  LWIP_IPV4
+#define LWIP_IGMP                         LWIP_IPV4
+#define LWIP_ICMP                         LWIP_IPV4
 
-#define LWIP_SNMP                  LWIP_UDP
-#define MIB2_STATS                 LWIP_SNMP
+#define LWIP_SNMP                         LWIP_UDP
+#define MIB2_STATS                        LWIP_SNMP
 #ifdef LWIP_HAVE_MBEDTLS
-#define LWIP_SNMP_V3               (LWIP_SNMP)
+#define LWIP_SNMP_V3                      (LWIP_SNMP)
 #endif
 
-#define LWIP_DNS                   LWIP_UDP
-#define LWIP_MDNS_RESPONDER        LWIP_UDP
+#define LWIP_DNS                          LWIP_UDP
+#define LWIP_MDNS_RESPONDER               LWIP_UDP
 
-#define LWIP_NUM_NETIF_CLIENT_DATA (LWIP_MDNS_RESPONDER)
+#define LWIP_NUM_NETIF_CLIENT_DATA        (LWIP_MDNS_RESPONDER)
 
-#define LWIP_HAVE_LOOPIF           1
-#define LWIP_NETIF_LOOPBACK        1
-#define LWIP_LOOPBACK_MAX_PBUFS    10
+#define LWIP_HAVE_LOOPIF                  1
+#define LWIP_NETIF_LOOPBACK               1
+#define LWIP_LOOPBACK_MAX_PBUFS           10
 
-#define TCP_LISTEN_BACKLOG         1
+#define TCP_LISTEN_BACKLOG                1
 
-#define LWIP_COMPAT_SOCKETS        1
-#define LWIP_SO_RCVTIMEO           1
-#define LWIP_SO_RCVBUF             1
+#define LWIP_COMPAT_SOCKETS               1
+#define LWIP_SO_RCVTIMEO                  1
+#define LWIP_SO_RCVBUF                    1
 
-#define LWIP_TCPIP_CORE_LOCKING    0
+#define LWIP_TCPIP_CORE_LOCKING           0
 
-#define LWIP_NETIF_LINK_CALLBACK        1
-#define LWIP_NETIF_STATUS_CALLBACK      1
-#define LWIP_NETIF_EXT_STATUS_CALLBACK  1
+#define LWIP_NETIF_LINK_CALLBACK          1
+#define LWIP_NETIF_STATUS_CALLBACK        1
+#define LWIP_NETIF_EXT_STATUS_CALLBACK    1
+
+/* WIP: Added by Aadu */
+#define TCPIP_MBOX_SIZE                   10
+#define TCPIP_THREAD_STACKSIZE            8192
+#define LWIP_IPV6_MLD                     (LWIP_IPV6)
+
+/* Disabling because we are modifying the SRC IPV6 address to hold the ingress port before
+   passing the payload to lwip. This will cause the packet to fail the CRC */
+#define CHECKSUM_GEN_UDP                  0
+#define CHECKSUM_CHECK_UDP                0
 
 #ifdef LWIP_DEBUG
 
