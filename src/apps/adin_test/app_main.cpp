@@ -179,8 +179,10 @@ void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, ui
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", data, data_len) == 0) {
             IOWrite(&LED_BLUE, 1);
+            IOWrite(&ALARM_OUT, 1);
         } else if (strncmp("off", data, data_len) == 0) {
             IOWrite(&LED_BLUE, 0);
+            IOWrite(&ALARM_OUT, 0);
         } else {
             // Not handled
         }
@@ -240,6 +242,8 @@ static void defaultTask( void *parameters ) {
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
     bcl_init(dfuSerial);
+
+    IOWrite(&ALARM_OUT, 0);
 
     bm_sub_t subscription;
     const char topic[] = "button";

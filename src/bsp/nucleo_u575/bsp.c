@@ -9,7 +9,6 @@
 #include "spi.h"
 #include "stm32_io.h"
 
-
 // Define all GPIO's here
 IOPinHandle_t ADIN_CS = {&STM32PinDriver, &(STM32Pin_t){ADIN_CS_GPIO_Port, ADIN_CS_Pin, NULL, NULL}};
 IOPinHandle_t ADIN_RDY = {&STM32PinDriver, &(STM32Pin_t){ADIN_RDY_GPIO_Port, ADIN_RDY_Pin, NULL, NULL}};
@@ -20,6 +19,7 @@ IOPinHandle_t LED_BLUE = {&STM32PinDriver, &(STM32Pin_t){LED_BLUE_GPIO_Port, LED
 IOPinHandle_t USART1_TX = {&STM32PinDriver, &(STM32Pin_t){USART1_TX_GPIO_Port, USART1_TX_Pin, NULL, NULL}};
 IOPinHandle_t USART1_RX = {&STM32PinDriver, &(STM32Pin_t){USART1_RX_GPIO_Port, USART1_RX_Pin, NULL, NULL}};
 IOPinHandle_t USER_BUTTON = {&STM32PinDriver, &(STM32Pin_t){USER_BUTTON_GPIO_Port, USER_BUTTON_Pin, NULL, NULL}};
+IOPinHandle_t ALARM_OUT = {&STM32PinDriver, &(STM32Pin_t){ALARM_OUT_GPIO_Port, ALARM_OUT_Pin, NULL, NULL}};
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;

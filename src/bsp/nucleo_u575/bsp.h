@@ -27,6 +27,7 @@ extern IOPinHandle_t LED_BLUE;
 extern IOPinHandle_t USART1_TX;
 extern IOPinHandle_t USART1_RX;
 extern IOPinHandle_t USER_BUTTON;
+extern IOPinHandle_t ALARM_OUT;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
