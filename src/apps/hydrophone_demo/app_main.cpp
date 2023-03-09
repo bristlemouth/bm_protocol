@@ -239,20 +239,6 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   return true;
 }
 
-void printDbData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
-  (void)topic;
-  (void)topic_len;
-  if(data_len == sizeof(float)) {
-    float *dbLevel = (float *)data;
-    printf("RX %0.1f dB\n", *dbLevel);
-    if(*dbLevel >= 78) {
-      IOWrite(&LED_BLUE, 1);
-    } else {
-      IOWrite(&LED_BLUE, 0);
-    }
-  }
-}
-
 extern SAI_HandleTypeDef hsai_BlockA1;
 
 static void hydrophoneTask( void *parameters ) {
@@ -268,14 +254,8 @@ static void hydrophoneTask( void *parameters ) {
       micSample(50000, processMicSamples, NULL);
     }
   } else {
-    printf("Microphone not detected. Defaulting to listener.\n");
+    printf("Microphone not detected.\n");
 
-    bm_sub_t hydroDbSub;
-
-    hydroDbSub.topic = (char *)hydroDbTopic;
-    hydroDbSub.topic_len = sizeof(hydroDbTopic) - 1; // Don't care about Null terminator
-    hydroDbSub.cb = printDbData;
-    bm_pubsub_subscribe(&hydroDbSub);
     while(1) {
       /* Do nothing */
       vTaskDelay(1000);

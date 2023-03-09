@@ -30,8 +30,16 @@ static const CLI_Command_Definition_t cmdGpio = {
 };
 
 static void print_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
-    printf("Received data on topic: %.*s\n", topic_len, topic);
-    printf("Data: %.*s\n", data_len, data);
+    if (strncmp("hydrophone/db", topic, topic_len) == 0) {
+        if(data_len == sizeof(float)) {
+            float dbLevel;
+            memcpy(&dbLevel, data, data_len);
+            printf("RX %0.1f dB\n", dbLevel);
+        }
+    } else {
+        printf("Received data on topic: %.*s\n", topic_len, topic);
+        printf("Data: %.*s\n", data_len, data);
+    }
 }
 
 void debugMiddlewareInit(void) {
