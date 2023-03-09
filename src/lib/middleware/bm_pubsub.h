@@ -31,6 +31,8 @@ bool bm_pubsub_subscribe(bm_sub_t* sub);
 bool bm_pubsub_unsubscribe(bm_sub_t* sub);
 void bm_pubsub_handle_msg(struct pbuf *pbuf, char* delim_ptr);
 void bm_pubsub_print_subs(void);
+char* bm_pubsub_get_pubs(void);
+char* bm_pubsub_get_subs(void);
 
 #ifdef __cplusplus
 }

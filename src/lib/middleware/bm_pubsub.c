@@ -19,6 +19,8 @@ static bm_sub_node_t* get_sub(char* key, uint16_t key_len);
 static bm_sub_node_t* get_last_sub(void);
 static pubsubContext_t _ctx;
 
+extern const char* publication_topics;
+
 /*!
   Subscribe to a specific string topic
   \param[in] *bm_sub_t - struct with the subscription topic and scope of
@@ -74,6 +76,7 @@ bool bm_pubsub_subscribe(bm_sub_t* sub) {
             memcpy(_ctx.subscription_list->sub.topic, sub->topic, sub->topic_len);
             _ctx.subscription_list->sub.topic_len = sub->topic_len;
             _ctx.subscription_list->sub.cb = sub->cb;
+            _ctx.subscription_list->next = NULL;
         }
     } while(0);
 
@@ -184,6 +187,46 @@ void bm_pubsub_print_subs(void) {
         printf("Node: %.*s\n", node->sub.topic_len, node->sub.topic);
         node = node->next;
     }
+}
+
+/*!
+  Get all reported publications
+  \return *char, string of pubs
+*/
+char* bm_pubsub_get_pubs(void) {
+    return (char *) publication_topics;
+}
+
+#define MAX_SUB_STR_LEN 256
+
+/*!
+  Get all registered subscriptions
+  \return *char, string of subs
+*/
+char* bm_pubsub_get_subs(void) {
+    bm_sub_node_t* node = _ctx.subscription_list;
+    char* subs_string = (char *) pvPortMalloc(MAX_SUB_STR_LEN);
+    memset(subs_string, 0, MAX_SUB_STR_LEN);
+    configASSERT(subs_string);
+    char* ptr = subs_string;
+    char spacing[] = " | ";
+    bool first = true;
+
+    while(node != NULL) {
+        if (first) {
+            first = false;
+        } else {
+            strcat(ptr, spacing);
+            ptr += sizeof(spacing) - 1;
+        }
+        strncat(ptr, node->sub.topic, node->sub.topic_len);
+        ptr += node->sub.topic_len;
+
+        node = node->next;
+    }
+    *ptr = 0x00; // Add Null terminator
+
+    return subs_string;
 }
 
 /*!

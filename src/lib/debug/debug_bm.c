@@ -22,7 +22,8 @@ static const CLI_Command_Definition_t cmdGpio = {
   "bm:\n"
   " * bm neighbors - show neighbors + liveliness\n"
   " * bm topo - print network topology\n"
-  " * bm info <ip addr> - Request fw info from device\n",
+  " * bm info <ip addr> - Request fw info from device\n"
+  " * bm caps - get pub/sub capabilities of other nodes on network\n",
   // Command function
   neighborsCommand,
   // Number of parameters (variable)
@@ -81,6 +82,8 @@ static BaseType_t neighborsCommand( char *writeBuffer,
 
             bm_network_request_fw_info(&addr);
 
+        } else if (strncmp("caps", parameter,parameterStringLength) == 0) {
+            bm_network_request_caps();
         } else {
             printf("ERR Invalid paramters\n");
             break;

@@ -76,7 +76,6 @@ SerialHandle_t usbCLI   = {
   .flags = 0,
 };
 
-
 SerialHandle_t usbPcap   = {
   .device = (void *)1, // Using CDC 1
   .name = "vcp-bm",
@@ -93,6 +92,8 @@ SerialHandle_t usbPcap   = {
   .enabled = false,
   .flags = 0,
 };
+
+const char* publication_topics = "button";
 
 extern "C" void USART1_IRQHandler(void) {
     serialGenericUartIRQHandler(&usart1);

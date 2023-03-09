@@ -12,6 +12,7 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 set(LIB_FILES
     ${SRC_DIR}/lib/bcl/src/bm_config.c
     ${SRC_DIR}/lib/bcl/src/bm_info.c
+    ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_l2.c
     ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c

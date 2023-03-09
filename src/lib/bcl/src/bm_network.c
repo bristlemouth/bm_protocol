@@ -14,6 +14,7 @@
 #include "zcbor_encode.h"
 
 #include "bm_info.h"
+#include "bm_caps.h"
 #include "bm_msg_types.h"
 #include "bm_network.h"
 #include "bm_usr_msg.h"
@@ -516,6 +517,66 @@ void bm_network_send_fw_info(const ip_addr_t * addr) {
     do {
         uint32_t payload_len = DEV_INFO_BUf_LEN;
         if(!bm_info_get_cbor(payload, &payload_len)) {
+            printf("Error encoding device info\n");
+            break;
+        }
+
+        struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(msg_hdr) + payload_len, PBUF_RAM);
+        configASSERT(buf);
+        memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
+        memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], payload, payload_len);
+
+        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+        pbuf_free(buf);
+    } while(0);
+    vPortFree(payload);
+}
+
+#define DEV_CAPS_BUF_LEN 1024
+
+/*!
+  Send Pub/Sub Capabilites  request
+
+  \param[in] *addr - unused until multicast works
+  \return None
+*/
+void bm_network_request_caps(void) {
+    bm_usr_msg_hdr_t msg_hdr = {
+        .encoding = BM_ENCODING_CBOR,
+        .set_id = BM_SET_DEFAULT,
+        .id = MSG_BM_REQUEST_CAPS,
+    };
+
+    struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(msg_hdr), PBUF_RAM);
+    configASSERT(buf);
+    memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
+
+    udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+    pbuf_free(buf);
+}
+
+/*!
+  Send pubsub capabilities
+
+  \param[in] *addr - unused until multicast works
+  \return None
+*/
+void bm_network_send_caps(const ip_addr_t * addr) {
+    bm_usr_msg_hdr_t msg_hdr = {
+        .encoding = BM_ENCODING_CBOR,
+        .set_id = BM_SET_DEFAULT,
+        .id = MSG_BM_CAPS,
+    };
+
+    // Unicast isn't working right now :'(
+    (void)addr;
+
+    uint8_t* payload = (uint8_t *) pvPortMalloc(DEV_CAPS_BUF_LEN);
+    configASSERT(payload);
+
+    do {
+        uint32_t payload_len = DEV_CAPS_BUF_LEN;
+        if(!bm_caps_get_cbor(payload, &payload_len)) {
             printf("Error encoding device info\n");
             break;
         }

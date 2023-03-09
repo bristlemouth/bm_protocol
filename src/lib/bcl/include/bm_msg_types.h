@@ -22,6 +22,8 @@ enum {
   MSG_BM_TEMPERATURE,
   MSG_BM_REQUEST_FW_INFO,
   MSG_BM_FW_INFO,
+  MSG_BM_REQUEST_CAPS,
+  MSG_BM_CAPS,
 };
 
 #ifdef __cplusplus
