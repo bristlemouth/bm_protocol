@@ -36,6 +36,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 
 static void defaultTask(void *parameters);
 
@@ -147,12 +148,46 @@ extern "C" int main(void) {
     while (1){};
 }
 
+const char topic[] = "button";
+const char on_str[] = "on";
+const char off_str[] = "off";
+
 bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
 
-    printf("Button press! %d\n", value);
+    bm_pub_t publication;
+
+
+    publication.topic = (char *) topic;
+    publication.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
+
+    if(value) {
+        publication.data = (char *)on_str;
+        publication.data_len = sizeof(on_str) - 1; // Don't care about Null terminator
+    } else {
+        publication.data = (char *)off_str;
+        publication.data_len = sizeof(off_str) - 1; // Don't care about Null terminator
+    }
+
+    bm_pubsub_publish(&publication);
+
     return false;
+}
+
+void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+    if (strncmp("button", topic, topic_len) == 0) {
+        if (strncmp("on", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 1);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 0);
+        } else {
+            // Not handled
+        }
+    } else {
+        printf("Topic: %.*s\n", topic_len, topic);
+        printf("Data: %.*s\n", data_len, data);
+    }
 }
 
 static void defaultTask( void *parameters ) {
@@ -205,6 +240,14 @@ static void defaultTask( void *parameters ) {
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
     bcl_init(dfuSerial);
+
+    bm_sub_t subscription;
+    const char topic[] = "button";
+
+    subscription.topic = (char *) topic;
+    subscription.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
+    subscription.cb = handle_sensor_subscriptions;
+    bm_pubsub_subscribe(&subscription);
 
     while(1) {
         /* Do nothing */
