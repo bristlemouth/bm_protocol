@@ -56,7 +56,7 @@ void MX_GPIO_Init(void)
   LL_PWR_EnableVDDIO2();
 
   /**/
-  LL_GPIO_ResetOutputPin(ADIN_CS_GPIO_Port, ADIN_CS_Pin);
+  LL_GPIO_ResetOutputPin(GPIOA, ALARM_OUT_Pin|ADIN_CS_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(ADIN_RST_GPIO_Port, ADIN_RST_Pin);
@@ -103,12 +103,12 @@ void MX_GPIO_Init(void)
   LL_GPIO_SetPinMode(ADIN_RDY_GPIO_Port, ADIN_RDY_Pin, LL_GPIO_MODE_INPUT);
 
   /**/
-  GPIO_InitStruct.Pin = ADIN_CS_Pin;
+  GPIO_InitStruct.Pin = ALARM_OUT_Pin|ADIN_CS_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(ADIN_CS_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = ADIN_RST_Pin;
