@@ -176,13 +176,14 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 }
 
 void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
-    (void) data;
-    (void) data_len;
     if (strncmp("button", topic, topic_len) == 0) {
-        IOWrite(&LED_BLUE, 1);
-        vTaskDelay(2000);
-        IOWrite(&LED_BLUE, 0);
-        vTaskDelay(500);
+        if (strncmp("on", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 1);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 0);
+        } else {
+            // Not handled
+        }
     } else {
         printf("Topic: %.*s\n", topic_len, topic);
         printf("Data: %.*s\n", data_len, data);
