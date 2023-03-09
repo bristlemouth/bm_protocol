@@ -148,19 +148,28 @@ extern "C" int main(void) {
     while (1){};
 }
 
+const char topic[] = "button";
+const char on_str[] = "on";
+const char off_str[] = "off";
+
 bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
-    (void) value;
 
     bm_pub_t publication;
-    const char topic[] = "button";
-    const char data[] = "on";
+
 
     publication.topic = (char *) topic;
     publication.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
-    publication.data = (char *) data;
-    publication.data_len = sizeof(data) - 1; // Don't care about Null terminator
+
+    if(value) {
+        publication.data = (char *)on_str;
+        publication.data_len = sizeof(on_str) - 1; // Don't care about Null terminator
+    } else {
+        publication.data = (char *)off_str;
+        publication.data_len = sizeof(off_str) - 1; // Don't care about Null terminator
+    }
+
     bm_pubsub_publish(&publication);
 
     return false;

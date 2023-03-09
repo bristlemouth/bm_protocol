@@ -105,6 +105,13 @@ void EXTI13_IRQHandler(void)
         rval |= STM32IOHandleInterrupt((const STM32Pin_t *)USER_BUTTON.pin);
     /* USER CODE END LL_EXTI_LINE_13_FALLING */
   }
+  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_13) != RESET)
+  {
+    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_13);
+    /* USER CODE BEGIN LL_EXTI_LINE_13_RISING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)USER_BUTTON.pin);
+    /* USER CODE END LL_EXTI_LINE_13_RISING */
+  }
   /* USER CODE BEGIN EXTI13_IRQn 1 */
   portYIELD_FROM_ISR(rval);
   /* USER CODE END EXTI13_IRQn 1 */
