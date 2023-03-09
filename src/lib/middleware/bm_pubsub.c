@@ -147,9 +147,7 @@ bool bm_pubsub_publish(bm_pub_t* pub) {
         pbuf_free(pbuf);
     } while (0);
 
-    if (retv) {
-        printf("Published to Topic: %.*s\n", pub->topic_len, pub->topic);
-    } else {
+    if (!retv) {
         printf("Unable to publish to topic\n");
     }
 
