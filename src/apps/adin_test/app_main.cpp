@@ -31,7 +31,6 @@
 #include "serial_console.h"
 #include "usb.h"
 #include "watchdog.h"
-#include "debug_middleware.h"
 #include "bm_pubsub.h"
 
 
@@ -237,7 +236,6 @@ static void defaultTask( void *parameters ) {
     debugSysInit();
     debugMemfaultInit(&usart1);
     debugBMInit();
-    debugMiddlewareInit();
 
     // Commenting out while we test usart1
     // lpmPeripheralInactive(LPM_BOOT);

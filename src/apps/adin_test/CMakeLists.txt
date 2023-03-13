@@ -37,7 +37,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
-    ${SRC_DIR}/lib/debug/debug_middleware.c
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
