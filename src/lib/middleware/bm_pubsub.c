@@ -200,7 +200,7 @@ char* bm_pubsub_get_pubs(void) {
 #define MAX_SUB_STR_LEN 256
 
 /*!
-  Get all registered subscriptions
+  Get all registered subscriptions. Returned value must be freed by user
   \return *char, string of subs
 */
 char* bm_pubsub_get_subs(void) {
