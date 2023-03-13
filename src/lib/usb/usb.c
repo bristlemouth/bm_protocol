@@ -281,10 +281,14 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     case 1: {
       if ( dtr ) {
         // Enable packet dumps
-        pcapEnable();
+        // pcapEnable();
+        serialEnable(&usbPcap);
+        xStreamBufferReset(usbPcap.txStreamBuffer);
+        xStreamBufferReset(usbPcap.rxStreamBuffer);
       } else {
         // Disable packet dumps
-        pcapDisable();
+        // pcapDisable();
+        serialDisable(&usbPcap);
       }
       break;
     }
@@ -303,4 +307,3 @@ void tud_suspend_cb(bool remote_wakeup_en) {
   // serialConsoleDisable();
   printf("SUSPEND\n");
 }
-
