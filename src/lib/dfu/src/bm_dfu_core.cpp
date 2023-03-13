@@ -8,6 +8,7 @@
 #include "lib_state_machine.h"
 #include "serial.h"
 #include "task_priorities.h"
+#include "bsp.h"
 
 #include "semphr.h"
 
@@ -738,7 +739,19 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
     configASSERT(retval == pdPASS);
 
     // hSerial currently required for DFU host
-    configASSERT(hSerial);
+    if(!hSerial) {
+        while(1) {
+            printf("USB-C must be connected\n");
+            for (int i=0; i < 10; i++) {
+                IOWrite(&LED_RED, 1);
+                vTaskDelay(100);
+                IOWrite(&LED_RED, 0);
+                IOWrite(&LED_GREEN, 1);
+                vTaskDelay(100);
+                IOWrite(&LED_GREEN, 0);
+            }
+        }
+    }
 
     /* Setup processing RX Bytes */
     hSerial->processByte = bm_dfu_process_rx_byte;

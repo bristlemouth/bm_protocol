@@ -51,6 +51,9 @@ void bm_network_heartbeat_received(uint8_t port_num, uint32_t * addr);
 void bm_network_process_table_request(uint32_t* addr);
 void bm_network_store_neighbor_table(struct bm_Table_Response* table_resp, uint32_t* ip_addr);
 
+void bm_network_send_caps(const ip_addr_t * addr);
+void bm_network_request_caps(void);
+
 ip_addr_t *bm_network_get_fw_info_ip();
 
 #ifdef __cplusplus

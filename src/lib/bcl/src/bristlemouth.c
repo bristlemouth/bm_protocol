@@ -18,6 +18,7 @@
 
 #include "bm_dfu.h"
 #include "bm_info.h"
+#include "bm_caps.h"
 #include "bm_l2.h"
 #include "bm_msg_types.h"
 #include "bm_network.h"
@@ -178,6 +179,15 @@ static void bcl_rx_thread(void *parameters) {
                             ip_addr_set_zero(info_addr);
                         }
 
+                        break;
+                    }
+                    case MSG_BM_REQUEST_CAPS: {
+                        bm_network_send_caps(&rx_data.src);
+                        break;
+                    }
+                    case MSG_BM_CAPS: {
+                        printf("Pub/Sub Capabilities for %s\n", ip6addr_ntoa(&rx_data.src));
+                        bm_caps_print_from_cbor(&(((uint8_t *)(rx_data.buf->payload))[sizeof(bm_usr_msg_hdr_t)]), payload_length);
                         break;
                     }
                     default: {

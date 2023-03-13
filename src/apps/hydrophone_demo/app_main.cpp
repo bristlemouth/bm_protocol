@@ -24,7 +24,6 @@
 #include "cli.h"
 #include "debug_bm.h"
 #include "debug_memfault.h"
-#include "debug_middleware.h"
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
@@ -95,6 +94,8 @@ SerialHandle_t usbPcap   = {
   .enabled = false,
   .flags = 0,
 };
+
+const char* publication_topics = "";
 
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
@@ -205,7 +206,6 @@ static void defaultTask( void *parameters ) {
   debugSysInit();
   debugMemfaultInit(&usart1);
   debugBMInit();
-  debugMiddlewareInit();
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
@@ -314,6 +314,7 @@ static void hydrophoneTask( void *parameters ) {
   hydroDbPub.topic_len = sizeof(hydroDbTopic) - 1;
 
   if(micInit(&hsai_BlockA1, NULL)) {
+    publication_topics = "hydrophone/db";
     while(1) {
       // "sample long time"
       micSample(50000, processMicSamples, NULL);

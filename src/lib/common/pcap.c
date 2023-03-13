@@ -66,7 +66,7 @@ void pcapInit(SerialHandle_t *handle) {
   \return none
 */
 void pcapTxPacket(const uint8_t *buff, size_t len) {
-  if(pcapSerialHandle->enabled) {
+  if(pcapSerialHandle && pcapSerialHandle->enabled) {
     PcapRecordHeader_t header;
 
     header.ts_sec = xTaskGetTickCount()/1000;
@@ -90,17 +90,21 @@ void pcapTxPacket(const uint8_t *buff, size_t len) {
   Enable pcap stream (automatically called when host connects over USB)
 */
 void pcapEnable() {
-  pcapSerialHandle->enabled = true;
-  xStreamBufferReset(pcapSerialHandle->rxStreamBuffer);
-  xStreamBufferReset(pcapSerialHandle->txStreamBuffer);
-  printf("PCAP Stream enabled!\n");
-  firstMessage = false;
+  if(pcapSerialHandle) {
+    pcapSerialHandle->enabled = true;
+    xStreamBufferReset(pcapSerialHandle->rxStreamBuffer);
+    xStreamBufferReset(pcapSerialHandle->txStreamBuffer);
+    printf("PCAP Stream enabled!\n");
+    firstMessage = false;
+  }
 }
 
 /*!
   Disable pcapSerialHandle serial device. (automatically called when host disconnects over USB)
 */
 void pcapDisable() {
-  pcapSerialHandle->enabled = false;
-  printf("PCAP Stream disabled!\n");
+  if(pcapSerialHandle) {
+    pcapSerialHandle->enabled = false;
+    printf("PCAP Stream disabled!\n");
+  }
 }

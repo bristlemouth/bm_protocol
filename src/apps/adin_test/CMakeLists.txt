@@ -12,6 +12,7 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 set(LIB_FILES
     ${SRC_DIR}/lib/bcl/src/bm_config.c
     ${SRC_DIR}/lib/bcl/src/bm_info.c
+    ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_l2.c
     ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c
@@ -36,7 +37,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
-    ${SRC_DIR}/lib/debug/debug_middleware.c
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp

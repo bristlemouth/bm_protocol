@@ -31,7 +31,6 @@
 #include "serial_console.h"
 #include "usb.h"
 #include "watchdog.h"
-#include "debug_middleware.h"
 #include "bm_pubsub.h"
 
 
@@ -76,7 +75,6 @@ SerialHandle_t usbCLI   = {
   .flags = 0,
 };
 
-
 SerialHandle_t usbPcap   = {
   .device = (void *)1, // Using CDC 1
   .name = "vcp-bm",
@@ -93,6 +91,8 @@ SerialHandle_t usbPcap   = {
   .enabled = false,
   .flags = 0,
 };
+
+const char* publication_topics = "button";
 
 extern "C" void USART1_IRQHandler(void) {
     serialGenericUartIRQHandler(&usart1);
@@ -206,8 +206,10 @@ static void defaultTask( void *parameters ) {
       // so no explicit serialEnable is required
 
 #if BM_DFU_HOST
-      dfuSerial = &usart1;
-      serialEnable(&usart1);
+      dfuSerial = &usbPcap;
+      serialEnable(&usbPcap);
+#else
+      pcapInit(&usbPcap);
 #endif
 
     } else {
@@ -220,7 +222,7 @@ static void defaultTask( void *parameters ) {
       printf("WARNING: PCAP support requires USB connection.\n");
     }
     startCLI();
-    pcapInit(&usbPcap);
+    // pcapInit(&usbPcap);
     serialEnable(&usart1);
     gpioISRStartTask();
 
@@ -234,7 +236,6 @@ static void defaultTask( void *parameters ) {
     debugSysInit();
     debugMemfaultInit(&usart1);
     debugBMInit();
-    debugMiddlewareInit();
 
     // Commenting out while we test usart1
     // lpmPeripheralInactive(LPM_BOOT);
