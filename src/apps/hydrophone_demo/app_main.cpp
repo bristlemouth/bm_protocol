@@ -96,7 +96,7 @@ SerialHandle_t usbPcap   = {
   .flags = 0,
 };
 
-const char* publication_topics = "hydrophone/db | alarm/duration | alarm/threshold | alarm/trigger";
+const char* publication_topics = "hydrophone/db";
 
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
