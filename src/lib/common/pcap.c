@@ -66,7 +66,7 @@ void pcapInit(SerialHandle_t *handle) {
   \return none
 */
 void pcapTxPacket(const uint8_t *buff, size_t len) {
-  if(pcapSerialHandle->enabled) {
+  if(pcapSerialHandle && pcapSerialHandle->enabled) {
     PcapRecordHeader_t header;
 
     header.ts_sec = xTaskGetTickCount()/1000;
