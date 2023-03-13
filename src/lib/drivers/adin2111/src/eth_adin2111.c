@@ -5,6 +5,7 @@
 #include "eth_adin2111.h"
 #include "bm_l2.h"
 #include "task_priorities.h"
+#include "bsp.h"
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
@@ -428,6 +429,20 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
     err_t retv = ERR_OK;
     int i;
     uint8_t bm_egress_port = 0;
+
+    if (!hDevice) {
+        while(1) {
+            printf("ADIN not found\n");
+            for (int i=0; i < 10; i++) {
+                IOWrite(&LED_RED, 1);
+                vTaskDelay(100);
+                IOWrite(&LED_RED, 0);
+                IOWrite(&LED_GREEN, 1);
+                vTaskDelay(100);
+                IOWrite(&LED_GREEN, 0);
+            }
+        }
+    }
 
     for(i=0; i <ADIN2111_PORT_NUM; i++) {
         if (!adin2111_main_queue_is_full(&txQueue)) {
