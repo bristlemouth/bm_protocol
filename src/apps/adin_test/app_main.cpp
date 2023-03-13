@@ -207,8 +207,10 @@ static void defaultTask( void *parameters ) {
       // so no explicit serialEnable is required
 
 #if BM_DFU_HOST
-      dfuSerial = &usart1;
-      serialEnable(&usart1);
+      dfuSerial = &usbPcap;
+      serialEnable(&usbPcap);
+#else
+      pcapInit(&usbPcap);
 #endif
 
     } else {
@@ -221,7 +223,7 @@ static void defaultTask( void *parameters ) {
       printf("WARNING: PCAP support requires USB connection.\n");
     }
     startCLI();
-    pcapInit(&usbPcap);
+    // pcapInit(&usbPcap);
     serialEnable(&usart1);
     gpioISRStartTask();
 
