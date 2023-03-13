@@ -96,7 +96,7 @@ SerialHandle_t usbPcap   = {
   .flags = 0,
 };
 
-const char* publication_topics = "hydrophone/db";
+const char* publication_topics = "";
 
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
@@ -316,6 +316,7 @@ static void hydrophoneTask( void *parameters ) {
   hydroDbPub.topic_len = sizeof(hydroDbTopic) - 1;
 
   if(micInit(&hsai_BlockA1, NULL)) {
+    publication_topics = "hydrophone/db";
     while(1) {
       // "sample long time"
       micSample(50000, processMicSamples, NULL);
