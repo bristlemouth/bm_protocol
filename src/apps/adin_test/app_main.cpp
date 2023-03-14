@@ -207,7 +207,6 @@ static void defaultTask( void *parameters ) {
 
 #if BM_DFU_HOST
       dfuSerial = &usbPcap;
-      serialEnable(&usbPcap);
 #else
       pcapInit(&usbPcap);
 #endif

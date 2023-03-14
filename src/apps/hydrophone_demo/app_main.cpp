@@ -34,6 +34,7 @@
 #include "serial_console.h"
 #include "task_priorities.h"
 #include "usb.h"
+#include "util.h"
 #include "watchdog.h"
 
 
@@ -85,7 +86,7 @@ SerialHandle_t usbPcap   = {
   .rxPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
-  .txBufferSize = 2048,
+  .txBufferSize = 4096,
   .rxBufferSize = 64,
   .rxBytesFromISR = NULL,
   .getTxBytesFromISR = NULL,
@@ -177,23 +178,15 @@ static void defaultTask( void *parameters ) {
     // Serial device will be enabled automatically when console connects
     // so no explicit serialEnable is required
 
-#if BM_DFU_HOST
-    dfuSerial = &usart1;
-    serialEnable(&usart1);
-#endif
-
   } else {
     startSerialConsole(&usart1);
-
-#if BM_DFU_HOST
-    printf("WARNING: USB must be connected to use DFU mode. This serial port will be used by the serial console instead.\n");
-#endif
-
-    printf("WARNING: PCAP support requires USB connection.\n");
+    serialEnable(&usart1);
   }
   startCLI();
-  pcapInit(&usbPcap);
-  serialEnable(&usart1);
+
+  // Using usbPcap for streaming audio
+  // pcapInit(&usbPcap);
+
   gpioISRStartTask();
 
   memfault_platform_boot();
@@ -229,7 +222,10 @@ static void defaultTask( void *parameters ) {
 }
 
 bm_pub_t hydroDbPub;
+bm_pub_t hydroStreamPub;
 const char hydroDbTopic[] = "hydrophone/db";
+const char hydroStreamTopic[] = "hydrophone/stream";
+const char hydroStreamEnableTopic[] = "hydrophone/stream/enable";
 const char alarmDurationTopic[] = "alarm/duration";
 const char alarmThresholdTopic[] = "alarm/threshold";
 const char alarmTriggerTopic[] = "alarm/trigger";
@@ -237,25 +233,79 @@ const char alarmTriggerTopic[] = "alarm/trigger";
 volatile static uint32_t alarmDBThreshold;
 volatile static uint32_t alarmDurationS;
 
+bool streamEnabled = false;
+
+#define AUDIO_MAGIC 0xAD10B055
+
+// buffer for resized mic samples (int16_t)
+#define MIC_SAMPLES_PER_PACKET (512)
+typedef struct {
+  uint32_t magic;
+  uint32_t sampleRate;
+  uint16_t numSamples;
+  uint8_t sampleSize;
+  uint8_t flags;
+  int16_t samples[0];
+} __attribute__((__packed__)) hydrophoneStreamDataHeader_t;
+
+typedef struct {
+  hydrophoneStreamDataHeader_t header;
+  int16_t samples[MIC_SAMPLES_PER_PACKET];
+} __attribute__((__packed__)) hydrophoneStreamData_t;
+
+static hydrophoneStreamData_t streamData;
+
 static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void *args) {
   (void)args;
+  (void)samples;
+  (void)numSamples;
   float dbLevel = micGetDB(samples, numSamples);
-  hydroDbPub.data = (char *)&dbLevel;
+  hydroDbPub.data = reinterpret_cast<char *>(&dbLevel);
   hydroDbPub.data_len = sizeof(float);
   bm_pubsub_publish(&hydroDbPub);
+
+  if(streamEnabled) {
+    for(uint32_t idx = 0; idx < MIN(numSamples, MIC_SAMPLES_PER_PACKET); idx++) {
+      streamData.samples[idx] = (int16_t)(samples[idx] >> 8);
+    }
+    streamData.header.numSamples = MIN(numSamples, MIC_SAMPLES_PER_PACKET);
+    hydroStreamPub.data = (char *)&streamData.header;
+    hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
+    bm_pubsub_publish(&hydroStreamPub);
+
+    if(numSamples > MIC_SAMPLES_PER_PACKET) {
+      for(uint32_t idx = MIC_SAMPLES_PER_PACKET; idx < numSamples; idx++) {
+        streamData.samples[idx - MIC_SAMPLES_PER_PACKET] = (int16_t)(samples[idx] >> 8);
+      }
+      streamData.header.numSamples = (numSamples - MIC_SAMPLES_PER_PACKET);
+      hydroStreamPub.data = (char *)&streamData.header;
+      hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
+      bm_pubsub_publish(&hydroStreamPub);
+    }
+  }
 
   return true;
 }
 
-void printDbData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+
+void streamAudioData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
-  if(data_len == sizeof(float)) {
-    float *dbLevel = (float *)data;
-    printf("RX %0.1f dB\n", *dbLevel);
-    if(*dbLevel >= alarmDBThreshold) {
-      alarmTimer = alarmDurationS * 100;
-    }
+
+  if(usbPcap.enabled) {
+    serialWrite(&usbPcap, reinterpret_cast<uint8_t *>(data), data_len);
+  }
+}
+
+void streamEnable(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+  (void)topic;
+  (void)topic_len;
+  (void)data_len;
+
+  if((data[0] == '1') || (memcmp("on", data, 2) == 0)) {
+    streamEnabled = true;
+  } else {
+    streamEnabled = false;
   }
 }
 
@@ -276,7 +326,7 @@ void updateThresholdCb(char* topic, uint16_t topic_len, char* data, uint16_t dat
   if(data && data_len > 0) {
     uint32_t newThreshold = strtoul(data, 0, 10);
     if(newThreshold > 0 && newThreshold <= 200) {
-      printf("Updating alarm threshold to %ludB\n", newThreshold);
+      printf("Updating alarm threshold to %" PRIu32 "dB\n", newThreshold);
       alarmDBThreshold = newThreshold;
     }
   }
@@ -292,7 +342,7 @@ void updateDurationCb(char* topic, uint16_t topic_len, char* data, uint16_t data
 
     // Max duration of 2 minutes
     if(newDuration <= (60 * 2)) {
-      printf("Updating alarm duration to %ludB\n", newDuration);
+      printf("Updating alarm duration to %" PRIu32 "dB\n", newDuration);
       alarmDurationS = newDuration;
     }
   }
@@ -304,17 +354,35 @@ static void hydrophoneTask( void *parameters ) {
   (void)parameters;
   vTaskDelay(1000);
 
+  // memset(str1, ' ', sizeof(str1));
+
   // Default dB threshold (aka don't turn on at all)
   alarmDBThreshold = 200;
 
   // Default alarm duration (1 second)
   alarmDurationS = 1;
 
-  hydroDbPub.topic = (char *)hydroDbTopic;
+  hydroDbPub.topic = const_cast<char *>(hydroDbTopic);
   hydroDbPub.topic_len = sizeof(hydroDbTopic) - 1;
 
+  hydroStreamPub.topic = const_cast<char *>(hydroStreamTopic);
+  hydroStreamPub.topic_len = sizeof(hydroStreamTopic) - 1;
+
+  // These won't change
+  streamData.header.magic = AUDIO_MAGIC;
+  streamData.header.sampleRate = 48000;
+  streamData.header.sampleSize = 2;
+
   if(micInit(&hsai_BlockA1, NULL)) {
-    publication_topics = "hydrophone/db";
+    publication_topics = "hydrophone/db | hydrophone/stream";
+
+    // Hydrophone audio stream enable/disable
+    bm_sub_t sub;
+    sub.topic = const_cast<char *>(hydroStreamEnableTopic);
+    sub.topic_len = sizeof(hydroStreamEnableTopic) - 1;
+    sub.cb = streamEnable;
+    bm_pubsub_subscribe(&sub);
+
     while(1) {
       // "sample long time"
       micSample(50000, processMicSamples, NULL);
@@ -322,27 +390,36 @@ static void hydrophoneTask( void *parameters ) {
   } else {
     printf("Microphone not detected. Defaulting to listener.\n");
 
+    // Single byte trigger level for fast response time
+    usbPcap.txStreamBuffer = xStreamBufferCreate(usbPcap.txBufferSize, 1);
+    configASSERT(usbPcap.txStreamBuffer != NULL);
+
+    usbPcap.rxStreamBuffer = xStreamBufferCreate(usbPcap.rxBufferSize, 1);
+    configASSERT(usbPcap.rxStreamBuffer != NULL);
+
+    // serialEnable(&usbPcap);
+
     bm_sub_t sub;
-    // Hydrophone dB level
-    sub.topic = (char *)hydroDbTopic;
-    sub.topic_len = sizeof(hydroDbTopic) - 1;
-    sub.cb = printDbData;
+    // Hydrophone audio stream!
+    sub.topic = const_cast<char *>(hydroStreamTopic);
+    sub.topic_len = sizeof(hydroStreamTopic) - 1;
+    sub.cb = streamAudioData;
     bm_pubsub_subscribe(&sub);
 
     // alarm threshold level
-    sub.topic = (char *)alarmThresholdTopic;
+    sub.topic = const_cast<char *>(alarmThresholdTopic);
     sub.topic_len = sizeof(alarmThresholdTopic) - 1;
     sub.cb = updateThresholdCb;
     bm_pubsub_subscribe(&sub);
 
     // alarm duration
-    sub.topic = (char *)alarmDurationTopic;
+    sub.topic = const_cast<char *>(alarmDurationTopic);
     sub.topic_len = sizeof(alarmDurationTopic) - 1;
     sub.cb = updateDurationCb;
     bm_pubsub_subscribe(&sub);
 
     // alarm duration in seconds
-    sub.topic = (char *)alarmTriggerTopic;
+    sub.topic = const_cast<char *>(alarmTriggerTopic);
     sub.topic_len = sizeof(alarmTriggerTopic) - 1;
     sub.cb = alarmTriggerCb;
     bm_pubsub_subscribe(&sub);
@@ -358,5 +435,51 @@ static void hydrophoneTask( void *parameters ) {
       }
       vTaskDelay(10);
     }
+  }
+}
+
+void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
+  (void)rts;
+
+  SerialHandle_t *handle = serialHandleFromItf(itf);
+  configASSERT(handle);
+  switch(itf) {
+    case 0: {
+      if ( dtr ) {
+        // Terminal connected
+        serialConsoleEnable();
+      } else {
+        // Terminal disconnected
+        serialConsoleDisable();
+      }
+      break;
+    }
+
+    case 1: {
+      bm_pub_t publication;
+      publication.topic = const_cast<char *>(hydroStreamEnableTopic);
+      publication.topic_len = sizeof(hydroStreamEnableTopic) - 1;
+
+      publication.data_len = 1;
+
+      if ( dtr ) {
+        // Enable audio streaming
+        serialEnable(&usbPcap);
+        xStreamBufferReset(usbPcap.txStreamBuffer);
+        xStreamBufferReset(usbPcap.rxStreamBuffer);
+        publication.data = const_cast<char *>("1");
+        printf("bm pub %s 1\n", hydroStreamEnableTopic);
+      } else {
+        // Disable audio streaming
+        serialDisable(&usbPcap);
+        publication.data = const_cast<char *>("0");
+        printf("bm pub %s 0\n", hydroStreamEnableTopic);
+      }
+      bm_pubsub_publish(&publication);
+      break;
+    }
+
+    default:
+      configASSERT(0);
   }
 }
