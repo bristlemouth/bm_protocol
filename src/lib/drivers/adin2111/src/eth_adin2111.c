@@ -20,6 +20,7 @@
 #include "lwip/stats.h"
 #include "lwip/nd6.h"
 #include "lwip/prot/ip6.h"
+#include "lwip/udp.h"
 
 #include "pcap.h"
 
@@ -70,7 +71,7 @@ static SemaphoreHandle_t            tx_ready_sem;
 /**
  * @brief Initialize ADIN2111 Queue
  *
- * @note Used to initialize both TX and RX queues 
+ * @note Used to initialize both TX and RX queues
  *
  * @param *pQueue Queue to initialize
  * @param bufDesc Descriptions for each buffer in Queue
@@ -304,7 +305,7 @@ static void adin2111_service_thread(void *parameters) {
         /* Perform a different action for each event type. */
         if (activated_member == tx_ready_sem){
             xSemaphoreTake(activated_member, 0);
-            
+
             while (!adin2111_main_queue_is_empty(&txQueue)) {
                 pEntry = adin2111_main_queue_tail(&txQueue);
                 if ((pEntry != NULL) && (!pEntry->sent)) {
@@ -325,11 +326,7 @@ static void adin2111_service_thread(void *parameters) {
 
             if (!adin2111_main_queue_is_empty(&rxQueue)) {
                 pEntry = adin2111_main_queue_tail(&rxQueue);
-
-                if( !pEntry ) {
-                    printf("Null adin queue entry\n");
-                    goto out;
-                }
+                configASSERT(pEntry);
 
                 rx_port_mask = (1 << rx_info.port);
                 retv =  bm_l2_rx(rx_info.dev, pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize, rx_port_mask);
@@ -337,7 +334,6 @@ static void adin2111_service_thread(void *parameters) {
                     printf("Unable to pass to the L2 layer");
                 }
 
-out:
                 /* Put the buffer back into queue and re-submit to the ADIN2111 driver */
                 adin2111_main_queue_remove(&rxQueue);
                 adin2111_main_queue_add(&rxQueue, rx_info.port, pEntry->pBufDesc, adin2111_rx_cb);
@@ -356,7 +352,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice) {
     BaseType_t rval;
 
     do {
-        /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts 
+        /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts
         TODO: Provide a SPI interface? */
         if (adi_bsp_init()) {
             result = ADI_ETH_HW_ERROR;
@@ -424,16 +420,43 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice) {
     return result;
 }
 
+typedef struct {
+    struct eth_hdr eth_hdr;
+    struct ip6_hdr ip6_hdr;
+    struct udp_hdr udp_hdr;
+} net_header_t;
+
+void add_egress_port(uint8_t *buff, uint8_t port) {
+    net_header_t *header = (net_header_t *)buff;
+
+    // Modify egress port byte in IP address
+    uint8_t *pbyte = (uint8_t *)&header->ip6_hdr.src;
+    pbyte[EGRESS_PORT_IDX] = port;
+
+    //
+    // Correct checksum to account for change in ip address
+    //
+
+    // Undo 1's complement
+    header->udp_hdr.chksum ^= 0xFFFF;
+
+    // Add port to checksum (we can only do this because the value was previously 0)
+    // Since udp checksum is sum of uint16_t bytes
+    header->udp_hdr.chksum += port;
+
+    // Do 1's complement again
+    header->udp_hdr.chksum ^= 0xFFFF;
+}
+
 err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask, uint8_t port_offset) {
     queue_entry_t *pEntry;
     err_t retv = ERR_OK;
-    int i;
     uint8_t bm_egress_port = 0;
 
     if (!hDevice) {
         while(1) {
             printf("ADIN not found\n");
-            for (int i=0; i < 10; i++) {
+            for (int idx=0; idx < 10; idx++) {
 #ifdef BSP_NUCLEO_U575
                 IOWrite(&LED_RED, 1);
                 vTaskDelay(100);
@@ -446,7 +469,7 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
         }
     }
 
-    for(i=0; i <ADIN2111_PORT_NUM; i++) {
+    for(uint32_t port=0; port < ADIN2111_PORT_NUM; port++) {
         if (!adin2111_main_queue_is_full(&txQueue)) {
             pEntry = adin2111_main_queue_head(&txQueue);
             pEntry->pBufDesc->trxSize = buf_len;
@@ -456,32 +479,33 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
             (void) bm_egress_port;
             (void) port_offset;
 
-            if (port_mask & (0x01 << i)) {
+            if (port_mask & (0x01 << port)) {
 
                 /* We are modifying the IPV6 SRC address to include the egress port */
-                bm_egress_port = (0x01 << i) << port_offset;
-                ADD_EGRESS_PORT(pEntry->pBufDesc->pBuf, bm_egress_port);
+                bm_egress_port = (0x01 << port) << port_offset;
+                add_egress_port(pEntry->pBufDesc->pBuf, bm_egress_port);
 
                 pcapTxPacket(pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize);
 
-                adin2111_main_queue_add(&txQueue, (adin2111_Port_e) i, pEntry->pBufDesc, adin2111_tx_cb);
+                adin2111_main_queue_add(&txQueue, (adin2111_Port_e) port, pEntry->pBufDesc, adin2111_tx_cb);
             }
         } else {
             retv = ERR_MEM;
-            goto out;
+            break;
         }
     }
-    
-    /* Give semaphore after 1 or more buffers have been put onto the queue */
-    xSemaphoreGive(tx_ready_sem);
 
-out:
+    if(retv == ERR_OK) {
+        /* Give semaphore after 1 or more buffers have been put onto the queue */
+        xSemaphoreGive(tx_ready_sem);
+    }
+
     return retv;
 }
 
 /**
  * @brief Enables the ADIN2111 interface
- * 
+ *
  * @note Zephyr specific function (called by OS after defining net device)
  *
  * @param *dev Zephyr device type
@@ -495,7 +519,7 @@ int adin2111_hw_start(adin2111_DeviceHandle_t* dev) {
  * @brief Disables the ADIN2111 interface
  *
  * @note Zephyr specific function (called by OS after defining net device)
- * 
+ *
  * @param *dev Zephyr device type
  * @return int 0 on success
  */

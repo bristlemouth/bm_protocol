@@ -77,7 +77,7 @@
 
 /* Disabling because we are modifying the SRC IPV6 address to hold the ingress port before
    passing the payload to lwip. This will cause the packet to fail the CRC */
-#define CHECKSUM_GEN_UDP                  0
+#define CHECKSUM_GEN_UDP                  1
 #define CHECKSUM_CHECK_UDP                0
 
 #ifdef LWIP_DEBUG
