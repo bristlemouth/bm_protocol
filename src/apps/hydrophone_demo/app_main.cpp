@@ -437,3 +437,49 @@ static void hydrophoneTask( void *parameters ) {
     }
   }
 }
+
+void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
+  (void)rts;
+
+  SerialHandle_t *handle = serialHandleFromItf(itf);
+  configASSERT(handle);
+  switch(itf) {
+    case 0: {
+      if ( dtr ) {
+        // Terminal connected
+        serialConsoleEnable();
+      } else {
+        // Terminal disconnected
+        serialConsoleDisable();
+      }
+      break;
+    }
+
+    case 1: {
+      bm_pub_t publication;
+      publication.topic = const_cast<char *>(hydroStreamEnableTopic);
+      publication.topic_len = sizeof(hydroStreamEnableTopic) - 1;
+
+      publication.data_len = 1;
+
+      if ( dtr ) {
+        // Enable audio streaming
+        serialEnable(&usbPcap);
+        xStreamBufferReset(usbPcap.txStreamBuffer);
+        xStreamBufferReset(usbPcap.rxStreamBuffer);
+        publication.data = const_cast<char *>("1");
+        printf("bm pub %s 1\n", hydroStreamEnableTopic);
+      } else {
+        // Disable audio streaming
+        serialDisable(&usbPcap);
+        publication.data = const_cast<char *>("0");
+        printf("bm pub %s 0\n", hydroStreamEnableTopic);
+      }
+      bm_pubsub_publish(&publication);
+      break;
+    }
+
+    default:
+      configASSERT(0);
+  }
+}

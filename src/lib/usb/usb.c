@@ -250,18 +250,16 @@ void usbMspInit() {
 }
 
 /*!
-  Callback when CDC line state changes
-  Invoked when cdc when line state changed e.g connected/disconnected
+  Weak function called whenever the USB line state changes. (connected/disconnected)
+  Application can override as necessary
 
   \param[in] itf - unused
   \param[in] dtr - dtr signal
   \param[in] rts - rts signal
 
 */
-void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
-{
+__weak void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
   (void) rts;
-
   printf("itf: %u RTS: %d DTR: %d\n", itf, rts, dtr);
 
   SerialHandle_t *handle = serialHandleFromItf(itf);
@@ -279,24 +277,43 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     }
 
     case 1: {
+#if BM_DFU_HOST
       if ( dtr ) {
-        // Enable packet dumps
-        // pcapEnable();
         serialEnable(&usbPcap);
         xStreamBufferReset(usbPcap.txStreamBuffer);
         xStreamBufferReset(usbPcap.rxStreamBuffer);
       } else {
-        // Disable packet dumps
-        // pcapDisable();
         serialDisable(&usbPcap);
       }
+#else
+      if ( dtr ) {
+        // Enable packet dumps
+        pcapEnable();
+      } else {
+        // Disable packet dumps
+        pcapDisable();
+      }
+#endif
       break;
     }
-
     default:
       configASSERT(0);
   }
+}
 
+/*!
+  Callback when CDC line state changes
+  Invoked when cdc when line state changed e.g connected/disconnected
+
+  \param[in] itf - unused
+  \param[in] dtr - dtr signal
+  \param[in] rts - rts signal
+
+*/
+void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
+{
+
+  usb_line_state_change(itf, dtr, rts);
 
 }
 
