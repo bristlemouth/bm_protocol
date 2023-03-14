@@ -44,8 +44,13 @@ ser.flushInput()
 
 print("Waiting for data")
 
+# Wait for magic number
+header_bytes = bytes([0x55, 0xB0, 0x10, 0xAD])
+
+ser.read_until(header_bytes)
+
 # Get the first header
-header_bytes = ser.read(struct.calcsize(AUDIO_STRUCT))
+header_bytes += ser.read(struct.calcsize(AUDIO_STRUCT)-4)
 header = AUDIO_HDR._make(struct.unpack(AUDIO_STRUCT, header_bytes))
 
 print("Starting stream!")
