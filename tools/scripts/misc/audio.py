@@ -1,5 +1,9 @@
 """
 Stream audio data over USB port (from bristlemouth!)
+
+To run this script on MacOS, you must do the following:
+* conda install portaudio
+* pip3 install pyaudio
 """
 import pyaudio
 import serial

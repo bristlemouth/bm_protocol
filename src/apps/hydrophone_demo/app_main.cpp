@@ -225,12 +225,15 @@ bm_pub_t hydroDbPub;
 bm_pub_t hydroStreamPub;
 const char hydroDbTopic[] = "hydrophone/db";
 const char hydroStreamTopic[] = "hydrophone/stream";
+const char hydroStreamEnableTopic[] = "hydrophone/stream/enable";
 const char alarmDurationTopic[] = "alarm/duration";
 const char alarmThresholdTopic[] = "alarm/threshold";
 const char alarmTriggerTopic[] = "alarm/trigger";
 
 volatile static uint32_t alarmDBThreshold;
 volatile static uint32_t alarmDurationS;
+
+bool streamEnabled = false;
 
 #define AUDIO_MAGIC 0xAD10B055
 
@@ -261,38 +264,27 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   hydroDbPub.data_len = sizeof(float);
   bm_pubsub_publish(&hydroDbPub);
 
-  for(uint32_t idx = 0; idx < MIN(numSamples, MIC_SAMPLES_PER_PACKET); idx++) {
-    streamData.samples[idx] = (int16_t)(samples[idx] >> 8);
-  }
-  streamData.header.numSamples = MIN(numSamples, MIC_SAMPLES_PER_PACKET);
-  hydroStreamPub.data = (char *)&streamData.header;
-  hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
-  bm_pubsub_publish(&hydroStreamPub);
-
-  if(numSamples > MIC_SAMPLES_PER_PACKET) {
-    for(uint32_t idx = MIC_SAMPLES_PER_PACKET; idx < numSamples; idx++) {
-      streamData.samples[idx - MIC_SAMPLES_PER_PACKET] = (int16_t)(samples[idx] >> 8);
+  if(streamEnabled) {
+    for(uint32_t idx = 0; idx < MIN(numSamples, MIC_SAMPLES_PER_PACKET); idx++) {
+      streamData.samples[idx] = (int16_t)(samples[idx] >> 8);
     }
-    streamData.header.numSamples = (numSamples - MIC_SAMPLES_PER_PACKET);
+    streamData.header.numSamples = MIN(numSamples, MIC_SAMPLES_PER_PACKET);
     hydroStreamPub.data = (char *)&streamData.header;
     hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
     bm_pubsub_publish(&hydroStreamPub);
+
+    if(numSamples > MIC_SAMPLES_PER_PACKET) {
+      for(uint32_t idx = MIC_SAMPLES_PER_PACKET; idx < numSamples; idx++) {
+        streamData.samples[idx - MIC_SAMPLES_PER_PACKET] = (int16_t)(samples[idx] >> 8);
+      }
+      streamData.header.numSamples = (numSamples - MIC_SAMPLES_PER_PACKET);
+      hydroStreamPub.data = (char *)&streamData.header;
+      hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
+      bm_pubsub_publish(&hydroStreamPub);
+    }
   }
 
   return true;
-}
-
-void printDbData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
-  (void)topic;
-  (void)topic_len;
-  if(data_len == sizeof(float)) {
-    float dbLevel = 0;
-    memcpy(&dbLevel, data, sizeof(dbLevel));
-    printf("RX %0.1f dB\n", dbLevel);
-    if(dbLevel >= alarmDBThreshold) {
-      alarmTimer = alarmDurationS * 100;
-    }
-  }
 }
 
 
@@ -305,6 +297,17 @@ void streamAudioData(char* topic, uint16_t topic_len, char* data, uint16_t data_
   }
 }
 
+void streamEnable(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+  (void)topic;
+  (void)topic_len;
+  (void)data_len;
+
+  if((data[0] == '1') || (memcmp("on", data, 2) == 0)) {
+    streamEnabled = true;
+  } else {
+    streamEnabled = false;
+  }
+}
 
 // Manually trigger alarm
 void alarmTriggerCb(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
@@ -372,6 +375,14 @@ static void hydrophoneTask( void *parameters ) {
 
   if(micInit(&hsai_BlockA1, NULL)) {
     publication_topics = "hydrophone/db | hydrophone/stream";
+
+    // Hydrophone audio stream enable/disable
+    bm_sub_t sub;
+    sub.topic = const_cast<char *>(hydroStreamEnableTopic);
+    sub.topic_len = sizeof(hydroStreamEnableTopic) - 1;
+    sub.cb = streamEnable;
+    bm_pubsub_subscribe(&sub);
+
     while(1) {
       // "sample long time"
       micSample(50000, processMicSamples, NULL);
@@ -389,12 +400,6 @@ static void hydrophoneTask( void *parameters ) {
     // serialEnable(&usbPcap);
 
     bm_sub_t sub;
-    // Hydrophone dB level
-    sub.topic = const_cast<char *>(hydroDbTopic);
-    sub.topic_len = sizeof(hydroDbTopic) - 1;
-    sub.cb = printDbData;
-    bm_pubsub_subscribe(&sub);
-
     // Hydrophone audio stream!
     sub.topic = const_cast<char *>(hydroStreamTopic);
     sub.topic_len = sizeof(hydroStreamTopic) - 1;
