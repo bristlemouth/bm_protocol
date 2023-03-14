@@ -26,3 +26,4 @@ function(create_gtest library_name function_to_test)
 endfunction()
 
 add_subdirectory("common")
+add_subdirectory("drivers")

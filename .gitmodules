@@ -13,3 +13,6 @@
 [submodule "src/third_party/tinyusb"]
 	path = src/third_party/tinyusb
 	url = https://github.com/sofarocean/tinyusb.git
+[submodule "test/third_party/fff"]
+	path = test/third_party/fff
+	url = https://github.com/sofarocean/fff.git

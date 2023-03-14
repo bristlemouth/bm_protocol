@@ -43,6 +43,7 @@ jobs:
           git submodule update --init src/third_party/memfault-firmware-sdk
           git submodule update --init src/third_party/tinyusb
           git submodule update --init src/third_party/zcbor
+          git submodule update --init test/third_party/fff
 
       - name: Run Tests
         run: python3 tools/scripts/test/did_i_break_something.py tools/scripts/test/configs
