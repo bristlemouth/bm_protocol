@@ -434,12 +434,14 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
         while(1) {
             printf("ADIN not found\n");
             for (int i=0; i < 10; i++) {
+#ifdef BSP_NUCLEO_U575
                 IOWrite(&LED_RED, 1);
                 vTaskDelay(100);
                 IOWrite(&LED_RED, 0);
                 IOWrite(&LED_GREEN, 1);
                 vTaskDelay(100);
                 IOWrite(&LED_GREEN, 0);
+#endif // BSP_NUCLEO_U575
             }
         }
     }
