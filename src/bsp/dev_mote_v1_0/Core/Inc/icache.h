@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    usart.h
+  * @file    icache.h
   * @brief   This file contains all the function prototypes for
-  *          the usart.c file
+  *          the icache.c file
   ******************************************************************************
   * @attention
   *
@@ -18,8 +18,8 @@
   */
 /* USER CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __USART_H__
-#define __USART_H__
+#ifndef __ICACHE_H__
+#define __ICACHE_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,8 +36,7 @@ extern "C" {
 
 /* USER CODE END Private defines */
 
-void MX_LPUART1_UART_Init(void);
-void MX_USART1_UART_Init(void);
+void MX_ICACHE_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
@@ -47,5 +46,5 @@ void MX_USART1_UART_Init(void);
 }
 #endif
 
-#endif /* __USART_H__ */
+#endif /* __ICACHE_H__ */
 

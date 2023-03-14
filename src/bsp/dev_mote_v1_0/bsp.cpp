@@ -3,11 +3,12 @@
 #include "task.h"
 
 #include "adc.h"
+#include "i2c.h"
 #include "io.h"
 #include "io_adc.h"
 #include "main.h"
+#include "pca9535.h"
 #include "spi.h"
-#include "i2c.h"
 #include "stm32_io.h"
 
 extern __IO uint32_t uwTick;
@@ -37,11 +38,17 @@ void HAL_Delay(uint32_t Delay) {
   }
 }
 
-extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
+extern SPI_HandleTypeDef hspi2;
+extern SPI_HandleTypeDef hspi3;
 SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init);
+SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init);
+SPIInterface_t spi3 = PROTECTED_SPI("SPI3", hspi3, MX_SPI3_Init);
+
+extern I2C_HandleTypeDef hi2c1;
 I2CInterface_t i2c1 = PROTECTED_I2C("I2C1", hi2c1, MX_I2C1_Init);
-PCA9535Device_t devMoteIOExpander = {&i2c2, 0x20, 0 , 0, 0, {NULL}, false};
+
+PCA9535Device_t devMoteIOExpander = {&i2c1, 0x20, 0 , 0, 0, {NULL}, false};
 
 void bspInit() {
   // Switch HAL_GetTick to use freeRTOS tick
@@ -49,6 +56,8 @@ void bspInit() {
   HAL_SuspendTick();
 
   spiInit(&spi1);
+  spiInit(&spi2);
+  spiInit(&spi3);
   i2cInit(&i2c1);
 }
 

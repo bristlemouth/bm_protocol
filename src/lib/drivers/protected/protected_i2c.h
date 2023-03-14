@@ -4,9 +4,11 @@
 #include <stdbool.h>
 #include "FreeRTOS.h"
 #include "semphr.h"
+
 #ifndef CI_TEST
-#include "bsp.h"
+#include "stm32u5xx.h"
 #endif // CI_TEST
+
 #define I2C_WORKAROUND 1
 
 #ifdef __cplusplus

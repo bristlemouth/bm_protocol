@@ -5,6 +5,9 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/bsp_pins.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/adc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/i2c.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/icache.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/iwdg.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/spi.c
         # ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/syscalls.c
@@ -38,7 +41,14 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_spi_ex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_tim.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_tim_ex.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_exti.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_lpgpio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_lpuart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_gpio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_rcc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usb.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_utils.c
         ${COMMON_BSP_DIR}/stm32/startup_stm32u575zitxq.c
         PARENT_SCOPE)
 set(BSP_INCLUDES

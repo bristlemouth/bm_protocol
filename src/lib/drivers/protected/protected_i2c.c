@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "protected_i2c.h"
-#include "bsp.h"
 
 // Translate HAL i2c error codes to ours
 static I2CResponse_t _halI2cErrToI2CResponse(uint32_t errorCode) {

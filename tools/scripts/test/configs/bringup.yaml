@@ -1,0 +1,7 @@
+- name: bringup on dev_mote_v1_0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: bringup
+    bsp: dev_mote_v1_0
+    build_type: Debug
+    use_bootloader: True

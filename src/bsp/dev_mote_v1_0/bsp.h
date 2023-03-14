@@ -26,7 +26,7 @@ extern IOPinHandle_t BM_CS;
 extern IOPinHandle_t BM_SCK_RX3;
 extern IOPinHandle_t BM_MISO;
 extern IOPinHandle_t BM_MOSI_TX3;
-extern IOPinHandle_t BM_INT; 
+extern IOPinHandle_t BM_INT;
 extern IOPinHandle_t FLASH_SCK;
 extern IOPinHandle_t FLASH_MISO;
 extern IOPinHandle_t FLASH_MOSI;
@@ -37,6 +37,10 @@ extern IOPinHandle_t ADIN_MISO;
 extern IOPinHandle_t ADIN_MOSI;
 extern IOPinHandle_t BOOT_LED;
 extern IOPinHandle_t ADIN_INT;
+extern IOPinHandle_t DEBUG_RX;
+extern IOPinHandle_t DEBUG_TX;
+extern IOPinHandle_t PAYLOAD_RX;
+extern IOPinHandle_t PAYLOAD_TX;
 
 extern IOPinHandle_t EXP_LED_G1;
 extern IOPinHandle_t EXP_LED_R1;
@@ -57,6 +61,10 @@ extern IOPinHandle_t EXP_GPIO12;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
+extern SPIInterface_t spi2;
+extern SPIInterface_t spi3;
+
+// I2C Interfaces
 extern I2CInterface_t i2c1;
 
 uint32_t adcGetSampleMv(uint32_t channel);

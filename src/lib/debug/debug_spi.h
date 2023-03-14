@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "stm32l4xx_hal.h"
+#include "bsp.h"
 #include "protected_spi.h"
 
 #ifdef __cplusplus

@@ -29,6 +29,20 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32u5xx_hal.h"
 
+#include "stm32u5xx_ll_iwdg.h"
+#include "stm32u5xx_ll_lpuart.h"
+#include "stm32u5xx_ll_rcc.h"
+#include "stm32u5xx_ll_usart.h"
+#include "stm32u5xx_ll_system.h"
+#include "stm32u5xx_ll_gpio.h"
+#include "stm32u5xx_ll_exti.h"
+#include "stm32u5xx_ll_lpgpio.h"
+#include "stm32u5xx_ll_bus.h"
+#include "stm32u5xx_ll_cortex.h"
+#include "stm32u5xx_ll_utils.h"
+#include "stm32u5xx_ll_pwr.h"
+#include "stm32u5xx_ll_dma.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -58,41 +72,49 @@ void SystemPower_Config_ext(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define GPIO2_Pin GPIO_PIN_13
+#define GPIO2_Pin LL_GPIO_PIN_13
 #define GPIO2_GPIO_Port GPIOC
-#define GPIO1_Pin GPIO_PIN_0
+#define GPIO1_Pin LL_GPIO_PIN_0
 #define GPIO1_GPIO_Port GPIOH
-#define ADIN_PWR_Pin GPIO_PIN_1
+#define ADIN_PWR_Pin LL_GPIO_PIN_1
 #define ADIN_PWR_GPIO_Port GPIOH
-#define BM_CS_Pin GPIO_PIN_4
+#define PAYLOAD_TX_Pin LL_GPIO_PIN_2
+#define PAYLOAD_TX_GPIO_Port GPIOA
+#define PAYLOAD_RX_Pin LL_GPIO_PIN_3
+#define PAYLOAD_RX_GPIO_Port GPIOA
+#define BM_CS_Pin LL_GPIO_PIN_4
 #define BM_CS_GPIO_Port GPIOA
-#define BM_SCK_RX3_Pin GPIO_PIN_5
+#define BM_SCK_RX3_Pin LL_GPIO_PIN_5
 #define BM_SCK_RX3_GPIO_Port GPIOA
-#define BM_MISO_Pin GPIO_PIN_6
+#define BM_MISO_Pin LL_GPIO_PIN_6
 #define BM_MISO_GPIO_Port GPIOA
-#define BM_MOSI_TX3_Pin GPIO_PIN_7
+#define BM_MOSI_TX3_Pin LL_GPIO_PIN_7
 #define BM_MOSI_TX3_GPIO_Port GPIOA
-#define BM_INT_Pin GPIO_PIN_0
+#define BM_INT_Pin LL_GPIO_PIN_0
 #define BM_INT_GPIO_Port GPIOB
-#define FLASH_SCK_Pin GPIO_PIN_13
+#define FLASH_SCK_Pin LL_GPIO_PIN_13
 #define FLASH_SCK_GPIO_Port GPIOB
-#define FLASH_MISO_Pin GPIO_PIN_14
+#define FLASH_MISO_Pin LL_GPIO_PIN_14
 #define FLASH_MISO_GPIO_Port GPIOB
-#define FLASH_MOSI_Pin GPIO_PIN_15
+#define FLASH_MOSI_Pin LL_GPIO_PIN_15
 #define FLASH_MOSI_GPIO_Port GPIOB
-#define FLASH_CS_Pin GPIO_PIN_8
+#define FLASH_CS_Pin LL_GPIO_PIN_8
 #define FLASH_CS_GPIO_Port GPIOA
-#define ADIN_NSS_Pin GPIO_PIN_15
+#define DEBUG_TX_Pin LL_GPIO_PIN_9
+#define DEBUG_TX_GPIO_Port GPIOA
+#define DEBUG_RX_Pin LL_GPIO_PIN_10
+#define DEBUG_RX_GPIO_Port GPIOA
+#define ADIN_NSS_Pin LL_GPIO_PIN_15
 #define ADIN_NSS_GPIO_Port GPIOA
-#define ADIN_SCK_Pin GPIO_PIN_3
+#define ADIN_SCK_Pin LL_GPIO_PIN_3
 #define ADIN_SCK_GPIO_Port GPIOB
-#define ADIN_MISO_Pin GPIO_PIN_4
+#define ADIN_MISO_Pin LL_GPIO_PIN_4
 #define ADIN_MISO_GPIO_Port GPIOB
-#define ADIN_MOSI_Pin GPIO_PIN_5
+#define ADIN_MOSI_Pin LL_GPIO_PIN_5
 #define ADIN_MOSI_GPIO_Port GPIOB
-#define BOOT_LED_Pin GPIO_PIN_3
+#define BOOT_LED_Pin LL_GPIO_PIN_3
 #define BOOT_LED_GPIO_Port GPIOH
-#define ADIN_INT_Pin GPIO_PIN_8
+#define ADIN_INT_Pin LL_GPIO_PIN_8
 #define ADIN_INT_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 

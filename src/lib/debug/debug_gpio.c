@@ -8,12 +8,12 @@
 #include <string.h>
 #include <inttypes.h>
 #include "debug.h"
-#include "stm32l4xx_hal.h"
+#include "bsp.h"
 #include "gpio.h"
 #include "debug_gpio.h"
 #include "i2c.h"
 #include "bsp.h"
-#include "resourceManager.h"
+// #include "resourceManager.h"
 
 static BaseType_t debugGpioCommand( char *writeBuffer,
                                   size_t writeBufferLen,

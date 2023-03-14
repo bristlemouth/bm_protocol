@@ -17,6 +17,11 @@
 #define RESET_DELAY       (1)
 #define AFTER_RESET_DELAY (100)
 
+#ifdef BSP_DEV_MOTE_V1_0
+#define ADIN_CS ADIN_NSS
+#define ADIN_RDY ADIN_INT
+#endif // BSP_DEV_MOTE_V1_0
+
 static adi_cb_t gpfIntCallback = NULL;
 static void *gpIntCBParam = NULL;
 

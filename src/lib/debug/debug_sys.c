@@ -13,7 +13,7 @@
 #include "device_info.h"
 #include "reset_reason.h"
 #include "bootloader_helper.h"
-#include "stm32u5xx_hal.h"
+#include "bsp.h"
 #ifndef NO_NETWORK
 #include "bristlemouth.h"
 #endif
