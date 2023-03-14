@@ -173,7 +173,6 @@ err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint
         bm_l2_ctx.rx_data.pbuf = pbuf_alloc(PBUF_RAW, payload_len, PBUF_RAM);
         if (bm_l2_ctx.rx_data.pbuf == NULL) {
             printf("No mem for pbuf in RX pathway\n");
-            pbuf_free(bm_l2_ctx.rx_data.pbuf);
             retv = ERR_MEM;
             break;
         }
