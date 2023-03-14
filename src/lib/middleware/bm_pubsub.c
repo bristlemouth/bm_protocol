@@ -239,7 +239,8 @@ static bm_sub_node_t* get_sub(char* key, uint16_t key_len) {
     bm_sub_node_t* node = _ctx.subscription_list;
 
     while(node != NULL) {
-        if (memcmp(node->sub.topic, key, key_len) == 0) {
+        if ((node->sub.topic_len == key_len) &&
+            (memcmp(node->sub.topic, key, key_len) == 0)) {
             break;
         }
         node = node->next;
