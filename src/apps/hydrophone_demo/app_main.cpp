@@ -326,7 +326,7 @@ void updateThresholdCb(char* topic, uint16_t topic_len, char* data, uint16_t dat
   if(data && data_len > 0) {
     uint32_t newThreshold = strtoul(data, 0, 10);
     if(newThreshold > 0 && newThreshold <= 200) {
-      printf("Updating alarm threshold to %ludB\n", newThreshold);
+      printf("Updating alarm threshold to %" PRIu32 "dB\n", newThreshold);
       alarmDBThreshold = newThreshold;
     }
   }
@@ -342,7 +342,7 @@ void updateDurationCb(char* topic, uint16_t topic_len, char* data, uint16_t data
 
     // Max duration of 2 minutes
     if(newDuration <= (60 * 2)) {
-      printf("Updating alarm duration to %ludB\n", newDuration);
+      printf("Updating alarm duration to %" PRIu32 "dB\n", newDuration);
       alarmDurationS = newDuration;
     }
   }
