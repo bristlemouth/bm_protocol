@@ -7,7 +7,7 @@
 
 #include <string.h>
 #include "debug.h"
-#include "stm32l4xx_hal.h"
+#include "bsp.h"
 #include "i2c.h"
 #include "debug_i2c.h"
 

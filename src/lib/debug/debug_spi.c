@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "debug.h"
-#include "stm32l4xx_hal.h"
+#include "bsp.h"
 #include "gpio.h"
 #include "debug_gpio.h"
 #include "debug_spi.h"
@@ -142,7 +142,7 @@ static BaseType_t debugSPICommand(char *writeBuffer,
                     &parameterStringLength);
 
     if(parameter == NULL) {
-      printf("ERR Invalid paramters\n");
+      printf("ERR Invalid parameters\n");
       break;
     }
 
@@ -163,16 +163,19 @@ static BaseType_t debugSPICommand(char *writeBuffer,
                                     commandString,
                                     4,
                                     &parameterStringLength);
-
-      const DebugSPI_t * debugInterface = findInterface((uint8_t)(interfaceNum[0] - '0'));
-      if (interfaceNum != NULL && debugInterface != NULL) {
-        if(phA != NULL && poL != NULL) {
-          spiConfig(debugInterface->interface, !(phA[0] == '0'), !(poL[0] == '0'));
+      if(interfaceNum != NULL){
+        const DebugSPI_t * debugInterface = findInterface((uint8_t)(interfaceNum[0] - '0'));
+        if (debugInterface != NULL) {
+          if(phA != NULL && poL != NULL) {
+            spiConfig(debugInterface->interface, !(phA[0] == '0'), !(poL[0] == '0'));
+          } else {
+            printf("ERR Invalid parameters\n");
+          }
         } else {
-          printf("ERR Invalid paramters\n");
+          printf("ERR Invalid interface\n");
         }
       } else {
-        printf("ERR Invalid interface\n");
+        printf("ERR No interface parameter given\n");
       }
 
     } else if (strncmp("tx", parameter, parameterStringLength) == 0) {
@@ -191,17 +194,20 @@ static BaseType_t debugSPICommand(char *writeBuffer,
                                     commandString,
                                     4,
                                     &parameterStringLength);
-
-      const DebugSPI_t * debugInterface = findInterface((uint8_t)(interfaceNum[0] - '0'));
-      if (interfaceNum != NULL && debugInterface != NULL) {
-        const DebugGpio_t *spin = findGpio(sname, csNameLen);
-        if (spin == NULL) {
-          printf("ERR Invalid CS pin\n");
+      if (interfaceNum != NULL){
+        const DebugSPI_t * debugInterface = findInterface((uint8_t)(interfaceNum[0] - '0'));
+        if (interfaceNum != NULL && debugInterface != NULL) {
+          const DebugGpio_t *spin = findGpio(sname, csNameLen);
+          if (spin == NULL) {
+            printf("ERR Invalid CS pin\n");
+          } else {
+            debugSPITxRx(debugInterface->interface, spin, bytes);
+          }
         } else {
-          debugSPITxRx(debugInterface->interface, spin, bytes);
+          printf("ERR Invalid interface\n");
         }
       } else {
-        printf("ERR Invalid interface\n");
+        printf("ERR No interface parameter given\n");
       }
 
     } else {

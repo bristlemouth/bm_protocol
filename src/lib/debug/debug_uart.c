@@ -12,9 +12,6 @@
 #include <stdlib.h>
 #include "usbd_cdc_if.h"
 
-#include "stm32l4xx_hal.h"
-#include "stm32l4xx_ll_lpuart.h"
-
 #include "serial.h"
 #include "serial_console.h"
 #include "debug.h"

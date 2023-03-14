@@ -20,6 +20,10 @@ IOPinHandle_t ADIN_MISO = {&STM32PinDriver, &(STM32Pin_t){ADIN_MISO_GPIO_Port, A
 IOPinHandle_t ADIN_MOSI = {&STM32PinDriver, &(STM32Pin_t){ADIN_MOSI_GPIO_Port, ADIN_MOSI_Pin, NULL, NULL}};
 IOPinHandle_t BOOT_LED = {&STM32PinDriver, &(STM32Pin_t){BOOT_LED_GPIO_Port, BOOT_LED_Pin, NULL, NULL}};
 IOPinHandle_t ADIN_INT = {&STM32PinDriver, &(STM32Pin_t){ADIN_INT_GPIO_Port, ADIN_INT_Pin, NULL, NULL}};
+IOPinHandle_t DEBUG_RX = {&STM32PinDriver, &(STM32Pin_t){DEBUG_RX_GPIO_Port, DEBUG_RX_Pin, NULL, NULL}};
+IOPinHandle_t DEBUG_TX = {&STM32PinDriver, &(STM32Pin_t){DEBUG_TX_GPIO_Port, DEBUG_TX_Pin, NULL, NULL}};
+IOPinHandle_t PAYLOAD_RX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_RX_GPIO_Port, PAYLOAD_RX_Pin, NULL, NULL}};
+IOPinHandle_t PAYLOAD_TX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_TX_GPIO_Port, PAYLOAD_TX_Pin, NULL, NULL}};
 
 extern PCA9535Device_t devMoteIOExpander;
 

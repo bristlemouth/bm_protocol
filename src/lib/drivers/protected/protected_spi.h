@@ -5,6 +5,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "io.h"
+#include "stm32u5xx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +20,7 @@ typedef enum {
 
 typedef struct {
   const char *name;
-  void *handle;
+  SPI_HandleTypeDef *handle;
   void (*initFn)();
   SemaphoreHandle_t mutex;
 } SPIInterface_t;
