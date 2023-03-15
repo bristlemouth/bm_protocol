@@ -32,7 +32,7 @@ bool bm_pubsub_subscribe(bm_sub_t* sub) {
 
     do {
         /* Ensure that topic does not have illegal characters */
-        if(strchr(sub->topic, ':')) {
+        if(memchr(sub->topic, ':', sub->topic_len)) {
             retv = false;
             break;
         }
