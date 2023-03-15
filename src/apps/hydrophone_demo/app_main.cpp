@@ -287,6 +287,17 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   return true;
 }
 
+void printDbData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+  (void)topic;
+  (void)topic_len;
+  if(data_len == sizeof(float)) {
+    float dbLevel = 0;
+    memcpy(&dbLevel, data, sizeof(dbLevel));
+    if(dbLevel >= alarmDBThreshold) {
+      alarmTimer = alarmDurationS * 100;
+    }
+  }
+}
 
 void streamAudioData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
   (void)topic;
@@ -400,6 +411,12 @@ static void hydrophoneTask( void *parameters ) {
     // serialEnable(&usbPcap);
 
     bm_sub_t sub;
+    // Hydrophone dB level
+    sub.topic = const_cast<char *>(hydroDbTopic);
+    sub.topic_len = sizeof(hydroDbTopic) - 1;
+    sub.cb = printDbData;
+    bm_pubsub_subscribe(&sub);
+
     // Hydrophone audio stream!
     sub.topic = const_cast<char *>(hydroStreamTopic);
     sub.topic_len = sizeof(hydroStreamTopic) - 1;
