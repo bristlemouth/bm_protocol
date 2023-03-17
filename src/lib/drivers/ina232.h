@@ -52,7 +52,6 @@ public:
   bool measurePower();
   void getPower(float &voltage, float &current);
   uint32_t getTotalConversionTimeMs();
-  static INA232* debugGetIna232Singleton();
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);

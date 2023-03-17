@@ -22,6 +22,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
     ${SRC_DIR}/lib/common/enumToStr.c
+    ${SRC_DIR}/lib/common/freertos_cpp_overrides.cpp
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
     ${SRC_DIR}/lib/common/lpm_u5.c
@@ -38,12 +39,15 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_memfault.c
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
     ${SRC_DIR}/lib/debug/debug_i2c.c
+    ${SRC_DIR}/lib/debug/debug_ina232.cpp
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
     ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
+    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -52,8 +56,10 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
     ${SRC_DIR}/lib/drivers/htu21d.cpp
+    ${SRC_DIR}/lib/drivers/ina232.cpp
     # ${SRC_DIR}/lib/drivers/mic.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
+    ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
@@ -62,7 +68,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
-    ${SRC_DIR}/third_party/crc/crc16.c
+    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
@@ -79,6 +85,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
@@ -153,6 +160,7 @@ set(MCUBOOT_INCLUDES
     ${MCUBOOT_DIR}/boot/boot_serial/include
 
     # FreeRTOS port
+    ${SRC_DIR}/lib/mcuboot/
     ${SRC_DIR}/lib/mcuboot/include
 
     ${SRC_DIR}/lib/drivers/

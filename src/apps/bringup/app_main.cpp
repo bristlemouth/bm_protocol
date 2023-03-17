@@ -27,12 +27,15 @@
 #include "debug.h"
 #include "debug_gpio.h"
 #include "debug_i2c.h"
+#include "debug_ina232.h"
 #include "debug_memfault.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
 #include "debug_uart.h"
+#include "debug_w25.h"
 #include "gpioISR.h"
 #include "htu21d.h"
+#include "ina232.h"
 #include "io.h"
 #include "lpm.h"
 #include "memfault_platform_core.h"
@@ -40,6 +43,7 @@
 #include "serial.h"
 #include "serial_console.h"
 #include "usb.h"
+#include "w25.h"
 #include "watchdog.h"
 
 #ifdef USE_BOOTLOADER
@@ -165,6 +169,12 @@ extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
 
+spiflash::W25 debugW25(&spi2, &FLASH_CS);
+
+INA::INA232 debugIna(&i2c1);
+
+HTU21D debugHTU(&i2c1);
+
 extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
@@ -224,6 +234,7 @@ static void defaultTask( void *parameters ) {
   startSerial();
 
   startCLI();
+  pca9535StartIRQTask();
 
   // Use USB for serial console if USB is connected on boot
   // Otherwise use ST-Link serial port
@@ -249,7 +260,23 @@ static void defaultTask( void *parameters ) {
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
   debugI2CInit(debugI2CInterfaces, sizeof(debugI2CInterfaces)/sizeof(DebugI2C_t));
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));
+  debugW25Init(&debugW25);
+  debugINA232Init(&debugIna);
   debugMemfaultInit(&usart1);
+
+  // TODO - verify that all we need to do is set the shunt and times/avg
+  if(debugIna.init()){
+    debugIna.setShuntValue(0.01); // 10 mOhms
+
+    // Go back to normal sampling speed
+    debugIna.setBusConvTime(CT_1100);
+    debugIna.setShuntConvTime(CT_1100);
+    debugIna.setAvg(AVG_256);
+  }
+  else{
+    printf("Failed to initialize the INA232!\n");
+  }
+
 
 #ifdef USE_BOOTLOADER
   mcubootCliInit();

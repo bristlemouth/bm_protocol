@@ -35,7 +35,6 @@ using namespace INA;
 
 static const uint16_t inaAvgCounts[] = {1, 4, 16, 64, 128, 256, 512, 1024};
 static const uint16_t inaConvTimes[] = {140, 203, 332, 588, 1100, 2116, 4156, 8244};
-static INA232* _singleton = NULL;
 
 INA232::INA232(I2CInterface_t * interface, uint8_t address)
 {
@@ -85,10 +84,6 @@ bool INA232::init() {
 
     rval = true;
   };
-
-  if(rval && !_singleton) {
-    _singleton = this;
-  }
 
   return rval;
 }
@@ -324,8 +319,4 @@ bool INA232::measurePower() {
 void INA232::getPower(float &voltage, float &current) {
   voltage = _voltage;
   current = _current;
-}
-
-INA232* INA232::debugGetIna232Singleton() {
-  return _singleton;
 }
