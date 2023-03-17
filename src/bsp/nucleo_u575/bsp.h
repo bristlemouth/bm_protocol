@@ -28,9 +28,11 @@ extern IOPinHandle_t USART1_TX;
 extern IOPinHandle_t USART1_RX;
 extern IOPinHandle_t USER_BUTTON;
 extern IOPinHandle_t ALARM_OUT;
+extern IOPinHandle_t FLASH_CS;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
+extern SPIInterface_t spi2;
 
 uint32_t adcGetSampleMv(uint32_t channel);
 bool usb_is_connected();

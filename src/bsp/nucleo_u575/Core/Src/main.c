@@ -113,6 +113,7 @@ int main(void)
   MX_IWDG_Init();
   MX_SAI1_Init();
   MX_I2C1_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */

@@ -20,6 +20,7 @@ IOPinHandle_t USART1_TX = {&STM32PinDriver, &(STM32Pin_t){USART1_TX_GPIO_Port, U
 IOPinHandle_t USART1_RX = {&STM32PinDriver, &(STM32Pin_t){USART1_RX_GPIO_Port, USART1_RX_Pin, NULL, NULL}};
 IOPinHandle_t USER_BUTTON = {&STM32PinDriver, &(STM32Pin_t){USER_BUTTON_GPIO_Port, USER_BUTTON_Pin, NULL, NULL}};
 IOPinHandle_t ALARM_OUT = {&STM32PinDriver, &(STM32Pin_t){ALARM_OUT_GPIO_Port, ALARM_OUT_Pin, NULL, NULL}};
+IOPinHandle_t FLASH_CS = {&STM32PinDriver, &(STM32Pin_t){FLASH_CS_GPIO_Port, FLASH_CS_Pin, NULL, NULL}};
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;
@@ -49,7 +50,9 @@ void HAL_Delay(uint32_t Delay) {
 }
 
 extern SPI_HandleTypeDef hspi1;
+extern SPI_HandleTypeDef hspi2;
 SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init);
+SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init);
 
 void bspInit() {
   // Switch HAL_GetTick to use freeRTOS tick
@@ -57,6 +60,7 @@ void bspInit() {
   HAL_SuspendTick();
 
   spiInit(&spi1);
+  spiInit(&spi2);
 }
 
 // Helper function for sampling ADC on STM32

@@ -77,6 +77,8 @@ void SystemPower_Config_ext(void);
 #define USER_BUTTON_EXTI_IRQn EXTI13_IRQn
 #define VBUS_SENSE_Pin LL_GPIO_PIN_2
 #define VBUS_SENSE_GPIO_Port GPIOC
+#define FLASH_CS_Pin LL_GPIO_PIN_1
+#define FLASH_CS_GPIO_Port GPIOA
 #define ALARM_OUT_Pin LL_GPIO_PIN_3
 #define ALARM_OUT_GPIO_Port GPIOA
 #define ADIN_CS_Pin LL_GPIO_PIN_4

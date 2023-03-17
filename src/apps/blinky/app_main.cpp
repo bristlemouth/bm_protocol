@@ -26,6 +26,8 @@
 #include "debug_memfault.h"
 #include "debug_sys.h"
 #include "debug_mic.h"
+#include "w25.h"
+#include "debug_w25.h"
 #include "gpioISR.h"
 #include "io.h"
 #include "memfault_platform_core.h"
@@ -194,10 +196,13 @@ static void defaultTask( void *parameters ) {
   bspInit();
 
   usbInit();
+  spiflash::W25 w25(&spi2,&FLASH_CS);
+
 
   debugSysInit();
   debugMicInit(&hsai_BlockA1);
   debugMemfaultInit(&usart1);
+  debugW25Init(&w25);
 
 #ifdef USE_BOOTLOADER
   mcubootCliInit();

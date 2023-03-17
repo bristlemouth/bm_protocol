@@ -28,7 +28,10 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_mic.c
     ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/drivers/w25.cpp
+    ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
+    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/mic.c
     ${SRC_DIR}/lib/drivers/pca9535.c
@@ -50,6 +53,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/protected
+    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/mcuboot
     ${SRC_DIR}/lib/memfault
