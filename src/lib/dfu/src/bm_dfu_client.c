@@ -8,7 +8,7 @@
 #include "bootutil/bootutil_public.h"
 #include "bootutil/image.h"
 #include "flash_map_backend/flash_map_backend.h"
-#include "crc16.h"
+#include "crc.h"
 
 typedef struct dfu_client_ctx_t {
     QueueHandle_t dfu_event_queue;

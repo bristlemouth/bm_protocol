@@ -6,6 +6,7 @@
 #include "debug.h"
 #include "cli.h"
 #include <stdlib.h>
+#include "crc.h"
 
 #define BITMASK24BIT (0x00ffffff)
 #define MAX_READ_LEN_BYTES (2048)
@@ -27,7 +28,8 @@ static const CLI_Command_Definition_t cmdW25 = {
   " * w25 w <addr> <str>\n"
   " * w25 es <addr>\n"
   " * w25 ec\n"
-  " * w25 bw <addr> <len>\n",
+  " * w25 bw <addr> <len>\n"
+  " * w25 test <addr> <len>\n",
   // Command function
   w25Command,
   // Number of parameters (variable)
@@ -192,6 +194,69 @@ static BaseType_t w25Command( char *writeBuffer,
             }
             if(!write_len){
                 printf("Write succeded!\n");
+            }
+            vPortFree(wr_buf);
+        }  else if (strncmp("test", parameter, parameterStringLength) == 0) {
+            const char *addr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+            if(parameterStringLength == 0) {
+                printf("ERR Invalid write paramters\n");
+                break;
+            }
+            const char *len = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            3,
+                            &parameterStringLength);
+            if(parameterStringLength == 0) {
+                printf("ERR Invalid write paramters\n");
+                break;
+            }
+            uint32_t address = atoi(addr) & BITMASK24BIT;
+            uint32_t write_len = atoi(len);
+            uint32_t blocklen = (write_len < BIG_WRITE_BLOCK_LEN) ? write_len : BIG_WRITE_BLOCK_LEN;
+            uint8_t* wr_buf = (uint8_t *)pvPortMalloc(blocklen);
+            uint32_t crc32_write = 0;
+            uint32_t crc32_read = 0;
+            bool first_loop = true;
+            configASSERT(wr_buf);
+            for(uint32_t i = 0; i < blocklen; i++) {
+                wr_buf[i] = 0xAA + ((i % 5) * 0x11);
+            }
+            uint32_t offset = 0;
+            do {
+                while(write_len){
+                    printf("Writing addr %lu, size %lu \n", (address + offset), blocklen);
+                    if(!_w25_instance->write(address + offset, wr_buf, blocklen)){
+                        printf("Write failed\n");
+                        break;
+                    } 
+                    if(first_loop) {
+                        crc32_write = crc32_ieee(wr_buf, blocklen);
+                        first_loop = false;
+                    } else {
+                        crc32_write = crc32_ieee_update(crc32_write, wr_buf, blocklen);
+                    }
+                    offset += blocklen;
+                    write_len -= blocklen;
+                    blocklen = (write_len < BIG_WRITE_BLOCK_LEN) ? write_len : BIG_WRITE_BLOCK_LEN;
+                }
+                if(!write_len){
+                    printf("Write succeded!\n");
+                }  else {
+                    printf("Write failed!\n");
+                    break;
+                }
+                if(!_w25_instance->crc32Checksum(address,atoi(len),crc32_read)){
+                    printf("Read CRC32 failed!\n");
+                    break;
+                }
+            } while(0);
+            if(crc32_write == crc32_read){
+                printf("flash test success, crc_w:%lu, crc_r:%lu\n", crc32_write, crc32_read);
+            } else {
+                printf("flash test failed, crc_w:%lu, crc_r:%lu\n", crc32_write, crc32_read);
             }
             vPortFree(wr_buf);
         } else {

@@ -42,6 +42,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
+    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
@@ -61,6 +62,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/third_party/crc/
     )
 
 if (USE_BOOTLOADER STREQUAL 1)

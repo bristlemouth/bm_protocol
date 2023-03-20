@@ -3,6 +3,7 @@
 #include "util.h"
 #include <cstdio>
 #include "watchdog.h"
+#include "crc.h"
 
 namespace spiflash {
 // STATUS REGISTER BITS
@@ -71,7 +72,10 @@ typedef enum {
 W25::W25(SPIInterface_t *interface, IOPinHandle_t *csPin) : AbstractSPI(interface, csPin){
     configASSERT(_interface);
 }
-
+/*!
+ * Erase flash chip
+ * \return true if success, false if fail.
+*/
 bool W25::eraseChip(void) {
     bool retv = false;
     uint8_t txBuff = 0;
@@ -111,6 +115,13 @@ bool W25::eraseChip(void) {
     return retv;
 }
 
+/*!
+ * Read from flash
+ * \param[in] addr - address of flash
+ * \param[out] buffer - pointer to buffer to write into.
+ * \param[in] len - length of data
+ * \return true if success, false if fail.
+*/
 bool W25::read(uint32_t addr, uint8_t *buffer, size_t len) {
     configASSERT(buffer);
     configASSERT(((addr + len) < W25_MAX_ADDRESS));
@@ -147,6 +158,13 @@ bool W25::read(uint32_t addr, uint8_t *buffer, size_t len) {
     return rval;
 }
 
+/*!
+ * Write to flash
+ * \param[in] addr - address of flash
+ * \param[in] buffer - pointer to buffer of data
+ * \param[in] len - length of data
+ * \return true if success, false if fail.
+*/
 bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
     configASSERT(buffer);
     configASSERT(((addr + len) < W25_MAX_ADDRESS));
@@ -352,6 +370,11 @@ bool W25::checkWEL(uint32_t timeoutMs, bool set, bool feedWDT) {
   return rval;
 }
 
+/*!
+ * Erase a sector in flash.
+ * \param[in] addr - address of flash
+ * \return true if success, false if fail.
+*/
 bool W25::eraseSector(uint32_t addr) {
     /* Ensure that address/offset is Sector Aligned */
     configASSERT((addr & W25_SECTOR_MASK) == 0);
@@ -400,4 +423,43 @@ bool W25::eraseSector(uint32_t addr) {
 
     return retv;
 }
+
+/*!
+ * Compute the crc32 checksum for segment of flash
+ * \param[in] addr - address of flash
+ * \param[in] len - length of flash to compute checksum for
+ * \param[out] crc32 - resulting crc32 (valid if return is true)
+ * \return true if success, false if fail.
+*/
+bool W25::crc32Checksum(uint32_t addr, size_t len, uint32_t &crc32) {
+    configASSERT((addr + len) < W25_MAX_ADDRESS);
+    crc32 = 0;
+    bool retval = true;
+    bool first_read = true;
+    uint32_t readlen = len;
+    uint32_t offset = 0;
+    uint32_t blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
+    uint8_t* read_buf = (uint8_t *)pvPortMalloc(blocklen);
+    configASSERT(read_buf);
+    while(readlen){
+        printf("Reading addr %lu, size %lu \n", (addr + offset), blocklen);
+        if(!read(addr + offset, read_buf, blocklen)){
+            printf("Write failed\n");
+            retval = false;
+            break;
+        } 
+        if(first_read){
+            crc32 = crc32_ieee(read_buf, blocklen);
+            first_read = false;
+        } else {
+            crc32 = crc32_ieee_update(crc32, read_buf, blocklen);
+        }
+        offset += blocklen;
+        readlen -= blocklen;
+        blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
+    }
+    vPortFree(read_buf);
+    return retval;
+}
+
 } // namespace spiflash

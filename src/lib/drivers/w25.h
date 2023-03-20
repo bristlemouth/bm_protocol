@@ -11,6 +11,7 @@ public:
     bool read(uint32_t addr, uint8_t *buffer, size_t len);
     bool write(uint32_t addr, uint8_t *buffer, size_t len);
     bool eraseSector(uint32_t addr);
+    bool crc32Checksum(uint32_t addr, size_t len, uint32_t &crc32);
 private:
     bool readyToWrite(uint32_t timeoutMs);
     bool readStatus(uint8_t &status);

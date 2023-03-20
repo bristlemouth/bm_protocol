@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "crc16.h"
+#include "crc.h"
 
 uint16_t crc16_ccitt(uint16_t seed, const uint8_t *src, size_t len) {
 	for (; len > 0; len--) {

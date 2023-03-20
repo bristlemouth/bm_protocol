@@ -62,7 +62,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
-    ${SRC_DIR}/third_party/crc16/crc16.c
+    ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
@@ -87,7 +87,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
-    ${SRC_DIR}/third_party/crc16
+    ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/

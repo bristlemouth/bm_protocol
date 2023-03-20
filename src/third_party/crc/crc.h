@@ -8,11 +8,30 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+/** @file
+ * @brief CRC computation function
+ */
 
-#pragma once
+#ifndef ZEPHYR_INCLUDE_SYS_CRC_H_
+#define ZEPHYR_INCLUDE_SYS_CRC_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @defgroup checksum Checksum
+ */
+
+/**
+ * @defgroup crc CRC
+ * @ingroup checksum
+ * @{
+ */
 
 /**
  * @brief Compute the checksum of a buffer with polynomial 0x1021, reflecting
@@ -46,3 +65,37 @@
  * @return The computed CRC16 value (without any XOR applied to it)
  */
 uint16_t crc16_ccitt(uint16_t seed, const uint8_t *src, size_t len);
+
+
+/**
+ * @brief Generate IEEE conform CRC32 checksum.
+ *
+ * @param  *data        Pointer to data on which the CRC should be calculated.
+ * @param  len          Data length.
+ *
+ * @return CRC32 value.
+ *
+ */
+uint32_t crc32_ieee(const uint8_t *data, size_t len);
+
+/**
+ * @brief Update an IEEE conforming CRC32 checksum.
+ *
+ * @param crc   CRC32 checksum that needs to be updated.
+ * @param *data Pointer to data on which the CRC should be calculated.
+ * @param len   Data length.
+ *
+ * @return CRC32 value.
+ *
+ */
+uint32_t crc32_ieee_update(uint32_t crc, const uint8_t *data, size_t len);
+
+/**
+ * @}
+ */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
