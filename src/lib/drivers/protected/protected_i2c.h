@@ -25,7 +25,7 @@ typedef enum {
 
 typedef struct {
 	const char *name;
-	void *handle;
+	I2C_HandleTypeDef *handle;
 	void (*initFn)();
 	SemaphoreHandle_t mutex;
 } I2CInterface_t;

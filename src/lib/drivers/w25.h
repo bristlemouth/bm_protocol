@@ -18,4 +18,4 @@ private:
     bool checkWEL(uint32_t timeoutMs, bool set, bool feedWDT=false);
 };
 
-} // namespace spiflash 
+} // namespace spiflash
