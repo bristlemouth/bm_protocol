@@ -169,11 +169,16 @@ extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
 
-spiflash::W25 debugW25(&spi2, &FLASH_CS);
+static spiflash::W25 debugW25(&spi2, &FLASH_CS);
 
-INA::INA232 debugIna(&i2c1);
+static INA::INA232 debugIna1(&i2c1, I2C_IN_MAIN_ADDR);
+static INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
+static INA::INA232 *debugIna[NUM_INA232_DEV] = {
+  &debugIna1,
+  &debugIna2,
+};
 
-HTU21D debugHTU(&i2c1);
+static HTU21D debugHTU(&i2c1);
 
 extern "C" int main(void) {
 
@@ -261,21 +266,23 @@ static void defaultTask( void *parameters ) {
   debugI2CInit(debugI2CInterfaces, sizeof(debugI2CInterfaces)/sizeof(DebugI2C_t));
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));
   debugW25Init(&debugW25);
-  debugINA232Init(&debugIna);
+  debugINA232Init(debugIna, NUM_INA232_DEV);
   debugMemfaultInit(&usart1);
   debugHtu21dInit(&debugHTU);
 
   // TODO - verify that all we need to do is set the shunt and times/avg
-  if(debugIna.init()){
-    debugIna.setShuntValue(0.01); // 10 mOhms
+  for(int i = 0; i < NUM_INA232_DEV; i++){
+    if(debugIna[i]->init()){
+      debugIna[i]->setShuntValue(0.01); // 10 mOhms
 
-    // Go back to normal sampling speed
-    debugIna.setBusConvTime(CT_1100);
-    debugIna.setShuntConvTime(CT_1100);
-    debugIna.setAvg(AVG_256);
-  }
-  else{
-    printf("Failed to initialize the INA232!\n");
+      // Go back to normal sampling speed
+      debugIna[i]->setBusConvTime(CT_1100);
+      debugIna[i]->setShuntConvTime(CT_1100);
+      debugIna[i]->setAvg(AVG_256);
+    }
+    else{
+      printf("Failed to initialize the INA232!\n");
+    }
   }
 
 
