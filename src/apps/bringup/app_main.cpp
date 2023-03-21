@@ -45,7 +45,7 @@
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
-
+#include "debug_htu.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
@@ -263,6 +263,7 @@ static void defaultTask( void *parameters ) {
   debugW25Init(&debugW25);
   debugINA232Init(&debugIna);
   debugMemfaultInit(&usart1);
+  debugHtu21dInit(&debugHTU);
 
   // TODO - verify that all we need to do is set the shunt and times/avg
   if(debugIna.init()){
