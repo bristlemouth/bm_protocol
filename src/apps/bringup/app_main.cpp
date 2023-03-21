@@ -53,7 +53,7 @@
 #include <stdio.h>
 
 static void defaultTask(void *parameters);
-
+#ifndef DEBUG_USE_LPUART1
 SerialHandle_t lpuart1 = {
   .device = LPUART1,
   .name = "payload",
@@ -70,8 +70,9 @@ SerialHandle_t lpuart1 = {
   .enabled = false,
   .flags = 0,
 };
+#endif // DEBUG_USE_LPUART1
 
-// Serial console (when no usb present)
+#ifndef DEBUG_USE_USART1
 SerialHandle_t usart1 = {
   .device = USART1,
   .name = "debug",
@@ -88,6 +89,7 @@ SerialHandle_t usart1 = {
   .enabled = false,
   .flags = 0,
 };
+#endif /// DEBUG_USE_USART1
 
 // Serial console USB device
 SerialHandle_t usbCLI   = {
@@ -165,9 +167,17 @@ static const DebugGpio_t debugGpioPins[] = {
   {"exp_gpio12", &EXP_GPIO12, GPIO_OUT},
 };
 
+#ifndef DEBUG_USE_USART1
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
+#endif // DEBUG_USE_USART1
+
+#ifndef DEBUG_USE_LPUART1
+extern "C" void LPUART1_IRQHandler(void) {
+  serialGenericUartIRQHandler(&lpuart1);
+}
+#endif // DEBUG_USE_LPUART1
 
 static spiflash::W25 debugW25(&spi2, &FLASH_CS);
 
@@ -248,8 +258,10 @@ static void defaultTask( void *parameters ) {
     // Serial device will be enabled automatically when console connects
     // so no explicit serialEnable is required
   } else {
+#ifndef DEBUG_USE_USART1
     startSerialConsole(&usart1);
     serialEnable(&usart1);
+#endif // DEBUG_USE_USART1
   }
 
   gpioISRStartTask();
@@ -267,7 +279,9 @@ static void defaultTask( void *parameters ) {
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));
   debugW25Init(&debugW25);
   debugINA232Init(debugIna, NUM_INA232_DEV);
-  debugMemfaultInit(&usart1);
+// #ifndef DEBUG_USE_USART1
+//   debugMemfaultInit(&usart1);
+// #endif // DEBUG_USE_USART1
   debugHtu21dInit(&debugHTU);
 
   // TODO - verify that all we need to do is set the shunt and times/avg

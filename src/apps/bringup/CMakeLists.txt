@@ -43,6 +43,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
