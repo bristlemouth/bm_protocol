@@ -279,9 +279,9 @@ static void defaultTask( void *parameters ) {
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));
   debugW25Init(&debugW25);
   debugINA232Init(debugIna, NUM_INA232_DEV);
-// #ifndef DEBUG_USE_USART1
-//   debugMemfaultInit(&usart1);
-// #endif // DEBUG_USE_USART1
+#ifndef DEBUG_USE_USART1
+  debugMemfaultInit(&usart1);
+#endif // DEBUG_USE_USART1
   debugHtu21dInit(&debugHTU);
 
   // TODO - verify that all we need to do is set the shunt and times/avg
