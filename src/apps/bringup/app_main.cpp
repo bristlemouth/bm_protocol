@@ -309,7 +309,21 @@ static void defaultTask( void *parameters ) {
   // lpmPeripheralInactive(LPM_BOOT);
 
   while(1) {
-    vTaskDelay(1000);
+    IOWrite(&EXP_LED_G1, 0);
+    IOWrite(&EXP_LED_R1, 0);
+    IOWrite(&EXP_LED_G2, 0);
+    IOWrite(&EXP_LED_R2, 0);
+    vTaskDelay(250);
+    IOWrite(&EXP_LED_G1, 1);
+    IOWrite(&EXP_LED_R1, 0);
+    IOWrite(&EXP_LED_G2, 1);
+    IOWrite(&EXP_LED_R2, 0);
+    vTaskDelay(250);
+    IOWrite(&EXP_LED_G1, 0);
+    IOWrite(&EXP_LED_R1, 1);
+    IOWrite(&EXP_LED_G2, 0);
+    IOWrite(&EXP_LED_R2, 1);
+    vTaskDelay(250);
   }
 
 }
