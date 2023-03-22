@@ -10,19 +10,20 @@
 #include "debug_uart.h"
 #include "cli.h"
 #include <stdlib.h>
-#include "usbd_cdc_if.h"
+#include <string.h>
+// #include "usbd_cdc_if.h"
 
 #include "serial.h"
 #include "serial_console.h"
 #include "debug.h"
 #include "bsp.h"
 #include "task_priorities.h"
-#include "log.h"
+// #include "log.h"
 
 static void processLineBufferedRxByte(void *serialHandle, uint8_t byte);
 static void printLine(void *serialHandle, uint8_t *line, size_t len);
 
-Log_t *UARTLog;
+// Log_t *UARTLog;
 
 #ifdef DEBUG_USE_LPUART1
 #define LPUART1_LINE_BUFF_LEN 64
@@ -284,9 +285,9 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
 void startDebugUart() {
   BaseType_t rval;
 
-  UARTLog = logCreate("UART", "log", LOG_LEVEL_DEBUG, LOG_DEST_ALL);
-  logSetBuffSize(UARTLog, 1024);
-  logInit(UARTLog);
+  // UARTLog = logCreate("UART", "log", LOG_LEVEL_DEBUG, LOG_DEST_ALL);
+  // logSetBuffSize(UARTLog, 1024);
+  // logInit(UARTLog);
 
 #ifdef DEBUG_USE_LPUART1
   // Single byte trigger level for fast response time
@@ -412,7 +413,8 @@ static void printLine(void *serialHandle, uint8_t *line, size_t len) {
   // Not using len right now
   (void) len;
 
-  logPrint(UARTLog, LOG_LEVEL_DEBUG, "[%s] %s", handle->name, line);
+  // logPrint(UARTLog, LOG_LEVEL_DEBUG, "[%s] %s", handle->name, line);
+  printf("[%s] %s", handle->name, line);
 }
 
 #ifdef DEBUG_USE_LPUART1

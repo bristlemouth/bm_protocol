@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+#define DEBUG_USE_USART1
+#define DEBUG_USE_LPUART1
+
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
 #define VBUS_SENSE_CH ADC_CHANNEL_3
