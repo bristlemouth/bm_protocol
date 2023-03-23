@@ -249,20 +249,21 @@ static void defaultTask( void *parameters ) {
   startSerial();
 
   startCLI();
+  startDebugUart();
   pca9535StartIRQTask();
 
   // Use USB for serial console if USB is connected on boot
   // Otherwise use ST-Link serial port
-  if(usb_is_connected()) {
+  // if(usb_is_connected()) {
     startSerialConsole(&usbCLI);
     // Serial device will be enabled automatically when console connects
     // so no explicit serialEnable is required
-  } else {
-#ifndef DEBUG_USE_USART1
-    startSerialConsole(&usart1);
-    serialEnable(&usart1);
-#endif // DEBUG_USE_USART1
-  }
+//   } else {
+// #ifndef DEBUG_USE_USART1
+//     startSerialConsole(&usart1);
+//     serialEnable(&usart1);
+// #endif // DEBUG_USE_USART1
+  // }
 
   gpioISRStartTask();
 
@@ -308,7 +309,21 @@ static void defaultTask( void *parameters ) {
   // lpmPeripheralInactive(LPM_BOOT);
 
   while(1) {
-    vTaskDelay(1000);
+    IOWrite(&EXP_LED_G1, 0);
+    IOWrite(&EXP_LED_R1, 0);
+    IOWrite(&EXP_LED_G2, 0);
+    IOWrite(&EXP_LED_R2, 0);
+    vTaskDelay(250);
+    IOWrite(&EXP_LED_G1, 1);
+    IOWrite(&EXP_LED_R1, 0);
+    IOWrite(&EXP_LED_G2, 1);
+    IOWrite(&EXP_LED_R2, 0);
+    vTaskDelay(250);
+    IOWrite(&EXP_LED_G1, 0);
+    IOWrite(&EXP_LED_R1, 1);
+    IOWrite(&EXP_LED_G2, 0);
+    IOWrite(&EXP_LED_R2, 1);
+    vTaskDelay(250);
   }
 
 }

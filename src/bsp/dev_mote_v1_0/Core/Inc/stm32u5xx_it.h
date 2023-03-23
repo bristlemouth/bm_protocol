@@ -47,6 +47,7 @@
 
 /* Exported functions prototypes ---------------------------------------------*/
 void DebugMon_Handler(void);
+void TIM8_UP_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

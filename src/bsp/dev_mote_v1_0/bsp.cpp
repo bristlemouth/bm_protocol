@@ -59,6 +59,36 @@ void bspInit() {
   spiInit(&spi2);
   spiInit(&spi3);
   i2cInit(&i2c1);
+
+  // Initialize the IO Expander
+
+  // bool ioExpInitFailed = false;
+
+  pca9535Init(&devMoteIOExpander);
+
+  // Turn LEDS on by default
+  IOWrite(&EXP_LED_G1, 0);
+  IOWrite(&EXP_LED_R1, 0);
+  IOWrite(&EXP_LED_G2, 0);
+  IOWrite(&EXP_LED_R2, 0);
+
+  IOConfigure(&EXP_LED_G1, NULL);
+  IOConfigure(&EXP_LED_R1, NULL);
+  IOConfigure(&EXP_LED_G2, NULL);
+  IOConfigure(&EXP_LED_R2, NULL);
+  IOConfigure(&VUSB_DETECT, NULL);
+  IOConfigure(&ADIN_RST, NULL);
+  IOConfigure(&EXP_GPIO3, NULL);
+  IOConfigure(&EXP_GPIO4, NULL);
+  IOConfigure(&EXP_GPIO5, NULL);
+  IOConfigure(&EXP_GPIO6, NULL);
+  IOConfigure(&EXP_GPIO7, NULL);
+  IOConfigure(&EXP_GPIO8, NULL);
+  IOConfigure(&EXP_GPIO9, NULL);
+  IOConfigure(&EXP_GPIO10, NULL);
+  IOConfigure(&EXP_GPIO11, NULL);
+  IOConfigure(&EXP_GPIO12, NULL);
+
 }
 
 // Helper function for sampling ADC on STM32
