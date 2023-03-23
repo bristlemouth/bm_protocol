@@ -104,8 +104,8 @@ void SystemPower_Config_ext(void);
 #define DEBUG_TX_GPIO_Port GPIOA
 #define DEBUG_RX_Pin LL_GPIO_PIN_10
 #define DEBUG_RX_GPIO_Port GPIOA
-#define ADIN_NSS_Pin LL_GPIO_PIN_15
-#define ADIN_NSS_GPIO_Port GPIOA
+#define ADIN_CS_Pin LL_GPIO_PIN_15
+#define ADIN_CS_GPIO_Port GPIOA
 #define ADIN_SCK_Pin LL_GPIO_PIN_3
 #define ADIN_SCK_GPIO_Port GPIOB
 #define ADIN_MISO_Pin LL_GPIO_PIN_4
@@ -116,6 +116,7 @@ void SystemPower_Config_ext(void);
 #define BOOT_LED_GPIO_Port GPIOH
 #define ADIN_INT_Pin LL_GPIO_PIN_8
 #define ADIN_INT_GPIO_Port GPIOB
+#define ADIN_INT_EXTI_IRQn EXTI8_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

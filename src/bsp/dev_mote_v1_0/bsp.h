@@ -34,7 +34,7 @@ extern IOPinHandle_t FLASH_SCK;
 extern IOPinHandle_t FLASH_MISO;
 extern IOPinHandle_t FLASH_MOSI;
 extern IOPinHandle_t FLASH_CS;
-extern IOPinHandle_t ADIN_NSS;
+extern IOPinHandle_t ADIN_CS;
 extern IOPinHandle_t ADIN_SCK;
 extern IOPinHandle_t ADIN_MISO;
 extern IOPinHandle_t ADIN_MOSI;

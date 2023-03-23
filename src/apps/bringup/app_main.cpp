@@ -25,6 +25,7 @@
 #include "bsp.h"
 #include "cli.h"
 #include "debug.h"
+#include "debug_adin_raw.h"
 #include "debug_gpio.h"
 #include "debug_i2c.h"
 #include "debug_ina232.h"
@@ -140,7 +141,7 @@ static const DebugSPI_t debugSPIInterfaces[] = {
 
 // TODO - move this to some debug file?
 static const DebugGpio_t debugGpioPins[] = {
-  {"adin_nss", &ADIN_NSS, GPIO_OUT},
+  {"adin_cs", &ADIN_CS, GPIO_OUT},
   {"adin_int", &ADIN_INT, GPIO_IN},
   {"adin_pwr", &ADIN_PWR, GPIO_OUT},
   {"gpio1", &GPIO1, GPIO_OUT},
@@ -275,6 +276,7 @@ static void defaultTask( void *parameters ) {
   usbInit();
 
   debugSysInit();
+  debugAdinRawInit();
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
   debugI2CInit(debugI2CInterfaces, sizeof(debugI2CInterfaces)/sizeof(DebugI2C_t));
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));

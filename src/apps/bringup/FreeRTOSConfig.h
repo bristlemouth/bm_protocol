@@ -79,6 +79,7 @@ extern "C" {
 #define configUSE_COUNTING_SEMAPHORES            1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION  0
 #define configUSE_TICKLESS_IDLE                  2
+#define configUSE_QUEUE_SETS                     1
 
 
 /* Defaults to size_t for backward compatibility, but can be changed

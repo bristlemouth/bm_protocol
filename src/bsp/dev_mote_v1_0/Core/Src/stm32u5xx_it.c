@@ -87,6 +87,26 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI Line8 interrupt.
+  */
+void EXTI8_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI8_IRQn 0 */
+  BaseType_t rval = pdFALSE;
+  /* USER CODE END EXTI8_IRQn 0 */
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_8) != RESET)
+  {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_8);
+    /* USER CODE BEGIN LL_EXTI_LINE_8_FALLING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)ADIN_INT.pin);
+    /* USER CODE END LL_EXTI_LINE_8_FALLING */
+  }
+  /* USER CODE BEGIN EXTI8_IRQn 1 */
+  portYIELD_FROM_ISR(rval);
+  /* USER CODE END EXTI8_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM8 Update interrupt.
   */
 void TIM8_UP_IRQHandler(void)

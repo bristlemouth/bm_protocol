@@ -17,9 +17,9 @@
 #define RESET_DELAY       (1)
 #define AFTER_RESET_DELAY (100)
 
-#ifdef BSP_DEV_MOTE_V1_0
-#define ADIN_CS ADIN_NSS
-#define ADIN_RDY ADIN_INT
+#ifndef BSP_DEV_MOTE_V1_0
+#define ADIN_NSS ADIN_CS
+#define ADIN_INT ADIN_RDY
 #endif // BSP_DEV_MOTE_V1_0
 
 static adi_cb_t gpfIntCallback = NULL;
@@ -90,7 +90,12 @@ void adi_bsp_int_n_set_pending_irq(void) {
 uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nBytes, bool useDma) {
     (void) useDma;
 
+// TODO - make configurable spi bus instead of #defines
+#ifdef BSP_DEV_MOTE_V1_0
+    SPIResponse_t status = spiTxRx(&spi3, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
+#else
     SPIResponse_t status = spiTxRx(&spi1, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
+#endif
     if (status == SPI_OK) {
         /* Give semaphore to allow SPI Thread to call appropriate callback */
         xTaskNotifyGive(spiTask);
@@ -104,6 +109,14 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
 /* Setup the Interrupt on the DATA_RDY pin and create two threads to monitor SPI completion and
    Falling edge on DATA_RDY pin */
 uint32_t adi_bsp_init(void) {
+
+    // Power up adin
+#ifdef BSP_DEV_MOTE_V1_0
+
+    IOWrite(&ADIN_PWR, 1);
+    vTaskDelay(10); // huge delay
+    IOWrite(&ADIN_CS, 1);
+#endif
 
     adi_bsp_hw_reset();
 
@@ -140,9 +153,8 @@ uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback, void *const p
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY
    interrupts */
 uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback, void * hDevice) {
-    IORegisterCallback(&ADIN_RDY, adin_bsp_gpio_callback, NULL);
+    IORegisterCallback(&ADIN_INT, adin_bsp_gpio_callback, NULL);
     gpfIntCallback = (adi_cb_t) intCallback;
     gpIntCBParam = hDevice;
     return 0;
 }
-

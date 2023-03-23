@@ -1,12 +1,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include "adi_bsp.h"
-#include "eth_adin2111.h"
-#include "bm_l2.h"
-#include "task_priorities.h"
-#include "bsp.h"
-
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
@@ -21,6 +15,12 @@
 #include "lwip/nd6.h"
 #include "lwip/prot/ip6.h"
 #include "lwip/udp.h"
+
+#include "adi_bsp.h"
+#include "eth_adin2111.h"
+#include "bm_l2.h"
+#include "task_priorities.h"
+#include "bsp.h"
 
 #include "pcap.h"
 
