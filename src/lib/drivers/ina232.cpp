@@ -291,7 +291,7 @@ bool INA232::measurePower() {
       break;
     }
 
-    shuntV = static_cast<float>(decodeTwosComplBits(static_cast<int16_t>(regVal), 0xFF)) * SHUNT_V_RESOLUTION_V;
+    shuntV = static_cast<float>(decodeTwosComplBits(static_cast<int16_t>(regVal), 0xFFFF)) * SHUNT_V_RESOLUTION_V;
 
     // Read bus voltage
     reg += 1;
