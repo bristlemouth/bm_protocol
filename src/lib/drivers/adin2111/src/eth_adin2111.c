@@ -33,6 +33,8 @@ static adin2111_DriverConfig_t drvConfig = {
     .fcsCheckEn = false,
 };
 
+static adin_rx_callback_t _rx_callback = NULL;
+
 queue_t txQueue;
 queue_t rxQueue;
 
@@ -329,7 +331,7 @@ static void adin2111_service_thread(void *parameters) {
                 configASSERT(pEntry);
 
                 rx_port_mask = (1 << rx_info.port);
-                retv =  bm_l2_rx(rx_info.dev, pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize, rx_port_mask);
+                retv =  _rx_callback(rx_info.dev, pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize, rx_port_mask);
                 if (retv != ERR_OK) {
                     printf("Unable to pass to the L2 layer");
                 }
@@ -346,10 +348,13 @@ static void adin2111_service_thread(void *parameters) {
     }
 }
 
-adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice) {
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback) {
     adi_eth_Result_e result = ADI_ETH_SUCCESS;
     //adi_mac_AddressRule_t addrRule;
     BaseType_t rval;
+
+    configASSERT(rx_callback);
+    _rx_callback = rx_callback;
 
     do {
         /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts
@@ -451,7 +456,6 @@ void add_egress_port(uint8_t *buff, uint8_t port) {
 err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask, uint8_t port_offset) {
     queue_entry_t *pEntry;
     err_t retv = ERR_OK;
-    uint8_t bm_egress_port = 0;
 
     if (!hDevice) {
         while(1) {
@@ -476,13 +480,10 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
             memcpy(pEntry->pBufDesc->pBuf, buf, pEntry->pBufDesc->trxSize);
             pEntry->dev = hDevice;
 
-            (void) bm_egress_port;
-            (void) port_offset;
-
             if (port_mask & (0x01 << port)) {
 
                 /* We are modifying the IPV6 SRC address to include the egress port */
-                bm_egress_port = (0x01 << port) << port_offset;
+                uint8_t bm_egress_port = (0x01 << port) << port_offset;
                 add_egress_port(pEntry->pBufDesc->pBuf, bm_egress_port);
 
                 pcapTxPacket(pEntry->pBufDesc->pBuf, pEntry->pBufDesc->trxSize);
