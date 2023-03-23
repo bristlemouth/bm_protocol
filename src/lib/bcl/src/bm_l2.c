@@ -49,7 +49,7 @@ static bm_l2_ctx_t bm_l2_ctx;
 
 /* TODO: ADIN2111-specifc, let's move to ADIN driver.
    Rx Callback can only get the MAC Handle, not the Device handle itself */
-static int bm_l2_get_device_index(void* device_handle) {
+static int bm_l2_get_device_index(const void* device_handle) {
     int idx;
 
     for (idx=0; idx<BM_NETDEV_TYPE_MAX; idx++) {
@@ -65,13 +65,11 @@ static int bm_l2_get_device_index(void* device_handle) {
 static void bm_l2_rx_thread(void *parameters) {
     (void) parameters;
     static l2_queue_element_t rx_data;
-    uint8_t new_port_mask = 0;
-    uint8_t rx_port_mask = 0;
-    uint8_t device_idx = 0;
 
     while (1) {
         if(xQueueReceive(bm_l2_ctx.rx_queue, &rx_data, portMAX_DELAY) == pdPASS) {
-            device_idx = bm_l2_get_device_index(rx_data.device_handle);
+            uint8_t rx_port_mask = 0;
+            uint8_t device_idx = bm_l2_get_device_index(rx_data.device_handle);
             switch (bm_l2_ctx.devices[device_idx].type) {
                 case BM_NETDEV_TYPE_ADIN2111:
                     rx_port_mask = ((rx_data.port_mask & ADIN2111_PORT_MASK) << bm_l2_ctx.devices[device_idx].start_port_idx);
@@ -89,7 +87,7 @@ static void bm_l2_rx_thread(void *parameters) {
 
             if (IS_GLOBAL_MULTICAST(rx_data.pbuf->payload))
             {
-                new_port_mask = bm_l2_ctx.available_ports_mask & ~(rx_port_mask);
+                uint8_t new_port_mask = bm_l2_ctx.available_ports_mask & ~(rx_port_mask);
                 bm_l2_tx(rx_data.pbuf, new_port_mask);
             }
 
@@ -211,7 +209,7 @@ err_t bm_l2_init(struct netif *netif) {
         bm_l2_ctx.devices[idx].type = bm_netdev_config[idx].type;
         switch (bm_l2_ctx.devices[idx].type) {
             case BM_NETDEV_TYPE_ADIN2111:
-                if (adin2111_hw_init(&bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter]) == ADI_ETH_SUCCESS) {
+                if (adin2111_hw_init(&bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter], bm_l2_rx) == ADI_ETH_SUCCESS) {
                     bm_l2_ctx.devices[idx].device_handle = &bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter++];
                     bm_l2_ctx.devices[idx].num_ports = ADIN2111_PORT_NUM;
                     bm_l2_ctx.devices[idx].start_port_idx = bm_l2_ctx.available_port_mask_idx;
