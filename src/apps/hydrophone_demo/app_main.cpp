@@ -4,9 +4,7 @@
 
 // Peripheral
 #include "adc.h"
-#ifdef BSP_NUCLEO_U575
 #include "gpdma.h"
-#endif // BSP_NUCLEO_U575
 #include "gpio.h"
 #include "icache.h"
 #include "iwdg.h"
@@ -138,8 +136,8 @@ extern "C" int main(void) {
   MX_ICACHE_Init();
 #ifdef BSP_NUCLEO_U575
   MX_RTC_Init();
-  MX_GPDMA1_Init();
 #endif // BSP_NUCLEO_U575
+  MX_GPDMA1_Init();
   MX_IWDG_Init();
 
   usbMspInit();
@@ -405,7 +403,7 @@ static void hydrophoneTask( void *parameters ) {
 
   // These won't change
   streamData.header.magic = AUDIO_MAGIC;
-  streamData.header.sampleRate = 48000;
+  streamData.header.sampleRate = 50000;
   streamData.header.sampleSize = 2;
 
   if(micInit(&hsai_BlockA1, NULL)) {

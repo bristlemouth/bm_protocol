@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "gpdma.h"
 #include "i2c.h"
 #include "icache.h"
 #include "iwdg.h"
@@ -109,8 +110,9 @@ int main(void)
   MX_SPI2_Init();
   MX_IWDG_Init();
   MX_ICACHE_Init();
-  MX_RTC_Init();
+  MX_GPDMA1_Init();
   MX_SAI1_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
