@@ -541,10 +541,22 @@ add_custom_target(debug_tui
 	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py --tui ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
 )
 
+if (APP STREQUAL "bootloader")
 add_custom_target(dfu_flash
 	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${FLASH_START}:leave -D ${EXECUTABLE}.bin
 	DEPENDS ${EXECUTABLE}
 )
+elseif(USE_BOOTLOADER STREQUAL 1)
+add_custom_target(dfu_flash
+	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${APP_FLASH_ADDR}:leave -D ${EXECUTABLE}.dfu.bin
+	DEPENDS ${EXECUTABLE}
+)
+else()
+add_custom_target(dfu_flash
+	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${APP_FLASH_ADDR}:leave -D ${EXECUTABLE}.bin
+	DEPENDS ${EXECUTABLE}
+)
+endif()
 
 add_custom_target(memfault_upload
 	COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/memfault/memfault_elf_uploader.py --software_type ${APP_NAME} ${EXECUTABLE}
