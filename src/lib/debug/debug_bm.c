@@ -7,10 +7,17 @@
 
 #include <string.h>
 #include <inttypes.h>
+#include "bsp.h"
 #include "debug.h"
 #include "bm_network.h"
 #include "bm_pubsub.h"
 #include "lwip/inet.h"
+
+#ifdef BSP_DEV_MOTE_V1_0
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT EXP_LED_R2
+    #define USER_BUTTON GPIO2
+#endif // BSP_DEV_MOTE_V1_0
 
 static BaseType_t neighborsCommand( char *writeBuffer,
                                   size_t writeBufferLen,
@@ -41,6 +48,18 @@ static void print_subscriptions(char* topic, uint16_t topic_len, char* data, uin
             float dbLevel;
             memcpy(&dbLevel, data, data_len);
             printf("RX %0.1f dB\n", dbLevel);
+        }
+    } else if (strncmp("button", topic, topic_len) == 0){
+        printf("Received data on topic: %.*s\n", topic_len, topic);
+        printf("Data: %.*s\n", data_len, data);
+        if (strncmp("on", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 0);
+            IOWrite(&ALARM_OUT, 0);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 1);
+            IOWrite(&ALARM_OUT, 1);
+        } else {
+            // Not handled
         }
     } else {
         printf("Received data on topic: %.*s\n", topic_len, topic);

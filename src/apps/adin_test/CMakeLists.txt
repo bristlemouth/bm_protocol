@@ -48,6 +48,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
+    ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c

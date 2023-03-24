@@ -24,6 +24,7 @@
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
+#include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
 #include "serial.h"
@@ -35,6 +36,12 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#ifdef BSP_DEV_MOTE_V1_0
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT EXP_LED_R2
+    #define USER_BUTTON GPIO2
+#endif // BSP_DEV_MOTE_V1_0
 
 static void defaultTask(void *parameters);
 
@@ -111,7 +118,9 @@ extern "C" int main(void) {
     MX_USART1_UART_Init();
     MX_USB_OTG_FS_PCD_Init();
     MX_ICACHE_Init();
+#ifndef BSP_DEV_MOTE_V1_0
     MX_RTC_Init();
+#endif // BSP_DEV_MOTE_V1_0
     MX_IWDG_Init();
 
     usbMspInit();
@@ -176,11 +185,11 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", data, data_len) == 0) {
-            IOWrite(&LED_BLUE, 1);
-            IOWrite(&ALARM_OUT, 1);
-        } else if (strncmp("off", data, data_len) == 0) {
             IOWrite(&LED_BLUE, 0);
             IOWrite(&ALARM_OUT, 0);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, 1);
+            IOWrite(&ALARM_OUT, 1);
         } else {
             // Not handled
         }
@@ -198,7 +207,9 @@ static void defaultTask( void *parameters ) {
     startSerial();
     // Use USB for serial console if USB is connected on boot
     // Otherwise use ST-Link serial port
+#ifndef BSP_DEV_MOTE_V1_0
     if(usb_is_connected()) {
+#endif // BSP_DEV_MOTE_V1_0
       startSerialConsole(&usbCLI);
       // Serial device will be enabled automatically when console connects
       // so no explicit serialEnable is required
@@ -209,6 +220,7 @@ static void defaultTask( void *parameters ) {
       pcapInit(&usbPcap);
 #endif
 
+#ifndef BSP_DEV_MOTE_V1_0
     } else {
       startSerialConsole(&usart1);
 
@@ -218,6 +230,7 @@ static void defaultTask( void *parameters ) {
 
       printf("WARNING: PCAP support requires USB connection.\n");
     }
+#endif // BSP_DEV_MOTE_V1_0
     startCLI();
     // pcapInit(&usbPcap);
     serialEnable(&usart1);
@@ -241,7 +254,12 @@ static void defaultTask( void *parameters ) {
 
     bcl_init(dfuSerial);
 
-    IOWrite(&ALARM_OUT, 0);
+    IOWrite(&ALARM_OUT, 1);
+    IOWrite(&LED_BLUE, 1);
+#ifdef BSP_DEV_MOTE_V1_0
+    IOWrite(&EXP_LED_G2, 1);
+    IOWrite(&EXP_LED_R1, 1);
+#endif // BSP_DEV_MOTE_V1_0
 
     bm_sub_t subscription;
     const char topic[] = "button";
