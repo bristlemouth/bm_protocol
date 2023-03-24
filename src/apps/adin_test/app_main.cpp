@@ -8,7 +8,6 @@
 #include "icache.h"
 #include "iwdg.h"
 #include "rtc.h"
-#include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
 
@@ -109,7 +108,6 @@ extern "C" int main(void) {
 
     SystemPower_Config_ext();
     MX_GPIO_Init();
-    MX_UCPD1_Init();
     MX_USART1_UART_Init();
     MX_USB_OTG_FS_PCD_Init();
     MX_ICACHE_Init();
