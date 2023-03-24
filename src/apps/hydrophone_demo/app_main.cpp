@@ -191,6 +191,17 @@ static void defaultTask( void *parameters ) {
   SerialHandle_t *dfuSerial = NULL;
 
   startIWDGTask();
+
+  // Using usbPcap for streaming audio
+  // pcapInit(&usbPcap);
+
+  gpioISRStartTask();
+
+  memfault_platform_boot();
+  memfault_platform_start();
+
+  bspInit();
+
   startSerial();
   // Use USB for serial console if USB is connected on boot
   // Otherwise use ST-Link serial port
@@ -207,22 +218,10 @@ static void defaultTask( void *parameters ) {
   }
   startCLI();
 
-  // Using usbPcap for streaming audio
-  // pcapInit(&usbPcap);
-
-  gpioISRStartTask();
-
-  memfault_platform_boot();
-  memfault_platform_start();
-
-  bspInit();
-
   usbInit();
 
   debugSysInit();
-// #ifndef NO_UART
   debugMemfaultInit(&usbCLI);
-// #endif/
   debugBMInit();
 
   // Commenting out while we test usart1

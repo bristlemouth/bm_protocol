@@ -59,11 +59,15 @@ void startSerialConsole(SerialHandle_t *handle) {
 }
 
 void serialConsolePutcharUnbuffered(const char chr) {
-  serialPutcharUnbuffered(serialConsoleHandle, chr);
+  if(serialConsoleHandle){
+   serialPutcharUnbuffered(serialConsoleHandle, chr);
+  }
 }
 
 void _putchar(char character) {
-  serialPutcharUnbuffered(serialConsoleHandle, character);
+  if (serialConsoleHandle){
+    serialPutcharUnbuffered(serialConsoleHandle, character);
+  }
 }
 
 void serialConsolePutchar(char character, void* arg) {

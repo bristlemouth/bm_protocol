@@ -111,6 +111,10 @@ uint32_t adcGetSampleMv(uint32_t channel) {
 }
 
 bool usb_is_connected() {
-  // TODO 
-  return true;
+  // TODO
+  uint8_t vusb = 0;
+
+  IORead(&VUSB_DETECT, &vusb);
+
+  return (bool)vusb;
 }

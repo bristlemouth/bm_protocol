@@ -13,7 +13,9 @@ static SemaphoreHandle_t debugPrintMutex;
   characters over the USB virtual COM port.
 */
 int printf(const char* format, ...) {
-	configASSERT(debugPutcFn != NULL);
+	if(debugPutcFn == NULL){
+    return -1;
+  }
 
 	configASSERT(xSemaphoreTake(debugPrintMutex, portMAX_DELAY) == pdTRUE);
 	va_list va;
