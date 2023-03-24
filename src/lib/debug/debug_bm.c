@@ -17,7 +17,11 @@
     #define LED_BLUE EXP_LED_G1
     #define ALARM_OUT EXP_LED_R2
     #define USER_BUTTON GPIO2
-#endif // BSP_DEV_MOTE_V1_0
+#elif BSP_DEV_MOTE_HYDROPHONE
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT GPIO1
+#endif
+
 
 static BaseType_t neighborsCommand( char *writeBuffer,
                                   size_t writeBufferLen,

@@ -17,7 +17,7 @@
 #define RESET_DELAY       (1)
 #define AFTER_RESET_DELAY (100)
 
-#ifndef BSP_DEV_MOTE_V1_0
+#ifdef BSP_NUCLEO_U575
 #define ADIN_NSS ADIN_CS
 #define ADIN_INT ADIN_RDY
 #endif // BSP_DEV_MOTE_V1_0

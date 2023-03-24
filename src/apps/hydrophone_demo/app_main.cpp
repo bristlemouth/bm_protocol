@@ -4,12 +4,14 @@
 
 // Peripheral
 #include "adc.h"
+#ifdef BSP_NUCLEO_U575
 #include "gpdma.h"
+#endif // BSP_NUCLEO_U575
 #include "gpio.h"
 #include "icache.h"
 #include "iwdg.h"
 #include "rtc.h"
-#include "ucpd.h"
+// #include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
 
@@ -39,6 +41,15 @@
 
 
 #include <stdio.h>
+
+#ifdef BSP_DEV_MOTE_V1_0
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT EXP_LED_R2
+    #define USER_BUTTON GPIO2
+#elif BSP_DEV_MOTE_HYDROPHONE
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT GPIO1
+#endif
 
 static void defaultTask(void *parameters);
 
@@ -113,13 +124,15 @@ extern "C" int main(void) {
 
   SystemPower_Config_ext();
   MX_GPIO_Init();
-  MX_UCPD1_Init();
+  // MX_UCPD1_Init();
   MX_USART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_ICACHE_Init();
+#ifdef BSP_NUCLEO_U575
   MX_RTC_Init();
-  MX_IWDG_Init();
   MX_GPDMA1_Init();
+#endif // BSP_NUCLEO_U575
+  MX_IWDG_Init();
 
   usbMspInit();
 
