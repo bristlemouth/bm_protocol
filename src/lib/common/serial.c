@@ -301,7 +301,7 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
 
     totalBytesSent += bytesSent;
 
-#ifndef NO_UART
+
     // Right now, the USB handle is the only one without a device pointer
     // TODO - use some sort of flags instead
     if(HANDLE_IS_USB(handle)){
@@ -310,12 +310,14 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
         tud_cdc_tx_complete_cb(HANDLE_CDC_ITF(handle));
       }
     } else {
+#ifndef NO_UART
       // Enable transmit interrupt if not already transmitting
       if(!LL_USART_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
         LL_USART_EnableIT_TXE((USART_TypeDef *)handle->device);
       }
-    }
+
 #endif
+    }
   }
 
 }

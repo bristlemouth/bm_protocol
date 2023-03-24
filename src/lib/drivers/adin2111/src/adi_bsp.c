@@ -91,10 +91,10 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
     (void) useDma;
 
 // TODO - make configurable spi bus instead of #defines
-#ifdef BSP_DEV_MOTE_V1_0
-    SPIResponse_t status = spiTxRx(&spi3, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
-#else
+#ifdef BSP_NUCLEO_U575
     SPIResponse_t status = spiTxRx(&spi1, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
+#else
+    SPIResponse_t status = spiTxRx(&spi3, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
 #endif
     if (status == SPI_OK) {
         /* Give semaphore to allow SPI Thread to call appropriate callback */
@@ -111,7 +111,7 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
 uint32_t adi_bsp_init(void) {
 
     // Power up adin
-#ifdef BSP_DEV_MOTE_V1_0
+#ifndef BSP_NUCLEO_U575
 
     IOWrite(&ADIN_PWR, 1);
     vTaskDelay(10); // huge delay
