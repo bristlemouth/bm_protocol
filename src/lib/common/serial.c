@@ -315,8 +315,8 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
         LL_USART_EnableIT_TXE((USART_TypeDef *)handle->device);
       }
     }
-  }
 #endif
+  }
 
 }
 

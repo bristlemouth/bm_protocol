@@ -31,6 +31,7 @@
 #include "memfault_platform_core.h"
 #include "mic.h"
 #include "pcap.h"
+#include "pca9535.h"
 #include "printf.h"
 #include "serial.h"
 #include "serial_console.h"
@@ -49,11 +50,13 @@
 #elif BSP_DEV_MOTE_HYDROPHONE
     #define LED_BLUE EXP_LED_G1
     #define ALARM_OUT GPIO1
+    #define USER_BUTTON GPIO2
 #endif
 
 static void defaultTask(void *parameters);
 
 // Serial console (when no usb present)
+#ifndef NO_UART
 SerialHandle_t usart1 = {
   .device = USART1,
   .name = "usart1",
@@ -70,6 +73,7 @@ SerialHandle_t usart1 = {
   .enabled = false,
   .flags = 0,
 };
+#endif
 
 // Serial console USB device
 SerialHandle_t usbCLI   = {
@@ -109,9 +113,11 @@ SerialHandle_t usbPcap   = {
 
 const char* publication_topics = "";
 
+#ifndef NO_UART
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
+#endif // NO_UART
 
 extern "C" int main(void) {
 
@@ -125,7 +131,9 @@ extern "C" int main(void) {
   SystemPower_Config_ext();
   MX_GPIO_Init();
   // MX_UCPD1_Init();
+#ifndef NO_UART
   MX_USART1_UART_Init();
+#endif
   MX_USB_OTG_FS_PCD_Init();
   MX_ICACHE_Init();
 #ifdef BSP_NUCLEO_U575
@@ -192,8 +200,10 @@ static void defaultTask( void *parameters ) {
     // so no explicit serialEnable is required
 
   } else {
+#ifndef NO_UART
     startSerialConsole(&usart1);
     serialEnable(&usart1);
+#endif
   }
   startCLI();
 
@@ -210,7 +220,9 @@ static void defaultTask( void *parameters ) {
   usbInit();
 
   debugSysInit();
-  debugMemfaultInit(&usart1);
+// #ifndef NO_UART
+  debugMemfaultInit(&usbCLI);
+// #endif/
   debugBMInit();
 
   // Commenting out while we test usart1

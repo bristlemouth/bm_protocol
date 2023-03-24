@@ -63,7 +63,10 @@ static void SystemPower_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+// adding __weak here so we can override main()
+// This way we can keep track of all the initialization things we need to port
+// over after CubeMX re-generates code
+__weak
 /* USER CODE END 0 */
 
 /**
@@ -212,7 +215,11 @@ static void SystemPower_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+// Since SystemPower_Config is static, we need an accessor function
+// to get to it from our other main
+void SystemPower_Config_ext(void) {
+  SystemPower_Config();
+}
 /* USER CODE END 4 */
 
 /**

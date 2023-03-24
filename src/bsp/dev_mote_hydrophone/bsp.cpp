@@ -112,5 +112,5 @@ uint32_t adcGetSampleMv(uint32_t channel) {
 
 bool usb_is_connected() {
   // TODO 
-  return false;
+  return true;
 }

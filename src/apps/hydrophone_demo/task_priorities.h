@@ -3,6 +3,8 @@
 // Trying to keep them sorted by priority here
 //
 
+#define PCA9535_IRQ_TASK_PRIORITY 20
+
 #define DEFAULT_BOOT_TASK_PRIORITY  16
 
 #define ADIN_SPI_TASK_PRIORITY          15
