@@ -111,6 +111,9 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
     uint32_t bytesRemaining = nBytes - idx;
     uint32_t subNbytes = MIN(bytesRemaining, 1023);
     status = spiTxRx(&spi3, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+    if(status != SPI_OK) {
+      break;
+    }
   }
   IOWrite(&ADIN_CS, 1);
 
