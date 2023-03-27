@@ -57,11 +57,13 @@ static void adin_bsp_gpio_thread(void *parameters) {
 
   while(1) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    LL_GPIO_SetOutputPin(DBG2_GPIO_Port, DBG2_Pin);
     if (gpfIntCallback) {
       (*gpfIntCallback)(gpIntCBParam, 0, NULL);
     } else {
       /* No GPIO Callback function assigned */
     }
+    LL_GPIO_ResetOutputPin(DBG2_GPIO_Port, DBG2_Pin);
   }
 }
 
@@ -71,8 +73,12 @@ static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *a
   (void) pinHandle;
   (void) value;
 
-  xTaskNotifyGive(gpioTask);
-  return true; // TODO: What does this bool mean?
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  LL_GPIO_SetOutputPin(DBG1_GPIO_Port, DBG1_Pin);
+  vTaskNotifyGiveFromISR(gpioTask, &xHigherPriorityTaskWoken);
+  LL_GPIO_ResetOutputPin(DBG1_GPIO_Port, DBG1_Pin);
+
+  return xHigherPriorityTaskWoken;
 }
 
 void adi_bsp_hw_reset() {
@@ -81,10 +87,6 @@ void adi_bsp_hw_reset() {
   vTaskDelay(pdMS_TO_TICKS(RESET_DELAY));
   IOWrite(&ADIN_RST, 1);
   vTaskDelay(pdMS_TO_TICKS(AFTER_RESET_DELAY));
-}
-
-void adi_bsp_int_n_set_pending_irq(void) {
-  xTaskNotifyGive(gpioTask);
 }
 
 /* SPI transceive wrapper */
