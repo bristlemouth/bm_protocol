@@ -243,6 +243,9 @@ static void defaultTask( void *parameters ) {
 
   bcl_init(dfuSerial);
 
+  // Drop priority now that we're done booting
+  vTaskPrioritySet(xTaskGetCurrentTaskHandle(), DEFAULT_TASK_PRIORITY);
+
   BaseType_t rval = xTaskCreate(hydrophoneTask,
                   "hydrophone",
                   // TODO - verify stack size
