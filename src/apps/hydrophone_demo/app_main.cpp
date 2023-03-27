@@ -3,7 +3,7 @@
 #include "main.h"
 
 // Peripheral
-#include "adc.h"
+// #include "adc.h"
 #include "gpdma.h"
 #include "gpio.h"
 #include "icache.h"
