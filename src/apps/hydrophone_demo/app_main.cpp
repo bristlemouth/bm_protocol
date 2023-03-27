@@ -400,6 +400,23 @@ void updateDurationCb(char* topic, uint16_t topic_len, char* data, uint16_t data
 
 extern SAI_HandleTypeDef hsai_BlockA1;
 
+static bool prevAlarmState = false;
+// Only write alarm state if state has changed
+// Since IO's go through IO expander, this saves on a LOT
+// of IO expander comms
+void setAlarmState(bool state) {
+  if(state != prevAlarmState){
+    prevAlarmState = state;
+    if(state) {
+      IOWrite(&ALARM_OUT, 1);
+      IOWrite(&LED_BLUE, LED_ON);
+    } else {
+      IOWrite(&ALARM_OUT, 0);
+      IOWrite(&LED_BLUE, LED_OFF);
+    }
+  }
+}
+
 static void hydrophoneTask( void *parameters ) {
   (void)parameters;
   vTaskDelay(1000);
@@ -477,11 +494,10 @@ static void hydrophoneTask( void *parameters ) {
     while(1) {
       if(alarmTimer > 0) {
         alarmTimer--;
-        IOWrite(&ALARM_OUT, 1);
-        IOWrite(&LED_BLUE, LED_ON);
+        setAlarmState(true);
       } else {
-        IOWrite(&ALARM_OUT, 0);
-        IOWrite(&LED_BLUE, LED_OFF);
+        setAlarmState(false);
+
       }
       vTaskDelay(10);
     }
