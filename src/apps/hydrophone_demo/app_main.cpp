@@ -456,12 +456,6 @@ static void hydrophoneTask( void *parameters ) {
     sub.cb = printDbData;
     bm_pubsub_subscribe(&sub);
 
-    // Hydrophone audio stream!
-    sub.topic = const_cast<char *>(hydroStreamTopic);
-    sub.topic_len = sizeof(hydroStreamTopic) - 1;
-    sub.cb = streamAudioData;
-    bm_pubsub_subscribe(&sub);
-
     // alarm threshold level
     sub.topic = const_cast<char *>(alarmThresholdTopic);
     sub.topic_len = sizeof(alarmThresholdTopic) - 1;
@@ -520,6 +514,14 @@ void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
 
       if ( dtr ) {
         // Enable audio streaming
+
+        // Hydrophone audio stream!
+        bm_sub_t sub;
+        sub.topic = const_cast<char *>(hydroStreamTopic);
+        sub.topic_len = sizeof(hydroStreamTopic) - 1;
+        sub.cb = streamAudioData;
+        bm_pubsub_subscribe(&sub);
+
         serialEnable(&usbPcap);
         xStreamBufferReset(usbPcap.txStreamBuffer);
         xStreamBufferReset(usbPcap.rxStreamBuffer);
@@ -527,6 +529,13 @@ void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
         printf("bm pub %s 1\n", hydroStreamEnableTopic);
       } else {
         // Disable audio streaming
+
+            // Hydrophone audio stream!
+        bm_sub_t sub;
+        sub.topic = const_cast<char *>(hydroStreamTopic);
+        sub.topic_len = sizeof(hydroStreamTopic) - 1;
+        sub.cb = NULL;
+        bm_pubsub_unsubscribe(&sub);
         serialDisable(&usbPcap);
         publication.data = const_cast<char *>("0");
         printf("bm pub %s 0\n", hydroStreamEnableTopic);
