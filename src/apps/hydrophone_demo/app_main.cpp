@@ -43,13 +43,20 @@
 
 #ifdef BSP_DEV_MOTE_V1_0
     #define LED_BLUE EXP_LED_G1
-    #define ALARM_OUT EXP_LED_R2
+    #define ALARM_OUT GPIO1
     #define USER_BUTTON GPIO2
+    #define LED_ON (0)
+    #define LED_OFF (1)
 #elif BSP_DEV_MOTE_HYDROPHONE
     #define LED_BLUE EXP_LED_G1
     #define ALARM_OUT GPIO1
     #define USER_BUTTON GPIO2
-#endif
+    #define LED_ON (0)
+    #define LED_OFF (1)
+#else
+    #define LED_ON (1)
+    #define LED_OFF (0)
+#endif // BSP_DEV_MOTE_V1_0
 
 static void defaultTask(void *parameters);
 
@@ -221,6 +228,13 @@ static void defaultTask( void *parameters ) {
   debugSysInit();
   debugMemfaultInit(&usbCLI);
   debugBMInit();
+
+#ifndef BSP_NUCLEO_U575
+  IOWrite(&EXP_LED_G1, LED_OFF);
+  IOWrite(&EXP_LED_R1, LED_OFF);
+  IOWrite(&EXP_LED_G2, LED_OFF);
+  IOWrite(&EXP_LED_R2, LED_OFF);
+#endif
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
@@ -467,10 +481,10 @@ static void hydrophoneTask( void *parameters ) {
       if(alarmTimer > 0) {
         alarmTimer--;
         IOWrite(&ALARM_OUT, 1);
-        IOWrite(&LED_BLUE, 1);
+        IOWrite(&LED_BLUE, LED_ON);
       } else {
         IOWrite(&ALARM_OUT, 0);
-        IOWrite(&LED_BLUE, 0);
+        IOWrite(&LED_BLUE, LED_OFF);
       }
       vTaskDelay(10);
     }
