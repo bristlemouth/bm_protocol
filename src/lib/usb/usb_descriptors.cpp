@@ -24,6 +24,7 @@
  */
 
 #include "tusb.h"
+#include "device_info.h"
 
 /* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
@@ -185,11 +186,12 @@ char const* string_desc_arr [] =
   (const char[]) { 0x09, 0x04 },  // 0: is supported language is English (0x0409)
   "Sofar Ocean Technologies",     // 1: Manufacturer
   "Bristlemouth",                 // 2: Product
-  "123456",                       // 3: Serials, should use chip ID
+  "",                             // 3: Serials, should use chip ID
   "TinyUSB CDC",                  // 4: CDC Interface
 };
 
 static uint16_t _desc_str[32];
+static char macAddrStr[16];
 
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
@@ -203,8 +205,28 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
   {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
-  }else
-  {
+  } else if (index == 3) {
+    if(macAddrStr[0] == 0) {
+      uint8_t mac[6];
+      getMacAddr(mac, sizeof(mac));
+
+      snprintf(macAddrStr, sizeof(macAddrStr), "%02X%02X%02X%02X%02X%02X",
+      mac[0],
+      mac[1],
+      mac[2],
+      mac[3],
+      mac[4],
+      mac[5]);
+    }
+
+    chr_count = 12;
+
+    // Convert ASCII string into UTF-16
+    for(uint8_t i=0; i<chr_count; i++)
+    {
+      _desc_str[1+i] = macAddrStr[i];
+    }
+  } else {
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
 
