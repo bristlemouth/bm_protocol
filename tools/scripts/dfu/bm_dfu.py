@@ -136,9 +136,9 @@ def send_dfu_payload(chunk_num):
 
     # "new way"
     header = DFU_PAYLOAD_HEADER(
-        MAGIC_NUM, 
-        frame_size, 
-        BM_DFU_FRM_TYPE.PAYLOAD, 
+        MAGIC_NUM,
+        frame_size,
+        BM_DFU_FRM_TYPE.PAYLOAD,
         src_addr[0],
         src_addr[1],
         src_addr[2],
@@ -289,7 +289,7 @@ def parse_args():
         "-p", "--port", dest="port", required=True, help="Absolute path to Port"
     )
 
-    parser.add_argument("-b", "--baud", dest="baud", required=True, help="Baudrate")
+    parser.add_argument("-b", "--baud", dest="baud", required=False, help="Baudrate", default=921600)
 
     parser.add_argument(
         "--ip", dest="dst", required=True, help="Destination IP Address"
