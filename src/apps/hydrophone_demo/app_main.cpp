@@ -467,11 +467,16 @@ static void hydrophoneTask( void *parameters ) {
     // serialEnable(&usbPcap);
 
     bm_sub_t sub;
+#if 0
+    // Don't subscribe to hydrophone/db on purpose
+    // So it will require a firmware update during the demo to work
+
     // Hydrophone dB level
     sub.topic = const_cast<char *>(hydroDbTopic);
     sub.topic_len = sizeof(hydroDbTopic) - 1;
     sub.cb = printDbData;
     bm_pubsub_subscribe(&sub);
+#endif
 
     // alarm threshold level
     sub.topic = const_cast<char *>(alarmThresholdTopic);
