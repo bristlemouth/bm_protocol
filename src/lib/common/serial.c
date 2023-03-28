@@ -165,6 +165,7 @@ void serialGenericRxTask( void *parameters ) {
 void serialEnable(SerialHandle_t *handle) {
   configASSERT(handle != NULL);
 
+#ifndef NO_UART
   // Don't do uart specific stuff for USB :D
   if(!HANDLE_IS_USB(handle)) {
     // Check for and clear any overrun flags
@@ -184,6 +185,7 @@ void serialEnable(SerialHandle_t *handle) {
     // Enable Uart RX interrupt
     LL_USART_EnableIT_RXNE((USART_TypeDef *)handle->device);
   }
+#endif
 
   handle->enabled = true;
 }
@@ -191,6 +193,7 @@ void serialEnable(SerialHandle_t *handle) {
 void serialDisable(SerialHandle_t *handle) {
   configASSERT(handle);
 
+#ifndef NO_UART
   // Don't do uart specific stuff for USB :D
   if(!HANDLE_IS_USB(handle)) {
     // Disable Uart RX interrupt
@@ -202,10 +205,13 @@ void serialDisable(SerialHandle_t *handle) {
       LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_INPUT);
     }
   }
+#endif
 
   handle->enabled = false;
 }
 
+
+#ifndef NO_UART
 // Generic interrupt handler for all USART/UART/LPUART peripherals
 // Takes an SerialHandle_t and receives serial data into a stream buffer
 // as well as takes data from another stream buffer to send
@@ -251,6 +257,7 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
   // TODO - call this from actual irqhandler?
 }
+#endif
 
 // Cheat by using the length field to send single characters to the queue
 // This way we save a malloc/free
@@ -294,6 +301,7 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
 
     totalBytesSent += bytesSent;
 
+
     // Right now, the USB handle is the only one without a device pointer
     // TODO - use some sort of flags instead
     if(HANDLE_IS_USB(handle)){
@@ -302,12 +310,16 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
         tud_cdc_tx_complete_cb(HANDLE_CDC_ITF(handle));
       }
     } else {
+#ifndef NO_UART
       // Enable transmit interrupt if not already transmitting
       if(!LL_USART_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
         LL_USART_EnableIT_TXE((USART_TypeDef *)handle->device);
       }
+
+#endif
     }
   }
+
 }
 
 //

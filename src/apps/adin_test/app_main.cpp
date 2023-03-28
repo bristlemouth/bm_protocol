@@ -8,7 +8,6 @@
 #include "icache.h"
 #include "iwdg.h"
 #include "rtc.h"
-#include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
 
@@ -25,6 +24,7 @@
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
+#include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
 #include "serial.h"
@@ -36,6 +36,19 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#ifdef BSP_DEV_MOTE_V1_0
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT EXP_LED_R2
+    #define USER_BUTTON GPIO2
+
+    // LEDS are active low
+    #define LED_ON (0)
+    #define LED_OFF (1)
+#else
+    #define LED_ON (1)
+    #define LED_OFF (0)
+#endif // BSP_DEV_MOTE_V1_0
 
 static void defaultTask(void *parameters);
 
@@ -109,11 +122,12 @@ extern "C" int main(void) {
 
     SystemPower_Config_ext();
     MX_GPIO_Init();
-    MX_UCPD1_Init();
     MX_USART1_UART_Init();
     MX_USB_OTG_FS_PCD_Init();
     MX_ICACHE_Init();
+#ifndef BSP_DEV_MOTE_V1_0
     MX_RTC_Init();
+#endif // BSP_DEV_MOTE_V1_0
     MX_IWDG_Init();
 
     usbMspInit();
@@ -159,14 +173,14 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     bm_pub_t publication;
 
 
-    publication.topic = (char *) topic;
+    publication.topic = const_cast<char *>(topic);
     publication.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
 
     if(value) {
-        publication.data = (char *)on_str;
+        publication.data = const_cast<char *>(on_str);
         publication.data_len = sizeof(on_str) - 1; // Don't care about Null terminator
     } else {
-        publication.data = (char *)off_str;
+        publication.data = const_cast<char *>(off_str);
         publication.data_len = sizeof(off_str) - 1; // Don't care about Null terminator
     }
 
@@ -178,11 +192,11 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", data, data_len) == 0) {
-            IOWrite(&LED_BLUE, 1);
-            IOWrite(&ALARM_OUT, 1);
-        } else if (strncmp("off", data, data_len) == 0) {
-            IOWrite(&LED_BLUE, 0);
+            IOWrite(&LED_BLUE, LED_OFF);
             IOWrite(&ALARM_OUT, 0);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, LED_ON);
+            IOWrite(&ALARM_OUT, 1);
         } else {
             // Not handled
         }
@@ -200,7 +214,9 @@ static void defaultTask( void *parameters ) {
     startSerial();
     // Use USB for serial console if USB is connected on boot
     // Otherwise use ST-Link serial port
+#ifndef BSP_DEV_MOTE_V1_0
     if(usb_is_connected()) {
+#endif // BSP_DEV_MOTE_V1_0
       startSerialConsole(&usbCLI);
       // Serial device will be enabled automatically when console connects
       // so no explicit serialEnable is required
@@ -211,6 +227,7 @@ static void defaultTask( void *parameters ) {
       pcapInit(&usbPcap);
 #endif
 
+#ifndef BSP_DEV_MOTE_V1_0
     } else {
       startSerialConsole(&usart1);
 
@@ -220,6 +237,7 @@ static void defaultTask( void *parameters ) {
 
       printf("WARNING: PCAP support requires USB connection.\n");
     }
+#endif // BSP_DEV_MOTE_V1_0
     startCLI();
     // pcapInit(&usbPcap);
     serialEnable(&usart1);
@@ -243,12 +261,16 @@ static void defaultTask( void *parameters ) {
 
     bcl_init(dfuSerial);
 
-    IOWrite(&ALARM_OUT, 0);
+    IOWrite(&ALARM_OUT, 1);
+    IOWrite(&LED_BLUE, LED_ON);
+#ifdef BSP_DEV_MOTE_V1_0
+    IOWrite(&EXP_LED_G2, LED_OFF);
+    IOWrite(&EXP_LED_R1, LED_OFF);
+#endif // BSP_DEV_MOTE_V1_0
 
     bm_sub_t subscription;
-    const char topic[] = "button";
 
-    subscription.topic = (char *) topic;
+    subscription.topic = const_cast<char *>(topic);
     subscription.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
     subscription.cb = handle_sensor_subscriptions;
     bm_pubsub_subscribe(&subscription);

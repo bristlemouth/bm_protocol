@@ -49,6 +49,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
     ${SRC_DIR}/lib/drivers/mic.c
+    ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
@@ -220,14 +221,6 @@ set(APP_LIBS
 set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
     )
-
-if (DFU_HOST  STREQUAL 1)
-list(APPEND APP_DEFINES "BM_DFU_HOST=1")
-message(STATUS "DFU HOST AND CLIENT")
-else()
-list(APPEND APP_DEFINES "BM_DFU_HOST=0")
-message(STATUS "DFU CLIENT ONLY")
-endif()
 
 if (NOT ${USE_BOOTLOADER})
      message(SEND_ERROR "USE_BOOTLOADER is not set.")

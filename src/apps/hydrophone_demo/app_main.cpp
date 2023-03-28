@@ -9,7 +9,7 @@
 #include "icache.h"
 #include "iwdg.h"
 #include "rtc.h"
-#include "ucpd.h"
+// #include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
 
@@ -29,6 +29,7 @@
 #include "memfault_platform_core.h"
 #include "mic.h"
 #include "pcap.h"
+#include "pca9535.h"
 #include "printf.h"
 #include "serial.h"
 #include "serial_console.h"
@@ -40,9 +41,27 @@
 
 #include <stdio.h>
 
+#ifdef BSP_DEV_MOTE_V1_0
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT GPIO1
+    #define USER_BUTTON GPIO2
+    #define LED_ON (0)
+    #define LED_OFF (1)
+#elif BSP_DEV_MOTE_HYDROPHONE
+    #define LED_BLUE EXP_LED_G1
+    #define ALARM_OUT GPIO1
+    #define USER_BUTTON GPIO2
+    #define LED_ON (0)
+    #define LED_OFF (1)
+#else
+    #define LED_ON (1)
+    #define LED_OFF (0)
+#endif // BSP_DEV_MOTE_V1_0
+
 static void defaultTask(void *parameters);
 
 // Serial console (when no usb present)
+#ifndef NO_UART
 SerialHandle_t usart1 = {
   .device = USART1,
   .name = "usart1",
@@ -59,6 +78,7 @@ SerialHandle_t usart1 = {
   .enabled = false,
   .flags = 0,
 };
+#endif
 
 // Serial console USB device
 SerialHandle_t usbCLI   = {
@@ -98,9 +118,11 @@ SerialHandle_t usbPcap   = {
 
 const char* publication_topics = "";
 
+#ifndef NO_UART
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
+#endif // NO_UART
 
 extern "C" int main(void) {
 
@@ -113,13 +135,17 @@ extern "C" int main(void) {
 
   SystemPower_Config_ext();
   MX_GPIO_Init();
-  MX_UCPD1_Init();
+  // MX_UCPD1_Init();
+#ifndef NO_UART
   MX_USART1_UART_Init();
+#endif
   MX_USB_OTG_FS_PCD_Init();
   MX_ICACHE_Init();
+#ifdef BSP_NUCLEO_U575
   MX_RTC_Init();
-  MX_IWDG_Init();
+#endif // BSP_NUCLEO_U575
   MX_GPDMA1_Init();
+  MX_IWDG_Init();
 
   usbMspInit();
 
@@ -170,19 +196,6 @@ static void defaultTask( void *parameters ) {
   SerialHandle_t *dfuSerial = NULL;
 
   startIWDGTask();
-  startSerial();
-  // Use USB for serial console if USB is connected on boot
-  // Otherwise use ST-Link serial port
-  if(usb_is_connected()) {
-    startSerialConsole(&usbCLI);
-    // Serial device will be enabled automatically when console connects
-    // so no explicit serialEnable is required
-
-  } else {
-    startSerialConsole(&usart1);
-    serialEnable(&usart1);
-  }
-  startCLI();
 
   // Using usbPcap for streaming audio
   // pcapInit(&usbPcap);
@@ -194,11 +207,34 @@ static void defaultTask( void *parameters ) {
 
   bspInit();
 
+  startSerial();
+  // Use USB for serial console if USB is connected on boot
+  // Otherwise use ST-Link serial port
+  if(usb_is_connected()) {
+    startSerialConsole(&usbCLI);
+    // Serial device will be enabled automatically when console connects
+    // so no explicit serialEnable is required
+
+  } else {
+#ifndef NO_UART
+    startSerialConsole(&usart1);
+    serialEnable(&usart1);
+#endif
+  }
+  startCLI();
+
   usbInit();
 
   debugSysInit();
-  debugMemfaultInit(&usart1);
+  debugMemfaultInit(&usbCLI);
   debugBMInit();
+
+#ifndef BSP_NUCLEO_U575
+  IOWrite(&EXP_LED_G1, LED_OFF);
+  IOWrite(&EXP_LED_R1, LED_OFF);
+  IOWrite(&EXP_LED_G2, LED_OFF);
+  IOWrite(&EXP_LED_R2, LED_OFF);
+#endif
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
@@ -206,6 +242,9 @@ static void defaultTask( void *parameters ) {
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
   bcl_init(dfuSerial);
+
+  // Drop priority now that we're done booting
+  vTaskPrioritySet(xTaskGetCurrentTaskHandle(), DEFAULT_TASK_PRIORITY);
 
   BaseType_t rval = xTaskCreate(hydrophoneTask,
                   "hydrophone",
@@ -361,6 +400,23 @@ void updateDurationCb(char* topic, uint16_t topic_len, char* data, uint16_t data
 
 extern SAI_HandleTypeDef hsai_BlockA1;
 
+static bool prevAlarmState = false;
+// Only write alarm state if state has changed
+// Since IO's go through IO expander, this saves on a LOT
+// of IO expander comms
+void setAlarmState(bool state) {
+  if(state != prevAlarmState){
+    prevAlarmState = state;
+    if(state) {
+      IOWrite(&ALARM_OUT, 1);
+      IOWrite(&LED_BLUE, LED_ON);
+    } else {
+      IOWrite(&ALARM_OUT, 0);
+      IOWrite(&LED_BLUE, LED_OFF);
+    }
+  }
+}
+
 static void hydrophoneTask( void *parameters ) {
   (void)parameters;
   vTaskDelay(1000);
@@ -381,7 +437,7 @@ static void hydrophoneTask( void *parameters ) {
 
   // These won't change
   streamData.header.magic = AUDIO_MAGIC;
-  streamData.header.sampleRate = 48000;
+  streamData.header.sampleRate = 50000;
   streamData.header.sampleSize = 2;
 
   if(micInit(&hsai_BlockA1, NULL)) {
@@ -417,12 +473,6 @@ static void hydrophoneTask( void *parameters ) {
     sub.cb = printDbData;
     bm_pubsub_subscribe(&sub);
 
-    // Hydrophone audio stream!
-    sub.topic = const_cast<char *>(hydroStreamTopic);
-    sub.topic_len = sizeof(hydroStreamTopic) - 1;
-    sub.cb = streamAudioData;
-    bm_pubsub_subscribe(&sub);
-
     // alarm threshold level
     sub.topic = const_cast<char *>(alarmThresholdTopic);
     sub.topic_len = sizeof(alarmThresholdTopic) - 1;
@@ -444,11 +494,10 @@ static void hydrophoneTask( void *parameters ) {
     while(1) {
       if(alarmTimer > 0) {
         alarmTimer--;
-        IOWrite(&ALARM_OUT, 1);
-        IOWrite(&LED_BLUE, 1);
+        setAlarmState(true);
       } else {
-        IOWrite(&ALARM_OUT, 0);
-        IOWrite(&LED_BLUE, 0);
+        setAlarmState(false);
+
       }
       vTaskDelay(10);
     }
@@ -481,6 +530,14 @@ void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
 
       if ( dtr ) {
         // Enable audio streaming
+
+        // Hydrophone audio stream!
+        bm_sub_t sub;
+        sub.topic = const_cast<char *>(hydroStreamTopic);
+        sub.topic_len = sizeof(hydroStreamTopic) - 1;
+        sub.cb = streamAudioData;
+        bm_pubsub_subscribe(&sub);
+
         serialEnable(&usbPcap);
         xStreamBufferReset(usbPcap.txStreamBuffer);
         xStreamBufferReset(usbPcap.rxStreamBuffer);
@@ -488,6 +545,13 @@ void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
         printf("bm pub %s 1\n", hydroStreamEnableTopic);
       } else {
         // Disable audio streaming
+
+            // Hydrophone audio stream!
+        bm_sub_t sub;
+        sub.topic = const_cast<char *>(hydroStreamTopic);
+        sub.topic_len = sizeof(hydroStreamTopic) - 1;
+        sub.cb = NULL;
+        bm_pubsub_unsubscribe(&sub);
         serialDisable(&usbPcap);
         publication.data = const_cast<char *>("0");
         printf("bm pub %s 0\n", hydroStreamEnableTopic);

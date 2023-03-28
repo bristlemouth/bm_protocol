@@ -128,7 +128,7 @@ bool bm_pubsub_publish(bm_pub_t* pub) {
 
     do {
         /* Ensure that topic does not have illegal characters */
-        if(strchr(pub->topic, ':')) {
+        if(memchr(pub->topic, ':', pub->topic_len)) {
             retv = false;
             break;
         }
