@@ -57,13 +57,17 @@ static void adin_bsp_gpio_thread(void *parameters) {
 
   while(1) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+#ifdef DBG1_GPIO_Port
     LL_GPIO_SetOutputPin(DBG2_GPIO_Port, DBG2_Pin);
+#endif
     if (gpfIntCallback) {
       (*gpfIntCallback)(gpIntCBParam, 0, NULL);
     } else {
       /* No GPIO Callback function assigned */
     }
+#ifdef DBG1_GPIO_Port
     LL_GPIO_ResetOutputPin(DBG2_GPIO_Port, DBG2_Pin);
+#endif
   }
 }
 
@@ -74,9 +78,15 @@ static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *a
   (void) value;
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+#ifdef DBG1_GPIO_Port
   LL_GPIO_SetOutputPin(DBG1_GPIO_Port, DBG1_Pin);
+#endif
   vTaskNotifyGiveFromISR(gpioTask, &xHigherPriorityTaskWoken);
+
+#ifdef DBG1_GPIO_Port
   LL_GPIO_ResetOutputPin(DBG1_GPIO_Port, DBG1_Pin);
+#endif
 
   return xHigherPriorityTaskWoken;
 }
