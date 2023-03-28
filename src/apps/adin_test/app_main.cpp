@@ -192,11 +192,9 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", data, data_len) == 0) {
-            IOWrite(&LED_BLUE, LED_OFF);
-            IOWrite(&ALARM_OUT, 0);
-        } else if (strncmp("off", data, data_len) == 0) {
             IOWrite(&LED_BLUE, LED_ON);
-            IOWrite(&ALARM_OUT, 1);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, LED_OFF);
         } else {
             // Not handled
         }
@@ -262,7 +260,7 @@ static void defaultTask( void *parameters ) {
     bcl_init(dfuSerial);
 
     IOWrite(&ALARM_OUT, 1);
-    IOWrite(&LED_BLUE, LED_ON);
+    IOWrite(&LED_BLUE, LED_OFF);
 #ifdef BSP_DEV_MOTE_V1_0
     IOWrite(&EXP_LED_G2, LED_OFF);
     IOWrite(&EXP_LED_R1, LED_OFF);
