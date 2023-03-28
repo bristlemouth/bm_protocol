@@ -202,7 +202,7 @@ def main(cwd, args):
 
     print("Attempting to update Downstream client device")
 
-    abs_path = cwd + "/" + args.image
+    abs_path =  os.path.realpath(args.image)
 
     if not os.path.exists(abs_path):
         print("File does not exist")
