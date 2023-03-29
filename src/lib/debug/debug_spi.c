@@ -27,7 +27,7 @@ static const CLI_Command_Definition_t cmdSPI = {
   "spi:\n"
   " * spi list - show available interfaces\n"
   " * spi cfg <interface> <cpha> <cpol>\n"
-  " * spi tx <interface> <cspin> <bytes 00 11 22 ...>\n",
+  " * spi tx <interface> <cspin> <dma> <bytes 00 11 22 ...>\n",
   // Command function
   debugSPICommand,
   // Number of parameters (variable)
@@ -84,7 +84,7 @@ static void spiConfig(SPIInterface_t *interface, uint8_t cpOL, uint8_t cpHA) {
   }
 }
 
-static void debugSPITxRx(SPIInterface_t *interface, const DebugGpio_t *spin, const char* bytes) {
+static void debugSPITxRx(SPIInterface_t *interface, const DebugGpio_t *spin, const char* bytes, bool use_dma) {
 
   // Calculate number of bytes from string length
   // (adding one to account for the possibly missing space at the end)
@@ -108,7 +108,12 @@ static void debugSPITxRx(SPIInterface_t *interface, const DebugGpio_t *spin, con
   // Delay in case CS wasn't high
   vTaskDelay(2);
 
-  SPIResponse_t status = spiTxRx(interface, spin->handle, numBytes, txBuff, rxBuff, 100);
+  SPIResponse_t status; 
+  if(use_dma){
+    status = spiTxRxNonblocking(interface, spin->handle, numBytes, txBuff, rxBuff, 100);
+  } else{
+    status = spiTxRx(interface, spin->handle, numBytes, txBuff, rxBuff, 100);
+  }
 
   if(status == SPI_OK) {
     // Print received bytes
@@ -190,9 +195,14 @@ static BaseType_t debugSPICommand(char *writeBuffer,
                                     3,
                                     &csNameLen);
 
+      const char *dma = FreeRTOS_CLIGetParameter(
+                              commandString,
+                              4,
+                              &csNameLen);
+
       const char *bytes = FreeRTOS_CLIGetParameter(
                                     commandString,
-                                    4,
+                                    5,
                                     &parameterStringLength);
       if (interfaceNum != NULL){
         const DebugSPI_t * debugInterface = findInterface((uint8_t)(interfaceNum[0] - '0'));
@@ -201,7 +211,7 @@ static BaseType_t debugSPICommand(char *writeBuffer,
           if (spin == NULL) {
             printf("ERR Invalid CS pin\n");
           } else {
-            debugSPITxRx(debugInterface->interface, spin, bytes);
+            debugSPITxRx(debugInterface->interface, spin, bytes, (bool) atoi(dma));
           }
         } else {
           printf("ERR Invalid interface\n");

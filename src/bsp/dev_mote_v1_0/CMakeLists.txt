@@ -18,6 +18,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/system_stm32u5xx.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usb_otg.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpdma.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc_ex.c

@@ -87,7 +87,7 @@ bool W25::eraseChip(void) {
         }
         /* Enable writes */
         txBuff = WRITE_ENABLE;
-        if(writeBytes(&txBuff, sizeof(txBuff), 10) != SPI_OK) {
+        if(writeBytes(&txBuff, sizeof(txBuff), 10,true) != SPI_OK) {
             printf("Error sending WREN command\n");
             break;
         }
@@ -99,7 +99,7 @@ bool W25::eraseChip(void) {
 
         /* Erase Chip */
         txBuff = CHIP_ERASE;
-        if(writeBytes(&txBuff, sizeof(txBuff), 10) != SPI_OK) {
+        if(writeBytes(&txBuff, sizeof(txBuff), 10, true) != SPI_OK) {
             printf("Error sending Erase Chip command\n");
             break;
         }
@@ -144,7 +144,7 @@ bool W25::read(uint32_t addr, uint8_t *buffer, size_t len) {
 
     /* Make sure there's no write in progress! */
     if(readyToWrite(W25_WRITE_TIMEOUT_MS)) {
-        if(writeReadBytes(rxBuff, buffLen, txBuff, 100) == SPI_OK){
+        if(writeReadBytes(rxBuff, buffLen, txBuff, 100, true) == SPI_OK){
             memcpy(buffer, &rxBuff[W25_RW_HEADER_LEN], len);
             rval = true;
         }
@@ -201,7 +201,7 @@ bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
 
     /* Check if end address in the middle of a sector and it's a different sector than the beginning (write straddles a sector). */
     if((((addr) / W25_SECTOR_SIZE) != ((len + addr) / W25_SECTOR_SIZE )) && \
-        (len + addr) % W25_SECTOR_SIZE) { 
+        (len + addr) % W25_SECTOR_SIZE) {
         numSectors++;
     }
 
@@ -272,7 +272,7 @@ bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
 
             /* Enable writes */
             uint8_t writeEnReq = WRITE_ENABLE;
-            if(writeBytes(&writeEnReq, sizeof(writeEnReq), 10) != SPI_OK) {
+            if(writeBytes(&writeEnReq, sizeof(writeEnReq), 10,true) != SPI_OK) {
                 printf("Error sending WREN command\n");
                 sectorWriteSuccess = false;
                 break;
@@ -292,7 +292,7 @@ bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
 
             memcpy(&pageReqBuff[W25_RW_HEADER_LEN], &sectorBuff[wrAddr - currSectorAddr], W25_PAGE_SIZE);
 
-            if(writeBytes(pageReqBuff, W25_RW_HEADER_LEN + W25_PAGE_SIZE, 10) != SPI_OK) {
+            if(writeBytes(pageReqBuff, W25_RW_HEADER_LEN + W25_PAGE_SIZE, 10, true) != SPI_OK) {
                 printf("Error writing bytes\n");
                 sectorWriteSuccess = false;
                 break;
@@ -343,7 +343,7 @@ bool W25::readStatus(uint8_t &status) {
     uint8_t rxBuff[3];
 
     txBuff[0] = READ_STATUS_1;
-    bool rval = (writeReadBytes(rxBuff, sizeof(txBuff),txBuff,10) == SPI_OK);
+    bool rval = (writeReadBytes(rxBuff, sizeof(txBuff),txBuff,10,true) == SPI_OK);
     status = rxBuff[1];
     return rval;
 }
@@ -391,7 +391,7 @@ bool W25::eraseSector(uint32_t addr) {
 
         /* Enable writes */
         txBuff[0] = WRITE_ENABLE;
-        if(writeBytes(txBuff, 1, 10) != SPI_OK) {
+        if(writeBytes(txBuff, 1, 10,true) != SPI_OK) {
             printf("Error sending WREN command\n");
             break;
         }
@@ -407,7 +407,7 @@ bool W25::eraseSector(uint32_t addr) {
         txBuff[1] = (addr >> 16) & 0xFF;
         txBuff[2] = (addr >> 8) & 0xFF;
         txBuff[3] = addr & 0xFF;
-        if(writeBytes(txBuff, sizeof(txBuff), 10) != SPI_OK) {
+        if(writeBytes(txBuff, sizeof(txBuff), 10,true) != SPI_OK) {
             printf("Error sending Erase Chip command\n");
             break;
         }
@@ -447,7 +447,7 @@ bool W25::crc32Checksum(uint32_t addr, size_t len, uint32_t &crc32) {
             printf("Write failed\n");
             retval = false;
             break;
-        } 
+        }
         if(first_read){
             crc32 = crc32_ieee(read_buf, blocklen);
             first_read = false;

@@ -57,6 +57,12 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef handle_GPDMA1_Channel15;
+extern DMA_HandleTypeDef handle_GPDMA1_Channel14;
+extern DMA_HandleTypeDef handle_GPDMA1_Channel13;
+extern DMA_HandleTypeDef handle_GPDMA1_Channel12;
+extern SPI_HandleTypeDef hspi2;
+extern SPI_HandleTypeDef hspi3;
 extern TIM_HandleTypeDef htim8;
 
 /* USER CODE BEGIN EV */
@@ -118,6 +124,90 @@ void TIM8_UP_IRQHandler(void)
   /* USER CODE BEGIN TIM8_UP_IRQn 1 */
 
   /* USER CODE END TIM8_UP_IRQn 1 */
+}
+
+/**
+  * @brief This function handles SPI2 global interrupt.
+  */
+void SPI2_IRQHandler(void)
+{
+  /* USER CODE BEGIN SPI2_IRQn 0 */
+
+  /* USER CODE END SPI2_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi2);
+  /* USER CODE BEGIN SPI2_IRQn 1 */
+
+  /* USER CODE END SPI2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles GPDMA1 Channel 12 global interrupt.
+  */
+void GPDMA1_Channel12_IRQHandler(void)
+{
+  /* USER CODE BEGIN GPDMA1_Channel12_IRQn 0 */
+
+  /* USER CODE END GPDMA1_Channel12_IRQn 0 */
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel12);
+  /* USER CODE BEGIN GPDMA1_Channel12_IRQn 1 */
+
+  /* USER CODE END GPDMA1_Channel12_IRQn 1 */
+}
+
+/**
+  * @brief This function handles GPDMA1 Channel 13 global interrupt.
+  */
+void GPDMA1_Channel13_IRQHandler(void)
+{
+  /* USER CODE BEGIN GPDMA1_Channel13_IRQn 0 */
+
+  /* USER CODE END GPDMA1_Channel13_IRQn 0 */
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel13);
+  /* USER CODE BEGIN GPDMA1_Channel13_IRQn 1 */
+
+  /* USER CODE END GPDMA1_Channel13_IRQn 1 */
+}
+
+/**
+  * @brief This function handles GPDMA1 Channel 14 global interrupt.
+  */
+void GPDMA1_Channel14_IRQHandler(void)
+{
+  /* USER CODE BEGIN GPDMA1_Channel14_IRQn 0 */
+
+  /* USER CODE END GPDMA1_Channel14_IRQn 0 */
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel14);
+  /* USER CODE BEGIN GPDMA1_Channel14_IRQn 1 */
+
+  /* USER CODE END GPDMA1_Channel14_IRQn 1 */
+}
+
+/**
+  * @brief This function handles GPDMA1 Channel 15 global interrupt.
+  */
+void GPDMA1_Channel15_IRQHandler(void)
+{
+  /* USER CODE BEGIN GPDMA1_Channel15_IRQn 0 */
+
+  /* USER CODE END GPDMA1_Channel15_IRQn 0 */
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel15);
+  /* USER CODE BEGIN GPDMA1_Channel15_IRQn 1 */
+
+  /* USER CODE END GPDMA1_Channel15_IRQn 1 */
+}
+
+/**
+  * @brief This function handles SPI3 global interrupt.
+  */
+void SPI3_IRQHandler(void)
+{
+  /* USER CODE BEGIN SPI3_IRQn 0 */
+
+  /* USER CODE END SPI3_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi3);
+  /* USER CODE BEGIN SPI3_IRQn 1 */
+
+  /* USER CODE END SPI3_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
