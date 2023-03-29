@@ -5,7 +5,7 @@
 #endif
 
 #define ENTER_BOOTLOADER_MAGIC 0xB8278F6D
-#define BOOTLOADER_START_ADDRESS 0x1FFF0000
+#define BOOTLOADER_START_ADDRESS 0x0BF90000
 
 typedef void (*functionPointer_t)(void);
 
