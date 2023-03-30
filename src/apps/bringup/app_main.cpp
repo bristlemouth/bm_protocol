@@ -180,8 +180,6 @@ extern "C" void LPUART1_IRQHandler(void) {
 }
 #endif // DEBUG_USE_LPUART1
 
-static spiflash::W25 debugW25(&spi2, &FLASH_CS);
-
 static INA::INA232 debugIna1(&i2c1, I2C_IN_MAIN_ADDR);
 static INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
@@ -275,6 +273,7 @@ static void defaultTask( void *parameters ) {
 
   usbInit();
 
+  spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
   debugAdinRawInit();
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));

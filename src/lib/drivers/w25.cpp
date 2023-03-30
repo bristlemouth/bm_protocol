@@ -71,47 +71,54 @@ typedef enum {
 
 W25::W25(SPIInterface_t *interface, IOPinHandle_t *csPin) : AbstractSPI(interface, csPin){
     configASSERT(_interface);
+    _mutex = xSemaphoreCreateMutex();
+    configASSERT(_mutex != NULL);
 }
 /*!
  * Erase flash chip
  * \return true if success, false if fail.
 */
-bool W25::eraseChip(void) {
+bool W25::eraseChip(uint32_t timeoutMs) {
     bool retv = false;
-    uint8_t txBuff = 0;
-    /* Make sure the previous write finished */
-    do {
-        if(!readyToWrite(W25_WRITE_TIMEOUT_MS)) {
-            printf("Timeout waiting for write to complete\n");
-            break;
-        }
-        /* Enable writes */
-        txBuff = WRITE_ENABLE;
-        if(writeBytes(&txBuff, sizeof(txBuff), 10,true) != SPI_OK) {
-            printf("Error sending WREN command\n");
-            break;
-        }
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        uint8_t txBuff = 0;
+        /* Make sure the previous write finished */
+        do {
+            if(!readyToWrite(W25_WRITE_TIMEOUT_MS)) {
+                printf("Timeout waiting for write to complete\n");
+                break;
+            }
+            /* Enable writes */
+            txBuff = WRITE_ENABLE;
+            if(writeBytes(&txBuff, sizeof(txBuff), 10,true) != SPI_OK) {
+                printf("Error sending WREN command\n");
+                break;
+            }
 
-        if(!checkWEL(W25_WRITE_TIMEOUT_MS, true)) {
-            printf("Timeout waiting for write to complete\n");
-            break;
-        }
+            if(!checkWEL(W25_WRITE_TIMEOUT_MS, true)) {
+                printf("Timeout waiting for write to complete\n");
+                break;
+            }
 
-        /* Erase Chip */
-        txBuff = CHIP_ERASE;
-        if(writeBytes(&txBuff, sizeof(txBuff), 10, true) != SPI_OK) {
-            printf("Error sending Erase Chip command\n");
-            break;
-        }
+            /* Erase Chip */
+            txBuff = CHIP_ERASE;
+            if(writeBytes(&txBuff, sizeof(txBuff), 10, true) != SPI_OK) {
+                printf("Error sending Erase Chip command\n");
+                break;
+            }
 
-        /* Ensure WEL is reset */
-        if(!checkWEL(W25_CHIP_ERASE_TIMEOUT_MS, false, true)) {
-            printf("Timeout waiting for write to complete\n");
-            break;
-        }
-        retv = true;
-        printf("Successfully erased chip\n");
-    } while (!retv);
+            /* Ensure WEL is reset */
+            if(!checkWEL(W25_CHIP_ERASE_TIMEOUT_MS, false, true)) {
+                printf("Timeout waiting for write to complete\n");
+                break;
+            }
+            retv = true;
+            printf("Successfully erased chip\n");
+        } while (!retv);
+        xSemaphoreGive(_mutex);
+    } else {
+        printf("Failed to acquir W25 mutex.\n");
+    }
     return retv;
 }
 
@@ -122,7 +129,142 @@ bool W25::eraseChip(void) {
  * \param[in] len - length of data
  * \return true if success, false if fail.
 */
-bool W25::read(uint32_t addr, uint8_t *buffer, size_t len) {
+bool W25::read(uint32_t addr, uint8_t *buffer, size_t len, uint32_t timeoutMs) {
+    bool rval = false;
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        rval = _read(addr, buffer, len);
+        xSemaphoreGive(_mutex);
+    } else {
+        printf("Failed to acquire W25 mutex.\n");
+    }
+    return rval;
+}
+
+/*!
+ * Write to flash
+ * \param[in] addr - address of flash
+ * \param[in] buffer - pointer to buffer of data
+ * \param[in] len - length of data
+ * \return true if success, false if fail.
+*/
+bool W25::write(uint32_t addr, uint8_t *buffer, size_t len, uint32_t timeoutMs) {
+    bool rval = false;
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        rval = _write(addr, buffer, len);
+        xSemaphoreGive(_mutex);
+    } else {
+        printf("Failed to acquire W25 mutex.\n");
+    }
+    return rval;
+}
+
+bool W25::readyToWrite(uint32_t timeoutMs) {
+    uint32_t startTime = xTaskGetTickCount();
+    bool rval = false;
+
+    do {
+        uint8_t status;
+        if(!readStatus(status)) {
+            break;
+        }
+        rval = !(status & W25_SR1_BUSY);
+    } while((rval == false) && timeRemainingTicks(startTime, pdMS_TO_TICKS(timeoutMs)));
+    return rval;
+}
+
+bool W25::readStatus(uint8_t &status) {
+    uint8_t txBuff[3];
+    uint8_t rxBuff[3];
+
+    txBuff[0] = READ_STATUS_1;
+    bool rval = (writeReadBytes(rxBuff, sizeof(txBuff),txBuff,10,true) == SPI_OK);
+    status = rxBuff[1];
+    return rval;
+}
+
+bool W25::checkWEL(uint32_t timeoutMs, bool set, bool feedWDT) {
+    uint32_t startTime = xTaskGetTickCount();
+    bool rval = false;
+
+    do {
+        if(feedWDT){
+            watchdogFeed();
+        }
+        uint8_t status;
+        if(!readStatus(status)) {
+            break;
+        }
+
+        if (set) {
+            rval = (status & W25_SR1_WEL);
+        } else {
+            rval = !(status & W25_SR1_WEL);
+        }
+  } while((rval == false) && timeRemainingTicks(startTime, pdMS_TO_TICKS(timeoutMs)));
+  return rval;
+}
+
+/*!
+ * Erase a sector in flash.
+ * \param[in] addr - address of flash
+ * \return true if success, false if fail.
+*/
+bool W25::eraseSector(uint32_t addr, uint32_t timeoutMs) {
+    bool rval = false;
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        rval = _eraseSector(addr);
+        xSemaphoreGive(_mutex);
+    } else {
+        printf("Failed to acquire W25 mutex.\n");
+    }
+    return rval;
+}
+
+/*!
+ * Compute the crc32 checksum for segment of flash
+ * \param[in] addr - address of flash
+ * \param[in] len - length of flash to compute checksum for
+ * \param[out] crc32 - resulting crc32 (valid if return is true)
+ * \return true if success, false if fail.
+*/
+bool W25::crc32Checksum(uint32_t addr, size_t len, uint32_t &crc32, uint32_t timeoutMs) {
+    configASSERT((addr + len) < W25_MAX_ADDRESS);
+    crc32 = 0;
+    bool retval = true;
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        bool first_read = true;
+        uint32_t readlen = len;
+        uint32_t offset = 0;
+        uint32_t blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
+        uint8_t* read_buf = (uint8_t *)pvPortMalloc(blocklen);
+        configASSERT(read_buf);
+        while(readlen){
+            printf("Reading addr %lu, size %lu \n", (addr + offset), blocklen);
+            if(!_read(addr + offset, read_buf, blocklen)){
+                printf("Write failed\n");
+                retval = false;
+                break;
+            }
+            if(first_read){
+                crc32 = crc32_ieee(read_buf, blocklen);
+                first_read = false;
+            } else {
+                crc32 = crc32_ieee_update(crc32, read_buf, blocklen);
+            }
+            offset += blocklen;
+            readlen -= blocklen;
+            blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
+        }
+        vPortFree(read_buf);
+        xSemaphoreGive(_mutex);
+    } else {
+        retval = false;
+        printf("Failed to acquire W25 mutex.\n");
+    }
+    return retval;
+}
+
+bool W25::_read(uint32_t addr, uint8_t *buffer, size_t len) {
     configASSERT(buffer);
     configASSERT(((addr + len) < W25_MAX_ADDRESS));
     bool rval = false;
@@ -158,14 +300,7 @@ bool W25::read(uint32_t addr, uint8_t *buffer, size_t len) {
     return rval;
 }
 
-/*!
- * Write to flash
- * \param[in] addr - address of flash
- * \param[in] buffer - pointer to buffer of data
- * \param[in] len - length of data
- * \return true if success, false if fail.
-*/
-bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
+bool W25::_write(uint32_t addr, uint8_t *buffer, size_t len) {
     configASSERT(buffer);
     configASSERT(((addr + len) < W25_MAX_ADDRESS));
     bool rval = true;
@@ -233,7 +368,7 @@ bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
             }
         }
 
-        if(!read(currSectorAddr, sectorBuff, W25_SECTOR_SIZE)) {
+        if(!_read(currSectorAddr, sectorBuff, W25_SECTOR_SIZE)) {
             printf("Unable to read sector.\n");
             rval = false;
             break;
@@ -249,7 +384,7 @@ bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
         totalBytesRemaining -= numSectorBytesToModify;
         currAddr += numSectorBytesToModify;
         /* Erase Sector in Flash before re-writing */
-        if (!eraseSector(currSectorAddr)) {
+        if (!_eraseSector(currSectorAddr)) {
             printf("Unable to erase sector at addr: %lu\n", currSectorAddr);
             rval = false;
             break;
@@ -324,58 +459,7 @@ bool W25::write(uint32_t addr, uint8_t *buffer, size_t len) {
 
 }
 
-bool W25::readyToWrite(uint32_t timeoutMs) {
-    uint32_t startTime = xTaskGetTickCount();
-    bool rval = false;
-
-    do {
-        uint8_t status;
-        if(!readStatus(status)) {
-            break;
-        }
-        rval = !(status & W25_SR1_BUSY);
-    } while((rval == false) && timeRemainingTicks(startTime, pdMS_TO_TICKS(timeoutMs)));
-    return rval;
-}
-
-bool W25::readStatus(uint8_t &status) {
-    uint8_t txBuff[3];
-    uint8_t rxBuff[3];
-
-    txBuff[0] = READ_STATUS_1;
-    bool rval = (writeReadBytes(rxBuff, sizeof(txBuff),txBuff,10,true) == SPI_OK);
-    status = rxBuff[1];
-    return rval;
-}
-
-bool W25::checkWEL(uint32_t timeoutMs, bool set, bool feedWDT) {
-    uint32_t startTime = xTaskGetTickCount();
-    bool rval = false;
-
-    do {
-        if(feedWDT){
-            watchdogFeed();
-        }
-        uint8_t status;
-        if(!readStatus(status)) {
-            break;
-        }
-
-        if (set) {
-            rval = (status & W25_SR1_WEL);
-        } else {
-            rval = !(status & W25_SR1_WEL);
-        }
-  } while((rval == false) && timeRemainingTicks(startTime, pdMS_TO_TICKS(timeoutMs)));
-  return rval;
-}
-
-/*!
- * Erase a sector in flash.
- * \param[in] addr - address of flash
- * \return true if success, false if fail.
-*/
-bool W25::eraseSector(uint32_t addr) {
+bool W25::_eraseSector(uint32_t addr) {
     /* Ensure that address/offset is Sector Aligned */
     configASSERT((addr & W25_SECTOR_MASK) == 0);
     configASSERT(addr < W25_MAX_ADDRESS);
@@ -422,44 +506,6 @@ bool W25::eraseSector(uint32_t addr) {
     } while (!retv);
 
     return retv;
-}
-
-/*!
- * Compute the crc32 checksum for segment of flash
- * \param[in] addr - address of flash
- * \param[in] len - length of flash to compute checksum for
- * \param[out] crc32 - resulting crc32 (valid if return is true)
- * \return true if success, false if fail.
-*/
-bool W25::crc32Checksum(uint32_t addr, size_t len, uint32_t &crc32) {
-    configASSERT((addr + len) < W25_MAX_ADDRESS);
-    crc32 = 0;
-    bool retval = true;
-    bool first_read = true;
-    uint32_t readlen = len;
-    uint32_t offset = 0;
-    uint32_t blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
-    uint8_t* read_buf = (uint8_t *)pvPortMalloc(blocklen);
-    configASSERT(read_buf);
-    while(readlen){
-        printf("Reading addr %lu, size %lu \n", (addr + offset), blocklen);
-        if(!read(addr + offset, read_buf, blocklen)){
-            printf("Write failed\n");
-            retval = false;
-            break;
-        }
-        if(first_read){
-            crc32 = crc32_ieee(read_buf, blocklen);
-            first_read = false;
-        } else {
-            crc32 = crc32_ieee_update(crc32, read_buf, blocklen);
-        }
-        offset += blocklen;
-        readlen -= blocklen;
-        blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
-    }
-    vPortFree(read_buf);
-    return retval;
 }
 
 } // namespace spiflash

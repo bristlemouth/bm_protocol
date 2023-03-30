@@ -253,7 +253,7 @@ static BaseType_t w25Command( char *writeBuffer,
                     break;
                 }
             } while(0);
-            if(crc32_write == crc32_read){
+            if(crc32_write == crc32_read && crc32_write != 0){
                 printf("flash test success, crc_w:%lu, crc_r:%lu\n", crc32_write, crc32_read);
             } else {
                 printf("flash test failed, crc_w:%lu, crc_r:%lu\n", crc32_write, crc32_read);
