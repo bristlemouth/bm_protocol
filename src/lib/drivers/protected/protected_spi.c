@@ -201,6 +201,7 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
       case HAL_OK: {
         if(!notified) { // Timeout occured.
           HAL_SPI_Abort(interface->handle); // Our task notification timed out, so try to HAL_SPI_Abort just in case.
+          _dma_context.spi_task_to_wake[interface->dma_id] = NULL;
           rval = SPI_TIMEOUT;
         } else if (_dma_context.spi_dma_error_occurred[interface->dma_id]){
           rval = SPI_ERR;

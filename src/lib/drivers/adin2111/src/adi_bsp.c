@@ -101,12 +101,12 @@ void adi_bsp_hw_reset() {
 
 /* SPI transceive wrapper */
 uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nBytes, bool useDma) {
-  (void) useDma;
 
   SPIResponse_t status = SPI_OK;
 
 // TODO - make configurable spi bus instead of #defines
 #ifdef BSP_NUCLEO_U575
+  (void) useDma;
   status = spiTxRx(&spi1, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
 #else
 
@@ -122,7 +122,11 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
   for(uint32_t idx = 0; idx < nBytes; idx += 1023) {
     uint32_t bytesRemaining = nBytes - idx;
     uint32_t subNbytes = MIN(bytesRemaining, 1023);
-    status = spiTxRx(&spi3, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+    if(useDma){
+        status = spiTxRxNonblocking(&spi3, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+    } else {
+        status = spiTxRx(&spi3, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+    }
     if(status != SPI_OK) {
       break;
     }
