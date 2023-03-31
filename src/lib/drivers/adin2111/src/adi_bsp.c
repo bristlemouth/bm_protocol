@@ -29,51 +29,38 @@ static void *gpIntCBParam = NULL;
 static adi_cb_t gpfSpiCallback = NULL;
 static void *gpSpiCBParam = NULL;
 
-// static void adin_bsp_spi_thread(void *parameters);
-static void adin_bsp_gpio_thread(void *parameters);
-static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *args);
+static adi_irq_evt_t _irq_evt_cb = NULL;
 
-/* Handles for the tasks create by main(). */
-static TaskHandle_t spiTask = NULL;
-static TaskHandle_t gpioTask = NULL;
+static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args);
 
 extern adin_pins_t adin_pins;
 
-/* Thread to respond to SPI interrupts */
-static void adin_bsp_spi_thread(void *parameters) {
-  (void) parameters;
-
-  while(1) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    if (gpfSpiCallback) {
-      (*gpfSpiCallback)(gpSpiCBParam, 0, NULL);
-    } else {
-      /* No SPI Callback function assigned */
-    }
+//
+// SPI callback (called at the end of adi_bsp_spi_write_and_read())
+//
+static void adi_bsp_spi_callback() {
+  if (gpfSpiCallback) {
+    (*gpfSpiCallback)(gpSpiCBParam, 0, NULL);
+  } else {
+    /* No SPI Callback function assigned */
   }
 }
 
-/* Thread to respond to GPIO interrupts */
-static void adin_bsp_gpio_thread(void *parameters) {
-  (void) parameters;
-
-  while(1) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-#ifdef DBG1_GPIO_Port
-    LL_GPIO_SetOutputPin(DBG2_GPIO_Port, DBG2_Pin);
-#endif
-    if (gpfIntCallback) {
-      (*gpfIntCallback)(gpIntCBParam, 0, NULL);
-    } else {
-      /* No GPIO Callback function assigned */
-    }
-#ifdef DBG1_GPIO_Port
-    LL_GPIO_ResetOutputPin(DBG2_GPIO_Port, DBG2_Pin);
-#endif
+//
+// IRQ callback (called from eth_adin2111 event task)
+//
+void adi_bsp_irq_callback() {
+  if (gpfIntCallback) {
+    (*gpfIntCallback)(gpIntCBParam, 0, NULL);
+  } else {
+    /* No GPIO Callback function assigned */
   }
 }
 
-static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *args) {
+//
+// ADIN GPIO ISR callback (All calls must be ISR safe!)
+//
+static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args) {
 
   (void) args;
   (void) pinHandle;
@@ -81,14 +68,9 @@ static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *a
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-#ifdef DBG1_GPIO_Port
-  LL_GPIO_SetOutputPin(DBG1_GPIO_Port, DBG1_Pin);
-#endif
-  vTaskNotifyGiveFromISR(gpioTask, &xHigherPriorityTaskWoken);
-
-#ifdef DBG1_GPIO_Port
-  LL_GPIO_ResetOutputPin(DBG1_GPIO_Port, DBG1_Pin);
-#endif
+  if(_irq_evt_cb) {
+    _irq_evt_cb(&xHigherPriorityTaskWoken);
+  }
 
   return xHigherPriorityTaskWoken;
 }
@@ -111,6 +93,11 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
   (void) useDma;
   status = spiTxRx(adin_pins.spiInterface, adin_pins.chipSelect, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
 #else
+
+// Skip DMA for now since we haven't enabled it on this BSP
+#ifdef BSP_DEV_MOTE_HYDROPHONE
+  useDma = false;
+#endif
 
   //
   // spi3 has a limit of 1024 bytes per transaction
@@ -136,10 +123,11 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
   IOWrite(adin_pins.chipSelect, 1);
 
 #endif
+
   if (status == SPI_OK) {
-    /* Give semaphore to allow SPI Thread to call appropriate callback */
-    xTaskNotifyGive(spiTask);
+    adi_bsp_spi_callback();
   } else {
+    // TODO - handle this nicely
     configASSERT(0);
   }
 
@@ -151,25 +139,7 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
 uint32_t adi_bsp_init(void) {
 
   IOWrite(adin_pins.chipSelect, 1);
-
   adi_bsp_hw_reset();
-
-  BaseType_t rval;
-  rval = xTaskCreate(adin_bsp_spi_thread,
-             "ADIN_SPI",
-             1024,
-             NULL,
-             ADIN_SPI_TASK_PRIORITY,
-             &spiTask);
-  configASSERT(rval == pdTRUE);
-
-  rval = xTaskCreate(adin_bsp_gpio_thread,
-             "ADIN_IO",
-             1024,
-             NULL,
-             ADIN_GPIO_TASK_PRIORITY,
-             &gpioTask);
-  configASSERT(rval == pdTRUE);
 
   return 0;
 }
@@ -187,8 +157,12 @@ uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback, void *const p
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY
    interrupts */
 uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback, void * hDevice) {
-  IORegisterCallback(adin_pins.interrupt, adin_bsp_gpio_callback, NULL);
+  IORegisterCallback(adin_pins.interrupt, adin_bsp_gpio_callback_fromISR, NULL);
   gpfIntCallback = (adi_cb_t) intCallback;
   gpIntCBParam = hDevice;
   return 0;
+}
+
+void adi_bsp_register_irq_evt (adi_irq_evt_t irq_evt_cb) {
+  _irq_evt_cb = irq_evt_cb;
 }
