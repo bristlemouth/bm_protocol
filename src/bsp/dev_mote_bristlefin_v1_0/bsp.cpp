@@ -49,6 +49,7 @@ extern I2C_HandleTypeDef hi2c1;
 I2CInterface_t i2c1 = PROTECTED_I2C("I2C1", hi2c1, MX_I2C1_Init);
 
 PCA9535Device_t devMoteIOExpander = {&i2c1, 0x20, 0 , 0, 0, {NULL}, false};
+PCA9535Device_t bristlefinIOExpander = {&i2c1, 0x21, 0 , 0, 0, {NULL}, false};
 
 adin_pins_t adin_pins = {&spi3, &ADIN_CS, &ADIN_INT, &ADIN_RST};
 
@@ -65,8 +66,9 @@ void bspInit() {
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
 
-  // Initialize the IO Expander
+  // Initialize the IO Expanders
   pca9535Init(&devMoteIOExpander);
+  pca9535Init(&bristlefinIOExpander);
 
   // Turn LEDS on by default
   IOWrite(&EXP_LED_G1, 0);
