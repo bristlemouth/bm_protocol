@@ -45,6 +45,7 @@ extern IOPinHandle_t DEBUG_TX;
 extern IOPinHandle_t PAYLOAD_RX;
 extern IOPinHandle_t PAYLOAD_TX;
 
+//Dev Mote IO Expander pins
 extern IOPinHandle_t EXP_LED_G1;
 extern IOPinHandle_t EXP_LED_R1;
 extern IOPinHandle_t EXP_LED_G2;
@@ -61,6 +62,27 @@ extern IOPinHandle_t EXP_GPIO9;
 extern IOPinHandle_t EXP_GPIO10;
 extern IOPinHandle_t EXP_GPIO11;
 extern IOPinHandle_t EXP_GPIO12;
+extern IOPinHandle_t EXP_INT;
+
+// Bristlefine IO expander pins
+extern IOPinHandle_t BF_EXP_IO1;
+extern IOPinHandle_t BF_EXP_IO2;
+extern IOPinHandle_t BF_EXP_HFIO;
+extern IOPinHandle_t BF_EXP_3V3_EN;
+extern IOPinHandle_t BF_EXP_5V_EN;
+extern IOPinHandle_t BF_EXP_IMU_INT;
+extern IOPinHandle_t BF_EXP_IMU_RST;
+extern IOPinHandle_t BF_EXP_SDI12_OE;
+extern IOPinHandle_t BF_EXP_TP16;
+extern IOPinHandle_t BF_EXP_LED_G1;
+extern IOPinHandle_t BF_EXP_LED_R1;
+extern IOPinHandle_t BF_EXP_LED_G2;
+extern IOPinHandle_t BF_EXP_LED_R2;
+extern IOPinHandle_t BF_EXP_PL_BUCK_EN;
+extern IOPinHandle_t BF_EXP_LED_TP7;
+extern IOPinHandle_t BF_EXP_LED_TP8;
+extern IOPinHandle_t BF_EXP_INT;
+
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
