@@ -54,6 +54,8 @@ extern SPI_HandleTypeDef hspi2;
 SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init);
 SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init);
 
+adin_pins_t adin_pins = {&spi1, &ADIN_CS, &ADIN_RDY, &ADIN_RST};
+
 void bspInit() {
   // Switch HAL_GetTick to use freeRTOS tick
   osStarted = true;

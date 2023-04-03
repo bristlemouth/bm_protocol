@@ -37,6 +37,8 @@ static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *a
 static TaskHandle_t spiTask = NULL;
 static TaskHandle_t gpioTask = NULL;
 
+extern adin_pins_t adin_pins;
+
 /* Thread to respond to SPI interrupts */
 static void adin_bsp_spi_thread(void *parameters) {
   (void) parameters;
@@ -93,9 +95,9 @@ static bool adin_bsp_gpio_callback(const void *pinHandle, uint8_t value, void *a
 
 void adi_bsp_hw_reset() {
 
-  IOWrite(&ADIN_RST, 0);
+  IOWrite(adin_pins.reset, 0);
   vTaskDelay(pdMS_TO_TICKS(RESET_DELAY));
-  IOWrite(&ADIN_RST, 1);
+  IOWrite(adin_pins.reset, 1);
   vTaskDelay(pdMS_TO_TICKS(AFTER_RESET_DELAY));
 }
 
@@ -107,7 +109,7 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
 // TODO - make configurable spi bus instead of #defines
 #ifdef BSP_NUCLEO_U575
   (void) useDma;
-  status = spiTxRx(&spi1, &ADIN_CS, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
+  status = spiTxRx(adin_pins.spiInterface, adin_pins.chipSelect, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
 #else
 
   //
@@ -116,22 +118,22 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
   // Manually controlling CS and "emulating" larger transactions here
   //
 
-  IOWrite(&ADIN_CS, 0);
+  IOWrite(adin_pins.chipSelect, 0);
   // NOTE: We cannot send 1024 bytes, since the counter will wrap and be zero and return an error
   // Sending more than 1024 bytes will send nBuytes % 1024 then time out
   for(uint32_t idx = 0; idx < nBytes; idx += 1023) {
     uint32_t bytesRemaining = nBytes - idx;
     uint32_t subNbytes = MIN(bytesRemaining, 1023);
     if(useDma){
-        status = spiTxRxNonblocking(&spi3, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+        status = spiTxRxNonblocking(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
     } else {
-        status = spiTxRx(&spi3, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+        status = spiTxRx(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
     }
     if(status != SPI_OK) {
       break;
     }
   }
-  IOWrite(&ADIN_CS, 1);
+  IOWrite(adin_pins.chipSelect, 1);
 
 #endif
   if (status == SPI_OK) {
@@ -148,13 +150,7 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
    Falling edge on DATA_RDY pin */
 uint32_t adi_bsp_init(void) {
 
-  // Power up adin
-#ifndef BSP_NUCLEO_U575
-
-  IOWrite(&ADIN_PWR, 1);
-  vTaskDelay(10); // huge delay
-  IOWrite(&ADIN_CS, 1);
-#endif
+  IOWrite(adin_pins.chipSelect, 1);
 
   adi_bsp_hw_reset();
 
@@ -191,7 +187,7 @@ uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback, void *const p
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY
    interrupts */
 uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback, void * hDevice) {
-  IORegisterCallback(&ADIN_INT, adin_bsp_gpio_callback, NULL);
+  IORegisterCallback(adin_pins.interrupt, adin_bsp_gpio_callback, NULL);
   gpfIntCallback = (adi_cb_t) intCallback;
   gpIntCBParam = hDevice;
   return 0;

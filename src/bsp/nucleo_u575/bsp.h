@@ -37,6 +37,13 @@ extern SPIInterface_t spi2;
 uint32_t adcGetSampleMv(uint32_t channel);
 bool usb_is_connected();
 
+typedef struct adin_pins_s {
+	SPIInterface_t *spiInterface;
+	IOPinHandle_t *chipSelect;
+	IOPinHandle_t *interrupt;
+	IOPinHandle_t *reset;
+} adin_pins_t;
+
 #ifdef __cplusplus
 }
 #endif

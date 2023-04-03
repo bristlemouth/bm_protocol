@@ -73,6 +73,13 @@ extern I2CInterface_t i2c1;
 uint32_t adcGetSampleMv(uint32_t channel);
 bool usb_is_connected();
 
+typedef struct adin_pins_s {
+	SPIInterface_t *spiInterface;
+	IOPinHandle_t *chipSelect;
+	IOPinHandle_t *interrupt;
+	IOPinHandle_t *reset;
+} adin_pins_t;
+
 #define I2C_IN_MAIN_ADDR  (0x42)
 #define I2C_INA_PODL_ADDR  (0x41)
 #define NUM_INA232_DEV (2)
