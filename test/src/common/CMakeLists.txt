@@ -64,3 +64,37 @@ add_test(
   COMMAND
     lib_state_machine_tests
   )
+
+#
+# NVM Partition
+#
+add_executable(nvm_partition_tests)
+target_include_directories(nvm_partition_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${SRC_DIR}/lib/drivers/abstract
+)
+
+target_sources(nvm_partition_tests
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
+
+    # Stubs
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c    
+
+    # Unit test wrapper for test
+    nvmPartition_ut.cpp
+)
+
+target_link_libraries(nvm_partition_tests gtest gmock gtest_main)
+
+add_test(
+  NAME
+    nvm_partition_tests
+  COMMAND
+    nvm_partition_tests
+  )

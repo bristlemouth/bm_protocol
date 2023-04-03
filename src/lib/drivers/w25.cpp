@@ -40,6 +40,9 @@ namespace spiflash {
 #define W25Q80DV_CAPACITY_ID                0x14
 #define W25Q80DV_CAPACITY_KBYTES            (1024)
 
+#define W25Q64JVXGIQ_CAPCITY_BYTES          (8000000) // 8MB
+#define W25Q64JVXGIQ_ALIGNMENT_BYTES        (4096) // Sector Alignment
+
 typedef enum {
     WRITE_STATUS                = 0x01,
     PAGE_PROGRAM                = 0x02,
@@ -506,6 +509,14 @@ bool W25::_eraseSector(uint32_t addr) {
     } while (!retv);
 
     return retv;
+}
+
+uint32_t W25::getAlignmentBytes(void) {
+    return W25Q64JVXGIQ_ALIGNMENT_BYTES; 
+}
+
+uint32_t W25::getStorageSizeBytes(void) {
+    return W25Q64JVXGIQ_CAPCITY_BYTES;
 }
 
 } // namespace spiflash

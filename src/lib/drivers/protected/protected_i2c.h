@@ -5,9 +5,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-#ifndef CI_TEST
 #include "stm32u5xx.h"
-#endif // CI_TEST
 
 #define I2C_WORKAROUND 1
 
