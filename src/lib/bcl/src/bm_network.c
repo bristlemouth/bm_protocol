@@ -25,6 +25,8 @@
 #include "lwip/pbuf.h"
 #include "lwip/inet.h"
 
+#include "task_priorities.h"
+
 static bm_neighbor_table_t self_neighbor_table = {0};
 
 /* Timers */
@@ -55,20 +57,41 @@ static uint8_t network_map_idx = 0;
 /******************************* Timer Handlers *********************************************/
 /********************************************************************************************/
 
+// Callback function
+typedef struct {
+    void (*fn)(void *arg);
+    void *arg;
+} __attribute__((packed)) timerCallback_t;
+
+#define TIMER_QUEUE_SIZE 8
+static xQueueHandle timerEventQueue;
+
+static void _print_unresponsive_neighbor(void *arg) {
+    uint32_t neighbor = (uint32_t)arg;
+    printf("Neighbor on Port %u is unresponsive\n", (uint8_t)neighbor);
+}
+
 /* Used to keep track of "reachable" neighbors */
-static void neighbor_timer_handler(TimerHandle_t tmr){
-    for (int neighbor = 0; neighbor < MAX_NUM_NEIGHBORS; neighbor++) {
+static void neighbor_timer_handler(TimerHandle_t tmr) {
+    for (uint32_t neighbor = 0; neighbor < MAX_NUM_NEIGHBORS; neighbor++) {
         if ( tmr == neighbor_timers[neighbor]) {
-            printf("Neighbor on Port %d is unresponsive\n", neighbor);
-            configASSERT(xTimerStop(tmr, 10));
+            // Stop the timer
+            configASSERT(xTimerStop(tmr, 0));
+
+            // Update table
             self_neighbor_table.neighbor[neighbor].reachable = 0;
+
+            // Print message (outside timer callback context)
+            timerCallback_t callback = {_print_unresponsive_neighbor, (void*)neighbor};
+            configASSERT(xQueueSend( timerEventQueue, &callback, 0 ));
             break;
         }
     }
 }
 
-static void heartbeat_timer_handler(TimerHandle_t tmr){
-    (void) tmr;
+static void _send_heartbeat(void *arg) {
+    (void)arg;
+
     size_t cbor_len;
     struct bm_Heartbeat heartbeat_msg;
 
@@ -98,9 +121,17 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
         pbuf_free(buf);
     } while (0);
     vPortFree(output);
+}
+
+static void heartbeat_timer_handler(TimerHandle_t tmr){
+    (void) tmr;
+
+    // Send heartbeat (happens outside timer handler context)
+    timerCallback_t callback = {_send_heartbeat, NULL};
+    configASSERT(xQueueSend( timerEventQueue, &callback, 0 ));
 
     /* Re-start heartbeat timer */
-    configASSERT(xTimerStart(tmr, 10));
+    configASSERT(xTimerStart(tmr, 0));
 }
 
 /********************************************************************************************/
@@ -600,16 +631,19 @@ void bm_network_start(void) {
     send_discover_neighbors();
 }
 
-int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
+//
+// Thread to handle heartbeat timer callbacks
+// TODO - make this generic
+//
+static void bm_network_timer_thread(void *parameters) {
+    (void) parameters;
+
+    timerEventQueue = xQueueCreate(TIMER_QUEUE_SIZE, sizeof(timerCallback_t));
+    configASSERT(timerEventQueue != NULL);
+
     int tmr_id = 0;
     char timer_name[] = "neighborTmr ";
     uint8_t str_len = sizeof(timer_name)/sizeof(timer_name[0]);
-
-    /* Store relevant variables from bristlemouth.c */
-    self_addr = _self_addr;
-    pcb = _pcb;
-    port = _port;
-    netif = _netif;
 
     /* Initialize timers for all potential neighbors */
     for (int neighbor=0; neighbor < MAX_NUM_NEIGHBORS; neighbor++) {
@@ -625,5 +659,35 @@ int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port,
                                    pdTRUE, (void *) &tmr_id, heartbeat_timer_handler);
     configASSERT(heartbeat_timer);
     configASSERT(xTimerStart(heartbeat_timer, 10));
+
+    for(;;) {
+        timerCallback_t callback;
+        BaseType_t rval = xQueueReceive(timerEventQueue, &callback, portMAX_DELAY);
+        configASSERT(rval == pdTRUE);
+        if(callback.fn) {
+            callback.fn(callback.arg);
+        }
+    }
+}
+
+int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
+    /* Store relevant variables from bristlemouth.c */
+    self_addr = _self_addr;
+    pcb = _pcb;
+    port = _port;
+    netif = _netif;
+
+    // TODO - Create a single timer handler thread for project
+    // xTimer callbacks MUST NOT do any sort of sleeps/delays, so
+    // we need to handle the callbacks in a regular task context
+    BaseType_t rval = xTaskCreate(bm_network_timer_thread,
+                       "BM Net Timers",
+                       2048,
+                       NULL,
+                       BM_NETWORK_TIMER_TASK_PRIORITY,
+                       NULL);
+    configASSERT(rval == pdPASS);
+
+
     return 0;
 }
