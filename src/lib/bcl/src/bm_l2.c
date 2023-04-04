@@ -12,6 +12,9 @@
 #define NETIF_LINK_SPEED_IN_BPS     10000000
 #define ETHERNET_MTU                1500
 
+#define RX_QUEUE_LEN (16)
+#define TX_QUEUE_LEN (16)
+
 struct bm_netdev_ctx_t {
     uint8_t num_ports;
     void* device_handle;
@@ -122,7 +125,7 @@ static void bm_l2_tx_thread(void *parameters) {
                                            (tx_data.port_mask >> mask_idx) & ADIN2111_PORT_MASK, bm_l2_ctx.devices[idx].start_port_idx);
                         mask_idx += bm_l2_ctx.devices[idx].num_ports;
                         if (retv != ERR_OK) {
-                            printf("Failed to submit TX buffer to ADIN");
+                            printf("Failed to submit TX buffer to ADIN\n");
                         }
                         break;
                     case BM_NETDEV_TYPE_NONE:
@@ -240,8 +243,8 @@ err_t bm_l2_init(struct netif *netif) {
     netif->mtu = ETHERNET_MTU;
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
 
-    bm_l2_ctx.tx_queue = xQueueCreate( TX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
-    bm_l2_ctx.rx_queue = xQueueCreate( RX_QUEUE_NUM_ENTRIES, sizeof(l2_queue_element_t));
+    bm_l2_ctx.tx_queue = xQueueCreate( TX_QUEUE_LEN, sizeof(l2_queue_element_t));
+    bm_l2_ctx.rx_queue = xQueueCreate( RX_QUEUE_LEN, sizeof(l2_queue_element_t));
 
     bm_l2_ctx.tx_sem = xSemaphoreCreateMutex();
     configASSERT(bm_l2_ctx.tx_sem != NULL);

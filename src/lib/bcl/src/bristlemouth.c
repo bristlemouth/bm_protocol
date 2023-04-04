@@ -242,6 +242,7 @@ void bcl_init(SerialHandle_t* hSerial) {
 
     /* Create threads and Queues */
     bcl_rx_queue = xQueueCreate( BCL_RX_QUEUE_NUM_ENTRIES, sizeof(bcl_rx_element_t));
+    configASSERT(bcl_rx_queue);
 
     rval = xTaskCreate(bcl_rx_thread,
                        "BCL RX Thread",

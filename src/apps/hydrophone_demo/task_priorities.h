@@ -7,8 +7,7 @@
 
 #define DEFAULT_BOOT_TASK_PRIORITY  16
 
-#define ADIN_SPI_TASK_PRIORITY          15
-#define ADIN_GPIO_TASK_PRIORITY         15
+
 #define ADIN_SERVICE_TASK_PRIORITY      14
 #define L2_TX_TASK_PRIORITY             13
 #define L2_RX_TASK_PRIORITY             13

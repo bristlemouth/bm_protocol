@@ -71,6 +71,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
@@ -97,6 +98,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
+    ${SRC_DIR}/third_party/aligned_malloc
     ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
