@@ -23,14 +23,17 @@ import math
 from ipaddress import ip_address, IPv6Address
 import socket
 
+
 class BM_VERSION:
     V0 = 0
     V1 = 1
+
 
 class BM_PAYLOAD_TYPE:
     GENERIC = 0
     IEEE802154 = 1
     DFU = 2
+
 
 class BM_DFU_FRM_TYPE:
     START = 0
@@ -42,9 +45,11 @@ class BM_DFU_FRM_TYPE:
     HEARTBEAT = 6
     BEGIN_HOST = 7
 
+
 class BM_DFU_RETVAL:
     FAIL = 0
     SUCCESS = 1
+
 
 CHUNK_SIZE = 512
 
@@ -61,6 +66,7 @@ img_size = None
 img_data = None
 num_chunks = None
 
+
 def validIPv6Address(IP: str) -> str:
     try:
         if type(ip_address(IP)) is IPv6Address:
@@ -68,14 +74,15 @@ def validIPv6Address(IP: str) -> str:
     except ValueError:
         return False
 
+
 def wait_for_valid_header():
     global ser
 
     # Wait for magic number
     while True:
         if not ser is None and ser.isOpen():
-            number = struct.unpack('<I', ser.read(4))[0]
-            if (number == MAGIC_NUM):
+            number = struct.unpack("<I", ser.read(4))[0]
+            if number == MAGIC_NUM:
                 break
 
         else:
@@ -83,8 +90,9 @@ def wait_for_valid_header():
             ser.close()
             break
     # Next get length
-    payload_len = struct.unpack('<H', ser.read(2))[0]
+    payload_len = struct.unpack("<H", ser.read(2))[0]
     return payload_len
+
 
 def wait_for_ack():
     global ser
@@ -104,6 +112,7 @@ def wait_for_ack():
             break
     return 0
 
+
 def send_bm_frame(frame):
     global ser
 
@@ -113,6 +122,7 @@ def send_bm_frame(frame):
         print("Could not open Serial Port")
         ser.close()
 
+
 # DFU Payload
 DFU_PAYLOAD_HEADER = namedtuple(
     "DFU_PAYLOAD_HEADER",
@@ -120,6 +130,7 @@ DFU_PAYLOAD_HEADER = namedtuple(
 )
 # https://docs.python.org/3/library/struct.html#format-characters
 DFU_PAYLOAD_STRUCT = "<LHB8LH"
+
 
 def send_dfu_payload(chunk_num):
     global img_size
@@ -147,13 +158,15 @@ def send_dfu_payload(chunk_num):
         dst_addr[1],
         dst_addr[2],
         dst_addr[3],
-        payload_len)
+        payload_len,
+    )
     payload = struct.pack(DFU_PAYLOAD_STRUCT, *header)
     payload += bytearray(
         img_data[(chunk_num * CHUNK_SIZE) : ((chunk_num * CHUNK_SIZE) + payload_len)]
     )
 
     send_bm_frame(payload)
+
 
 # DFU Payload
 DFU_REQ_HEADER = namedtuple(
@@ -193,6 +206,7 @@ def send_dfu_request(img_crc, major_ver, minor_ver):
 
     send_bm_frame(payload)
 
+
 def main(cwd, args):
     global ser
     global num_chunks
@@ -202,7 +216,7 @@ def main(cwd, args):
 
     print("Attempting to update Downstream client device")
 
-    abs_path = cwd + "/" + args.image
+    abs_path = os.path.realpath(args.image)
 
     if not os.path.exists(abs_path):
         print("File does not exist")
@@ -225,7 +239,7 @@ def main(cwd, args):
 
     if validIPv6Address(args.dst):
         dst_addr_raw = args.dst
-        binaryIP = socket.inet_pton(socket.AF_INET6, dst_addr_raw);
+        binaryIP = socket.inet_pton(socket.AF_INET6, dst_addr_raw)
         dst_addr[0] = int.from_bytes(binaryIP[0:4], "little")
         dst_addr[1] = int.from_bytes(binaryIP[4:8], "little")
         dst_addr[2] = int.from_bytes(binaryIP[8:12], "little")
@@ -289,7 +303,9 @@ def parse_args():
         "-p", "--port", dest="port", required=True, help="Absolute path to Port"
     )
 
-    parser.add_argument("-b", "--baud", dest="baud", required=False, help="Baudrate", default=921600)
+    parser.add_argument(
+        "-b", "--baud", dest="baud", required=False, help="Baudrate", default=921600
+    )
 
     parser.add_argument(
         "--ip", dest="dst", required=True, help="Destination IP Address"
@@ -302,6 +318,7 @@ def parse_args():
         "--minor", dest="minor_ver", required=True, help="Minor Version of BM Image"
     )
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     cwd = os.getcwd()

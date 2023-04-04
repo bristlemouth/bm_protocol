@@ -50,6 +50,8 @@ bool bm_pubsub_subscribe(bm_sub_t* sub) {
                     retv = false;
                     break;
                 }
+
+                memset(ptr->next, 0x00, sizeof(bm_sub_node_t));
                 ptr->next->sub.topic = (char *) pvPortMalloc(sub->topic_len);
                 if(!ptr->next->sub.topic){
                     vPortFree(ptr->next);

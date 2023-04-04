@@ -179,6 +179,26 @@ extern "C" int main(void) {
   while (1){};
 }
 
+void buttonTopicSubscription(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+    if (strncmp("button", topic, topic_len) == 0) {
+        if (strncmp("on", data, data_len) == 0) {
+#if BSP_DEV_MOTE_HYDROPHONE
+            IOWrite(&EXP_LED_R1, LED_ON);
+#else
+            IOWrite(&LED_BLUE, LED_ON);
+#endif
+        } else if (strncmp("off", data, data_len) == 0) {
+#if BSP_DEV_MOTE_HYDROPHONE
+            IOWrite(&EXP_LED_R1, LED_OFF);
+#else
+            IOWrite(&LED_BLUE, LED_OFF);
+#endif
+        } else {
+            // Not handled
+        }
+    }
+}
+
 bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
   (void)pinHandle;
   (void)args;
@@ -262,6 +282,7 @@ static void defaultTask( void *parameters ) {
 
 bm_pub_t hydroDbPub;
 bm_pub_t hydroStreamPub;
+const char buttonTopic[] = "button";
 const char hydroDbTopic[] = "hydrophone/db";
 const char hydroStreamTopic[] = "hydrophone/stream";
 const char hydroStreamEnableTopic[] = "hydrophone/stream/enable";
@@ -450,6 +471,11 @@ static void hydrophoneTask( void *parameters ) {
     sub.cb = streamEnable;
     bm_pubsub_subscribe(&sub);
 
+    sub.topic = const_cast<char *>(buttonTopic);
+    sub.topic_len = sizeof(buttonTopic) - 1;
+    sub.cb = buttonTopicSubscription;
+    bm_pubsub_subscribe(&sub);
+
     while(1) {
       // "sample long time"
       micSample(50000, processMicSamples, NULL);
@@ -489,6 +515,11 @@ static void hydrophoneTask( void *parameters ) {
     sub.topic = const_cast<char *>(alarmTriggerTopic);
     sub.topic_len = sizeof(alarmTriggerTopic) - 1;
     sub.cb = alarmTriggerCb;
+    bm_pubsub_subscribe(&sub);
+
+    sub.topic = const_cast<char *>(buttonTopic);
+    sub.topic_len = sizeof(buttonTopic) - 1;
+    sub.cb = buttonTopicSubscription;
     bm_pubsub_subscribe(&sub);
 
     while(1) {

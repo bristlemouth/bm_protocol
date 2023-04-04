@@ -164,7 +164,7 @@ extern "C" int main(void) {
     while (1){};
 }
 
-const char topic[] = "button";
+const char buttonTopic[] = "button";
 const char on_str[] = "on";
 const char off_str[] = "off";
 
@@ -175,8 +175,8 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     bm_pub_t publication;
 
 
-    publication.topic = const_cast<char *>(topic);
-    publication.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
+    publication.topic = const_cast<char *>(buttonTopic);
+    publication.topic_len = sizeof(buttonTopic) - 1; // Don't care about Null terminator
 
     if(value) {
         publication.data = const_cast<char *>(on_str);
@@ -194,11 +194,9 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", data, data_len) == 0) {
-            IOWrite(&LED_BLUE, LED_OFF);
-            IOWrite(&ALARM_OUT, 0);
-        } else if (strncmp("off", data, data_len) == 0) {
             IOWrite(&LED_BLUE, LED_ON);
-            IOWrite(&ALARM_OUT, 1);
+        } else if (strncmp("off", data, data_len) == 0) {
+            IOWrite(&LED_BLUE, LED_OFF);
         } else {
             // Not handled
         }
@@ -264,7 +262,7 @@ static void defaultTask( void *parameters ) {
     bcl_init(dfuSerial);
 
     IOWrite(&ALARM_OUT, 1);
-    IOWrite(&LED_BLUE, LED_ON);
+    IOWrite(&LED_BLUE, LED_OFF);
 #ifdef BSP_DEV_MOTE_V1_0
     IOWrite(&EXP_LED_G2, LED_OFF);
     IOWrite(&EXP_LED_R1, LED_OFF);
@@ -272,8 +270,8 @@ static void defaultTask( void *parameters ) {
 
     bm_sub_t subscription;
 
-    subscription.topic = const_cast<char *>(topic);
-    subscription.topic_len = sizeof(topic) - 1; // Don't care about Null terminator
+    subscription.topic = const_cast<char *>(buttonTopic);
+    subscription.topic_len = sizeof(buttonTopic) - 1; // Don't care about Null terminator
     subscription.cb = handle_sensor_subscriptions;
     bm_pubsub_subscribe(&subscription);
 
