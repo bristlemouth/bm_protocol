@@ -2,12 +2,6 @@
 
 #include "bm_dfu.h"
 
-// Includes for FreeRTOS
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "timers.h"
-#include "semphr.h"
-
 #ifdef __cplusplus
 extern "C"
 {

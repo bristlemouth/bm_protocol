@@ -1,18 +1,20 @@
 #include <string.h>
-#include "bristlemouth.h"
+
+#include "FreeRTOS.h"
+#include "semphr.h"
+
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
-#include "bm_util.h"
 #include "bm_ports.h"
+#include "bm_util.h"
+#include "bristlemouth.h"
+#include "bsp.h"
 #include "lib_state_machine.h"
+#include "lwip/pbuf.h"
+#include "safe_udp.h"
 #include "serial.h"
 #include "task_priorities.h"
-#include "bsp.h"
-
-#include "semphr.h"
-
-#include "lwip/pbuf.h"
 
 typedef struct dfu_core_ctx_t {
     SerialHandle_t *hSerial;
@@ -529,7 +531,7 @@ void bm_dfu_send_ack(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, bm
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &ack_evt, sizeof(ack_evt));
 
-        udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
+        safe_udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
         pbuf_free(buf);
     } else if (dev_type == BM_DESKTOP) {
         uint8_t* ser_buf = (uint8_t *) pvPortMalloc(sizeof(bm_dfu_serial_header_t) + payload_len);
@@ -582,7 +584,7 @@ void bm_dfu_req_next_chunk(uint8_t dev_type, ip6_addr_t* dst_addr, uint16_t chun
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &chunk_req_evt, sizeof(chunk_req_evt));
 
-        udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
+        safe_udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
         pbuf_free(buf);
     } else if (dev_type == BM_DESKTOP) {
         uint8_t* ser_buf = (uint8_t *) pvPortMalloc(sizeof(bm_dfu_serial_header_t) + payload_len);
@@ -636,7 +638,7 @@ void bm_dfu_update_end(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, 
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &update_end_evt, sizeof(update_end_evt));
 
-        udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
+        safe_udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
         pbuf_free(buf);
     } else if (dev_type == BM_DESKTOP) {
         uint8_t* ser_buf = (uint8_t *) pvPortMalloc(sizeof(bm_dfu_serial_header_t) + payload_len);
@@ -683,7 +685,7 @@ void bm_dfu_send_heartbeat(ip6_addr_t* dst_addr) {
     bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
     memcpy(&header[1], &heartbeat_evt, sizeof(heartbeat_evt));
 
-    udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
+    safe_udp_sendto_if(dfu_ctx.pcb, buf, &multicast_global_addr, dfu_ctx.port, dfu_ctx.netif);
     pbuf_free(buf);
 }
 

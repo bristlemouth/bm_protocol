@@ -1,15 +1,16 @@
 #include <string.h>
 #include "FreeRTOS.h"
+#include "bm_ports.h"
+#include "bm_pubsub.h"
+#include "bm_util.h"
+#include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "lwip/pbuf.h"
 #include "lwip/udp.h"
-#include "lwip/inet.h"
 #include "middleware.h"
+#include "safe_udp.h"
 #include "semphr.h"
 #include "task_priorities.h"
-#include "bm_util.h"
-#include "bm_pubsub.h"
-#include "bm_ports.h"
 
 #define NET_QUEUE_LEN 64
 
@@ -67,7 +68,7 @@ void bm_middleware_init(struct netif* netif, uint16_t port) {
 */
 int32_t middleware_net_tx(struct pbuf *pbuf) {
   // TODO - Do we always send global multicast or link local?
-  return udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, _ctx.port, _ctx.netif);
+  return safe_udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, _ctx.port, _ctx.netif);
 }
 
 /*!

@@ -3,6 +3,7 @@
 #include "bm_dfu.h"
 #include "bm_dfu_host.h"
 #include "bm_util.h"
+#include "safe_udp.h"
 
 typedef struct dfu_host_ctx_t {
     QueueHandle_t dfu_event_queue;
@@ -109,7 +110,7 @@ static void bm_dfu_host_req_update(bool self_update) {
         bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
         memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
 
-        udp_sendto_if(host_ctx.pcb, buf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
+        safe_udp_sendto_if(host_ctx.pcb, buf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
         pbuf_free(buf);
     }
 }
@@ -129,7 +130,7 @@ static void bm_dfu_host_send_chunk(void) {
     memcpy(chunk_evt->addresses.src_addr, host_ctx.self_addr.addr, sizeof(host_ctx.self_addr.addr));
     memcpy(chunk_evt->addresses.dst_addr, host_ctx.client_addr.addr, sizeof(host_ctx.client_addr.addr));
 
-    udp_sendto_if(host_ctx.pcb, evt.pbuf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
+    safe_udp_sendto_if(host_ctx.pcb, evt.pbuf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
 }
 
 /**

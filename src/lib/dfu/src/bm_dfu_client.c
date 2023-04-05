@@ -1,14 +1,20 @@
+// Includes for FreeRTOS
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "timers.h"
+#include "semphr.h"
+
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_util.h"
-
-#include "stm32_flash.h"
-#include "reset_reason.h"
-#include "sysflash/sysflash.h"
 #include "bootutil/bootutil_public.h"
 #include "bootutil/image.h"
-#include "flash_map_backend/flash_map_backend.h"
 #include "crc.h"
+#include "flash_map_backend/flash_map_backend.h"
+#include "reset_reason.h"
+#include "safe_udp.h"
+#include "stm32_flash.h"
+#include "sysflash/sysflash.h"
 
 typedef struct dfu_client_ctx_t {
     QueueHandle_t dfu_event_queue;
@@ -62,7 +68,7 @@ static void bm_dfu_client_abort(void) {
     bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf->payload;
     evtPtr->type = BM_DFU_ABORT;
 
-    udp_sendto_if(client_ctx.pcb, buf, &multicast_global_addr, client_ctx.port, client_ctx.netif);
+    safe_udp_sendto_if(client_ctx.pcb, buf, &multicast_global_addr, client_ctx.port, client_ctx.netif);
     pbuf_free(buf);
 }
 
