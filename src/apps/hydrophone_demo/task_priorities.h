@@ -9,8 +9,7 @@
 
 
 #define ADIN_SERVICE_TASK_PRIORITY      14
-#define L2_TX_TASK_PRIORITY             13
-#define L2_RX_TASK_PRIORITY             13
+#define BM_L2_TX_TASK_PRIORITY          13
 #define BM_DFU_NODE_TASK_PRIORITY       12
 #define BM_DFU_DESKTOP_TASK_PRIORITY    12
 #define BM_DFU_EVENT_TASK_PRIORITY      11
