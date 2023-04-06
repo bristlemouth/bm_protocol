@@ -75,6 +75,10 @@ void bspInit() {
   IOWrite(&EXP_LED_R1, 0);
   IOWrite(&EXP_LED_G2, 0);
   IOWrite(&EXP_LED_R2, 0);
+  IOWrite(&BF_EXP_LED_G1, 0);
+  IOWrite(&BF_EXP_LED_R1, 0);
+  IOWrite(&BF_EXP_LED_G2, 0);
+  IOWrite(&BF_EXP_LED_R2, 0);
 
   IOConfigure(&EXP_LED_G1, NULL);
   IOConfigure(&EXP_LED_R1, NULL);
@@ -92,6 +96,24 @@ void bspInit() {
   IOConfigure(&EXP_GPIO10, NULL);
   IOConfigure(&EXP_GPIO11, NULL);
   IOConfigure(&EXP_GPIO12, NULL);
+  IOConfigure(&EXP_INT, NULL);
+  IOConfigure(&BF_EXP_LED_G1, NULL);
+  IOConfigure(&BF_EXP_LED_R1, NULL);
+  IOConfigure(&BF_EXP_LED_G2, NULL);
+  IOConfigure(&BF_EXP_LED_R2, NULL);
+  IOConfigure(&BF_EXP_IO1, NULL);
+  IOConfigure(&BF_EXP_IO2, NULL);
+  IOConfigure(&BF_EXP_HFIO, NULL);
+  IOConfigure(&BF_EXP_3V3_EN, NULL);
+  IOConfigure(&BF_EXP_5V_EN, NULL);
+  IOConfigure(&BF_EXP_IMU_INT, NULL);
+  IOConfigure(&BF_EXP_IMU_RST, NULL);
+  IOConfigure(&BF_EXP_SDI12_OE, NULL);
+  IOConfigure(&BF_EXP_TP16, NULL);
+  IOConfigure(&BF_EXP_PL_BUCK_EN, NULL);
+  IOConfigure(&BF_EXP_TP7, NULL);
+  IOConfigure(&BF_EXP_TP8, NULL);
+  IOConfigure(&BF_EXP_INT, NULL);
 
 }
 

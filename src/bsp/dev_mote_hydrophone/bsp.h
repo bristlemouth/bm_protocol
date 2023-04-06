@@ -61,6 +61,7 @@ extern IOPinHandle_t EXP_GPIO9;
 extern IOPinHandle_t EXP_GPIO10;
 extern IOPinHandle_t EXP_GPIO11;
 extern IOPinHandle_t EXP_GPIO12;
+extern IOPinHandle_t EXP_INT;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;

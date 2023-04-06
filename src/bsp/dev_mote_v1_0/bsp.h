@@ -61,6 +61,7 @@ extern IOPinHandle_t EXP_GPIO9;
 extern IOPinHandle_t EXP_GPIO10;
 extern IOPinHandle_t EXP_GPIO11;
 extern IOPinHandle_t EXP_GPIO12;
+extern IOPinHandle_t EXP_INT;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
@@ -80,7 +81,7 @@ typedef struct adin_pins_s {
 	IOPinHandle_t *reset;
 } adin_pins_t;
 
-#define I2C_IN_MAIN_ADDR  (0x42)
+#define I2C_INA_MAIN_ADDR  (0x42)
 #define I2C_INA_PODL_ADDR  (0x41)
 #define NUM_INA232_DEV (2)
 

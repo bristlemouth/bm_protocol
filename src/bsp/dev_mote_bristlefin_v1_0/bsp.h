@@ -1,6 +1,6 @@
 #pragma once
 
-#define BSP_NAME "dev_mote_v1_0"
+#define BSP_NAME "dev_mote_bristlefin_v1_0"
 
 #include "main.h"
 #include "stm32u5xx.h"
@@ -79,8 +79,8 @@ extern IOPinHandle_t BF_EXP_LED_R1;
 extern IOPinHandle_t BF_EXP_LED_G2;
 extern IOPinHandle_t BF_EXP_LED_R2;
 extern IOPinHandle_t BF_EXP_PL_BUCK_EN;
-extern IOPinHandle_t BF_EXP_LED_TP7;
-extern IOPinHandle_t BF_EXP_LED_TP8;
+extern IOPinHandle_t BF_EXP_TP7;
+extern IOPinHandle_t BF_EXP_TP8;
 extern IOPinHandle_t BF_EXP_INT;
 
 
@@ -102,9 +102,12 @@ typedef struct adin_pins_s {
 	IOPinHandle_t *reset;
 } adin_pins_t;
 
-#define I2C_IN_MAIN_ADDR  (0x42)
+#define I2C_INA_BF_ADDR (0x43)
+#define I2C_INA_MAIN_ADDR  (0x42)
 #define I2C_INA_PODL_ADDR  (0x41)
-#define NUM_INA232_DEV (2)
+#define NUM_INA232_DEV (3)
+
+#define MS5083_ADDR (0x76)
 
 #ifdef __cplusplus
 }

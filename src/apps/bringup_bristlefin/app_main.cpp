@@ -40,6 +40,7 @@
 #include "io.h"
 #include "lpm.h"
 #include "memfault_platform_core.h"
+#include "ms5803.h"
 #include "pca9535.h"
 #include "serial.h"
 #include "serial_console.h"
@@ -166,6 +167,23 @@ static const DebugGpio_t debugGpioPins[] = {
   {"exp_gpio10", &EXP_GPIO10, GPIO_OUT},
   {"exp_gpio11", &EXP_GPIO11, GPIO_OUT},
   {"exp_gpio12", &EXP_GPIO12, GPIO_OUT},
+  {"bf_exp_io1", &BF_EXP_IO1, GPIO_OUT},
+  {"bf_exp_io2", &BF_EXP_IO2, GPIO_OUT},
+  {"bf_exp_hfio", &BF_EXP_HFIO, GPIO_OUT},
+  {"bf_exp_3v3_en", &BF_EXP_3V3_EN, GPIO_OUT},
+  {"bf_exp_5v_en", &BF_EXP_5V_EN, GPIO_OUT},
+  {"bf_exp_imu_int", &BF_EXP_IMU_INT, GPIO_OUT},
+  {"bf_exp_imu_rst", &BF_EXP_IMU_RST, GPIO_OUT},
+  {"bf_exp_sdi12_oe", &BF_EXP_SDI12_OE, GPIO_OUT},
+  {"bf_exp_tp16", &BF_EXP_TP16, GPIO_OUT},
+  {"bf_exp_led_g1", &BF_EXP_LED_G1, GPIO_OUT},
+  {"bf_exp_led_r1", &BF_EXP_LED_R1, GPIO_OUT},
+  {"bf_exp_led_g2", &BF_EXP_LED_G2, GPIO_OUT},
+  {"bf_exp_led_r2", &BF_EXP_LED_R2, GPIO_OUT},
+  {"bf_exp_pl_buck_en", &BF_EXP_PL_BUCK_EN, GPIO_OUT},
+  {"bf_exp_tp7", &BF_EXP_TP7, GPIO_OUT},
+  {"bf_exp_tp8", &BF_EXP_TP8, GPIO_OUT},
+  {"bf_exp_int", &BF_EXP_INT, GPIO_OUT},
 };
 
 #ifndef DEBUG_USE_USART1
@@ -182,12 +200,16 @@ extern "C" void LPUART1_IRQHandler(void) {
 
 static INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
 static INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
+static INA::INA232 debugIna3(&i2c1, I2C_INA_BF_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
   &debugIna2,
+  &debugIna3,
 };
 
-static HTU21D debugHTU(&i2c1);
+// TODO - When I2C mux is implemented we will need to make sure we have
+//        the right channel selected
+static MS5803 debugPressure(&i2c1, MS5083_ADDR);
 
 extern "C" int main(void) {
 
@@ -274,7 +296,6 @@ static void defaultTask( void *parameters ) {
 #ifndef DEBUG_USE_USART1
   debugMemfaultInit(&usart1);
 #endif // DEBUG_USE_USART1
-  debugHtu21dInit(&debugHTU);
 
 #ifdef USE_BOOTLOADER
   mcubootCliInit();

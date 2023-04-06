@@ -90,6 +90,7 @@ void bspInit() {
   IOConfigure(&EXP_GPIO10, NULL);
   IOConfigure(&EXP_GPIO11, NULL);
   IOConfigure(&EXP_GPIO12, NULL);
+  IOConfigure(&EXP_INT, NULL);
 
 }
 
