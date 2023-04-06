@@ -1,0 +1,32 @@
+#include "external_flash_partitions.h"
+#include <stdlib.h>
+
+#define SECTOR_BUFFER_BYTES                   (4096)
+
+#define HARDWARE_CONFIG_FLASH_OFFSET_BYTES    (0)
+#define HARDWARE_CONFIG_FLASH_SIZE_BYTES      (256 * 1024)
+#define HARDWARE_CONFIG_FLASH_END_BYTES       (HARDWARE_CONFIG_FLASH_OFFSET_BYTES + HARDWARE_CONFIG_FLASH_SIZE_BYTES)
+
+#define SYSTEM_CONFIG_FLASH_OFFSET_BYTES      (HARDWARE_CONFIG_FLASH_END_BYTES + SECTOR_BUFFER_BYTES)
+#define SYSTEM_CONFIG_FLASH_SIZE_BYTES        (256 * 1024)
+#define SYSTEM_CONFIG_FLASH_END_BYTES         (SYSTEM_CONFIG_FLASH_OFFSET_BYTES + SYSTEM_CONFIG_FLASH_SIZE_BYTES)
+_Static_assert((SYSTEM_CONFIG_FLASH_OFFSET_BYTES >= HARDWARE_CONFIG_FLASH_END_BYTES), "Invalid flash range");
+
+#define USER_CONFIG_FLASH_OFFSET_BYTES        (SYSTEM_CONFIG_FLASH_END_BYTES + SECTOR_BUFFER_BYTES)
+#define USER_CONFIG_FLASH_SIZE_BYTES          (256 * 1024)
+_Static_assert((USER_CONFIG_FLASH_OFFSET_BYTES >= SYSTEM_CONFIG_FLASH_END_BYTES), "Invalid flash range");
+
+const ext_flash_partition_t hardware_configuration = {
+    .fa_off = HARDWARE_CONFIG_FLASH_OFFSET_BYTES,
+    .fa_size = HARDWARE_CONFIG_FLASH_SIZE_BYTES,
+};
+
+const ext_flash_partition_t system_configuration = {
+    .fa_off = SYSTEM_CONFIG_FLASH_OFFSET_BYTES,
+    .fa_size = SYSTEM_CONFIG_FLASH_SIZE_BYTES,
+};
+
+const ext_flash_partition_t user_configuration = {
+    .fa_off = USER_CONFIG_FLASH_OFFSET_BYTES,
+    .fa_size = USER_CONFIG_FLASH_SIZE_BYTES,
+};

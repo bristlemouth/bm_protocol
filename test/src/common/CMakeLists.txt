@@ -76,6 +76,7 @@ target_include_directories(nvm_partition_tests
     ${TEST_DIR}/mocks
     ${SRC_DIR}/third_party/FreeRTOS/Source/include
     ${SRC_DIR}/lib/drivers/abstract
+    ${SRC_DIR}/lib/sys
 )
 
 target_sources(nvm_partition_tests

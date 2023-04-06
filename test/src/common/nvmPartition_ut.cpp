@@ -37,6 +37,10 @@ class NvmPartitionTest : public ::testing::Test {
 
 TEST_F(NvmPartitionTest, BasicTest)
 {
+  const ext_flash_partition_t test_configuration = {
+      .fa_off = 4096,
+      .fa_size = 2000,
+  };
   MockStorageDriver _storage;
   EXPECT_CALL(_storage, getAlignmentBytes())
     .Times(1)
@@ -44,7 +48,7 @@ TEST_F(NvmPartitionTest, BasicTest)
   EXPECT_CALL(_storage, getStorageSizeBytes())
     .Times(1)
     .WillRepeatedly(Return(8000000));
-  NvmPartition testPartition(_storage, 4096, 2000);
+  NvmPartition testPartition(_storage, test_configuration);
   EXPECT_CALL(_storage, write)
     .Times(1)
     .WillRepeatedly(Return(true));
@@ -58,6 +62,14 @@ TEST_F(NvmPartitionTest, BasicTest)
 
 TEST_F(NvmPartitionTest, BadInit)
 {
+  const ext_flash_partition_t bad_test_configuration_a = {
+      .fa_off = 201,
+      .fa_size = 2000,
+  };
+  const ext_flash_partition_t bad_test_configuration_b = {
+      .fa_off = 201,
+      .fa_size = 2000,
+  };
   MockStorageDriver _storage;
   EXPECT_CALL(_storage, getAlignmentBytes())
     .Times(AtLeast(0))
@@ -65,6 +77,6 @@ TEST_F(NvmPartitionTest, BadInit)
   EXPECT_CALL(_storage, getStorageSizeBytes())
     .Times(AtLeast(0))
     .WillRepeatedly(Return(8000000));
-  EXPECT_DEATH(NvmPartition testPartition(_storage, 201, 2000),"");
-  EXPECT_DEATH(NvmPartition testPartition(_storage, 4096, 8000001),"");
+  EXPECT_DEATH(NvmPartition testPartition(_storage, bad_test_configuration_a),"");
+  EXPECT_DEATH(NvmPartition testPartition(_storage, bad_test_configuration_b),"");
 }
