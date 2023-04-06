@@ -24,6 +24,7 @@
 
 #include "lwip/pbuf.h"
 #include "lwip/inet.h"
+#include "safe_udp.h"
 
 #include "task_priorities.h"
 
@@ -117,7 +118,7 @@ static void _send_heartbeat(void *arg) {
         configASSERT(buf);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
         pbuf_free(buf);
     } while (0);
     vPortFree(output);
@@ -182,7 +183,7 @@ static void send_discover_neighbors(void)
         struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
         pbuf_free(buf);
     } while(0);
     vPortFree(output);
@@ -215,7 +216,7 @@ static void send_ack(uint32_t * addr) {
         struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_ll_addr, port, netif);
         pbuf_free(buf);
     } while(0);
     vPortFree(output);
@@ -300,7 +301,7 @@ void bm_network_process_table_request(uint32_t* addr) {
         struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
         pbuf_free(buf);
     } while (0);
     vPortFree(output);
@@ -424,7 +425,7 @@ void bm_network_request_neighbor_tables(void) {
         struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, cbor_len + sizeof(msg_hdr), PBUF_RAM);
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], output, cbor_len);
-        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
         pbuf_free(buf);
     } while(0);
     vPortFree(output);
@@ -511,7 +512,7 @@ void bm_network_request_fw_info(const ip_addr_t *addr) {
     configASSERT(buf);
     memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
 
-    if(udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif) == ERR_OK) {
+    if(safe_udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif) == ERR_OK) {
         ip_addr_copy(info_addr, *addr);
     }
     pbuf_free(buf);
@@ -557,7 +558,7 @@ void bm_network_send_fw_info(const ip_addr_t * addr) {
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], payload, payload_len);
 
-        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
         pbuf_free(buf);
     } while(0);
     vPortFree(payload);
@@ -582,7 +583,7 @@ void bm_network_request_caps(void) {
     configASSERT(buf);
     memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
 
-    udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+    safe_udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
     pbuf_free(buf);
 }
 
@@ -617,7 +618,7 @@ void bm_network_send_caps(const ip_addr_t * addr) {
         memcpy(buf->payload, &msg_hdr, sizeof(msg_hdr));
         memcpy(&((uint8_t *)(buf->payload))[sizeof(msg_hdr)], payload, payload_len);
 
-        udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
+        safe_udp_sendto_if(pcb, buf, &multicast_global_addr, port, netif);
         pbuf_free(buf);
     } while(0);
     vPortFree(payload);

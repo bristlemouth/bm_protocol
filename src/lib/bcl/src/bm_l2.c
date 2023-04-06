@@ -98,7 +98,9 @@ static void bm_l2_rx_thread(void *parameters) {
                packet to net_if->input() if unnecessary, as well as forwarding routed multicast data to interested
                neighbors and user devices. */
 
-            /* Submit packet to lwip. User RX Callback is responsible for freeing the packet*/
+            // Submit packet to lwip. User RX Callback is responsible for freeing the packet
+            // We're using tcpip_input in the netif, which is thread safe, so no
+            // need for additional locking
             if (bm_l2_ctx.net_if->input(rx_data.pbuf, bm_l2_ctx.net_if) != ERR_OK) {
                 pbuf_free(rx_data.pbuf);
             }
