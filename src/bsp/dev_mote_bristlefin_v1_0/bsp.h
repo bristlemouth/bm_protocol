@@ -107,7 +107,12 @@ typedef struct adin_pins_s {
 #define I2C_INA_PODL_ADDR  (0x41)
 #define NUM_INA232_DEV (3)
 
-#define MS5083_ADDR (0x76)
+#define MS5803_ADDR (0x76)
+
+// This will be a GPIO coming from the dev mote through the mezzanine
+// to the bristlefin board
+#define TCA9546A_RST GPIO1
+#define TCA9546A_ADDR (0x70)
 
 #ifdef __cplusplus
 }

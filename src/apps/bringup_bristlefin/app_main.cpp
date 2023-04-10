@@ -32,6 +32,7 @@
 #include "debug_memfault.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
+#include "debug_tca9546a.h"
 #include "debug_uart.h"
 #include "debug_w25.h"
 #include "gpioISR.h"
@@ -41,6 +42,7 @@
 #include "lpm.h"
 #include "memfault_platform_core.h"
 #include "ms5803.h"
+#include "tca9546a.h"
 #include "pca9535.h"
 #include "serial.h"
 #include "serial_console.h"
@@ -207,9 +209,9 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna3,
 };
 
-// TODO - When I2C mux is implemented we will need to make sure we have
-//        the right channel selected
-static MS5803 debugPressure(&i2c1, MS5083_ADDR);
+static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &TCA9546A_RST);
+
+static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 
 extern "C" int main(void) {
 
@@ -284,6 +286,12 @@ static void defaultTask( void *parameters ) {
   bspInit();
 
   usbInit();
+
+  if(bristlefinTCA.init()){
+    bristlefinTCA.setChannel(TCA::CH_1);
+  }
+
+  debugTCA9546AInit(&bristlefinTCA);
 
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();

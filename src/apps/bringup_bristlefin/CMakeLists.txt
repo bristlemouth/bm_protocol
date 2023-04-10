@@ -45,6 +45,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/debug/debug_uart.c
+    ${SRC_DIR}/lib/debug/debug_tca9546a.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
@@ -63,6 +64,7 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/drivers/mic.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
+    ${SRC_DIR}/lib/drivers/tca9546a.cpp
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
