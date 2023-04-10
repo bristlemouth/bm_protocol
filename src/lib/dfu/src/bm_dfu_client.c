@@ -466,12 +466,12 @@ void s_client_activating_entry(void)
  * @param sock    Socket from DFU Core
  * @return none
  */
-void bm_dfu_client_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif)
+void bm_dfu_client_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif)
 {
     int32_t tmr_id = 0;
 
     /* Store relevant variables */
-    client_ctx.self_addr = _self_addr;
+    client_ctx.self_addr = *netif_ip6_addr(_netif, 0);
     client_ctx.pcb = _pcb;
     client_ctx.port = _port;
     client_ctx.netif = _netif;

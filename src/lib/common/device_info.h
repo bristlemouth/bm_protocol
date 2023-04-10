@@ -12,6 +12,7 @@ const versionInfo_t *findVersionInfo(uint32_t addr, uint32_t len);
 
 bool fwIsEng(const versionInfo_t *info);
 bool fwIsDirty(const versionInfo_t *info);
+const uint32_t* getUID();
 const char * getUIDStr();
 const char * getFWVersionStr();
 uint32_t getGitSHA();

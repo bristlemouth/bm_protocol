@@ -230,6 +230,7 @@ static void defaultTask( void *parameters ) {
 #ifndef BSP_DEV_MOTE_V1_0
     } else {
       startSerialConsole(&usart1);
+      serialEnable(&usart1);
 
 #if BM_DFU_HOST
       printf("WARNING: USB must be connected to use DFU mode. This serial port will be used by the serial console instead.\n");
@@ -240,7 +241,7 @@ static void defaultTask( void *parameters ) {
 #endif // BSP_DEV_MOTE_V1_0
     startCLI();
     // pcapInit(&usbPcap);
-    serialEnable(&usart1);
+
     gpioISRStartTask();
 
     memfault_platform_boot();

@@ -671,9 +671,12 @@ static void bm_network_timer_thread(void *parameters) {
     }
 }
 
-int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
+int bm_network_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
     /* Store relevant variables from bristlemouth.c */
-    self_addr = _self_addr;
+    configASSERT(_netif);
+    configASSERT(_pcb);
+
+    self_addr = *netif_ip6_addr(_netif, 0);
     pcb = _pcb;
     port = _port;
     netif = _netif;

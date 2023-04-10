@@ -154,6 +154,7 @@ set(LWIP_COMPILER_FLAGS
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
+	-Wno-format
 
 # In case we want faster sqrtf, etc
 	# -fno-math-errno

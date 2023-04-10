@@ -689,9 +689,11 @@ void bm_dfu_send_heartbeat(ip6_addr_t* dst_addr) {
     pbuf_free(buf);
 }
 
-void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _netif) {
+void bm_dfu_init(SerialHandle_t* hSerial, struct netif* _netif) {
     bm_dfu_event_t evt;
     int retval;
+
+    configASSERT(_netif);
 
     /* Using raw udp tx/rx for now */
     dfu_ctx.pcb = udp_new_ip_type(IPADDR_TYPE_V6);
@@ -700,7 +702,7 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
     udp_recv(dfu_ctx.pcb, bm_dfu_rx_cb, NULL);
 
     /* Store relevant variables from bristlemouth.c */
-    dfu_ctx.self_addr = _self_addr;
+    dfu_ctx.self_addr = *netif_ip6_addr(_netif, 0);
     dfu_ctx.netif = _netif;
 
     /* Initialize pbuf to NULL */
@@ -774,11 +776,11 @@ void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _
                         NULL);
     configASSERT(retval == pdTRUE);
 
-    bm_dfu_host_init(_self_addr, dfu_ctx.pcb, dfu_ctx.port, _netif);
+    bm_dfu_host_init(dfu_ctx.pcb, dfu_ctx.port, _netif);
 #else
     (void)hSerial;
 #endif // BM_DFU_HOST
-    bm_dfu_client_init(_self_addr, dfu_ctx.pcb, dfu_ctx.port, _netif);
+    bm_dfu_client_init(dfu_ctx.pcb, dfu_ctx.port, _netif);
 
     evt.type = DFU_EVENT_INIT_SUCCESS;
     evt.pbuf = NULL;

@@ -56,8 +56,8 @@ enum BM_DFU_FRM_TYPE {
     BM_DFU_BEGIN_HOST,
 };
 
-enum BM_DFU_HFSM_STATES { 
-    BM_DFU_STATE_INIT, 
+enum BM_DFU_HFSM_STATES {
+    BM_DFU_STATE_INIT,
     BM_DFU_STATE_IDLE,
     BM_DFU_STATE_ERROR,
     BM_DFU_STATE_CLIENT,
@@ -143,7 +143,7 @@ typedef struct __attribute__((__packed__)) bm_dfu_event_img_info_s {
 typedef struct {
     uint8_t type;
     struct pbuf *pbuf;
-} bm_dfu_event_t; 
+} bm_dfu_event_t;
 
 QueueHandle_t bm_dfu_get_event_queue(void);
 bm_dfu_event_t bm_dfu_get_current_event(void);
@@ -155,7 +155,7 @@ void bm_dfu_req_next_chunk(uint8_t dev_type, ip6_addr_t* dst_addr, uint16_t chun
 void bm_dfu_update_end(uint8_t dev_type, ip6_addr_t* dst_addr, uint8_t success, bm_dfu_err_t err_code);
 void bm_dfu_send_heartbeat(ip6_addr_t* dst_addr);
 
-void bm_dfu_init(SerialHandle_t* hSerial, ip6_addr_t _self_addr, struct netif* _netif);
+void bm_dfu_init(SerialHandle_t* hSerial, struct netif* _netif);
 
 #ifdef __cplusplus
 }
