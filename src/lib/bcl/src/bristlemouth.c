@@ -27,6 +27,9 @@
 #include "bm_zcbor_decode.h"
 #include "bm_zcbor_encode.h"
 
+#include "bcmp.h"
+#include "bcmp_cli.h"
+
 #include "middleware.h"
 #include "task_priorities.h"
 
@@ -68,8 +71,8 @@ static void bcl_rx_thread(void *parameters) {
     static bcl_rx_element_t rx_data;
     uint16_t payload_length = 0;
     size_t decode_len;
-    uint8_t dst_port_bitmask = 0;
-    uint8_t dst_port_num = 0;
+    uint8_t dst_port_bitmask;
+    uint8_t dst_port_num;
     // uint8_t src_port_bitmask = 0;
     // uint8_t src_port_num = 0;
     const ip6_addr_t* self_addr = netif_ip6_addr(&netif, 0);
@@ -207,6 +210,8 @@ void bcl_init(SerialHandle_t* hSerial) {
     int         rval;
     ip6_addr_t  multicast_glob_addr;
 
+    (void)hSerial;
+
     printf( "Starting up BCL\n" );
 
     /* Looks like we don't call lwip_init if we are using a RTOS */
@@ -264,11 +269,14 @@ void bcl_init(SerialHandle_t* hSerial) {
     udp_bind(udp_pcb, IP_ANY_TYPE, udp_port);
     udp_recv(udp_pcb, bcl_rx_cb, NULL);
 
+    bcmp_init(&netif);
+    bcmp_cli_init();
+
     /* Init and start the bristlemouth network */
-    bm_network_init(udp_pcb, udp_port, &netif);
+    // bm_network_init(udp_pcb, udp_port, &netif);
 
     /* Start DFU service here */
-    bm_dfu_init(hSerial, &netif);
+    // bm_dfu_init(hSerial, &netif);
 
 
     bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);

@@ -10,15 +10,18 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
+    ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_config.c
     ${SRC_DIR}/lib/bcl/src/bm_info.c
-    ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_l2.c
     ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
     ${SRC_DIR}/lib/bcl/src/bristlemouth.c
+    ${SRC_DIR}/lib/bcmp/bcmp.c
+    ${SRC_DIR}/lib/bcmp/bcmp_cli.c
+    ${SRC_DIR}/lib/bcmp/bcmp_heartbeat.c
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
@@ -70,7 +73,7 @@ set(LIB_FILES
 
 set(LIB_INCLUDES
     ${SRC_DIR}/lib/bcl/include
-    ${SRC_DIR}/lib/bcl/include
+    ${SRC_DIR}/lib/bcmp
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
