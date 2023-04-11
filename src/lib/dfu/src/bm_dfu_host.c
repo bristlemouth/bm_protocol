@@ -288,11 +288,11 @@ void s_host_update_run(void) {
     }
 }
 
-void bm_dfu_host_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
+void bm_dfu_host_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
     int tmr_id = 0;
 
     /* Store relevant variables */
-    host_ctx.self_addr = _self_addr;
+    host_ctx.self_addr = *netif_ip6_addr(_netif, 0);
     host_ctx.pcb = _pcb;
     host_ctx.port = _port;
     host_ctx.netif = _netif;

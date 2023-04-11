@@ -167,7 +167,9 @@ static BaseType_t infoCommand( char *writeBuffer,
   printf("%02x\n", mac[sizeof(mac)-1]);
 
 #ifndef NO_NETWORK
-  printf("IP: %s\n", bcl_get_ip_str(0));
+  printf("IP addresses:\n");
+  printf("Link Local: %s\n", bcl_get_ip_str(0));
+  printf("Unicast:    %s\n", bcl_get_ip_str(1));
 #endif
 
   printf("FW Version: %s\n", getFWVersionStr());
@@ -191,9 +193,9 @@ static BaseType_t infoCommand( char *writeBuffer,
   const versionInfo_t *bootloaderInfo = findVersionInfo(FLASH_START, BOOTLOADER_SIZE);
 
   if(bootloaderInfo) {
-    const char *dirtyStr = "";
+    const char *bootDirtyStr = "";
     if(fwIsDirty(bootloaderInfo)){
-      dirtyStr = "+";
+      bootDirtyStr = "+";
     }
     const char *engStr = "";
     if(fwIsEng(bootloaderInfo)) {
@@ -201,7 +203,7 @@ static BaseType_t infoCommand( char *writeBuffer,
     }
     printf("Bootloader Information:\n");
     printf("  Version: %s%s\n", engStr, bootloaderInfo->versionStr);
-    printf("  SHA: %08lX%s\n", bootloaderInfo->gitSHA, dirtyStr);
+    printf("  SHA: %08lX%s\n", bootloaderInfo->gitSHA, bootDirtyStr);
     printf("  Signature support: %lu\n", (bootloaderInfo->flags >> VER_SIGNATURE_SUPPORT_OFFSET) & 0x1);
     printf("  Encrytion support: %lu\n", (bootloaderInfo->flags >> VER_ENCRYPTION_SUPPORT_OFFSET) & 0x1);
   } else {

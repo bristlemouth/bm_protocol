@@ -37,7 +37,7 @@ struct bm_network_node_t {
 };
 
 /* Network API */
-int bm_network_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif);
+int bm_network_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif);
 void bm_network_start(void);
 void bm_network_stop(void);
 void bm_network_request_neighbor_tables(void);

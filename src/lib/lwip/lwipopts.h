@@ -84,6 +84,8 @@
 #define CHECKSUM_GEN_UDP                  1
 #define CHECKSUM_CHECK_UDP                0
 
+// #define LWIP_DEBUG 1
+
 #ifdef LWIP_DEBUG
 
 #define LWIP_DBG_MIN_LEVEL         0
@@ -91,19 +93,20 @@
 #define MEM_DEBUG                  LWIP_DBG_OFF
 #define MEMP_DEBUG                 LWIP_DBG_OFF
 #define PBUF_DEBUG                 LWIP_DBG_OFF
-#define API_LIB_DEBUG              LWIP_DBG_OFF
-#define API_MSG_DEBUG              LWIP_DBG_OFF
-#define TCPIP_DEBUG                LWIP_DBG_OFF
-#define NETIF_DEBUG                LWIP_DBG_OFF
+#define API_LIB_DEBUG              LWIP_DBG_ON
+#define API_MSG_DEBUG              LWIP_DBG_ON
+#define TCPIP_DEBUG                LWIP_DBG_ON
+#define NETIF_DEBUG                LWIP_DBG_ON
 #define SOCKETS_DEBUG              LWIP_DBG_OFF
 #define DNS_DEBUG                  LWIP_DBG_OFF
 #define AUTOIP_DEBUG               LWIP_DBG_OFF
 #define DHCP_DEBUG                 LWIP_DBG_OFF
-#define IP_DEBUG                   LWIP_DBG_OFF
-#define IP_REASS_DEBUG             LWIP_DBG_OFF
-#define ICMP_DEBUG                 LWIP_DBG_OFF
-#define IGMP_DEBUG                 LWIP_DBG_OFF
-#define UDP_DEBUG                  LWIP_DBG_OFF
+#define IP_DEBUG                   LWIP_DBG_ON
+#define IP6_DEBUG                  LWIP_DBG_ON
+#define IP_REASS_DEBUG             LWIP_DBG_ON
+#define ICMP_DEBUG                 LWIP_DBG_ON
+#define IGMP_DEBUG                 LWIP_DBG_ON
+#define UDP_DEBUG                  LWIP_DBG_ON
 #define TCP_DEBUG                  LWIP_DBG_OFF
 #define TCP_INPUT_DEBUG            LWIP_DBG_OFF
 #define TCP_OUTPUT_DEBUG           LWIP_DBG_OFF
@@ -269,6 +272,8 @@ a lot of data that needs to be copied, this should be set high. */
 /* ---------- RAW options ---------- */
 #define LWIP_RAW                1
 
+// Multicast options
+#define LWIP_MULTICAST_TX_OPTIONS       ((LWIP_IGMP || LWIP_IPV6_MLD) && (LWIP_UDP || LWIP_RAW))
 
 /* ---------- Statistics options ---------- */
 
@@ -330,5 +335,11 @@ void sys_check_core_locking(void);
 void lwip_example_app_platform_assert(const char *msg, int line, const char *file);
 #define LWIP_PLATFORM_ASSERT(x) lwip_example_app_platform_assert(x, __LINE__, __FILE__)
 #endif
+
+#if LWIP_DEBUG
+#include <stdio.h>
+#define LWIP_PLATFORM_DIAG(x) do {printf x;} while(0)
+#endif
+
 
 #endif /* LWIP_LWIPOPTS_H */

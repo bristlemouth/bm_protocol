@@ -95,11 +95,20 @@ void getFWVersion(uint8_t *major, uint8_t *minor, uint8_t *revision) {
 const char * getUIDStr() {
   static bool uidStrGenerated = false;
   if (!uidStrGenerated) {
-    snprintf(uidStr, sizeof(uidStr), "%08lX%08lX%08lX", UID[2], UID[1], UID[0]);
+    snprintf(uidStr, sizeof(uidStr), "%08"PRIx32"%08"PRIx32"%08"PRIx32"", UID[2], UID[1], UID[0]);
     uidStrGenerated = true;
   }
 
   return uidStr;
+}
+
+/*!
+  Get device unique hardware id
+
+  \return pointer to UID
+*/
+const uint32_t* getUID() {
+  return UID;
 }
 
 uint32_t getGitSHA() {

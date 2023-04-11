@@ -25,7 +25,7 @@ void s_host_req_update_run(void);
 void s_host_update_entry(void);
 void s_host_update_run(void);
 
-void bm_dfu_host_init(ip6_addr_t _self_addr, struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif);
+void bm_dfu_host_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif);
 
 #ifdef __cplusplus
 }

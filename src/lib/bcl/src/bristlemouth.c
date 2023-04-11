@@ -214,13 +214,12 @@ void bcl_init(SerialHandle_t* hSerial) {
 
     getMacAddr(netif.hwaddr, sizeof(netif.hwaddr));
     netif.hwaddr_len = sizeof(netif.hwaddr);
-
-    // Generate IPv6 address using EUI-64 format derived from mac address
-    ip_addr_t my_addr = IPADDR6_INIT_HOST(
-            0x20010db8,
-            0,
-            (netif.hwaddr[0] << 24 | netif.hwaddr[1] << 16 | netif.hwaddr[2] << 8 | 0xFF),
-            (0xFE << 24 | netif.hwaddr[3] << 16 | netif.hwaddr[4] << 8 | netif.hwaddr[5])
+    const uint32_t *uid = getUID();
+    ip_addr_t unicast_addr = IPADDR6_INIT_HOST(
+            0xFD000000,
+            uid[2],
+            uid[1],
+            uid[0]
         );
 
     inet6_aton("ff03::1", &multicast_glob_addr);
@@ -228,10 +227,13 @@ void bcl_init(SerialHandle_t* hSerial) {
     /* The documentation says to use tcpip_input if we are running with an OS */
     netif_add(&netif, NULL, bm_l2_init, tcpip_input);
 
+    // Generate IPv6 address using EUI-64 format derived from mac address
     netif_create_ip6_linklocal_address(&netif, 1);
     netif_set_up(&netif);
-    netif_ip6_addr_set(&netif, 0, ip_2_ip6(&my_addr));
+    netif_ip6_addr_set(&netif, 1, ip_2_ip6(&unicast_addr));
     netif_ip6_addr_set_state(&netif, 0, IP6_ADDR_VALID);
+    netif_ip6_addr_set_state(&netif, 1, IP6_ADDR_VALID);
+
     netif_set_link_up(&netif);
 
     /* add to relevant multicast groups */
@@ -259,10 +261,10 @@ void bcl_init(SerialHandle_t* hSerial) {
     udp_recv(udp_pcb, bcl_rx_cb, NULL);
 
     /* Init and start the bristlemouth network */
-    bm_network_init(my_addr, udp_pcb, udp_port, &netif);
+    bm_network_init(udp_pcb, udp_port, &netif);
 
     /* Start DFU service here */
-    bm_dfu_init(hSerial, my_addr, &netif);
+    bm_dfu_init(hSerial, &netif);
 
 
     bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
@@ -281,7 +283,7 @@ void bcl_init(SerialHandle_t* hSerial) {
   \param[in] ip IP address index (Since there are up to LWIP_IPV6_NUM_ADDRESSES)
   \return pointer to string with ip address
 */
-const char *bcl_get_ip_str(uint8_t ip) {
-    configASSERT(ip < LWIP_IPV6_NUM_ADDRESSES);
-    return(ip6addr_ntoa(netif_ip6_addr(&netif, ip)));
+const char *bcl_get_ip_str(uint8_t idx) {
+    configASSERT(idx < LWIP_IPV6_NUM_ADDRESSES);
+    return(ip6addr_ntoa(netif_ip6_addr(&netif, idx)));
 }
