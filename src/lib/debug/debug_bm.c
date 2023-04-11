@@ -24,6 +24,9 @@
 #elif BSP_DEV_MOTE_HYDROPHONE
     #define LED_BLUE EXP_LED_G1
     #define ALARM_OUT GPIO1
+#elif BSP_BRIDGE_V1_0
+    #define LED_BLUE LED_G
+    #define ALARM_OUT TP10
 #endif
 
 

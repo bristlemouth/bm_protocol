@@ -1,6 +1,5 @@
 #include "bsp.h"
 #include "stm32_io.h"
-#include "pca9535.h"
 
 IOPinHandle_t ADIN_PWR = {&STM32PinDriver, &(STM32Pin_t){ADIN_PWR_GPIO_Port, ADIN_PWR_Pin, NULL, NULL}};
 IOPinHandle_t BM_CS = {&STM32PinDriver, &(STM32Pin_t){BM_CS_GPIO_Port, BM_CS_Pin, NULL, NULL}};
@@ -16,9 +15,14 @@ IOPinHandle_t ADIN_CS = {&STM32PinDriver, &(STM32Pin_t){ADIN_CS_GPIO_Port, ADIN_
 IOPinHandle_t ADIN_SCK = {&STM32PinDriver, &(STM32Pin_t){ADIN_SCK_GPIO_Port, ADIN_SCK_Pin, NULL, NULL}};
 IOPinHandle_t ADIN_MISO = {&STM32PinDriver, &(STM32Pin_t){ADIN_MISO_GPIO_Port, ADIN_MISO_Pin, NULL, NULL}};
 IOPinHandle_t ADIN_MOSI = {&STM32PinDriver, &(STM32Pin_t){ADIN_MOSI_GPIO_Port, ADIN_MOSI_Pin, NULL, NULL}};
+IOPinHandle_t ADIN_RST = {&STM32PinDriver, &(STM32Pin_t){ADIN_RST_GPIO_Port, ADIN_RST_Pin, NULL, NULL}};
 IOPinHandle_t BOOT = {&STM32PinDriver, &(STM32Pin_t){BOOT_GPIO_Port, BOOT_Pin, NULL, NULL}};
 IOPinHandle_t ADIN_INT = {&STM32PinDriver, &(STM32Pin_t){ADIN_INT_GPIO_Port, ADIN_INT_Pin, NULL, NULL}};
 IOPinHandle_t DEBUG_RX = {&STM32PinDriver, &(STM32Pin_t){DEBUG_RX_GPIO_Port, DEBUG_RX_Pin, NULL, NULL}};
 IOPinHandle_t DEBUG_TX = {&STM32PinDriver, &(STM32Pin_t){DEBUG_TX_GPIO_Port, DEBUG_TX_Pin, NULL, NULL}};
 IOPinHandle_t BOOST_EN = {&STM32PinDriver, &(STM32Pin_t){BOOST_EN_GPIO_Port, BOOST_EN_Pin, NULL, NULL}};
 IOPinHandle_t VBUS_SW_EN = {&STM32PinDriver, &(STM32Pin_t){VBUS_SW_EN_GPIO_Port, VBUS_SW_EN_Pin, NULL, NULL}};
+IOPinHandle_t LED_G = {&STM32PinDriver, &(STM32Pin_t){LED_G_GPIO_Port, LED_G_Pin, NULL, NULL}};
+IOPinHandle_t LED_R = {&STM32PinDriver, &(STM32Pin_t){LED_R_GPIO_Port, LED_R_Pin, NULL, NULL}};
+IOPinHandle_t TP10 = {&STM32PinDriver, &(STM32Pin_t){TP10_GPIO_Port, TP10_Pin, NULL, NULL}};
+IOPinHandle_t VUSB_DETECT = {&STM32PinDriver, &(STM32Pin_t){VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, NULL, NULL}};

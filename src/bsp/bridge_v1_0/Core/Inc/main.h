@@ -77,6 +77,10 @@ void SystemPower_Config_ext(void);
 #define VUSB_DETECT_GPIO_Port GPIOH
 #define ADIN_PWR_Pin LL_GPIO_PIN_1
 #define ADIN_PWR_GPIO_Port GPIOH
+#define TP10_Pin LL_GPIO_PIN_0
+#define TP10_GPIO_Port GPIOA
+#define LED_G_Pin LL_GPIO_PIN_1
+#define LED_G_GPIO_Port GPIOA
 #define BOOST_EN_Pin LL_GPIO_PIN_2
 #define BOOST_EN_GPIO_Port GPIOA
 #define VBUS_SW_EN_Pin LL_GPIO_PIN_3
@@ -91,6 +95,8 @@ void SystemPower_Config_ext(void);
 #define BM_MOSI_TX3_GPIO_Port GPIOA
 #define BM_INT_Pin LL_GPIO_PIN_0
 #define BM_INT_GPIO_Port GPIOB
+#define LED_R_Pin LL_GPIO_PIN_1
+#define LED_R_GPIO_Port GPIOB
 #define FLASH_SCK_Pin LL_GPIO_PIN_13
 #define FLASH_SCK_GPIO_Port GPIOB
 #define FLASH_MISO_Pin LL_GPIO_PIN_14

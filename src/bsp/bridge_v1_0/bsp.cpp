@@ -2,10 +2,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "adc.h"
 #include "i2c.h"
 #include "io.h"
-#include "io_adc.h"
 #include "main.h"
 #include "pca9535.h"
 #include "spi.h"
@@ -60,25 +58,6 @@ void bspInit() {
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
 
-}
-
-// Helper function for sampling ADC on STM32
-uint32_t adcGetSampleMv(uint32_t channel) {
-  int32_t result = 0;
-
-  ADC_ChannelConfTypeDef config = {};
-
-  config.Rank = ADC_REGULAR_RANK_1;
-  config.SamplingTime = ADC_SAMPLETIME_814CYCLES;
-  config.SingleDiff = ADC_SINGLE_ENDED;
-  config.OffsetNumber = ADC_OFFSET_NONE;
-  config.Offset = 0;
-
-  config.Channel = channel;
-  IOAdcChannelConfig(&hadc1, &config);
-
-  IOAdcReadMv(&hadc1, &result);
-  return ((uint32_t)result);
 }
 
 bool usb_is_connected() {

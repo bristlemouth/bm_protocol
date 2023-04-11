@@ -22,8 +22,6 @@ extern "C" {
 void bspInit();
 
 // Pin definitions
-extern IOPinHandle_t GPIO2;
-extern IOPinHandle_t GPIO1;
 extern IOPinHandle_t ADIN_PWR;
 extern IOPinHandle_t BM_CS;
 extern IOPinHandle_t BM_SCK_RX3;
@@ -38,33 +36,19 @@ extern IOPinHandle_t ADIN_CS;
 extern IOPinHandle_t ADIN_SCK;
 extern IOPinHandle_t ADIN_MISO;
 extern IOPinHandle_t ADIN_MOSI;
-extern IOPinHandle_t BOOT_LED;
+extern IOPinHandle_t ADIN_RST;
+extern IOPinHandle_t BOOT;
 extern IOPinHandle_t ADIN_INT;
 extern IOPinHandle_t DEBUG_RX;
 extern IOPinHandle_t DEBUG_TX;
-extern IOPinHandle_t PAYLOAD_RX;
-extern IOPinHandle_t PAYLOAD_TX;
-
-extern IOPinHandle_t EXP_LED_G1;
-extern IOPinHandle_t EXP_LED_R1;
-extern IOPinHandle_t EXP_LED_G2;
-extern IOPinHandle_t EXP_LED_R2;
+extern IOPinHandle_t BOOST_EN;
+extern IOPinHandle_t VBUS_SW_EN;
+extern IOPinHandle_t LED_G;
+extern IOPinHandle_t LED_R;
+extern IOPinHandle_t TP10;
 extern IOPinHandle_t VUSB_DETECT;
-extern IOPinHandle_t ADIN_RST;
-extern IOPinHandle_t EXP_GPIO3;
-extern IOPinHandle_t EXP_GPIO4;
-extern IOPinHandle_t EXP_GPIO5;
-extern IOPinHandle_t EXP_GPIO6;
-extern IOPinHandle_t EXP_GPIO7;
-extern IOPinHandle_t EXP_GPIO8;
-extern IOPinHandle_t EXP_GPIO9;
-extern IOPinHandle_t EXP_GPIO10;
-extern IOPinHandle_t EXP_GPIO11;
-extern IOPinHandle_t EXP_GPIO12;
-extern IOPinHandle_t EXP_INT;
 
 // SPI Interfaces
-extern SPIInterface_t spi1;
 extern SPIInterface_t spi2;
 extern SPIInterface_t spi3;
 

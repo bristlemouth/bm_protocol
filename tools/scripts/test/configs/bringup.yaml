@@ -13,3 +13,11 @@
     bsp: dev_mote_bristlefin_v1_0
     build_type: Debug
     use_bootloader: True
+
+- name: bringup_bridge on bridge_v1_0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: bringup_bridge
+    bsp: bridge_v1_0
+    build_type: Debug
+    use_bootloader: True
