@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "timers.h"
 
 #include "bcmp.h"
 #include "debug.h"
@@ -13,17 +14,21 @@
 #include "lwip/inet_chksum.h"
 #include "lwip/raw.h"
 
-#define BCMP_RX_QUEUE_LEN 32
+#define BCMP_EVT_QUEUE_LEN 32
+
+// Send heartbeats every 10 seconds (and check for expired links)
+#define BCMP_HEARTBEAT_S 10
 
 typedef struct {
-    struct netif* netif;
-    struct raw_pcb *pcb;
-    QueueHandle_t rx_queue;
+  struct netif* netif;
+  struct raw_pcb *pcb;
+  QueueHandle_t rx_queue;
+  TimerHandle_t heartbeat_timer;
 } bcmpContext_t;
 
 typedef enum {
-    BCMP_RX,
-    BCMP_TIMER,
+    BCMP_EVT_RX,
+    BCMP_EVT_HEARTBEAT,
 } bcmp_queue_type_e;
 
 typedef struct {
@@ -84,37 +89,14 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
   return rval;
 }
 
-static void bcmp_rx_thread(void *parameters) {
-  (void) parameters;
 
-  for(;;) {
-    bcmp_queue_item_t item;
+static void heartbeat_timer_handler(TimerHandle_t tmr){
+  (void) tmr;
 
-    BaseType_t rval = xQueueReceive(_ctx.rx_queue, &item, portMAX_DELAY);
-    configASSERT(rval == pdTRUE);
+  bcmp_queue_item_t item = {BCMP_EVT_HEARTBEAT, NULL, {{0,0,0,0}, 0}, NULL};
 
-    switch(item.type) {
-      case BCMP_RX: {
-        bmcp_process_packet(item.pbuf, &item.src);
-        break;
-      }
-
-      case BCMP_TIMER: {
-        break;
-      }
-
-      default: {
-        break;
-      }
-    }
-
-    if(item.pbuf) {
-      pbuf_free(item.pbuf);
-    }
-  }
-
+  configASSERT(xQueueSend(_ctx.rx_queue, &item, 0) == pdTRUE);
 }
-
 
 static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, const ip_addr_t *src) {
   (void)arg;
@@ -138,7 +120,7 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
     // Make a copy of the IP address since we'll be modifying it later when we
     // remove the src/dest ports (and since it might not be in the pbuf so someone
     // else is managing that memory)
-    bcmp_queue_item_t item = {BCMP_RX, pbuf, *src, NULL};
+    bcmp_queue_item_t item = {BCMP_EVT_RX, pbuf, *src, NULL};
 
     if(xQueueSend(_ctx.rx_queue, &item, 0) != pdTRUE) {
       printf("Error sending to Queue\n");
@@ -150,6 +132,50 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
   } while (0);
 
   return rval;
+}
+
+static void bcmp_rx_thread(void *parameters) {
+  (void) parameters;
+
+  // Start listening for BCMP packets
+  raw_recv(_ctx.pcb, bcmp_recv, NULL);
+  configASSERT(raw_bind(_ctx.pcb, IP_ADDR_ANY) == ERR_OK);
+
+  _ctx.heartbeat_timer = xTimerCreate("bcmp_heartbeat", pdMS_TO_TICKS(BCMP_HEARTBEAT_S * 1000),
+                                 pdTRUE, NULL, heartbeat_timer_handler);
+  configASSERT(_ctx.heartbeat_timer);
+  configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
+
+  // TODO - send out heartbeats on link change
+
+  for(;;) {
+    bcmp_queue_item_t item;
+
+    BaseType_t rval = xQueueReceive(_ctx.rx_queue, &item, portMAX_DELAY);
+    configASSERT(rval == pdTRUE);
+
+    switch(item.type) {
+      case BCMP_EVT_RX: {
+        bmcp_process_packet(item.pbuf, &item.src);
+        break;
+      }
+
+      case BCMP_EVT_HEARTBEAT: {
+        static uint32_t heartbeat_count;
+        bcmp_send_heartbeat(heartbeat_count++);
+        break;
+      }
+
+      default: {
+        break;
+      }
+    }
+
+    if(item.pbuf) {
+      pbuf_free(item.pbuf);
+    }
+  }
+
 }
 
 err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint16_t len) {
@@ -195,18 +221,15 @@ void bcmp_init(struct netif* netif) {
   configASSERT(_ctx.pcb);
 
 
-    /* Create threads and Queues */
-    _ctx.rx_queue = xQueueCreate(BCMP_RX_QUEUE_LEN, sizeof(bcmp_queue_item_t));
-    configASSERT(_ctx.rx_queue);
+  /* Create threads and Queues */
+  _ctx.rx_queue = xQueueCreate(BCMP_EVT_QUEUE_LEN, sizeof(bcmp_queue_item_t));
+  configASSERT(_ctx.rx_queue);
 
-    BaseType_t rval = xTaskCreate(bcmp_rx_thread,
-                       "BCMP",
-                       1024,
-                       NULL,
-                       BCMP_TASK_PRIORITY,
-                       NULL);
-    configASSERT(rval == pdPASS);
-
-  raw_recv(_ctx.pcb, bcmp_recv, NULL);
-  configASSERT(raw_bind(_ctx.pcb, IP_ADDR_ANY) == ERR_OK);
+  BaseType_t rval = xTaskCreate(bcmp_rx_thread,
+                     "BCMP",
+                     1024,
+                     NULL,
+                     BCMP_TASK_PRIORITY,
+                     NULL);
+  configASSERT(rval == pdPASS);
 }
