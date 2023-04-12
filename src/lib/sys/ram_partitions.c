@@ -1,0 +1,5 @@
+#include "ram_partitions.h"
+
+uint8_t ram_hardware_configuration[RAM_HARDWARE_CONFIG_SIZE_BYTES];
+uint8_t ram_system_configuration[RAM_SYSTEM_CONFIG_SIZE_BYTES];
+uint8_t ram_user_configuration[RAM_USER_CONFIG_SIZE_BYTES];

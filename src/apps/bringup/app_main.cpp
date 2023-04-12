@@ -34,6 +34,9 @@
 #include "debug_sys.h"
 #include "debug_uart.h"
 #include "debug_w25.h"
+#include "nvmPartition.h"
+#include "debug_configuration.h"
+#include "ram_partitions.h"
 #include "gpioISR.h"
 #include "htu21d.h"
 #include "ina232.h"
@@ -275,6 +278,13 @@ static void defaultTask( void *parameters ) {
   debugMemfaultInit(&usart1);
 #endif // DEBUG_USE_USART1
   debugHtu21dInit(&debugHTU);
+  NvmPartition debug_user_partition(debugW25, user_configuration);
+  NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
+  NvmPartition debug_system_partition(debugW25, system_configuration);
+  cfg::Configuration debug_configuration_user(debug_user_partition,ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_hardware(debug_hardware_partition,ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
 
 #ifdef USE_BOOTLOADER
   mcubootCliInit();

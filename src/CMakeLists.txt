@@ -226,6 +226,8 @@ add_compile_options(
 	# -ffast-math
 
 	${BSP_CPU_FLAGS}
+	-DCBOR_CUSTOM_ALLOC_INCLUDE="tinycbor_alloc.h"
+    -DCBOR_PARSER_MAX_RECURSIONS=10
 	)
 
 # set(LINKER_FILE spotter_stm32l496)

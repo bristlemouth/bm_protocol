@@ -85,7 +85,7 @@ target_sources(nvm_partition_tests
     ${SRC_DIR}/lib/common/nvmPartition.cpp
 
     # Stubs
-    ${TEST_DIR}/stubs/FreeRTOSStubs.c    
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c
 
     # Unit test wrapper for test
     nvmPartition_ut.cpp
@@ -98,4 +98,47 @@ add_test(
     nvm_partition_tests
   COMMAND
     nvm_partition_tests
+  )
+
+#
+# Configuration
+#
+add_executable(configuration_tests)
+target_include_directories(configuration_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${SRC_DIR}/lib/drivers/abstract
+    ${SRC_DIR}/lib/sys
+    ${SRC_DIR}/third_party/tinycbor/src
+)
+
+target_sources(configuration_tests
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
+    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/ram_partitions.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
+
+    # Stubs
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c
+
+    # Unit test wrapper for test
+    configuration_ut.cpp
+)
+
+target_link_libraries(configuration_tests gtest gmock gtest_main)
+
+add_test(
+  NAME
+    configuration_tests
+  COMMAND
+    configuration_tests
   )

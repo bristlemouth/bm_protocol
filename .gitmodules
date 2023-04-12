@@ -16,3 +16,6 @@
 [submodule "test/third_party/fff"]
 	path = test/third_party/fff
 	url = https://github.com/sofarocean/fff.git
+[submodule "src/third_party/tinycbor"]
+	path = src/third_party/tinycbor
+	url = https://github.com/sofarocean/tinycbor.git

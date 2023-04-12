@@ -33,7 +33,10 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/sys/external_flash_partitions.c
+    ${SRC_DIR}/lib/sys/ram_partitions.c
+    ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_adin_raw.c
     ${SRC_DIR}/lib/debug/debug_htu.cpp
@@ -47,6 +50,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_w25.cpp
+    ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
     ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
@@ -81,6 +85,11 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
     ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
     ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     )
 
 set(LIB_INCLUDES
@@ -90,6 +99,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/sys
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
@@ -105,6 +115,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/third_party/zcbor/include
+    ${SRC_DIR}/third_party/tinycbor/src
     )
 
 set_source_files_properties(

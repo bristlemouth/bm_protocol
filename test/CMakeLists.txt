@@ -18,6 +18,8 @@ add_compile_options(
     -ggdb
     -Og
     -DCI_TEST
+    -DCBOR_CUSTOM_ALLOC_INCLUDE="tinycbor_alloc.h"
+    -DCBOR_PARSER_MAX_RECURSIONS=10
 )
 
 add_subdirectory("src")
