@@ -17,8 +17,9 @@ extern "C" {
 #define MAX_FRAME_BUF_SIZE  (MAX_FRAME_SIZE + 4 + 2)
 
 typedef int8_t (*adin_rx_callback_t)(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask);
+typedef void (*adin_link_change_callback_t)(void* device_handle, uint8_t port, bool state);
 
-adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback);
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback, adin_link_change_callback_t link_change_callback);
 err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask, uint8_t port_offset);
 int adin2111_hw_start(adin2111_DeviceHandle_t* dev);
 int adin2111_hw_stop(adin2111_DeviceHandle_t* dev);

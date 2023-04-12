@@ -51,7 +51,13 @@ typedef struct {
     adin2111_DeviceHandle_t dev;
 } rxMsgEvt_t;
 
-static adin_rx_callback_t _rx_callback = NULL;
+typedef struct {
+    adin2111_DeviceHandle_t handle;
+    adin2111_Port_e port;
+} linkChangeEvt_t;
+
+static adin_rx_callback_t _rx_callback;
+static adin_link_change_callback_t _link_change_callback;
 
 #define ETH_EVT_QUEUE_LEN 32
 
@@ -64,6 +70,9 @@ typedef enum {
 
     // IRQ event callback
     EVT_IRQ_CB,
+
+    // Link change
+    EVT_LINK_CHANGE,
 
 } ethEvtType_e;
 
@@ -127,17 +136,49 @@ static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg) {
 */
 static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg) {
     (void) Event;
-    (void) pCBParam;
 
+    // Letting callback handle checking the port state for each port
     adi_mac_StatusRegisters_t *statusRegisters = (adi_mac_StatusRegisters_t *)pArg;
 
-    /* The port where the link status changed happened can be determined by */
-    /* examining the values of the masked status registers. Then the link   */
-    /* status can be read from the actual PHY registers. */
+    linkChangeEvt_t *linkChangeEvt = (linkChangeEvt_t *)pvPortMalloc(sizeof(linkChangeEvt_t));
+    configASSERT(linkChangeEvt);
 
-    // TODO - do something about it
-    printf("LINK CHANGE\n");
-    (void) statusRegisters;
+    linkChangeEvt->handle = (adin2111_DeviceHandle_t)pCBParam;
+
+    if (statusRegisters->p1StatusMasked == ADI_PHY_EVT_LINK_STAT_CHANGE) {
+        linkChangeEvt->port = ADIN2111_PORT_1;
+    } else if (statusRegisters->p2StatusMasked == ADI_PHY_EVT_LINK_STAT_CHANGE) {
+        linkChangeEvt->port = ADIN2111_PORT_2;
+    } else {
+        printf("Unknown link change event\n");
+        vPortFree(linkChangeEvt);
+        linkChangeEvt = NULL;
+    }
+
+    if(linkChangeEvt) {
+        ethEvt_t event = {.type=EVT_LINK_CHANGE, .data=linkChangeEvt};
+        configASSERT(xQueueSend(_eth_evt_queue, &event, 10));
+    }
+}
+
+/*!
+  Link change callback function. Whenever ADIN2111 ports change, this function
+  is called in the main thread. Use to notify interested tasks about change
+
+  \param linkChangeEvt struct with link change information
+  \return none
+*/
+void _link_change(linkChangeEvt_t *linkChangeEvt) {
+    adi_eth_LinkStatus_e status;
+    if(adin2111_GetLinkStatus(linkChangeEvt->handle, linkChangeEvt->port, &status) == ADI_ETH_SUCCESS) {
+
+        // Pass data to callback function if present
+        if(_link_change_callback) {
+            _link_change_callback(  linkChangeEvt->handle,
+                                    linkChangeEvt->port,
+                                    (status == ADI_ETH_LINK_STATUS_UP));
+        }
+    }
 }
 
 /*!
@@ -205,6 +246,13 @@ static void adin2111_thread(void *parameters) {
                 adi_bsp_irq_callback();
                 break;
             }
+        case EVT_LINK_CHANGE: {
+                configASSERT(event.data);
+                linkChangeEvt_t *linkChangeEvt = (linkChangeEvt_t *)event.data;
+                _link_change(linkChangeEvt);
+                vPortFree(linkChangeEvt);
+                break;
+            }
             default: {
                 // Unexpected event!
                 configASSERT(0);
@@ -232,14 +280,18 @@ static void _irq_evt_cb_from_isr(BaseType_t *pxHigherPriorityTaskWoken) {
 
   \param hDevice adin device handle
   \param rx_callback Callback function to be called when new data is received
+  \param link_change_callback Callback function to be called when link state changes
   \return 0 if successful, nonzero otherwise
 */
-adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback) {
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback, adin_link_change_callback_t link_change_callback) {
     adi_eth_Result_e result = ADI_ETH_SUCCESS;
     BaseType_t rval;
 
     configASSERT(rx_callback);
     _rx_callback = rx_callback;
+
+    // Optional link change callback
+    _link_change_callback = link_change_callback;
 
     do {
         /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts
@@ -261,8 +313,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
         }
 
         /* Register Callback for link change */
-        result = adin2111_RegisterCallback(hDevice, adin2111_link_change_cb,
-                        ADI_MAC_EVT_LINK_CHANGE);
+        result = adin2111_RegisterCallback(hDevice, adin2111_link_change_cb, ADI_MAC_EVT_LINK_CHANGE);
         if (result != ADI_ETH_SUCCESS) {
             break;
         }

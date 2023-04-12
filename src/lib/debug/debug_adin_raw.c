@@ -72,7 +72,7 @@ static BaseType_t adinCommand( char *writeBuffer,
     if (strncmp("init", parameter,parameterStringLength) == 0) {
       if(_adin_started) {
         printf("Adin already initialized\n");
-      } else if(adin2111_hw_init(&_device, debug_l2_rx) == ADI_ETH_SUCCESS) {
+      } else if(adin2111_hw_init(&_device, debug_l2_rx, NULL) == ADI_ETH_SUCCESS) {
         printf("Adin initialized successfully\n");
         _adin_started = true;
       } else {
