@@ -14,4 +14,4 @@ typedef enum {
 } bcmpMessaegType_t;
 
 err_t bcmp_send_heartbeat(uint32_t count);
-err_t bcmp_process_heartbeat(void *payload, const ip_addr_t *src);
+err_t bcmp_process_heartbeat(void *payload, const ip_addr_t *src, uint8_t dst_port);

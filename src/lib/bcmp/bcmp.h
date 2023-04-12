@@ -9,6 +9,10 @@
 #include "bcmp_messages.h"
 #include "bm_util.h"
 
+/* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
+    the bristlemouth protocol spec */
+#define CLEAR_PORTS(x) (x[1] &= (~(0xFFFFU)))
+
 #ifdef __cplusplus
 extern "C" {
 #endif
