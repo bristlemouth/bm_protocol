@@ -29,7 +29,7 @@ typedef struct {
 
 void bcmp_init(struct netif* netif);
 err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint16_t len);
-err_t bcmp_send_heartbeat(uint32_t count);
+void bcmp_link_change(uint8_t port, bool state);
 
 #ifdef __cplusplus
 }

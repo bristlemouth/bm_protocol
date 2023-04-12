@@ -203,6 +203,18 @@ static void bcl_rx_thread(void *parameters) {
 }
 #endif
 
+// Callback function in case of link changes.
+// Will notify relevant subsystems of link change event
+void bm_link_change_cb(uint8_t port, bool state) {
+    printf("bm port%u %s\n",
+                port,
+                state ? "up" : "down");
+
+    // Let BCMP know a link has changed!
+    // (Useful for heartbeats/discovery)
+    bcmp_link_change(port, state);
+}
+
 void bcl_init() {
     err_t       mld6_err;
     // int         rval;
@@ -226,7 +238,7 @@ void bcl_init() {
     inet6_aton("ff03::1", &multicast_glob_addr);
 
     // Initialize l2 structs/callbacks
-    bm_l2_init(NULL);
+    bm_l2_init(bm_link_change_cb);
 
     // The documentation says to use tcpip_input if we are running with an OS
     // bm_l2_netif_init will be called from netif_add

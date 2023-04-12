@@ -44,7 +44,17 @@ typedef struct {
 
 static bcmpContext_t _ctx;
 
-// TODO add context with in/out ports here?
+void bcmp_link_change(uint8_t port, bool state) {
+  (void)port; // Not using the port for now
+  if(state) {
+    // Send heartbeat since we just connected to someone and (re)start the
+    // heartbeat timer
+    bcmp_send_heartbeat();
+    configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
+  }
+}
+
+
 int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
   int32_t rval = 0;
   // uint8_t src_port;
@@ -144,7 +154,6 @@ static void bcmp_rx_thread(void *parameters) {
   _ctx.heartbeat_timer = xTimerCreate("bcmp_heartbeat", pdMS_TO_TICKS(BCMP_HEARTBEAT_S * 1000),
                                  pdTRUE, NULL, heartbeat_timer_handler);
   configASSERT(_ctx.heartbeat_timer);
-  configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
 
   // TODO - send out heartbeats on link change
 
@@ -161,8 +170,7 @@ static void bcmp_rx_thread(void *parameters) {
       }
 
       case BCMP_EVT_HEARTBEAT: {
-        static uint32_t heartbeat_count;
-        bcmp_send_heartbeat(heartbeat_count++);
+        bcmp_send_heartbeat();
         break;
       }
 
