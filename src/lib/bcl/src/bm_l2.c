@@ -9,7 +9,7 @@
 
 #define IFNAME0                     'b'
 #define IFNAME1                     'm'
-#define NETIF_LINK_SPEED_IN_BPS     10000000
+#define NETIF_LINK_SPEED_BPS        10000000
 #define ETHERNET_MTU                1500
 
 #define EVT_QUEUE_LEN (32)
@@ -42,6 +42,8 @@ typedef struct {
     /* TODO: We are only supporting the ADIN2111 net device. Currently assuming we have up to BM_NETDEV_TYPE_MAX ADIN2111s.
        We want to eventually support new net devices and pre-allocate here before giving to init function */
     adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX];
+
+    bm_l2_link_change_cb_t link_change_cb;
 
     uint8_t adin_device_counter;
     uint8_t available_ports_mask;
@@ -159,6 +161,7 @@ static void bm_l2_process_rx_evt(l2_queue_element_t *rx_evt) {
   \return none
 */
 static void _link_change_cb(void* device_handle, uint8_t port, bool state) {
+    configASSERT(device_handle);
 
     l2_queue_element_t link_change_evt = {device_handle, port, NULL, BM_L2_LINK_DOWN};
     if(state) {
@@ -181,14 +184,17 @@ static void _link_change_cb(void* device_handle, uint8_t port, bool state) {
 static void _handle_link_change(const void *device_handle, uint8_t port, bool state) {
     // TODO - Calculate overall port number from device port number
     // Using single device now so it maps 1:1
+    configASSERT(device_handle);
 
     for(uint8_t device = 0; device < BM_NETDEV_COUNT; device++) {
         if(device_handle == bm_l2_ctx.devices[device].device_handle) {
-            printf("port%u %s\n",
+            if(bm_l2_ctx.link_change_cb) {
+                bm_l2_ctx.link_change_cb(port, state);
+            } else {
+                printf("port%u %s\n",
                 port,
                 state ? "up" : "down");
-
-            // TODO - l2 port change callback?
+            }
         }
     }
 }
@@ -300,9 +306,29 @@ err_t bm_l2_link_output(struct netif *netif, struct pbuf *pbuf) {
     return bm_l2_tx(pbuf, bm_l2_ctx.available_ports_mask);
 }
 
+// Netif initialization for BM devices
+err_t bm_l2_netif_init(struct netif *netif) {
+    MIB2_INIT_NETIF(netif, snmp_ifType_ethernet_csmacd, NETIF_LINK_SPEED_BPS);
+
+    netif->name[0] = IFNAME0;
+    netif->name[1] = IFNAME1;
+    netif->output_ip6 = ethip6_output;
+    netif->linkoutput = bm_l2_link_output;
+
+    /* Store netif in local pointer */
+    bm_l2_ctx.net_if = netif;
+
+    netif->mtu = ETHERNET_MTU;
+    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
+
+    return ERR_OK;
+}
+
 /* L2 Initialization */
-err_t bm_l2_init(struct netif *netif) {
+err_t bm_l2_init(bm_l2_link_change_cb_t link_change_cb) {
     err_t retv = ERR_OK;
+
+    bm_l2_ctx.link_change_cb = link_change_cb;
 
     /* Reset context variables */
     bm_l2_ctx.adin_device_counter = 0;
@@ -331,18 +357,6 @@ err_t bm_l2_init(struct netif *netif) {
                 break;
         }
     }
-    MIB2_INIT_NETIF(netif, snmp_ifType_ethernet_csmacd, NETIF_LINK_SPEED_IN_BPS);
-
-    netif->name[0] = IFNAME0;
-    netif->name[1] = IFNAME1;
-    netif->output_ip6 = ethip6_output;
-    netif->linkoutput = bm_l2_link_output;
-
-    /* Store netif in local pointer */
-    bm_l2_ctx.net_if = netif;
-
-    netif->mtu = ETHERNET_MTU;
-    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
 
     bm_l2_ctx.evt_queue = xQueueCreate( EVT_QUEUE_LEN, sizeof(l2_queue_element_t));
 

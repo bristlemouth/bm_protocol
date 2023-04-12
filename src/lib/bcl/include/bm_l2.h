@@ -22,11 +22,13 @@ enum {
     IPV6_ADDR_DWORD_2,
     IPV6_ADDR_DWORD_3
 };
+typedef void (*bm_l2_link_change_cb_t)(uint8_t port, bool state);
 
 err_t bm_l2_tx(struct pbuf *p, uint8_t port_mask);
 err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask);
 err_t bm_l2_link_output(struct netif *netif, struct pbuf *p);
-err_t bm_l2_init(struct netif *netif);
+err_t bm_l2_netif_init(struct netif *netif);
+err_t bm_l2_init(bm_l2_link_change_cb_t link_change_cb);
 
 #define ADD_EGRESS_PORT(addr, port) (addr[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + EGRESS_PORT_IDX] = port)
 #define ADD_INGRESS_PORT(addr, port) (addr[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + INGRESS_PORT_IDX] = port)
