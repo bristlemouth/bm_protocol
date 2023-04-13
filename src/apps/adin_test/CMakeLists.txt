@@ -35,10 +35,11 @@ set(BRISTLEMOUTH_FILES
 set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
-    ${SRC_DIR}/third_party/aligned_malloc/
+    ${SRC_DIR}/third_party/aligned_malloc
     ${SRC_DIR}/third_party/zcbor/include
     )
 
@@ -91,7 +92,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
-    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include

@@ -4,7 +4,6 @@ static uint32_t heartbeat_count;
 
 err_t bcmp_send_heartbeat() {
   bcmpHeartbeat_t heartbeat = {.count=heartbeat_count++};
-  printf("heartbeat count %"PRIu32"\n", heartbeat.count);
   return bcmp_tx(&multicast_ll_addr, BCMP_HEARTBEAT, (uint8_t *)&heartbeat, sizeof(heartbeat));
 }
 
