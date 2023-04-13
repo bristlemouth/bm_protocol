@@ -224,8 +224,12 @@ void bcl_init(SerialHandle_t* hSerial) {
 
     inet6_aton("ff03::1", &multicast_glob_addr);
 
-    /* The documentation says to use tcpip_input if we are running with an OS */
-    netif_add(&netif, NULL, bm_l2_init, tcpip_input);
+    // Initialize l2 structs/callbacks
+    bm_l2_init(NULL);
+
+    // The documentation says to use tcpip_input if we are running with an OS
+    // bm_l2_netif_init will be called from netif_add
+    netif_add(&netif, NULL, bm_l2_netif_init, tcpip_input);
 
     // Generate IPv6 address using EUI-64 format derived from mac address
     netif_create_ip6_linklocal_address(&netif, 1);
