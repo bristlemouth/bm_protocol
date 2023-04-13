@@ -85,7 +85,6 @@ void debugBMInit(void) {
 static BaseType_t neighborsCommand( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString) {
-    const char *parameter;
     BaseType_t parameterStringLength;
 
     // Remove unused argument warnings
@@ -94,23 +93,26 @@ static BaseType_t neighborsCommand( char *writeBuffer,
     ( void ) writeBufferLen;
 
     do {
-        parameter = FreeRTOS_CLIGetParameter(
+        const char *parameter = FreeRTOS_CLIGetParameter(
                     commandString,
                     1, // Get the first parameter (command)
                     &parameterStringLength);
 
         if(parameter == NULL) {
-            printf("ERR Invalid paramters\n");
+            printf("ERR Invalid parameters\n");
             break;
         }
 
         if (strncmp("neighbors", parameter,parameterStringLength) == 0) {
-            bm_network_print_neighbor_table();
+            // bm_network_print_neighbor_table();
+            // TODO
         } else if (strncmp("topo", parameter,parameterStringLength) == 0) {
-            bm_network_request_neighbor_tables();
-            vTaskDelay(10);
-            bm_network_print_topology(NULL, NULL, 0);
-            printf("\n");
+            // bm_network_request_neighbor_tables();
+            // vTaskDelay(10);
+            // bm_network_print_topology(NULL, NULL, 0);
+            // printf("\n");
+
+            // TODO
         } else if (strncmp("info", parameter, parameterStringLength) == 0) {
             BaseType_t addrStrLen;
             const char *addrStr = FreeRTOS_CLIGetParameter(
@@ -129,10 +131,12 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            bm_network_request_fw_info(&addr);
+            // TODO
+            // bm_network_request_fw_info(&addr);
 
         } else if (strncmp("list-topics", parameter,parameterStringLength) == 0) {
-            bm_network_request_caps();
+            // bm_network_request_caps();
+            // TODO
 
         } else if (strncmp("sub", parameter,parameterStringLength) == 0) {
             const char *topic = FreeRTOS_CLIGetParameter(
@@ -214,7 +218,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
         } else if (strncmp("print", parameter,parameterStringLength) == 0) {
             bm_pubsub_print_subs();
         } else {
-            printf("ERR Invalid paramters\n");
+            printf("ERR Invalid parameters\n");
             break;
         }
     } while(0);

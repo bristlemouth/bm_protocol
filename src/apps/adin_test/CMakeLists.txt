@@ -9,16 +9,41 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
-set(LIB_FILES
+set(BRISTLEMOUTH_FILES
+    # ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_config.c
     ${SRC_DIR}/lib/bcl/src/bm_info.c
-    ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_l2.c
-    ${SRC_DIR}/lib/bcl/src/bm_network.c
+    # ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
     ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
     ${SRC_DIR}/lib/bcl/src/bristlemouth.c
+    ${SRC_DIR}/lib/bcmp/bcmp.c
+    ${SRC_DIR}/lib/bcmp/bcmp_cli.c
+    ${SRC_DIR}/lib/bcmp/bcmp_heartbeat.c
+    # ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
+    # ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
+    # ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
+    ${SRC_DIR}/lib/middleware/bm_pubsub.c
+    ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
+    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
+    )
+
+set(BRISTLEMOUTH_INCLUDES
+    ${SRC_DIR}/lib/bcl/include
+    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/dfu/include
+    ${SRC_DIR}/lib/lwip
+    ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/third_party/
+    ${SRC_DIR}/third_party/aligned_malloc
+    ${SRC_DIR}/third_party/zcbor/include
+    )
+
+set(LIB_FILES
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
@@ -38,9 +63,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
-    ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
-    ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
-    ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
+
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -55,26 +78,20 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/bm_pubsub.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
     )
 
 set(LIB_INCLUDES
     ${SRC_DIR}/lib/bcl/include
-    ${SRC_DIR}/lib/bcl/include
+    ${SRC_DIR}/lib/bcmp
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
-    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
@@ -88,7 +105,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
-    ${SRC_DIR}/third_party/zcbor/include
     )
 
 set_source_files_properties(
@@ -200,6 +216,7 @@ set(APP_FILES
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
+    ${BRISTLEMOUTH_FILES}
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MEMFAULT_SOURCES}
     ${TINYUSB_FILES}
@@ -210,6 +227,7 @@ set(APP_INCLUDES
     ${FREERTOS_INCLUDES}
     ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
+    ${BRISTLEMOUTH_INCLUDES}
     ${MCUBOOT_INCLUDES}
     ${MEMFAULT_INCLUDES}
     ${TINYUSB_INCLUDES}

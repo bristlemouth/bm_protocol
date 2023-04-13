@@ -27,19 +27,19 @@
 #include "bm_zcbor_decode.h"
 #include "bm_zcbor_encode.h"
 
+#include "bcmp.h"
+#include "bcmp_cli.h"
+
 #include "middleware.h"
 #include "task_priorities.h"
 
 static struct netif     netif;
-static struct udp_pcb*  udp_pcb;
-static uint16_t         udp_port;
-static TaskHandle_t     rx_thread = NULL;
-static QueueHandle_t    bcl_rx_queue;
+// static struct udp_pcb*  udp_pcb;
+// static uint16_t         udp_port;
+// static TaskHandle_t     rx_thread = NULL;
+// static QueueHandle_t    bcl_rx_queue;
 
-/* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
-    the bristlemouth protocol spec */
-#define CLEAR_PORTS(x) (x[IPV6_ADDR_DWORD_1] &= (~(0xFFFFU)))
-
+#if 0
 /* Define here for now */
 #define BCL_RX_QUEUE_NUM_ENTRIES  5
 
@@ -68,8 +68,8 @@ static void bcl_rx_thread(void *parameters) {
     static bcl_rx_element_t rx_data;
     uint16_t payload_length = 0;
     size_t decode_len;
-    uint8_t dst_port_bitmask = 0;
-    uint8_t dst_port_num = 0;
+    uint8_t dst_port_bitmask;
+    uint8_t dst_port_num;
     // uint8_t src_port_bitmask = 0;
     // uint8_t src_port_num = 0;
     const ip6_addr_t* self_addr = netif_ip6_addr(&netif, 0);
@@ -201,10 +201,23 @@ static void bcl_rx_thread(void *parameters) {
         }
     }
 }
+#endif
 
-void bcl_init(SerialHandle_t* hSerial) {
+// Callback function in case of link changes.
+// Will notify relevant subsystems of link change event
+void bm_link_change_cb(uint8_t port, bool state) {
+    printf("bm port%u %s\n",
+                port,
+                state ? "up" : "down");
+
+    // Let BCMP know a link has changed!
+    // (Useful for heartbeats/discovery)
+    bcmp_link_change(port, state);
+}
+
+void bcl_init() {
     err_t       mld6_err;
-    int         rval;
+    // int         rval;
     ip6_addr_t  multicast_glob_addr;
 
     printf( "Starting up BCL\n" );
@@ -225,7 +238,7 @@ void bcl_init(SerialHandle_t* hSerial) {
     inet6_aton("ff03::1", &multicast_glob_addr);
 
     // Initialize l2 structs/callbacks
-    bm_l2_init(NULL);
+    bm_l2_init(bm_link_change_cb);
 
     // The documentation says to use tcpip_input if we are running with an OS
     // bm_l2_netif_init will be called from netif_add
@@ -247,36 +260,39 @@ void bcl_init(SerialHandle_t* hSerial) {
     }
 
     /* Create threads and Queues */
-    bcl_rx_queue = xQueueCreate( BCL_RX_QUEUE_NUM_ENTRIES, sizeof(bcl_rx_element_t));
-    configASSERT(bcl_rx_queue);
+    // bcl_rx_queue = xQueueCreate( BCL_RX_QUEUE_NUM_ENTRIES, sizeof(bcl_rx_element_t));
+    // configASSERT(bcl_rx_queue);
 
-    rval = xTaskCreate(bcl_rx_thread,
-                       "BCL RX Thread",
-                       2048,
-                       NULL,
-                       BM_NETWORK_TASK_PRIORITY,
-                       &rx_thread);
-    configASSERT(rval == pdPASS);
+    // rval = xTaskCreate(bcl_rx_thread,
+    //                    "BCL RX Thread",
+    //                    2048,
+    //                    NULL,
+    //                    BM_NETWORK_TASK_PRIORITY,
+    //                    &rx_thread);
+    // configASSERT(rval == pdPASS);
 
     /* Using raw udp tx/rx for now */
-    udp_pcb = udp_new_ip_type(IPADDR_TYPE_V6);
-    udp_port = BM_BCL_PORT;
-    udp_bind(udp_pcb, IP_ANY_TYPE, udp_port);
-    udp_recv(udp_pcb, bcl_rx_cb, NULL);
+    // udp_pcb = udp_new_ip_type(IPADDR_TYPE_V6);
+    // udp_port = BM_BCL_PORT;
+    // udp_bind(udp_pcb, IP_ANY_TYPE, udp_port);
+    // udp_recv(udp_pcb, bcl_rx_cb, NULL);
+
+    bcmp_init(&netif);
+    bcmp_cli_init();
 
     /* Init and start the bristlemouth network */
-    bm_network_init(udp_pcb, udp_port, &netif);
+    // bm_network_init(udp_pcb, udp_port, &netif);
 
     /* Start DFU service here */
-    bm_dfu_init(hSerial, &netif);
+    // bm_dfu_init(hSerial, &netif);
 
 
     bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
 
     /* FIXME: Why is this delay needed between initializing and sending out neighbor discovery? Without it, any
               messages attempted to be sent withing X ms are not received */
-    vTaskDelay(400);
-    bm_network_start();
+    // vTaskDelay(400);
+    // bm_network_start();
 
 }
 

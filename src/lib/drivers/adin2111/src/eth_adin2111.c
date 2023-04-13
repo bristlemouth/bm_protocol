@@ -16,12 +16,14 @@
 #include "lwip/nd6.h"
 #include "lwip/prot/ip6.h"
 #include "lwip/udp.h"
+#include "lwip/ip.h"
 
 #include "adi_bsp.h"
-#include "eth_adin2111.h"
+#include "bcmp.h"
 #include "bm_l2.h"
-#include "task_priorities.h"
 #include "bsp.h"
+#include "eth_adin2111.h"
+#include "task_priorities.h"
 
 #include "pcap.h"
 
@@ -361,7 +363,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
 typedef struct {
     struct eth_hdr eth_hdr;
     struct ip6_hdr ip6_hdr;
-    struct udp_hdr udp_hdr;
+    uint8_t payload[0];
 } net_header_t;
 
 /*!
@@ -383,16 +385,20 @@ static void add_egress_port(uint8_t *buff, uint8_t port) {
     //
     // Correct checksum to account for change in ip address
     //
+    if(header->eth_hdr.type == IP_PROTO_UDP) {
+        struct udp_hdr *udp_hdr = (struct udp_hdr *)header->payload;
+        // Undo 1's complement
+        udp_hdr->chksum ^= 0xFFFF;
 
-    // Undo 1's complement
-    header->udp_hdr.chksum ^= 0xFFFF;
+        // Add port to checksum (we can only do this because the value was previously 0)
+        // Since udp checksum is sum of uint16_t bytes
+        udp_hdr->chksum += port;
 
-    // Add port to checksum (we can only do this because the value was previously 0)
-    // Since udp checksum is sum of uint16_t bytes
-    header->udp_hdr.chksum += port;
-
-    // Do 1's complement again
-    header->udp_hdr.chksum ^= 0xFFFF;
+        // Do 1's complement again
+        udp_hdr->chksum ^= 0xFFFF;
+    } else if(header->eth_hdr.type == IP_PROTO_BCMP) {
+        // fix checksum for BCMP
+    }
 }
 
 /*!

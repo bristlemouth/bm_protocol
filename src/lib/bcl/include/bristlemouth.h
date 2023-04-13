@@ -13,13 +13,7 @@
 extern "C" {
 #endif
 
-typedef struct bcl_rx_element_s {
-    struct pbuf* buf;
-    ip_addr_t src;
-    //other_info_t other_info;
-} bcl_rx_element_t;
-
-void bcl_init(SerialHandle_t* hSerial);
+void bcl_init();
 const char *bcl_get_ip_str(uint8_t ip);
 
 #ifdef __cplusplus

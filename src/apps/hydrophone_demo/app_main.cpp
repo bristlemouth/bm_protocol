@@ -213,7 +213,6 @@ volatile uint32_t alarmTimer;
 
 static void defaultTask( void *parameters ) {
   (void)parameters;
-  SerialHandle_t *dfuSerial = NULL;
 
   startIWDGTask();
 
@@ -261,7 +260,7 @@ static void defaultTask( void *parameters ) {
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
-  bcl_init(dfuSerial);
+  bcl_init();
 
   // Drop priority now that we're done booting
   vTaskPrioritySet(xTaskGetCurrentTaskHandle(), DEFAULT_TASK_PRIORITY);

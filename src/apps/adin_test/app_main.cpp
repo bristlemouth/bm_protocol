@@ -208,7 +208,6 @@ void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, ui
 
 static void defaultTask( void *parameters ) {
     (void)parameters;
-    SerialHandle_t *dfuSerial = NULL;
 
     startIWDGTask();
     startSerial();
@@ -221,11 +220,7 @@ static void defaultTask( void *parameters ) {
       // Serial device will be enabled automatically when console connects
       // so no explicit serialEnable is required
 
-#if BM_DFU_HOST
-      dfuSerial = &usbPcap;
-#else
       pcapInit(&usbPcap);
-#endif
 
 #ifndef BSP_DEV_MOTE_V1_0
     } else {
@@ -260,7 +255,7 @@ static void defaultTask( void *parameters ) {
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
-    bcl_init(dfuSerial);
+    bcl_init();
 
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
