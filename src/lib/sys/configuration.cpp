@@ -1,22 +1,45 @@
 #include "configuration.h"
 #include "FreeRTOS.h"
 #include <stdio.h>
+#include "crc.h"
+#include "reset_reason.h"
 #ifndef CBOR_CUSTOM_ALLOC_INCLUDE
 #error "CBOR_CUSTOM_ALLOC_INCLUDE must be defined!"
 #endif // CBOR_CUSTOM_ALLOC_INCLUDE
 #ifndef CBOR_PARSER_MAX_RECURSIONS
 #error "CBOR_PARSER_MAX_RECURSIONS must be defined!"
 #endif // CBOR_PARSER_MAX_RECURSIONS
-using namespace cfg;
+namespace cfg {
 
 Configuration::Configuration(NvmPartition& flash_partition, uint8_t *ram_partition, size_t ram_partition_size):_flash_partition(flash_partition), _ram_partition_size(ram_partition_size) {
     configASSERT(_ram_partition);
     configASSERT(_ram_partition_size >= sizeof(ConfigPartition_t));
     _ram_partition = reinterpret_cast<ConfigPartition_t*>(ram_partition);
-    (void)_flash_partition; // TODO: GH-109
-    // TODO: If we have valid flash, read flash partition into ram. otherwise we init a new config partition / read from default.
-    _ram_partition->header.numKeys = 0;
+    if(!loadAndVerifyNvmConfig()) {
+        printf("Unable to load configs from flash.");
+        _ram_partition->header.numKeys = 0;
+        _ram_partition->header.version = CONFIG_VERSION;
+        // TODO: Once we have default configs, load these into flash.
+    } else {
+        printf("Succesfully loaded configs from flash.");
+    }
 }
+
+bool Configuration::loadAndVerifyNvmConfig(void) {
+    bool rval = false;
+    do {
+        if(!_flash_partition.read(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
+            break;
+        }
+        uint32_t computed_crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
+        if(_ram_partition->header.crc32 != computed_crc32) {
+            break;
+        }
+        rval = true;
+    } while(0);
+    return rval;
+}
+
 
 bool Configuration::prepareCborParser(const char * key, CborValue &it, CborParser &parser) {
     configASSERT(key);
@@ -349,7 +372,7 @@ bool Configuration::setConfig(const char * key, const uint8_t *value, size_t val
 }
 
 /*!
-* Gets a list of the keys stored in the configuration. 
+* Gets a list of the keys stored in the configuration.
 * \param num_stored_key[out] - number of keys stored
 * \returns - map of keys
 */
@@ -408,3 +431,17 @@ const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
     }
     configASSERT(false); // NOT_REACHED
 }
+
+bool Configuration::saveConfig(void) {
+    bool rval = false;
+    do {
+        _ram_partition->header.crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
+        if(!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
+            break;
+        }
+        resetSystem(RESET_REASON_CONFIG);
+    } while(0);
+    return rval;
+}
+
+} // namespace cfg

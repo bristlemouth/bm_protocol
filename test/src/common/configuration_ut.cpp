@@ -4,6 +4,9 @@
 #include "mock_storage_driver.h"
 #include "ram_partitions.h"
 #include "configuration.h"
+#include "fff.h"
+
+DEFINE_FFF_GLOBALS;
 
 using namespace testing;
 using namespace cfg;
@@ -59,7 +62,7 @@ TEST_F(ConfigurationTest, BasicTest)
 {
     const ext_flash_partition_t test_configuration = {
         .fa_off = 4096,
-        .fa_size = 2000,
+        .fa_size = 10000,
     };
     NvmPartition testPartition(_storage, test_configuration);
     Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);
@@ -171,7 +174,7 @@ TEST_F(ConfigurationTest, NoKeyFound)
 {
   const ext_flash_partition_t test_configuration = {
       .fa_off = 4096,
-      .fa_size = 2000,
+      .fa_size = 10000,
   };
   NvmPartition testPartition(_storage, test_configuration);
   Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);
@@ -186,7 +189,7 @@ TEST_F(ConfigurationTest, TooMuchThingy)
 {
   const ext_flash_partition_t test_configuration = {
       .fa_off = 4096,
-      .fa_size = 2000,
+      .fa_size = 10000,
   };
   NvmPartition testPartition(_storage, test_configuration);
   Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);
@@ -202,7 +205,7 @@ TEST_F(ConfigurationTest, TooLittleStorage)
 {
   const ext_flash_partition_t test_configuration = {
       .fa_off = 4096,
-      .fa_size = 2000,
+      .fa_size = 10000,
   };
   uint8_t small_storage;
   NvmPartition testPartition(_storage, test_configuration);
@@ -213,7 +216,7 @@ TEST_F(ConfigurationTest, NoKeyToRemove)
 {
   const ext_flash_partition_t test_configuration = {
       .fa_off = 4096,
-      .fa_size = 2000,
+      .fa_size = 10000,
   };
   NvmPartition testPartition(_storage, test_configuration);
   Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);

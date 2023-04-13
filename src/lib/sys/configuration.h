@@ -3,11 +3,11 @@
 #include "cbor.h"
 
 namespace cfg {
- 
+
 static constexpr uint8_t MAX_NUM_KV             = 50;
 static constexpr uint8_t MAX_KEY_LEN_BYTES      = 32;
 static constexpr uint8_t MAX_STR_LEN_BYTES      = 50;
-
+static constexpr uint32_t CONFIG_VERSION        = 0; // FIXME: Put this in the default config file.
 
 typedef enum ConfigDataTypes{
     UINT32,
@@ -19,6 +19,7 @@ typedef enum ConfigDataTypes{
 
 typedef struct ConfigPartitionHeader {
     uint32_t crc32;
+    uint32_t version;
     uint8_t numKeys;
 } __attribute__((packed, aligned(1))) ConfigPartitionHeader_t;
 
@@ -54,13 +55,18 @@ public:
     bool removeKey(const char * key);
     bool configFull(void);
     static const char* dataTypeEnumToStr(ConfigDataTypes_e type);
+    bool saveConfig(void);
 private:
     bool findKeyIndex(const char * key, size_t len, uint8_t &idx);
     bool prepareCborParser(const char * key, CborValue &it, CborParser &parser);
     bool prepareCborEncoder(const char * key, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists);
+    bool loadAndVerifyNvmConfig(void);
+
+    static constexpr uint32_t CONFIG_START_OFFSET_IN_BYTES = 0;
+    static constexpr uint32_t CONFIG_LOAD_TIMEOUT_MS = 5000;
 
 private:
-    NvmPartition &_flash_partition; // TODO: GH-109
+    NvmPartition &_flash_partition;
     size_t _ram_partition_size;
     ConfigPartition_t* _ram_partition;
 };

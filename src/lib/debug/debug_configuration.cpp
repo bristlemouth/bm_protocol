@@ -23,6 +23,7 @@ static const CLI_Command_Definition_t cmdConfiguration = {
   " * cfg <usr/hw/sys> set <key> <type:uint,int,float,str,bytestr> <value>\n"
   " * cfg <usr/hw/sys> get <key> <type>\n"
   " * cfg <usr/hw/sys> del <key>\n"
+  " * cfg <usr/hw/sys> save\n"
   " * cfg <usr/hw/sys> listkeys\n",
   // Command function
   configurationCommand,
@@ -58,7 +59,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
         BaseType_t partitionStrLen;
         const char *partitionStr = FreeRTOS_CLIGetParameter(
         commandString,
-        1, 
+        1,
         &partitionStrLen);
         if(partitionStr == NULL) {
             printf("ERR Invalid paramters\n");
@@ -78,7 +79,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
 
         parameter = FreeRTOS_CLIGetParameter(
                     commandString,
-                    2, 
+                    2,
                     &parameterStringLength);
 
         if(parameter == NULL) {
@@ -90,7 +91,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             BaseType_t keyStrLen;
             const char *keystr = FreeRTOS_CLIGetParameter(
             commandString,
-            3, 
+            3,
             &keyStrLen);
             if(keystr == NULL) {
                 printf("ERR Invalid paramters\n");
@@ -99,7 +100,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             BaseType_t typeStrLen;
             const char *typestr = FreeRTOS_CLIGetParameter(
             commandString,
-            4, 
+            4,
             &typeStrLen);
             if(typestr == NULL) {
                 printf("ERR Invalid paramters\n");
@@ -167,7 +168,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             BaseType_t keyStrLen;
             const char *keystr = FreeRTOS_CLIGetParameter(
             commandString,
-            3, 
+            3,
             &keyStrLen);
             if(keystr == NULL) {
                 printf("ERR Invalid paramters\n");
@@ -176,7 +177,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             BaseType_t typeStrLen;
             const char *typestr = FreeRTOS_CLIGetParameter(
             commandString,
-            4, 
+            4,
             &typeStrLen);
             if(typestr == NULL) {
                 printf("ERR Invalid paramters\n");
@@ -246,7 +247,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             BaseType_t keyStrLen;
             const char *keystr = FreeRTOS_CLIGetParameter(
             commandString,
-            3, 
+            3,
             &keyStrLen);
             if(keystr == NULL) {
                 printf("ERR Invalid paramters\n");
@@ -263,6 +264,11 @@ static BaseType_t configurationCommand( char *writeBuffer,
             } else {
                 printf("Failed to remove key %s\n",keyStrBuf);
             }
+        } else if (strncmp("save", parameter, parameterStringLength) == 0) {
+            if(!config->saveConfig()){
+                printf("Failed to save config.\n");
+            }
+            // Succesfull "save" will reset the system.
         }
         else {
             printf("ERR Invalid paramters\n");

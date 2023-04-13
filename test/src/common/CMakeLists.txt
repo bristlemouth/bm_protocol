@@ -113,6 +113,9 @@ target_include_directories(configuration_tests
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
+    ${SRC_DIR}/third_party/crc
+    ${TEST_DIR}/third_party/fff
+
 )
 
 target_sources(configuration_tests
@@ -126,9 +129,11 @@ target_sources(configuration_tests
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
     ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
     ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
+    ${SRC_DIR}/third_party/crc/crc32.c
 
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c
+    ${TEST_DIR}/stubs/mock_reset_reason.cpp
 
     # Unit test wrapper for test
     configuration_ut.cpp
