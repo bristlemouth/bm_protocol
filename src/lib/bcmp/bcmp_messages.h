@@ -3,10 +3,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct {
-  uint32_t count;
-} bcmpHeartbeat_t;
+typedef uint64_t bm_time_t;
 
+typedef struct {
+  // Time since unit powered up
+  bm_time_t uptime_us;
+
+  // Time between heartbeat messages
+  bm_time_t period_us;
+} bcmpHeartbeat_t;
 
 typedef enum {
   BCMP_ACK = 0x00,
@@ -23,5 +28,5 @@ typedef enum {
   BCMP_DFU_BEGIN_HOST = 0xD7,
 } bcmpMessaegType_t;
 
-err_t bcmp_send_heartbeat();
+err_t bcmp_send_heartbeat(uint32_t period_s);
 err_t bcmp_process_heartbeat(void *payload, const ip_addr_t *src, uint8_t dst_port);

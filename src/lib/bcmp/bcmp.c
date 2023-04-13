@@ -56,7 +56,7 @@ void bcmp_link_change(uint8_t port, bool state) {
   if(state) {
     // Send heartbeat since we just connected to someone and (re)start the
     // heartbeat timer
-    bcmp_send_heartbeat();
+    bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
     configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
   }
 }
@@ -231,7 +231,7 @@ static void bcmp_thread(void *parameters) {
       }
 
       case BCMP_EVT_HEARTBEAT: {
-        bcmp_send_heartbeat();
+        bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
         break;
       }
 

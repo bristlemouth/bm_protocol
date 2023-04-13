@@ -22,6 +22,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/bcmp/bcmp.c
     ${SRC_DIR}/lib/bcmp/bcmp_cli.c
     ${SRC_DIR}/lib/bcmp/bcmp_heartbeat.c
+    ${SRC_DIR}/lib/bcmp/bcmp_neighbors.c
     # ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
     # ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
     # ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
