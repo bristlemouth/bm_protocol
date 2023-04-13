@@ -71,30 +71,45 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
   CLEAR_PORTS(src->addr);
 
 
-    // bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
+  do {
+    bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
 
-    // TODO - Validate checksum
+    uint16_t checksum = ip6_chksum_pseudo( pbuf,
+                                          IP_PROTO_BCMP,
+                                          pbuf->len,
+                                          src, &multicast_ll_addr);
 
+    // Valid checksum will come out to zero, since the actual checksum
+    // is included and cancels out
+    if(checksum) {
+      printf("BCMP - Invalid checmsum\n");
+
+      rval = -1;
+      break;
+    }
+
+    // TODO - check for address match (only relevant on certain messages)
     // // Check for both link-local and unicast address match
     // if(ip6_addr_eq(header->dest, netif_ip_addr6(_ctx.netif, 0)) ||
     //    ip6_addr_eq(header->dest, netif_ip_addr6(_ctx.netif, 1))) {
 
     // }
 
+    // bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
+    switch(header->type) {
+      case BCMP_HEARTBEAT: {
+        bcmp_process_heartbeat(header->payload, src, dst_port);
+        break;
+      }
 
-
-  bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
-  switch(header->type) {
-    case BCMP_HEARTBEAT: {
-      bcmp_process_heartbeat(header->payload, src, dst_port);
-      break;
+      default: {
+        printf("Unsupported BMCP message %04X\n", header->type);
+        rval = -1;
+        break;
+      }
     }
 
-    default: {
-      printf("Unsupported BMCP message %04X\n", header->type);
-      break;
-    }
-  }
+  } while(0);
 
   return rval;
 }
