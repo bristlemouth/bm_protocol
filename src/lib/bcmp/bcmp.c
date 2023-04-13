@@ -44,6 +44,13 @@ typedef struct {
 
 static bcmpContext_t _ctx;
 
+/*!
+  BCMP link change event callback
+
+  \param port - system port in which the link change occurred
+  \param state - 0 for down 1 for up
+  \return none
+*/
 void bcmp_link_change(uint8_t port, bool state) {
   (void)port; // Not using the port for now
   if(state) {
@@ -54,7 +61,13 @@ void bcmp_link_change(uint8_t port, bool state) {
   }
 }
 
+/*!
+  BCMP packet processing function
 
+  \param *pbuf pbuf with packet
+  \param *src packet source
+  \return 0 if processed ok, nonzero otherwise
+*/
 int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
   int32_t rval = 0;
   // uint8_t src_port;
@@ -115,6 +128,13 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
 }
 
 
+/*!
+  FreeRTOS timer handler for sending out heartbeats. No work is done in the timer
+  handler, but instead an event is queued up to be handled in the BCMP task.
+
+  \param tmr unused
+  \return none
+*/
 static void heartbeat_timer_handler(TimerHandle_t tmr){
   (void) tmr;
 
@@ -123,6 +143,16 @@ static void heartbeat_timer_handler(TimerHandle_t tmr){
   configASSERT(xQueueSend(_ctx.rx_queue, &item, 0) == pdTRUE);
 }
 
+/*!
+  lwip raw recv callback for BCMP packets. Called from lwip task.
+  Packet is added to main BCMP queue for processing
+
+  \param *arg unused
+  \param *pcb unused
+  \param *pbuf packet buffer
+  \param *src packet sender address
+  \return 1 if the packet was consumed, 0 otherwise (someone else will take it)
+*/
 static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, const ip_addr_t *src) {
   (void)arg;
   (void)pcb;
@@ -159,7 +189,14 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
   return rval;
 }
 
-static void bcmp_rx_thread(void *parameters) {
+
+/*!
+  BCMP task. All BCMP events are handled here.
+
+  \param parameters unused
+  \return none
+*/
+static void bcmp_thread(void *parameters) {
   (void) parameters;
 
   // Start listening for BCMP packets
@@ -201,6 +238,15 @@ static void bcmp_rx_thread(void *parameters) {
 
 }
 
+/*!
+  BCMP packet transmit function. Header and checksum added and computer within
+
+  \param *dst destination ip
+  \param type message type
+  \param *buff message buffer
+  \param len message length
+  \return ERR_OK on success, something else otherwise
+*/
 err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint16_t len) {
     struct pbuf *pbuf;
 
@@ -238,6 +284,12 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint1
     return rval;
 }
 
+/*!
+  BCMP initialization
+
+  \param *netif lwip network interface to use
+  \return none
+*/
 void bcmp_init(struct netif* netif) {
   _ctx.netif = netif;
   _ctx.pcb = raw_new(IP_PROTO_BCMP);
@@ -248,7 +300,7 @@ void bcmp_init(struct netif* netif) {
   _ctx.rx_queue = xQueueCreate(BCMP_EVT_QUEUE_LEN, sizeof(bcmp_queue_item_t));
   configASSERT(_ctx.rx_queue);
 
-  BaseType_t rval = xTaskCreate(bcmp_rx_thread,
+  BaseType_t rval = xTaskCreate(bcmp_thread,
                      "BCMP",
                      1024,
                      NULL,
