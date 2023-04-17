@@ -24,7 +24,7 @@ typedef struct bm_neigbhor_s {
   uint32_t last_heartbeat_ticks;
 
   // Time between expected heartbeats
-  bm_time_t heartbeat_period_us;
+  uint64_t heartbeat_period_us;
 
   // TODO - resource list
 } bm_neigbhor_t;

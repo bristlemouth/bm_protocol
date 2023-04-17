@@ -19,16 +19,8 @@ extern "C" {
 
 #define IP_PROTO_BCMP (0xBC)
 
-typedef struct {
-  uint16_t type;
-  uint16_t checksum;
-  uint8_t flags;
-  uint8_t rsvd;
-  uint8_t payload[0];
-} __attribute__((packed)) bcmpHeader_t;
-
 void bcmp_init(struct netif* netif);
-err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint16_t len);
+err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len);
 void bcmp_link_change(uint8_t port, bool state);
 
 #ifdef __cplusplus
