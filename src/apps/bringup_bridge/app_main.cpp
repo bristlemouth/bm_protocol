@@ -162,7 +162,7 @@ extern "C" void USART1_IRQHandler(void) {
 }
 #endif // DEBUG_USE_USART1
 
-static INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
+static INA::INA232 debugIna1(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
 };
