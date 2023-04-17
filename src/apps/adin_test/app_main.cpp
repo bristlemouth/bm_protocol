@@ -3,7 +3,6 @@
 #include "main.h"
 
 // Peripheral
-#include "adc.h"
 #include "gpio.h"
 #include "icache.h"
 #include "iwdg.h"
@@ -42,6 +41,14 @@
     #define LED_BLUE EXP_LED_G1
     #define ALARM_OUT EXP_LED_R2
     #define USER_BUTTON GPIO2
+
+    // LEDS are active low
+    #define LED_ON (0)
+    #define LED_OFF (1)
+#elif BSP_BRIDGE_V1_0
+    #define LED_BLUE LED_G
+    #define ALARM_OUT LED_R
+    #define USER_BUTTON BOOT
 
     // LEDS are active low
     #define LED_ON (0)
