@@ -17,3 +17,16 @@ bool NvmPartition::write(uint32_t offset, uint8_t *buffer, size_t len, uint32_t 
     configASSERT(offset + len < _partition.fa_size);
     return _storage_driver.write(_partition.fa_off+offset, buffer, len, timeoutMs);
 }
+
+uint32_t NvmPartition::size(void) {
+    return _partition.fa_size;
+}
+
+bool NvmPartition::erase(uint32_t offset, size_t len, uint32_t timeoutMs) {
+    configASSERT(offset + len + (len % _storage_driver.getAlignmentBytes()) < _partition.fa_size);
+    return _storage_driver.erase(_partition.fa_off + offset, len, timeoutMs);
+}
+
+uint32_t NvmPartition::alignment(void) {
+    return _storage_driver.getAlignmentBytes();
+}

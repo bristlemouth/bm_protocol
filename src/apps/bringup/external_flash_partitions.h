@@ -22,7 +22,8 @@ typedef struct ext_flash_partition {
 extern const ext_flash_partition_t hardware_configuration;
 extern const ext_flash_partition_t system_configuration;
 extern const ext_flash_partition_t user_configuration;
-
+extern const ext_flash_partition_t cli_configuration;
+extern const ext_flash_partition_t dfu_configuration;
 #ifdef __cplusplus
 }
 #endif

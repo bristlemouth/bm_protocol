@@ -519,4 +519,36 @@ uint32_t W25::getStorageSizeBytes(void) {
     return W25Q64JVXGIQ_CAPCITY_BYTES;
 }
 
+/*!
+ * Erase flash. Note that we can only erase in minimum sizes of 4096 byte sectors, and aligned on a sector.
+ * \param[in] addr - address of flash, aligned to 4096 bytes
+ * \param[in] len - length of flash to erase
+ * \param[in] timeout - timeout to wait for operation to complete.
+ * \return true if success, false if fail.
+*/
+bool W25::erase(uint32_t addr, size_t len, uint32_t timeoutMs) {
+    uint32_t erase_start_addr = addr;
+    if((addr % W25_SECTOR_SIZE) != 0) {
+        erase_start_addr = addr - (addr % W25_SECTOR_SIZE);
+    }    
+    configASSERT(erase_start_addr + len + (len % W25_SECTOR_SIZE) < W25_MAX_ADDRESS);
+    bool rval = false;
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        uint32_t current_addr = erase_start_addr;
+        while(current_addr < (erase_start_addr + len)){
+            if(!_eraseSector(current_addr)){
+                break;
+            }
+            current_addr += W25_SECTOR_SIZE;
+        }
+        if(current_addr >= (erase_start_addr + len)){
+            rval = true;
+        }
+        xSemaphoreGive(_mutex);
+    } else {
+        printf("Failed to acquire W25 mutex.\n");
+    }
+    return rval;
+}
+
 } // namespace spiflash

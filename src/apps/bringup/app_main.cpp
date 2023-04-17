@@ -50,6 +50,7 @@
 #include "w25.h"
 #include "watchdog.h"
 #include "debug_htu.h"
+#include "debug_nvm_cli.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
@@ -286,6 +287,9 @@ static void defaultTask( void *parameters ) {
   cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
   debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
 
+  NvmPartition debug_cli_partition(debugW25, cli_configuration);
+  NvmPartition dfu_cli_partition(debugW25, dfu_configuration);
+  debugNvmCliInit(&debug_cli_partition, &dfu_cli_partition);
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
 #endif

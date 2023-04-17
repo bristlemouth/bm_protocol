@@ -13,6 +13,7 @@ public:
     bool eraseChip(uint32_t timeoutMs=100);
     bool read(uint32_t addr, uint8_t *buffer, size_t len, uint32_t timeoutMs=100);
     bool write(uint32_t addr, uint8_t *buffer, size_t len, uint32_t timeoutMs=100);
+    bool erase(uint32_t addr, size_t len, uint32_t timeoutMs=100);
     bool eraseSector(uint32_t addr, uint32_t timeoutMs=100);
     bool crc32Checksum(uint32_t addr, size_t len, uint32_t &crc32, uint32_t timeoutMs=100);
     uint32_t getAlignmentBytes(void);

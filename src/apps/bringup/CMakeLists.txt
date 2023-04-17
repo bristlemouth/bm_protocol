@@ -26,7 +26,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
-    ${SRC_DIR}/lib/sys/external_flash_partitions.c
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
@@ -43,6 +42,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
+    ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
@@ -218,6 +218,7 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}
