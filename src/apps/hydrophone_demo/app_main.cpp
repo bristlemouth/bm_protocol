@@ -224,6 +224,8 @@ static void defaultTask( void *parameters ) {
   memfault_platform_boot();
   memfault_platform_start();
 
+  pca9535StartIRQTask();
+
   bspInit();
 
   startSerial();

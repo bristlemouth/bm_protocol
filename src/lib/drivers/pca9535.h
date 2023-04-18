@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FreeRTOS.h"
+#include "timers.h"
 #include "io.h"
 #include "protected_i2c.h"
 
@@ -18,6 +19,9 @@ typedef struct {
 	uint16_t configPort;
 	IOCallbackFn callbacks[PCA9535_NUM_CHANNELS];
 	bool enabled;
+	// Timer used to poll the IO expander for cases
+	// where the INT pin is not connected
+	TimerHandle_t pollTimer;
 } PCA9535Device_t;
 
 typedef struct {
@@ -33,6 +37,8 @@ typedef struct {
 bool pca9535Init(PCA9535Device_t *device);
 
 void pca9535StartIRQTask();
+bool pca9535StartPollingTimer(PCA9535Device_t *device, uint32_t intervalMs);
+bool pca9535StopPollingTimer(PCA9535Device_t *device);
 bool pca9535IRQHandler(const void *pcaPinHandle, uint8_t value, void *args);
 
 extern IODriver_t PCA9535PinDriver;
