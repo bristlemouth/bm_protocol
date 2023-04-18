@@ -54,24 +54,6 @@
 #include <stdio.h>
 
 static void defaultTask(void *parameters);
-#ifndef DEBUG_USE_LPUART1
-SerialHandle_t lpuart1 = {
-  .device = LPUART1,
-  .name = "payload",
-  .txPin = &PAYLOAD_TX,
-  .rxPin = &PAYLOAD_RX,
-  .txStreamBuffer = NULL,
-  .rxStreamBuffer = NULL,
-  .txBufferSize = 128,
-  .rxBufferSize = 2048,
-  .rxBytesFromISR = serialGenericRxBytesFromISR,
-  .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-  .processByte = NULL,
-  .data = NULL,
-  .enabled = false,
-  .flags = 0,
-};
-#endif // DEBUG_USE_LPUART1
 
 #ifndef DEBUG_USE_USART1
 SerialHandle_t usart1 = {
@@ -162,7 +144,7 @@ extern "C" void USART1_IRQHandler(void) {
 }
 #endif // DEBUG_USE_USART1
 
-static INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
+static INA::INA232 debugIna1(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
 };
@@ -178,6 +160,7 @@ extern "C" int main(void) {
   SystemPower_Config_ext();
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
@@ -217,6 +200,8 @@ extern "C" int main(void) {
   while (1){};
 }
 
+extern SerialHandle_t usart3;
+
 static void defaultTask( void *parameters ) {
 
   (void)parameters;
@@ -225,7 +210,6 @@ static void defaultTask( void *parameters ) {
   startSerial();
 
   startCLI();
-  startDebugUart();
   pca9535StartIRQTask();
 
   // Use USB for serial console if USB for bringup
@@ -240,6 +224,9 @@ static void defaultTask( void *parameters ) {
 
   usbInit();
 
+  usart3.txPin = &BM_MOSI_TX3;
+  usart3.rxPin = &BM_SCK_RX3;
+  startDebugUart();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
   debugAdinRawInit();

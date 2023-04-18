@@ -12,24 +12,7 @@ typedef struct SpiDmaContext {
   bool spi_dma_error_occurred[MAX_NUM_SPI];
 } SpiDmaContext_t;
 
-static SpiDmaContext_t _dma_context = {
-  .num_registered_spi = 0,
-  .spi_handles = {
-    NULL,
-    NULL,
-    NULL,
-  },
-  .spi_task_to_wake = {
-    NULL,
-    NULL,
-    NULL
-  },
-  .spi_dma_error_occurred = {
-    false,
-    false,
-    false
-  },
-};
+static SpiDmaContext_t _dma_context;
 
 /*!
   Initialize an spi interface
@@ -151,7 +134,7 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
 */
 SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t len, uint8_t *txBuff, uint8_t *rxBuff, uint32_t timeoutMs) {
   configASSERT(interface != NULL);
-  configASSERT((interface->dma_id > 0 && interface->dma_id < MAX_NUM_SPI));
+  configASSERT(interface->dma_id < MAX_NUM_SPI);
   SPIResponse_t rval = SPI_ERR;
 
   if(xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
@@ -183,7 +166,7 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
       } else if (rxBuff != NULL) {
         halRval = HAL_SPI_Receive_DMA(interface->handle, rxBuff, len);
       }
-      
+
       if(halRval != HAL_OK){
         break;
       }
