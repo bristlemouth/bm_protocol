@@ -115,6 +115,15 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
         break;
       }
 
+      case BCMP_DFU_START:
+      case BCMP_DFU_PAYLOAD_REQ:
+      case BCMP_DFU_PAYLOAD:
+      case BCMP_DFU_END:
+      case BCMP_DFU_ACK:
+      case BCMP_DFU_HEARTBEAT:
+      case BCMP_DFU_BEGIN_HOST:
+        // TODO: PUMP DFU STATE MACHINE.
+        break;
       default: {
         printf("Unsupported BMCP message %04X\n", header->type);
         rval = -1;
