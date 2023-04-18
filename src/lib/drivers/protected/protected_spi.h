@@ -24,6 +24,7 @@ typedef struct {
   void (*initFn)();
   SemaphoreHandle_t mutex;
   int8_t dma_id;
+  uint32_t lpm_mask;
 } SPIInterface_t;
 
 bool spiInit(SPIInterface_t *interface);
@@ -37,4 +38,4 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
 }
 #endif
 
-#define PROTECTED_SPI(name, handle, initFunction) {name, &handle, initFunction, NULL, -1};
+#define PROTECTED_SPI(name, handle, initFunction) {name, &handle, initFunction, NULL, -1, 0};

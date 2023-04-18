@@ -52,7 +52,11 @@ void bspInit() {
   HAL_SuspendTick();
 
   spiInit(&spi2);
+  spi2.lpm_mask = LPM_SPI2;
+
   spiInit(&spi3);
+  spi3.lpm_mask = LPM_SPI3;
+
   i2cInit(&i2c1);
 
   // Turn on Adin2111
