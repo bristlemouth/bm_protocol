@@ -24,7 +24,7 @@ bm_neigbhor_t *bcmp_find_neighbor(const ip_addr_t *addr) {
   return neighbor;
 }
 
-bm_neigbhor_t * bcmp_add_neighbor(const ip_addr_t *addr, uint8_t port) {
+bm_neigbhor_t *bcmp_add_neighbor(const ip_addr_t *addr, uint8_t port) {
   bm_neigbhor_t *new_neighbor = pvPortMalloc(sizeof(bm_neigbhor_t));
   configASSERT(new_neighbor);
 
@@ -35,14 +35,15 @@ bm_neigbhor_t * bcmp_add_neighbor(const ip_addr_t *addr, uint8_t port) {
 
   bm_neigbhor_t *neighbor = NULL;
   if(_neighbors == NULL) {
-    // First neigbhor!
+    // First neighbor!
     _neighbors = new_neighbor;
   } else {
     neighbor = _neighbors;
 
     // Go to the last neighbor and insert the new one there
-    while(neighbor->next != NULL) {
+    while(neighbor && (neighbor->next != NULL)) {
       if(ip6_addr_eq(addr, &neighbor->addr)) {
+        neighbor = NULL;
         break;
       }
 
@@ -50,7 +51,11 @@ bm_neigbhor_t * bcmp_add_neighbor(const ip_addr_t *addr, uint8_t port) {
       neighbor = neighbor->next;
     }
 
-    neighbor->next = new_neighbor;
+    if(neighbor != NULL) {
+      neighbor->next = new_neighbor;
+    } else {
+      vPortFree(new_neighbor);
+    }
   }
 
   return new_neighbor;
