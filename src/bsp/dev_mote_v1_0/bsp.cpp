@@ -76,7 +76,7 @@ void bspInit() {
 
   // We don't have the IO expander's INT line connected to the microcontroller
   // So we'll have to poll for changes
-  pca9535StartPollingTimer(&devMoteIOExpander, 100);
+  pca9535StartPollingTimer(&devMoteIOExpander, 1000);
 
   // Turn LEDS on by default
   IOWrite(&EXP_LED_G1, 0);
