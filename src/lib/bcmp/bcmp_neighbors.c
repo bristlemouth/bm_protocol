@@ -55,6 +55,7 @@ bm_neigbhor_t *bcmp_add_neighbor(const ip_addr_t *addr, uint8_t port) {
       neighbor->next = new_neighbor;
     } else {
       vPortFree(new_neighbor);
+      new_neighbor = NULL;
     }
   }
 
