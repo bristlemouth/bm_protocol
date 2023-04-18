@@ -321,6 +321,73 @@ static void pca9535IRQTask() {
 }
 
 /*!
+  Trigger a PCA9535 update when the timer callback fires
+
+  \param tmr timer this callback is for
+  \return none
+*/
+static void pca9535PollTimerCallback(TimerHandle_t tmr){
+  configASSERT(tmr);
+
+  PCA9535Device_t *device = (PCA9535Device_t *)pvTimerGetTimerID(tmr);
+  configASSERT(device);
+
+  if(PCA9535TaskHandle){
+    xTaskNotify(PCA9535TaskHandle,(UBaseType_t)device, eSetValueWithOverwrite);
+  }
+}
+
+/*!
+  Create a timer to poll IO expander for changes. (In case the interrupt line is not connected)
+
+  \param device PCA device this timer is for
+  \param intervalMs time between polls
+  \return true if successful, false otherwise
+*/
+bool pca9535StartPollingTimer(PCA9535Device_t *device, uint32_t intervalMs) {
+  configASSERT(device);
+
+  bool rval = false;
+
+  if(device->pollTimer == NULL) {
+    device->pollTimer = xTimerCreate("pca9535 Poll",
+                              pdMS_TO_TICKS(intervalMs),
+                              pdTRUE,
+                              device,
+                              pca9535PollTimerCallback);
+    configASSERT(device->pollTimer);
+
+    configASSERT(xTimerStart(device->pollTimer, 10) == pdTRUE);
+
+    rval = true;
+  } else {
+    printf("pca9535 poll timer already present!\n");
+  }
+
+  return rval;
+}
+
+/*!
+  Stop an already running polling timer
+
+  \param device PCA device this timer is for
+  \return true if successful, false otherwise
+*/
+bool pca9535StopPollingTimer(PCA9535Device_t *device) {
+  configASSERT(device);
+
+  bool rval = false;
+
+  if(device->pollTimer) {
+    configASSERT(xTimerDelete(device->pollTimer, 10));
+    device->pollTimer = NULL;
+    rval = true;
+  }
+
+  return rval;
+}
+
+/*!
   Start IRQ task. Make sure stack is appropriately sized
 */
 void pca9535StartIRQTask() {

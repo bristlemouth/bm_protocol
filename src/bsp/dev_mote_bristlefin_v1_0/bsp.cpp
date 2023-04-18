@@ -48,8 +48,8 @@ SPIInterface_t spi3 = PROTECTED_SPI("SPI3", hspi3, MX_SPI3_Init);
 extern I2C_HandleTypeDef hi2c1;
 I2CInterface_t i2c1 = PROTECTED_I2C("I2C1", hi2c1, MX_I2C1_Init);
 
-PCA9535Device_t devMoteIOExpander = {&i2c1, 0x20, 0 , 0, 0, {NULL}, false};
-PCA9535Device_t bristlefinIOExpander = {&i2c1, 0x21, 0 , 0, 0, {NULL}, false};
+PCA9535Device_t devMoteIOExpander = {&i2c1, 0x20, 0 , 0, 0, {NULL}, false, NULL};
+PCA9535Device_t bristlefinIOExpander = {&i2c1, 0x21, 0 , 0, 0, {NULL}, false, NULL};
 
 adin_pins_t adin_pins = {&spi3, &ADIN_CS, &ADIN_INT, &ADIN_RST};
 
@@ -69,6 +69,11 @@ void bspInit() {
   // Initialize the IO Expanders
   pca9535Init(&devMoteIOExpander);
   pca9535Init(&bristlefinIOExpander);
+
+  // We don't have the IO expander's INT line connected to the microcontroller
+  // So we'll have to poll for changes
+  pca9535StartPollingTimer(&devMoteIOExpander, 100);
+  pca9535StartPollingTimer(&bristlefinIOExpander, 100);
 
   // Turn LEDS on by default
   IOWrite(&EXP_LED_G1, 0);
