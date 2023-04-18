@@ -42,6 +42,7 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
+    ${SRC_DIR}/lib/debug/debug_ms5803.cpp
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/debug/debug_uart.c

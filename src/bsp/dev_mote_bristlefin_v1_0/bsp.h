@@ -62,26 +62,24 @@ extern IOPinHandle_t EXP_GPIO9;
 extern IOPinHandle_t EXP_GPIO10;
 extern IOPinHandle_t EXP_GPIO11;
 extern IOPinHandle_t EXP_GPIO12;
-extern IOPinHandle_t EXP_INT;
 
 // Bristlefine IO expander pins
-extern IOPinHandle_t BF_EXP_IO1;
-extern IOPinHandle_t BF_EXP_IO2;
-extern IOPinHandle_t BF_EXP_HFIO;
-extern IOPinHandle_t BF_EXP_3V3_EN;
-extern IOPinHandle_t BF_EXP_5V_EN;
-extern IOPinHandle_t BF_EXP_IMU_INT;
-extern IOPinHandle_t BF_EXP_IMU_RST;
-extern IOPinHandle_t BF_EXP_SDI12_OE;
-extern IOPinHandle_t BF_EXP_TP16;
-extern IOPinHandle_t BF_EXP_LED_G1;
-extern IOPinHandle_t BF_EXP_LED_R1;
-extern IOPinHandle_t BF_EXP_LED_G2;
-extern IOPinHandle_t BF_EXP_LED_R2;
-extern IOPinHandle_t BF_EXP_PL_BUCK_EN;
-extern IOPinHandle_t BF_EXP_TP7;
-extern IOPinHandle_t BF_EXP_TP8;
-extern IOPinHandle_t BF_EXP_INT;
+extern IOPinHandle_t BF_IO1;
+extern IOPinHandle_t BF_IO2;
+extern IOPinHandle_t BF_HFIO;
+extern IOPinHandle_t BF_3V3_EN;
+extern IOPinHandle_t BF_5V_EN;
+extern IOPinHandle_t BF_IMU_INT;
+extern IOPinHandle_t BF_IMU_RST;
+extern IOPinHandle_t BF_SDI12_OE;
+extern IOPinHandle_t BF_TP16;
+extern IOPinHandle_t BF_LED_G1;
+extern IOPinHandle_t BF_LED_R1;
+extern IOPinHandle_t BF_LED_G2;
+extern IOPinHandle_t BF_LED_R2;
+extern IOPinHandle_t BF_PL_BUCK_EN;
+extern IOPinHandle_t BF_TP7;
+extern IOPinHandle_t BF_TP8;
 
 
 // SPI Interfaces
@@ -107,7 +105,7 @@ typedef struct adin_pins_s {
 #define I2C_INA_PODL_ADDR  (0x41)
 #define NUM_INA232_DEV (3)
 
-#define MS5803_ADDR (0x76)
+#define MS5803_ADDR (0x77)
 
 // This will be a GPIO coming from the dev mote through the mezzanine
 // to the bristlefin board

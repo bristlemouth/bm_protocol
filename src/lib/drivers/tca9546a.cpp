@@ -61,7 +61,7 @@ bool TCA9546A::setChannel(Channel_t channel) {
 */
 bool TCA9546A::getChannel(Channel_t *channel){
   bool rval = false;
-  if (readBytes((uint8_t*)&channel, sizeof(uint8_t), 100) == I2C_OK){
+  if (readBytes((uint8_t*)channel, sizeof(uint8_t), 100) == I2C_OK){
     _channel = *channel;
     rval = true;
   }

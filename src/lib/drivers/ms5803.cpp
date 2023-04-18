@@ -113,7 +113,7 @@ bool MS5803::readPTRaw(float &pressure, float &temperature) {
 
   \param[in] command Command to start measurement (for D1 or D2)
   \param[out] *value pointer to variable in which to store raw value
-  \param[in] timeoutMs SPI transaction timeout in milliseconds
+  \param[in] timeoutMs I2C transaction timeout in milliseconds
   \param[in] conversion delay in milliseconds
   \return true if successfull false otherwise
 */

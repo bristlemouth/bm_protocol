@@ -18,8 +18,8 @@
     #define ALARM_OUT EXP_LED_R2
     #define USER_BUTTON GPIO2
 #elif BSP_DEV_MOTE_BRISTLEFIN_V1_0
-    #define LED_BLUE EXP_LED_G1
-    #define ALARM_OUT EXP_LED_R2
+    #define LED_BLUE BF_LED_G1
+    #define ALARM_OUT BF_LED_R2
     #define USER_BUTTON GPIO2
 #elif BSP_DEV_MOTE_HYDROPHONE
     #define LED_BLUE EXP_LED_G1

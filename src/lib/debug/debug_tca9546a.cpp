@@ -66,7 +66,20 @@ static BaseType_t tca9546aCommand( char *writeBuffer,
     } else if (strncmp("get", parameter, parameterStringLength) == 0) {
       Channel_t _channel;
       if(_tca9546a_device->getChannel(&_channel)){
-        printf("TCA channel: %u\n", (uint8_t)_channel);
+        if(_channel == CH_NONE){
+          printf("TCA channel 0\n");
+          break;
+        } else if (_channel == CH_1){
+          printf("TCA channel 1\n");
+        } else if (_channel == CH_2){
+          printf("TCA channel 2\n");
+        } else if (_channel == CH_3){
+          printf("TCA channel 3\n");
+        } else if (_channel == CH_4){
+          printf("TCA channel 4\n");
+        } else {
+          printf("Invalid TCA channel: %x\n", (uint8_t)_channel);
+        }
         break;
       }
       else{
@@ -83,18 +96,30 @@ static BaseType_t tca9546aCommand( char *writeBuffer,
         2,
         &parameterStringLength);
       uint8_t channel = strtoul(channel_string, NULL, 10);
-      if(channel != CH_4 && channel != CH_3 && channel != CH_2 && channel != CH_1 && channel != CH_NONE){
+      printf("setting to channel %u\n", channel);
+      if(channel > 4){
         printf("ERR Invalid Channel!\n");
         break;
       }
       else{
-        if(_tca9546a_device->setChannel((Channel_t)channel)){
-          printf("Channel set!\n");
-          break;
-        }
-        else{
-          printf("Failed to set channel\n!");
-          break;
+        if(channel == 0){
+          if(_tca9546a_device->setChannel(CH_NONE)){
+            printf("Channel set!\n");
+            break;
+          }
+          else {
+            printf("Failed to set channel\n!");
+            break;
+          }
+        } else {
+          if(_tca9546a_device->setChannel((Channel_t)(0x1 << (channel - 1)))){
+            printf("Channel set!\n");
+            break;
+          }
+          else{
+            printf("Failed to set channel\n!");
+            break;
+          }
         }
       }
     } else {

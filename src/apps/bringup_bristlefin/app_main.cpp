@@ -30,6 +30,7 @@
 #include "debug_i2c.h"
 #include "debug_ina232.h"
 #include "debug_memfault.h"
+#include "debug_ms5803.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
 #include "debug_tca9546a.h"
@@ -169,23 +170,22 @@ static const DebugGpio_t debugGpioPins[] = {
   {"exp_gpio10", &EXP_GPIO10, GPIO_OUT},
   {"exp_gpio11", &EXP_GPIO11, GPIO_OUT},
   {"exp_gpio12", &EXP_GPIO12, GPIO_OUT},
-  {"bf_exp_io1", &BF_EXP_IO1, GPIO_OUT},
-  {"bf_exp_io2", &BF_EXP_IO2, GPIO_OUT},
-  {"bf_exp_hfio", &BF_EXP_HFIO, GPIO_OUT},
-  {"bf_exp_3v3_en", &BF_EXP_3V3_EN, GPIO_OUT},
-  {"bf_exp_5v_en", &BF_EXP_5V_EN, GPIO_OUT},
-  {"bf_exp_imu_int", &BF_EXP_IMU_INT, GPIO_OUT},
-  {"bf_exp_imu_rst", &BF_EXP_IMU_RST, GPIO_OUT},
-  {"bf_exp_sdi12_oe", &BF_EXP_SDI12_OE, GPIO_OUT},
-  {"bf_exp_tp16", &BF_EXP_TP16, GPIO_OUT},
-  {"bf_exp_led_g1", &BF_EXP_LED_G1, GPIO_OUT},
-  {"bf_exp_led_r1", &BF_EXP_LED_R1, GPIO_OUT},
-  {"bf_exp_led_g2", &BF_EXP_LED_G2, GPIO_OUT},
-  {"bf_exp_led_r2", &BF_EXP_LED_R2, GPIO_OUT},
-  {"bf_exp_pl_buck_en", &BF_EXP_PL_BUCK_EN, GPIO_OUT},
-  {"bf_exp_tp7", &BF_EXP_TP7, GPIO_OUT},
-  {"bf_exp_tp8", &BF_EXP_TP8, GPIO_OUT},
-  {"bf_exp_int", &BF_EXP_INT, GPIO_OUT},
+  {"bf_io1", &BF_IO1, GPIO_OUT},
+  {"bf_io2", &BF_IO2, GPIO_OUT},
+  {"bf_hfio", &BF_HFIO, GPIO_OUT},
+  {"bf_3v3_en", &BF_3V3_EN, GPIO_IN},
+  {"bf_5v_en", &BF_5V_EN, GPIO_OUT},
+  {"bf_imu_int", &BF_IMU_INT, GPIO_IN},
+  {"bf_imu_rst", &BF_IMU_RST, GPIO_OUT},
+  {"bf_sdi12_oe", &BF_SDI12_OE, GPIO_OUT},
+  {"bf_tp16", &BF_TP16, GPIO_OUT},
+  {"bf_led_g1", &BF_LED_G1, GPIO_OUT},
+  {"bf_led_r1", &BF_LED_R1, GPIO_OUT},
+  {"bf_led_g2", &BF_LED_G2, GPIO_OUT},
+  {"bf_led_r2", &BF_LED_R2, GPIO_OUT},
+  {"bf_pl_buck_en", &BF_PL_BUCK_EN, GPIO_OUT},
+  {"bf_tp7", &BF_TP7, GPIO_OUT},
+  {"bf_tp8", &BF_TP8, GPIO_OUT},
 };
 
 #ifndef DEBUG_USE_USART1
@@ -210,6 +210,8 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
 };
 
 static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &TCA9546A_RST);
+
+static HTU21D debugHTU(&i2c1);
 
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 
@@ -291,7 +293,12 @@ static void defaultTask( void *parameters ) {
     bristlefinTCA.setChannel(TCA::CH_1);
   }
 
+  debugPressure.init();
+
   debugTCA9546AInit(&bristlefinTCA);
+
+  // Turn on IMU to get address in I2C scan
+  IOWrite(&BF_IMU_RST, 1);
 
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
@@ -299,6 +306,8 @@ static void defaultTask( void *parameters ) {
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
   debugI2CInit(debugI2CInterfaces, sizeof(debugI2CInterfaces)/sizeof(DebugI2C_t));
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));
+  debugHtu21dInit(&debugHTU);
+  debugMs5803Init(&debugPressure);
   debugW25Init(&debugW25);
   debugINA232Init(debugIna, NUM_INA232_DEV);
 #ifndef DEBUG_USE_USART1
@@ -317,16 +326,28 @@ static void defaultTask( void *parameters ) {
     IOWrite(&EXP_LED_R1, 0);
     IOWrite(&EXP_LED_G2, 0);
     IOWrite(&EXP_LED_R2, 0);
+    IOWrite(&BF_LED_G1, 0);
+    IOWrite(&BF_LED_R1, 0);
+    IOWrite(&BF_LED_G2, 0);
+    IOWrite(&BF_LED_R2, 0);
     vTaskDelay(250);
     IOWrite(&EXP_LED_G1, 1);
     IOWrite(&EXP_LED_R1, 0);
     IOWrite(&EXP_LED_G2, 1);
     IOWrite(&EXP_LED_R2, 0);
+    IOWrite(&BF_LED_G1, 1);
+    IOWrite(&BF_LED_R1, 0);
+    IOWrite(&BF_LED_G2, 1);
+    IOWrite(&BF_LED_R2, 0);
     vTaskDelay(250);
     IOWrite(&EXP_LED_G1, 0);
     IOWrite(&EXP_LED_R1, 1);
     IOWrite(&EXP_LED_G2, 0);
     IOWrite(&EXP_LED_R2, 1);
+    IOWrite(&BF_LED_G1, 0);
+    IOWrite(&BF_LED_R1, 1);
+    IOWrite(&BF_LED_G2, 0);
+    IOWrite(&BF_LED_R2, 1);
     vTaskDelay(250);
   }
 
