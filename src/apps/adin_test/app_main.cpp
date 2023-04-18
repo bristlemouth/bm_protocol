@@ -15,12 +15,15 @@
 #include "task.h"
 
 #include "bm_l2.h"
+#include "bm_pubsub.h"
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
 #include "debug_bm.h"
+#include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_sys.h"
+#include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
 #include "pca9535.h"
@@ -30,8 +33,6 @@
 #include "serial_console.h"
 #include "usb.h"
 #include "watchdog.h"
-#include "bm_pubsub.h"
-#include "gpdma.h"
 
 
 #include <stdio.h>
@@ -213,6 +214,26 @@ void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, ui
     }
 }
 
+#ifdef BSP_BRIDGE_V1_0
+// TODO - move this to some debug file?
+static const DebugGpio_t debugGpioPins[] = {
+  {"adin_cs", &ADIN_CS, GPIO_OUT},
+  {"adin_int", &ADIN_INT, GPIO_IN},
+  {"adin_pwr", &ADIN_PWR, GPIO_OUT},
+  {"bm_int", &BM_INT, GPIO_IN},
+  {"bm_cs", &BM_CS, GPIO_OUT},
+  {"flash_cs", &FLASH_CS, GPIO_OUT},
+  {"boot", &BOOT, GPIO_IN},
+  {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+  {"adin_rst", &ADIN_RST, GPIO_OUT},
+  {"boost_en", &BOOST_EN, GPIO_OUT},
+  {"vbus_sw_en", &VBUS_SW_EN, GPIO_OUT},
+  {"led_g", &LED_G, GPIO_OUT},
+  {"led_r", &LED_R, GPIO_OUT},
+  {"tp10", &TP10, GPIO_OUT},
+};
+#endif
+
 static void defaultTask( void *parameters ) {
     (void)parameters;
 
@@ -255,6 +276,10 @@ static void defaultTask( void *parameters ) {
 
     debugSysInit();
     debugMemfaultInit(&usart1);
+
+#ifdef BSP_BRIDGE_V1_0
+    debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
+#endif
     debugBMInit();
 
     // Commenting out while we test usart1

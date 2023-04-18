@@ -61,6 +61,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
+    ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_sys.c
 
