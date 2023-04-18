@@ -188,6 +188,8 @@ static BaseType_t infoCommand( char *writeBuffer,
 
   printf("Reset Reason: %s\n", getResetReasonString());
 
+  printf("Node ID: %llx\n", getNodeId());
+
 #ifdef USE_BOOTLOADER
 
   const versionInfo_t *bootloaderInfo = findVersionInfo(FLASH_START, BOOTLOADER_SIZE);

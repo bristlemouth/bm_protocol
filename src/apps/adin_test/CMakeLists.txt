@@ -82,6 +82,7 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
+    ${SRC_DIR}/third_party/fnv/hash_64a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c

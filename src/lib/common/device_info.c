@@ -178,3 +178,7 @@ void getMacAddr(uint8_t *buff, size_t len) {
   buff[4] = (hash >> 8) & 0xFF;
   buff[5] = (hash >> 0) & 0xFF;
 }
+
+uint64_t getNodeId() {
+    return fnv_64a_buf((void *)UID, sizeof(uint32_t) * 3, 0);
+}
