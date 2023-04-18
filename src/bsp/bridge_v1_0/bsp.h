@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 #define DEBUG_USE_USART1
-#define DEBUG_USE_LPUART1
+#define DEBUG_USE_USART3
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
