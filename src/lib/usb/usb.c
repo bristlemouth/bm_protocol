@@ -24,25 +24,25 @@ static void usbTask(void *parameters);
 
   \return higherPriorityTaskWoken
 */
-// bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
-//   (void)pinHandle;
-//   (void)value;
-//   (void)args;
-//   BaseType_t higherPriorityTaskWoken = pdFALSE;
+bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
+  (void)pinHandle;
+  (void)value;
+  (void)args;
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
 
-//   if(value) {
-//     // lpmPeripheralActiveFromISR(LPM_USB);
-//     dcd_connect(0);
-//   } else {
-//     // lpmPeripheralInactiveFromISR(LPM_USB);
-//     dcd_disconnect(0);
+  if(value) {
+    lpmPeripheralActiveFromISR(LPM_USB);
+    dcd_connect(0);
+  } else {
+    lpmPeripheralInactiveFromISR(LPM_USB);
+    dcd_disconnect(0);
 
-//     // Force disable usbCDC serial device
-//     // serialConsoleDisable();
-//   }
+    // Force disable usbCDC serial device
+    serialConsoleDisable();
+  }
 
-//   return higherPriorityTaskWoken;
-// }
+  return higherPriorityTaskWoken;
+}
 
 /*!
   Start USB task (tinyUSB does most of the work in a task context)
@@ -50,7 +50,7 @@ static void usbTask(void *parameters);
   \return true if successful false otherwise
 */
 bool usbInit() {
-  // configASSERT(IORegisterCallback(&VBUS_DETECT, vusbDetectIRQHandler, NULL));
+  configASSERT(IORegisterCallback(&VUSB_DETECT, vusbDetectIRQHandler, NULL));
 
    BaseType_t rval = xTaskCreate(
     usbTask,
@@ -175,19 +175,18 @@ static void usbTask(void *parameters) {
   // Initialize tinyUSB stack
   tusb_init();
 
-  // Re-enable this when we have bristlemouth (since NUCLEO always has bus power)
-  // // Disable usb if we're not connected on boot. This is needed because
-  // // tusb_init() calls dcd_init() in dcd_dwc2.c, which in turn calls
-  // // dcd_connect(), which enables the D+ pull-up resistor and may cause
-  // // issues if USB is not connected. See SC-183448 for more info
-  // uint8_t vusbDetect = 0;
-  // IORead(&VBUS_DETECT, &vusbDetect);
-  // if(!vusbDetect) {
-  //   lpmPeripheralInactive(LPM_USB);
-  //   dcd_disconnect(0);
-  // } else {
-  //   lpmPeripheralActive(LPM_USB);
-  // }
+#ifndef BSP_NUCLEO_U575
+  // Disable usb if we're not connected on boot. This is needed because
+  // tusb_init() calls dcd_init() in dcd_dwc2.c, which in turn calls
+  // dcd_connect(), which enables the D+ pull-up resistor and may cause
+  // issues if USB is not connected. See SC-183448 for more info
+  if(!usb_is_connected()) {
+    lpmPeripheralInactive(LPM_USB);
+    dcd_disconnect(0);
+  } else {
+    lpmPeripheralActive(LPM_USB);
+  }
+#endif
 
   while(1) {
     // put this thread to waiting state until there are new events

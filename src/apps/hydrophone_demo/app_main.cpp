@@ -257,8 +257,15 @@ static void defaultTask( void *parameters ) {
   IOWrite(&EXP_LED_R2, LED_OFF);
 #endif
 
-  // Commenting out while we test usart1
-  // lpmPeripheralInactive(LPM_BOOT);
+#ifdef BSP_NUCLEO_U575
+    // USB detect is an analog signal on the NUCLEO, so we can't use
+    // an interrupt to detect when usb is connected/disconnected
+    // So low power mode will not be enabled
+    lpmPeripheralActive(LPM_USB);
+#endif
+
+   // Re-enable low power mode
+  lpmPeripheralInactive(LPM_BOOT);
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
