@@ -38,4 +38,4 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
 }
 #endif
 
-#define PROTECTED_SPI(name, handle, initFunction) {name, &handle, initFunction, NULL, -1, 0};
+#define PROTECTED_SPI(name, handle, initFunction, lpm_mask) {name, &handle, initFunction, NULL, -1, lpm_mask};

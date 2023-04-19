@@ -40,4 +40,4 @@ void i2cLoadLogCfg();
 }
 #endif
 
-#define PROTECTED_I2C(name, handle, initFunction) {name, &handle, initFunction, NULL, 0};
+#define PROTECTED_I2C(name, handle, initFunction, lpm_mask) {name, &handle, initFunction, NULL, lpm_mask};
