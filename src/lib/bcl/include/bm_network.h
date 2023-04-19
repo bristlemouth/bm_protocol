@@ -7,7 +7,6 @@
 
 #include "lwip/udp.h"
 #include "lwip/ip6.h"
-#include "bm_zcbor_types.h"
 
 #ifdef __cplusplus
 extern "C" {

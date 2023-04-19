@@ -19,8 +19,6 @@
 #include "bm_network.h"
 #include "bm_usr_msg.h"
 #include "bm_util.h"
-#include "bm_zcbor_decode.h"
-#include "bm_zcbor_encode.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/inet.h"

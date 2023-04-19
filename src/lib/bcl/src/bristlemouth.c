@@ -12,20 +12,8 @@
 #include "lwip/inet.h"
 #include "lwip/mld6.h"
 
-#include "zcbor_common.h"
-#include "zcbor_decode.h"
-#include "zcbor_encode.h"
-
-#include "bm_dfu.h"
-#include "bm_info.h"
-#include "bm_caps.h"
 #include "bm_l2.h"
-#include "bm_msg_types.h"
-#include "bm_network.h"
 #include "bm_ports.h"
-#include "bm_usr_msg.h"
-#include "bm_zcbor_decode.h"
-#include "bm_zcbor_encode.h"
 
 #include "bcmp.h"
 #include "bcmp_cli.h"
