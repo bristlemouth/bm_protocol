@@ -285,8 +285,12 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
                                     _ctx.netif,
                                     src_ip); // Using link-local address
 
+    // We're done with this pbuf
+    // raw_sendto_if_src eventually calls bm_l2_tx, which does a pbuf_ref
+    // on this buffer.
+    pbuf_free(pbuf);
+
     if(rval != ERR_OK) {
-      pbuf_free(pbuf);
       printf("Error sending BMCP packet %d\n", rval);
     }
 
