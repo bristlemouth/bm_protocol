@@ -41,12 +41,12 @@ void HAL_Delay(uint32_t Delay) {
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi3;
-SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init);
-SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init);
-SPIInterface_t spi3 = PROTECTED_SPI("SPI3", hspi3, MX_SPI3_Init);
+SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init, LPM_SPI1);
+SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init, LPM_SPI2);
+SPIInterface_t spi3 = PROTECTED_SPI("SPI3", hspi3, MX_SPI3_Init, LPM_SPI3);
 
 extern I2C_HandleTypeDef hi2c1;
-I2CInterface_t i2c1 = PROTECTED_I2C("I2C1", hi2c1, MX_I2C1_Init);
+I2CInterface_t i2c1 = PROTECTED_I2C("I2C1", hi2c1, MX_I2C1_Init, LPM_I2C1);
 
 PCA9535Device_t devMoteIOExpander = {&i2c1, 0x20, 0 , 0, 0, {NULL}, false, NULL};
 PCA9535Device_t bristlefinIOExpander = {&i2c1, 0x21, 0 , 0, 0, {NULL}, false, NULL};

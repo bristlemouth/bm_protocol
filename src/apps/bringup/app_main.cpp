@@ -265,7 +265,7 @@ static void defaultTask( void *parameters ) {
 
   bspInit();
 
-  usbInit();
+  usbInit(&VUSB_DETECT, usb_is_connected);
 
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();

@@ -54,6 +54,10 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
 
   if(xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
 
+    if(interface->lpm_mask) {
+      lpmPeripheralActive(interface->lpm_mask);
+    }
+
 #ifdef SPI_DEBUG
     printf("%s [%s] ", __func__, interface->name);
     if(txBuff != NULL) {
@@ -114,6 +118,10 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
     logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
 #endif
 
+    if(interface->lpm_mask) {
+      lpmPeripheralInactive(interface->lpm_mask);
+    }
+
     xSemaphoreGive(interface->mutex);
   } else {
     printf("%s Error [%s] - Unable to take mutex.\n", __func__, interface->name);
@@ -138,6 +146,10 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
   SPIResponse_t rval = SPI_ERR;
 
   if(xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+
+    if(interface->lpm_mask) {
+      lpmPeripheralActive(interface->lpm_mask);
+    }
 
 #ifdef SPI_DEBUG
     printf("%s [%s] ", __func__, interface->name);
@@ -217,6 +229,10 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
 
     logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
 #endif
+
+    if(interface->lpm_mask) {
+      lpmPeripheralInactive(interface->lpm_mask);
+    }
 
     xSemaphoreGive(interface->mutex);
   } else {

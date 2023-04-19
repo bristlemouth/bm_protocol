@@ -222,7 +222,7 @@ static void defaultTask( void *parameters ) {
 
   bspInit();
 
-  usbInit();
+  usbInit(&VUSB_DETECT, usb_is_connected);
 
   usart3.txPin = &BM_MOSI_TX3;
   usart3.rxPin = &BM_SCK_RX3;

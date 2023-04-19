@@ -16,41 +16,53 @@
 static TaskHandle_t usbTaskHandle;
 static void usbTask(void *parameters);
 
+static IOPinHandle_t *_vusbDetectPin;
+static bool (*_usbIsConnectedFn)();
+
 /*
   ISR VUSB detect
   \param[in] pinHandle - unused
-  \param[in] value - unused
+  \param[in] value - value of vusb detect pin
   \param[in] args - unused
 
   \return higherPriorityTaskWoken
 */
-// bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
-//   (void)pinHandle;
-//   (void)value;
-//   (void)args;
-//   BaseType_t higherPriorityTaskWoken = pdFALSE;
+bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
+  (void)pinHandle;
+  (void)args;
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
 
-//   if(value) {
-//     // lpmPeripheralActiveFromISR(LPM_USB);
-//     dcd_connect(0);
-//   } else {
-//     // lpmPeripheralInactiveFromISR(LPM_USB);
-//     dcd_disconnect(0);
+  if(value) {
+    lpmPeripheralActiveFromISR(LPM_USB);
+    dcd_connect(0);
+  } else {
+    lpmPeripheralInactiveFromISR(LPM_USB);
+    dcd_disconnect(0);
 
-//     // Force disable usbCDC serial device
-//     // serialConsoleDisable();
-//   }
+    // Force disable usbCDC serial device
+    serialConsoleDisable();
 
-//   return higherPriorityTaskWoken;
-// }
+    // Force disable packet dumps
+    pcapDisable();
+  }
+
+  return higherPriorityTaskWoken;
+}
 
 /*!
   Start USB task (tinyUSB does most of the work in a task context)
+  \param[in] *vusbDetectPin (optional)
 
   \return true if successful false otherwise
 */
-bool usbInit() {
-  // configASSERT(IORegisterCallback(&VBUS_DETECT, vusbDetectIRQHandler, NULL));
+bool usbInit(IOPinHandle_t *vusbDetectPin, bool (*usbIsConnectedFn)()) {
+  _vusbDetectPin = vusbDetectPin;
+  _usbIsConnectedFn = usbIsConnectedFn;
+
+  if(_vusbDetectPin){
+    // Make sure we get notified when usb is connected/disconnected
+    configASSERT(IORegisterCallback(_vusbDetectPin, vusbDetectIRQHandler, NULL));
+  }
 
    BaseType_t rval = xTaskCreate(
     usbTask,
@@ -175,19 +187,19 @@ static void usbTask(void *parameters) {
   // Initialize tinyUSB stack
   tusb_init();
 
-  // Re-enable this when we have bristlemouth (since NUCLEO always has bus power)
-  // // Disable usb if we're not connected on boot. This is needed because
-  // // tusb_init() calls dcd_init() in dcd_dwc2.c, which in turn calls
-  // // dcd_connect(), which enables the D+ pull-up resistor and may cause
-  // // issues if USB is not connected. See SC-183448 for more info
-  // uint8_t vusbDetect = 0;
-  // IORead(&VBUS_DETECT, &vusbDetect);
-  // if(!vusbDetect) {
-  //   lpmPeripheralInactive(LPM_USB);
-  //   dcd_disconnect(0);
-  // } else {
-  //   lpmPeripheralActive(LPM_USB);
-  // }
+  // Disable usb if we're not connected on boot. This is needed because
+  // tusb_init() calls dcd_init() in dcd_dwc2.c, which in turn calls
+  // dcd_connect(), which enables the D+ pull-up resistor and may cause
+  // issues if USB is not connected. See SC-183448 for more info
+  //
+  // If a usbIsConnectedFn is not provided, we assume that USB is always
+  // connected
+  if(_usbIsConnectedFn && !_usbIsConnectedFn()) {
+    lpmPeripheralInactive(LPM_USB);
+    dcd_disconnect(0);
+  } else {
+    lpmPeripheralActive(LPM_USB);
+  }
 
   while(1) {
     // put this thread to waiting state until there are new events
@@ -277,15 +289,6 @@ __weak void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
     }
 
     case 1: {
-#if BM_DFU_HOST
-      if ( dtr ) {
-        serialEnable(&usbPcap);
-        xStreamBufferReset(usbPcap.txStreamBuffer);
-        xStreamBufferReset(usbPcap.rxStreamBuffer);
-      } else {
-        serialDisable(&usbPcap);
-      }
-#else
       if ( dtr ) {
         // Enable packet dumps
         pcapEnable();
@@ -293,7 +296,6 @@ __weak void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
         // Disable packet dumps
         pcapDisable();
       }
-#endif
       break;
     }
     default:

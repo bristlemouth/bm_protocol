@@ -287,7 +287,7 @@ static void defaultTask( void *parameters ) {
 
   bspInit();
 
-  usbInit();
+  usbInit(&VUSB_DETECT, usb_is_connected);
 
   if(bristlefinTCA.init()){
     bristlefinTCA.setChannel(TCA::CH_1);

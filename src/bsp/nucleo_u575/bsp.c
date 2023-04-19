@@ -51,8 +51,8 @@ void HAL_Delay(uint32_t Delay) {
 
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
-SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init);
-SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init);
+SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init, LPM_SPI1);
+SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init, LPM_SPI2);
 
 adin_pins_t adin_pins = {&spi1, &ADIN_CS, &ADIN_RDY, &ADIN_RST};
 

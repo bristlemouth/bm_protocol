@@ -244,7 +244,17 @@ static void defaultTask( void *parameters ) {
   }
   startCLI();
 
-  usbInit();
+#ifdef BSP_NUCLEO_U575
+    // We don't have a vusb_detect interrupt line on the nucleo board
+    usbInit(NULL, usb_is_connected);
+
+    // USB detect is an analog signal on the NUCLEO, so we can't use
+    // an interrupt to detect when usb is connected/disconnected
+    // So low power mode will not be enabled
+    lpmPeripheralActive(LPM_USB);
+#else
+    usbInit(&VUSB_DETECT, usb_is_connected);
+#endif
 
   debugSysInit();
   debugMemfaultInit(&usbCLI);
@@ -257,8 +267,8 @@ static void defaultTask( void *parameters ) {
   IOWrite(&EXP_LED_R2, LED_OFF);
 #endif
 
-  // Commenting out while we test usart1
-  // lpmPeripheralInactive(LPM_BOOT);
+  // Re-enable low power mode
+  lpmPeripheralInactive(LPM_BOOT);
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
