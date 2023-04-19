@@ -9,7 +9,6 @@
 #include <inttypes.h>
 #include "bsp.h"
 #include "debug.h"
-#include "bm_network.h"
 #include "bm_pubsub.h"
 #include "lwip/inet.h"
 

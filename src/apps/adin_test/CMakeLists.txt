@@ -6,42 +6,31 @@ add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 # Include TinyUSB
 add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 
+
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
+# Include BCMP
+add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
+
 set(BRISTLEMOUTH_FILES
-    # ${SRC_DIR}/lib/bcl/src/bm_caps.c
     ${SRC_DIR}/lib/bcl/src/bm_config.c
-    ${SRC_DIR}/lib/bcl/src/bm_info.c
     ${SRC_DIR}/lib/bcl/src/bm_l2.c
-    # ${SRC_DIR}/lib/bcl/src/bm_network.c
     ${SRC_DIR}/lib/bcl/src/bm_util.c
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
     ${SRC_DIR}/lib/bcl/src/bristlemouth.c
-    ${SRC_DIR}/lib/bcmp/bcmp.c
-    ${SRC_DIR}/lib/bcmp/bcmp_cli.c
-    ${SRC_DIR}/lib/bcmp/bcmp_heartbeat.c
-    ${SRC_DIR}/lib/bcmp/bcmp_neighbors.c
-    # ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
-    # ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
-    # ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
+
+    ${BCMP_FILES}
     )
 
 set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/bcl/include
-    ${SRC_DIR}/lib/bcmp
-    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${SRC_DIR}/third_party/zcbor/include
+    ${BCMP_INCLUDES}
     )
 
 set(LIB_FILES
@@ -108,27 +97,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS -Wno-type-limits
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS "-Wno-unused-parameter -Wno-sign-compare"
     )
 
 #
