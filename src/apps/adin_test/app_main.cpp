@@ -277,6 +277,11 @@ static void defaultTask( void *parameters ) {
 #ifdef BSP_NUCLEO_U575
     // We don't have a vusb_detect interrupt line on the nucleo board
     usbInit(NULL, usb_is_connected);
+
+    // USB detect is an analog signal on the NUCLEO, so we can't use
+    // an interrupt to detect when usb is connected/disconnected
+    // So low power mode will not be enabled
+    lpmPeripheralActive(LPM_USB);
 #else
     usbInit(&VUSB_DETECT, usb_is_connected);
 #endif
@@ -288,13 +293,6 @@ static void defaultTask( void *parameters ) {
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
 #endif
     debugBMInit();
-
-#ifdef BSP_NUCLEO_U575
-    // USB detect is an analog signal on the NUCLEO, so we can't use
-    // an interrupt to detect when usb is connected/disconnected
-    // So low power mode will not be enabled
-    lpmPeripheralActive(LPM_USB);
-#endif
 
     // Re-enable low power mode
     lpmPeripheralInactive(LPM_BOOT);
