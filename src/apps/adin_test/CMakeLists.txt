@@ -99,27 +99,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/printf/
     )
 
-set_source_files_properties(
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS -Wno-type-limits
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS "-Wno-unused-parameter -Wno-sign-compare"
-    )
-
 #
 # MCUBoot files/includes
 #

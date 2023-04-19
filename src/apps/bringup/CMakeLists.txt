@@ -72,9 +72,6 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
     ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
@@ -105,29 +102,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
-    ${SRC_DIR}/third_party/zcbor/include
     ${SRC_DIR}/third_party/tinycbor/src
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS -Wno-type-limits
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS "-Wno-unused-parameter -Wno-sign-compare"
     )
 
 if (USE_BOOTLOADER STREQUAL 1)

@@ -10,14 +10,6 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 set(LIB_FILES
-    # ${SRC_DIR}/lib/bcl/src/bm_config.c
-    # ${SRC_DIR}/lib/bcl/src/bm_info.c
-    # ${SRC_DIR}/lib/bcl/src/bm_l2.c
-    # ${SRC_DIR}/lib/bcl/src/bm_network.c
-    # ${SRC_DIR}/lib/bcl/src/bm_util.c
-    # ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
-    # ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
-    # ${SRC_DIR}/lib/bcl/src/bristlemouth.c
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
@@ -46,9 +38,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_sys.c
     ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_w25.cpp
-    # ${SRC_DIR}/lib/dfu/src/bm_dfu_client.c
-    # ${SRC_DIR}/lib/dfu/src/bm_dfu_core.cpp
-    # ${SRC_DIR}/lib/dfu/src/bm_dfu_host.c
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
@@ -60,7 +49,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
-    # ${SRC_DIR}/lib/drivers/mic.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/w25.cpp
@@ -78,9 +66,6 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
     )
 
 set(LIB_INCLUDES
@@ -105,28 +90,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
-    ${SRC_DIR}/third_party/zcbor/include
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_decode.c
-    ${SRC_DIR}/lib/bcl/src/bm_zcbor_encode.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS -Wno-type-limits
-    )
-
-set_source_files_properties(
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_decode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_encode.c
-    ${SRC_DIR}/third_party/zcbor/src/zcbor_common.c
-
-    DIRECTORY ${SRC_DIR}
-
-    PROPERTIES
-    COMPILE_FLAGS "-Wno-unused-parameter -Wno-sign-compare"
     )
 
 if (USE_BOOTLOADER STREQUAL 1)
