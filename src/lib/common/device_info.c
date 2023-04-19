@@ -180,5 +180,14 @@ void getMacAddr(uint8_t *buff, size_t len) {
 }
 
 uint64_t getNodeId() {
-    return fnv_64a_buf((void *)UID, sizeof(uint32_t) * 3, 0);
+  static uint64_t *node_id;
+
+  // Only compute the hash the first time this function gets called
+  if(node_id == NULL) {
+    node_id = (uint64_t *)pvPortMalloc(sizeof(uint16_t));
+    configASSERT(node_id);
+    *node_id = fnv_64a_buf((void *)UID, sizeof(uint32_t) * 3, 0);
+  }
+
+  return *node_id;
 }
