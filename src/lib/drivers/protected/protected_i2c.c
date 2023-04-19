@@ -29,16 +29,18 @@ static void i2cWorkaround(I2CInterface_t *interface, I2CResponse_t rval) {
 #endif
 
 /*!
-  i2cInit(I2CInterface_t *interface)
-  \brief Initialize an i2c interface
+  Initialize an i2c interface
+
   \param interface Handle to i2c interface
+  \param lpm_mask low power mode bit mask (zero means no operation while in STOP mode!)
   \return I2C_OK if device present
 */
-bool i2cInit(I2CInterface_t *interface) {
+bool i2cInit(I2CInterface_t *interface, uint32_t lpm_mask) {
   configASSERT(interface != NULL);
 
   I2CResponse_t rval = true;
 
+  interface->lpm_mask = lpm_mask;
   interface->initFn();
 
   interface->mutex = xSemaphoreCreateMutex();

@@ -29,7 +29,7 @@ typedef struct {
   uint32_t lpm_mask;
 } I2CInterface_t;
 
-bool i2cInit(I2CInterface_t *interface);
+bool i2cInit(I2CInterface_t *interface, uint32_t lpm_mask);
 I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuff, size_t txLen, uint8_t *rxBuff, size_t rxLen, uint32_t timeoutMs);
 #define i2cTx(interface, address, buff, len, timeout) i2cTxRx(interface, address, buff, len, NULL, 0, timeout);
 #define i2cRx(interface, address, buff, len, timeout) i2cTxRx(interface, address, NULL, 0, buff, len, timeout);

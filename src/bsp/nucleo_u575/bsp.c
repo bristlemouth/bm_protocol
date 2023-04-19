@@ -61,11 +61,8 @@ void bspInit() {
   osStarted = true;
   HAL_SuspendTick();
 
-  spiInit(&spi1);
-  spi1.lpm_mask = LPM_SPI1;
-
-  spiInit(&spi2);
-  spi2.lpm_mask = LPM_SPI2;
+  spiInit(&spi1, LPM_SPI1);
+  spiInit(&spi2, LPM_SPI2);
 }
 
 // Helper function for sampling ADC on STM32

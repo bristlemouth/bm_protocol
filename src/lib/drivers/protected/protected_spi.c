@@ -18,13 +18,15 @@ static SpiDmaContext_t _dma_context;
   Initialize an spi interface
 
   \param interface Handle to spi interface
+  \param lpm_mask low power mode bit mask (zero means no operation while in STOP mode!)
   \return true if initialized successfully
 */
-bool spiInit(SPIInterface_t *interface) {
+bool spiInit(SPIInterface_t *interface, uint32_t lpm_mask) {
   configASSERT(interface != NULL);
 
   bool rval = SPI_OK;
 
+  interface->lpm_mask = lpm_mask;
   interface->initFn();
 
   interface->mutex = xSemaphoreCreateMutex();
