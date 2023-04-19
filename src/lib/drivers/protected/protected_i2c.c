@@ -68,10 +68,14 @@ I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuf
 
   if(xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
 
+    if(interface->lpm_mask) {
+      lpmPeripheralActive(interface->lpm_mask);
+    }
+
 #ifdef I2C_DEBUG
     printf("%s [%s] ", __func__, interface->name);
     if(txLen) {
-      printf("TX(%u) ", txLen);
+      printf("TX(%"PRIu32") ", txLen);
       for(uint16_t idx = 0; idx < txLen; idx++) {
         printf("%02X ", txBuff[idx]);
       }
@@ -121,7 +125,7 @@ I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuf
 
 #ifdef I2C_DEBUG
       if(rxLen) {
-        printf("RX(%u) ", rxLen);
+        printf("RX(%"PRIu32") ", rxLen);
         for(uint16_t idx = 0; idx < rxLen; idx++) {
           printf("%02X ", rxBuff[idx]);
         }
@@ -130,6 +134,10 @@ I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuf
 #endif
 
     } while (0);
+
+    if(interface->lpm_mask) {
+      lpmPeripheralInactive(interface->lpm_mask);
+    }
 
     xSemaphoreGive(interface->mutex);
   } else {
@@ -159,6 +167,10 @@ I2CResponse_t i2cProbe(I2CInterface_t *interface, uint8_t address, uint32_t time
   I2CResponse_t rval = I2C_OK;
   if(xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
 
+    if(interface->lpm_mask) {
+      lpmPeripheralActive(interface->lpm_mask);
+    }
+
     HAL_StatusTypeDef hal_rval;
     hal_rval = HAL_I2C_IsDeviceReady(interface->handle, address << 1, 1, timeoutMs);
     if(hal_rval != HAL_OK) {
@@ -173,6 +185,10 @@ I2CResponse_t i2cProbe(I2CInterface_t *interface, uint8_t address, uint32_t time
         i2cWorkaround(interface, rval);
 #endif
       }
+    }
+
+    if(interface->lpm_mask) {
+      lpmPeripheralInactive(interface->lpm_mask);
     }
 
     xSemaphoreGive(interface->mutex);

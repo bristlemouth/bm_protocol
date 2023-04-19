@@ -14,18 +14,19 @@ extern "C" {
 #endif
 
 typedef enum {
-	I2C_OK = 0,
-	I2C_TIMEOUT,
-	I2C_NACK,
-	I2C_MUTEX,
-	I2C_ERR
+  I2C_OK = 0,
+  I2C_TIMEOUT,
+  I2C_NACK,
+  I2C_MUTEX,
+  I2C_ERR
 } I2CResponse_t;
 
 typedef struct {
-	const char *name;
-	I2C_HandleTypeDef *handle;
-	void (*initFn)();
-	SemaphoreHandle_t mutex;
+  const char *name;
+  I2C_HandleTypeDef *handle;
+  void (*initFn)();
+  SemaphoreHandle_t mutex;
+  uint32_t lpm_mask;
 } I2CInterface_t;
 
 bool i2cInit(I2CInterface_t *interface);
@@ -39,4 +40,4 @@ void i2cLoadLogCfg();
 }
 #endif
 
-#define PROTECTED_I2C(name, handle, initFunction) {name, &handle, initFunction, NULL};
+#define PROTECTED_I2C(name, handle, initFunction) {name, &handle, initFunction, NULL, 0};
