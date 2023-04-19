@@ -56,7 +56,7 @@ void bcmp_link_change(uint8_t port, bool state) {
   if(state) {
     // Send heartbeat since we just connected to someone and (re)start the
     // heartbeat timer
-    bcmp_send_heartbeat();
+    bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
     configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
   }
 }
@@ -85,7 +85,7 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
 
 
   do {
-    bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
+    bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
 
     uint16_t checksum = ip6_chksum_pseudo( pbuf,
                                           IP_PROTO_BCMP,
@@ -108,7 +108,7 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
 
     // }
 
-    // bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
+    // bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
     switch(header->type) {
       case BCMP_HEARTBEAT: {
         bcmp_process_heartbeat(header->payload, src, dst_port);
@@ -171,7 +171,7 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
   configASSERT(pbuf);
 
   do {
-    if (pbuf->tot_len < (PBUF_IP_HLEN + sizeof(bcmpHeader_t))) {
+    if (pbuf->tot_len < (PBUF_IP_HLEN + sizeof(bcmp_header_t))) {
       break;
     }
 
@@ -231,7 +231,7 @@ static void bcmp_thread(void *parameters) {
       }
 
       case BCMP_EVT_HEARTBEAT: {
-        bcmp_send_heartbeat();
+        bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
         break;
       }
 
@@ -256,15 +256,15 @@ static void bcmp_thread(void *parameters) {
   \param len message length
   \return ERR_OK on success, something else otherwise
 */
-err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint16_t len) {
+err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
     struct pbuf *pbuf;
 
-    configASSERT((uint32_t)len + sizeof(bcmpHeader_t) < UINT16_MAX);
+    configASSERT((uint32_t)len + sizeof(bcmp_header_t) < UINT16_MAX);
 
-    pbuf = pbuf_alloc(PBUF_IP, len + sizeof(bcmpHeader_t), PBUF_RAM);
+    pbuf = pbuf_alloc(PBUF_IP, len + sizeof(bcmp_header_t), PBUF_RAM);
     configASSERT(pbuf);
 
-    bcmpHeader_t *header = (bcmpHeader_t *)pbuf->payload;
+    bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
     header->type = (uint16_t)type;
     header->checksum = 0;
     header->flags = 0; // Unused for now
@@ -276,7 +276,7 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmpMessaegType_t type, uint8_t *buff, uint1
 
     header->checksum = ip6_chksum_pseudo( pbuf,
                                           IP_PROTO_BCMP,
-                                          len + sizeof(bcmpHeader_t),
+                                          len + sizeof(bcmp_header_t),
                                           src_ip, dst);
 
     err_t rval = raw_sendto_if_src( _ctx.pcb,
