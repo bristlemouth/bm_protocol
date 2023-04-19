@@ -27,7 +27,7 @@ typedef struct {
   uint32_t lpm_mask;
 } SPIInterface_t;
 
-bool spiInit(SPIInterface_t *interface, uint32_t lpm_mask);
+bool spiInit(SPIInterface_t *interface);
 SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t len, uint8_t *txBuff, uint8_t *rxBuff, uint32_t timeoutMs);
 SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t len, uint8_t *txBuff, uint8_t *rxBuff, uint32_t timeoutMs);
 #define spiTx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, buff, NULL, timeout);

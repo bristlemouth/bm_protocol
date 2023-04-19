@@ -57,11 +57,17 @@ void bspInit() {
   osStarted = true;
   HAL_SuspendTick();
 
-  spiInit(&spi1, LPM_SPI1);
-  spiInit(&spi2, LPM_SPI2);
-  spiInit(&spi3, LPM_SPI3);
+  spiInit(&spi1);
+  spi1.lpm_mask = LPM_SPI1;
 
-  i2cInit(&i2c1,LPM_I2C1);
+  spiInit(&spi2);
+  spi2.lpm_mask = LPM_SPI2;
+
+  spiInit(&spi3);
+  spi3.lpm_mask = LPM_SPI3;
+
+  i2cInit(&i2c1);
+  i2c1.lpm_mask = LPM_I2C1;
 
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
