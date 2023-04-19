@@ -16,6 +16,9 @@
 static TaskHandle_t usbTaskHandle;
 static void usbTask(void *parameters);
 
+static IOPinHandle_t *_vusbDetectPin;
+static bool (*_usbIsConnectedFn)();
+
 /*
   ISR VUSB detect
   \param[in] pinHandle - unused
@@ -46,11 +49,17 @@ bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
 
 /*!
   Start USB task (tinyUSB does most of the work in a task context)
+  \param[in] *vusbDetectPin (optional)
 
   \return true if successful false otherwise
 */
-bool usbInit() {
-  configASSERT(IORegisterCallback(&VUSB_DETECT, vusbDetectIRQHandler, NULL));
+bool usbInit(IOPinHandle_t *vusbDetectPin, bool (*usbIsConnectedFn)()) {
+  _vusbDetectPin = vusbDetectPin;
+  _usbIsConnectedFn = usbIsConnectedFn;
+
+  if(_vusbDetectPin){
+    configASSERT(IORegisterCallback(_vusbDetectPin, vusbDetectIRQHandler, NULL));
+  }
 
    BaseType_t rval = xTaskCreate(
     usbTask,
@@ -175,18 +184,19 @@ static void usbTask(void *parameters) {
   // Initialize tinyUSB stack
   tusb_init();
 
-#ifndef BSP_NUCLEO_U575
   // Disable usb if we're not connected on boot. This is needed because
   // tusb_init() calls dcd_init() in dcd_dwc2.c, which in turn calls
   // dcd_connect(), which enables the D+ pull-up resistor and may cause
   // issues if USB is not connected. See SC-183448 for more info
-  if(!usb_is_connected()) {
+  //
+  // If a usbIsConnectedFn is not provided, we assume that USB is always
+  // connected
+  if(_usbIsConnectedFn && !_usbIsConnectedFn()) {
     lpmPeripheralInactive(LPM_USB);
     dcd_disconnect(0);
   } else {
     lpmPeripheralActive(LPM_USB);
   }
-#endif
 
   while(1) {
     // put this thread to waiting state until there are new events

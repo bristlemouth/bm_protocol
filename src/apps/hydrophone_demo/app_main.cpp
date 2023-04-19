@@ -244,7 +244,12 @@ static void defaultTask( void *parameters ) {
   }
   startCLI();
 
-  usbInit();
+#ifdef BSP_NUCLEO_U575
+    // We don't have a vusb_detect interrupt line on the nucleo board
+    usbInit(NULL, usb_is_connected);
+#else
+    usbInit(&VUSB_DETECT, usb_is_connected);
+#endif
 
   debugSysInit();
   debugMemfaultInit(&usbCLI);
