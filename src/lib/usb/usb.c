@@ -22,14 +22,13 @@ static bool (*_usbIsConnectedFn)();
 /*
   ISR VUSB detect
   \param[in] pinHandle - unused
-  \param[in] value - unused
+  \param[in] value - value of vusb detect pin
   \param[in] args - unused
 
   \return higherPriorityTaskWoken
 */
 bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
   (void)pinHandle;
-  (void)value;
   (void)args;
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
@@ -42,6 +41,9 @@ bool vusbDetectIRQHandler(const void *pinHandle, uint8_t value, void *args) {
 
     // Force disable usbCDC serial device
     serialConsoleDisable();
+
+    // Force disable packet dumps
+    pcapDisable();
   }
 
   return higherPriorityTaskWoken;
@@ -58,6 +60,7 @@ bool usbInit(IOPinHandle_t *vusbDetectPin, bool (*usbIsConnectedFn)()) {
   _usbIsConnectedFn = usbIsConnectedFn;
 
   if(_vusbDetectPin){
+    // Make sure we get notified when usb is connected/disconnected
     configASSERT(IORegisterCallback(_vusbDetectPin, vusbDetectIRQHandler, NULL));
   }
 
@@ -286,15 +289,6 @@ __weak void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
     }
 
     case 1: {
-#if BM_DFU_HOST
-      if ( dtr ) {
-        serialEnable(&usbPcap);
-        xStreamBufferReset(usbPcap.txStreamBuffer);
-        xStreamBufferReset(usbPcap.rxStreamBuffer);
-      } else {
-        serialDisable(&usbPcap);
-      }
-#else
       if ( dtr ) {
         // Enable packet dumps
         pcapEnable();
@@ -302,7 +296,6 @@ __weak void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
         // Disable packet dumps
         pcapDisable();
       }
-#endif
       break;
     }
     default:
