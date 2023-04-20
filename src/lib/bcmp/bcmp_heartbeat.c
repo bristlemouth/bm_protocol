@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "bcmp_neighbors.h"
+#include "bcmp_heartbeat.h"
 
 err_t bcmp_send_heartbeat(uint32_t period_s) {
   bcmp_heartbeat_t heartbeat = {
