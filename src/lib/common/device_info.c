@@ -159,9 +159,9 @@ size_t getBuildId(const uint8_t **buildId) {
 }
 
 /*!
-  Generate 48-bit MAC address from device's UUID.
+  Generate 48-bit MAC address from device's node_id.
   First 16 bits are common to all BM devices (0's for now)
-  Last 32 bits are hashed from the device's UUID
+  Last 32 bits the 32 least significant bits of the node id
 
   \param[out] *buff - 6 byte buffer to store MAC address
   \param[in] size of buffer as a safety check (must be >=)
@@ -170,13 +170,13 @@ void getMacAddr(uint8_t *buff, size_t len) {
   // MAC address is exactly 48 bits/6 bytes
   configASSERT(len >= 6);
 
-  uint32_t hash = fnv_32a_buf((void *)UID, sizeof(uint32_t) * 3, 0);
+  uint64_t node_id = getNodeId();
   buff[0] = 0x00; // TODO -
   buff[1] = 0x00;
-  buff[2] = (hash >> 24) & 0xFF;
-  buff[3] = (hash >> 16) & 0xFF;
-  buff[4] = (hash >> 8) & 0xFF;
-  buff[5] = (hash >> 0) & 0xFF;
+  buff[2] = (node_id >> 24) & 0xFF;
+  buff[3] = (node_id >> 16) & 0xFF;
+  buff[4] = (node_id >> 8) & 0xFF;
+  buff[5] = (node_id >> 0) & 0xFF;
 }
 
 uint64_t getNodeId() {
