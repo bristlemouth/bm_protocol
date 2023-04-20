@@ -309,6 +309,3 @@ typedef enum {
   BCMP_DFU_HEARTBEAT = 0xD6,
   BCMP_DFU_BEGIN_HOST = 0xD7,
 } bcmp_message_type_t;
-
-err_t bcmp_send_heartbeat(uint32_t period_s);
-err_t bcmp_process_heartbeat(void *payload, const ip_addr_t *src, uint8_t dst_port);

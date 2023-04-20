@@ -13,6 +13,7 @@
 #include "lwip/icmp.h"
 #include "lwip/inet_chksum.h"
 #include "lwip/raw.h"
+#include "bcmp_heartbeat.h"
 
 #define BCMP_EVT_QUEUE_LEN 32
 

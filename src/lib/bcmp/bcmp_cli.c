@@ -6,6 +6,7 @@
 
 #include "bcmp.h"
 #include "bcmp_cli.h"
+#include "bcmp_heartbeat.h"
 #include "debug.h"
 
 static BaseType_t cmd_ping_fn( char *writeBuffer,
