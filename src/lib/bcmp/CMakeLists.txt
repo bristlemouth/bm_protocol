@@ -7,6 +7,7 @@ set(BCMP_FILES
     ${BCMP_DIR}/bcmp.c
     ${BCMP_DIR}/bcmp_cli.c
     ${BCMP_DIR}/bcmp_heartbeat.c
+    ${BCMP_DIR}/bcmp_info.c
     ${BCMP_DIR}/bcmp_neighbors.c
 
     PARENT_SCOPE)

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
+#include "FreeRTOS.h"
+#include "timers.h"
 
 #ifdef __cplusplus
 extern "C" {

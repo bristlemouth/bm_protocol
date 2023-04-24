@@ -14,6 +14,8 @@
 #include "lwip/inet_chksum.h"
 #include "lwip/raw.h"
 #include "bcmp_heartbeat.h"
+#include "bcmp_info.h"
+#include "bcmp_neighbors.h"
 
 #define BCMP_EVT_QUEUE_LEN 32
 
@@ -37,6 +39,7 @@ typedef struct {
 
   struct pbuf* pbuf;
   ip_addr_t src;
+  ip_addr_t dst;
 
   // Used for non tx/rx items
   void *args;
@@ -67,9 +70,10 @@ void bcmp_link_change(uint8_t port, bool state) {
 
   \param *pbuf pbuf with packet
   \param *src packet source
+  \param *dst packet destination
   \return 0 if processed ok, nonzero otherwise
 */
-int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
+int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
   int32_t rval = 0;
   // uint8_t src_port;
   uint8_t dst_port;
@@ -88,10 +92,10 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
   do {
     bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
 
-    uint16_t checksum = ip6_chksum_pseudo( pbuf,
+    uint16_t checksum = ip6_chksum_pseudo(pbuf,
                                           IP_PROTO_BCMP,
                                           pbuf->len,
-                                          src, &multicast_ll_addr);
+                                          src, dst);
 
     // Valid checksum will come out to zero, since the actual checksum
     // is included and cancels out
@@ -102,17 +106,21 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
       break;
     }
 
-    // TODO - check for address match (only relevant on certain messages)
-    // // Check for both link-local and unicast address match
-    // if(ip6_addr_eq(header->dest, netif_ip_addr6(_ctx.netif, 0)) ||
-    //    ip6_addr_eq(header->dest, netif_ip_addr6(_ctx.netif, 1))) {
-
-    // }
-
     // bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
     switch(header->type) {
       case BCMP_HEARTBEAT: {
-        bcmp_process_heartbeat(header->payload, src, dst_port);
+        // Send out heartbeats
+        bcmp_process_heartbeat((bcmp_heartbeat_t *)header->payload, src, dst_port);
+        break;
+      }
+
+      case BCMP_DEVICE_INFO_REQUEST: {
+        bcmp_process_info_request((bcmp_device_info_request_t *)header->payload, src, dst);
+        break;
+      }
+
+      case BCMP_DEVICE_INFO_REPLY: {
+        bcmp_process_info_reply((bcmp_device_info_reply_t *)header->payload);
         break;
       }
 
@@ -148,7 +156,7 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src) {
 static void heartbeat_timer_handler(TimerHandle_t tmr){
   (void) tmr;
 
-  bcmp_queue_item_t item = {BCMP_EVT_HEARTBEAT, NULL, {{0,0,0,0}, 0}, NULL};
+  bcmp_queue_item_t item = {BCMP_EVT_HEARTBEAT, NULL, {{0,0,0,0}, 0}, {{0,0,0,0}, 0}, NULL};
 
   configASSERT(xQueueSend(_ctx.rx_queue, &item, 0) == pdTRUE);
 }
@@ -176,6 +184,9 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
       break;
     }
 
+    // Grab a pointer to the ip6 header so we can get the packet destination
+    struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)pbuf->payload;
+
     if(pbuf_remove_header(pbuf, PBUF_IP_HLEN) != 0) {
       //  restore original packet
       pbuf_add_header(pbuf, PBUF_IP_HLEN);
@@ -185,7 +196,10 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
     // Make a copy of the IP address since we'll be modifying it later when we
     // remove the src/dest ports (and since it might not be in the pbuf so someone
     // else is managing that memory)
-    bcmp_queue_item_t item = {BCMP_EVT_RX, pbuf, *src, NULL};
+    bcmp_queue_item_t item = {BCMP_EVT_RX, pbuf, *src, {{0,0,0,0}, 0}, NULL};
+
+    // Copy the destination into the queue item
+    memcpy(item.dst.addr, ip6_hdr->dest.addr, sizeof(item.dst.addr));
 
     if(xQueueSend(_ctx.rx_queue, &item, 0) != pdTRUE) {
       printf("Error sending to Queue\n");
@@ -227,11 +241,16 @@ static void bcmp_thread(void *parameters) {
 
     switch(item.type) {
       case BCMP_EVT_RX: {
-        bmcp_process_packet(item.pbuf, &item.src);
+        bmcp_process_packet(item.pbuf, &item.src, &item.dst);
         break;
       }
 
       case BCMP_EVT_HEARTBEAT: {
+        // Should we check neighbors on a differnt timer?
+        // Check neighbor status to see if any dropped
+        bcmp_check_neighbors();
+
+        // Send out heartbeats
         bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
         break;
       }

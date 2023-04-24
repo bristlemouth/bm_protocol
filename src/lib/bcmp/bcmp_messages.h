@@ -39,7 +39,7 @@ typedef struct {
 } __attribute__((packed)) bcmp_echo_request_t;
 
 typedef struct {
-   // Node ID of the responding node
+  // Node ID of the responding node
   uint64_t node_id;
 
   // ID matching that of the request that triggered this reply
@@ -87,9 +87,13 @@ typedef struct {
 
   // Version of the product hardware (0 for don't care)
   uint8_t ver_hw;
+} __attribute__((packed)) bcmp_device_info_t;
+
+typedef struct {
+  bcmp_device_info_t info;
 
   // Length of the full version string
-  uint16_t ver_str_len;
+  uint8_t ver_str_len;
 
   // Length of device name
   uint8_t dev_name_len;
