@@ -8,6 +8,7 @@
 #include "bsp.h"
 
 // #include "log.h"
+#include "bm_usart.h"
 #include "serial.h"
 #include "stm32_io.h"
 #include "task_priorities.h"
@@ -169,8 +170,8 @@ void serialEnable(SerialHandle_t *handle) {
   // Don't do uart specific stuff for USB :D
   if(!HANDLE_IS_USB(handle)) {
     // Check for and clear any overrun flags
-    if(LL_USART_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
-      LL_USART_ClearFlag_ORE((USART_TypeDef *)handle->device);
+    if(usart_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
+      usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
     }
 
     if(handle->txPin) {
@@ -179,11 +180,11 @@ void serialEnable(SerialHandle_t *handle) {
     }
 
     // Clear any data that might be in the rx buffer
-    (void)LL_USART_ReceiveData8((USART_TypeDef *)handle->device);
+    (void)usart_ReceiveData8((USART_TypeDef *)handle->device);
 
 
     // Enable Uart RX interrupt
-    LL_USART_EnableIT_RXNE((USART_TypeDef *)handle->device);
+    usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
   }
 #endif
 
@@ -197,7 +198,7 @@ void serialDisable(SerialHandle_t *handle) {
   // Don't do uart specific stuff for USB :D
   if(!HANDLE_IS_USB(handle)) {
     // Disable Uart RX interrupt
-    LL_USART_DisableIT_RXNE((USART_TypeDef *)handle->device);
+    usart_DisableIT_RXNE((USART_TypeDef *)handle->device);
 
 
     if(handle->txPin) {
@@ -222,35 +223,35 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
   configASSERT(handle != NULL);
 
   // Process received bytes
-  if( LL_USART_IsActiveFlag_RXNE((USART_TypeDef *)handle->device) &&
-      LL_USART_IsEnabledIT_RXNE((USART_TypeDef *)handle->device)){
+  if( usart_IsActiveFlag_RXNE((USART_TypeDef *)handle->device) &&
+      usart_IsEnabledIT_RXNE((USART_TypeDef *)handle->device)){
 
-    uint8_t byte = LL_USART_ReceiveData8((USART_TypeDef *)handle->device);
+    uint8_t byte = usart_ReceiveData8((USART_TypeDef *)handle->device);
     configASSERT(handle->rxBytesFromISR);
     higherPriorityTaskWoken = handle->rxBytesFromISR(handle, &byte, 1);
   }
 
   // Process bytes to transmit
-  if( LL_USART_IsActiveFlag_TXE((USART_TypeDef *)handle->device) &&
-      LL_USART_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
+  if( usart_IsActiveFlag_TXE((USART_TypeDef *)handle->device) &&
+      usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
     uint8_t txByte;
     configASSERT(handle->getTxBytesFromISR);
     size_t bytesAvailable = handle->getTxBytesFromISR(handle, &txByte, 1);
 
     if (bytesAvailable > 0) {
       // Transmit current byte
-      LL_USART_TransmitData8((USART_TypeDef *)handle->device, txByte);
+      usart_TransmitData8((USART_TypeDef *)handle->device, txByte);
     } else {
       // Disable this interrupt if there are no more bytes to transmit
-      LL_USART_DisableIT_TXE((USART_TypeDef *)handle->device);
+      usart_DisableIT_TXE((USART_TypeDef *)handle->device);
     }
   }
 
   // Handle UART overrun error
-  if (LL_USART_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
+  if (usart_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
     // TODO - maybe differentiate overrun error from rx buffer full
     handle->flags |= SERIAL_FLAG_RXDROP;
-    LL_USART_ClearFlag_ORE((USART_TypeDef *)handle->device);
+    usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
   }
 
   // Let the RTOS know if a task needs to be woken up
@@ -312,8 +313,8 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
     } else {
 #ifndef NO_UART
       // Enable transmit interrupt if not already transmitting
-      if(!LL_USART_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
-        LL_USART_EnableIT_TXE((USART_TypeDef *)handle->device);
+      if(!usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
+        usart_EnableIT_TXE((USART_TypeDef *)handle->device);
       }
 
 #endif

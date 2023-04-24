@@ -21,3 +21,11 @@
     bsp: bridge_v1_0
     build_type: Debug
     use_bootloader: True
+
+- name: bringup_mote on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: bringup_mote
+    bsp: bm_mote_v1.0
+    build_type: Debug
+    use_bootloader: True
