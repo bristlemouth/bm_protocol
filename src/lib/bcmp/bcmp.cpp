@@ -323,10 +323,11 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
   \param *netif lwip network interface to use
   \return none
 */
-void bcmp_init(struct netif* netif) {
+void bcmp_init(struct netif* netif, NvmPartition * dfu_partition) {
   _ctx.netif = netif;
   _ctx.pcb = raw_new(IP_PROTO_BCMP);
   configASSERT(_ctx.pcb);
+  (void) dfu_partition; // TODO
 
 
   /* Create threads and Queues */

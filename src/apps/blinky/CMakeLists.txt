@@ -28,7 +28,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_htu.cpp
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_mic.c
-    ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp

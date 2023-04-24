@@ -12,6 +12,10 @@
 #ifndef __ADI_BSP_H__
 #define __ADI_BSP_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -40,5 +44,9 @@ void adi_bsp_irq_callback();
 void adi_bsp_hw_reset();
 void adi_bsp_int_n_set_pending_irq(void);
 uint32_t adi_bsp_init(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ADI_BSP_H__ */

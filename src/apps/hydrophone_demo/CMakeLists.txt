@@ -46,14 +46,14 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
-    ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/mic.c
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
@@ -79,6 +79,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
+    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/third_party/
@@ -174,6 +175,7 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${BRISTLEMOUTH_FILES}

@@ -39,7 +39,7 @@ err_t bcmp_process_heartbeat(bcmp_heartbeat_t *heartbeat, const ip_addr_t *src, 
 
     // Neighbor restarted, let's get additional info
     if(heartbeat->time_since_boot_us < neighbor->last_time_since_boot_us) {
-      printf("🏘📡 Updating neighbor info! %"PRIx64"\n", neighbor->node_id);
+      printf("🏘📡 Updating neighbor info! %" PRIx64 "\n", neighbor->node_id);
       bcmp_request_info(neighbor->info.node_id, &multicast_ll_addr);
     }
 

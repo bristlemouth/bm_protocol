@@ -272,7 +272,7 @@ static void defaultTask( void *parameters ) {
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
-  bcl_init();
+  bcl_init(NULL);
 
   // Drop priority now that we're done booting
   vTaskPrioritySet(xTaskGetCurrentTaskHandle(), DEFAULT_TASK_PRIORITY);

@@ -299,7 +299,7 @@ static void defaultTask( void *parameters ) {
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
-    bcl_init();
+    bcl_init(NULL);
 
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);

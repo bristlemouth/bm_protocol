@@ -83,7 +83,7 @@ static void bm_l2_process_tx_evt(l2_queue_element_t *tx_evt) {
     for (uint32_t idx=0; idx < BM_NETDEV_TYPE_MAX; idx++) {
         switch (bm_l2_ctx.devices[idx].type) {
             case BM_NETDEV_TYPE_ADIN2111: {
-                err_t retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, tx_evt->pbuf->payload, tx_evt->pbuf->len,
+                err_t retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, (uint8_t*)tx_evt->pbuf->payload, tx_evt->pbuf->len,
                                    (tx_evt->port_mask >> mask_idx) & ADIN2111_PORT_MASK, bm_l2_ctx.devices[idx].start_port_idx);
                 mask_idx += bm_l2_ctx.devices[idx].num_ports;
                 if (retv != ERR_OK) {

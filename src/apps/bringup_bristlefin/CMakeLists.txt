@@ -53,7 +53,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
     ${SRC_DIR}/lib/debug/debug_ms5803.cpp
     ${SRC_DIR}/lib/debug/debug_spi.c
-    ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_tca9546a.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
@@ -65,7 +65,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
@@ -201,6 +201,7 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}

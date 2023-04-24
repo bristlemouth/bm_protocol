@@ -56,7 +56,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
     ${SRC_DIR}/lib/debug/debug_spi.c
-    ${SRC_DIR}/lib/debug/debug_sys.c
+    ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
@@ -69,7 +69,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.c
+    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
     # ${SRC_DIR}/lib/drivers/mic.cpp

@@ -36,6 +36,8 @@ static adin2111_DriverConfig_t drvConfig = {
     .pDevMem = (void *)dev_mem,
     .devMemSize = sizeof(dev_mem),
     .fcsCheckEn = false,
+    .tsTimerPin = ADIN2111_TS_TIMER_MUX_NA,
+    .tsCaptPin = ADIN2111_TS_CAPT_MUX_NA,
 };
 
 typedef struct {
@@ -513,7 +515,7 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
 
         for(uint32_t port=0; port < ADIN2111_PORT_NUM; port++) {
             if (port_mask & (0x01 << port)) {
-                txMsgEvt_t *txMsg = createTxMsgReq(hDevice, buf, buf_len, port);
+                txMsgEvt_t *txMsg = createTxMsgReq(hDevice, buf, buf_len, static_cast<adin2111_Port_e>(port));
                 if (txMsg) {
                     /* We are modifying the IPV6 SRC address to include the egress port */
                     uint8_t bm_egress_port = (0x01 << port) << port_offset;

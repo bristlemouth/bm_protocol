@@ -31,7 +31,7 @@ static const CLI_Command_Definition_t cmd_bcmp = {
 };
 
 void print_neighbor_basic(bm_neighbor_t *neighbor) {
-  printf("%"PRIx64" |   %u  | %7s | %0.3f\n",
+  printf("%" PRIx64 " |   %u  | %7s | %0.3f\n",
           neighbor->node_id,
           neighbor->port,
           neighbor->online ? "online": "offline",

@@ -35,7 +35,7 @@ void bm_link_change_cb(uint8_t port, bool state) {
     bcmp_link_change(port, state);
 }
 
-void bcl_init() {
+void bcl_init(NvmPartition * dfu_partition) {
     err_t       mld6_err;
     // int         rval;
     ip6_addr_t  multicast_glob_addr;
@@ -88,7 +88,7 @@ void bcl_init() {
         printf("Could not join ff03::1\n");
     }
 
-    bcmp_init(&netif);
+    bcmp_init(&netif, dfu_partition);
     bcmp_cli_init();
 
     bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);

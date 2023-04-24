@@ -5,10 +5,6 @@
 
 #define NEIGHBOR_UUID_LEN (12)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct bm_neighbor_s {
   // Pointer to next neighbor
   struct bm_neighbor_s *next;
@@ -53,6 +49,3 @@ bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id);
 bm_neighbor_t *bcmp_update_neighbor(uint64_t node_id, uint8_t port);
 void bcmp_neighbor_foreach(void (*callback)(bm_neighbor_t *neighbor));
 
-#ifdef __cplusplus
-}
-#endif
