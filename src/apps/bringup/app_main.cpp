@@ -19,7 +19,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "bm_l2.h"
+//#include "bm_l2.h"
 #include "bristlemouth.h"
 #include "bootloader_helper.h"
 #include "bsp.h"

@@ -13,10 +13,6 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/bcl/src/bm_config.c
-    ${SRC_DIR}/lib/bcl/src/bm_l2.c
-    ${SRC_DIR}/lib/bcl/src/bm_util.c
-    ${SRC_DIR}/lib/bcl/src/bristlemouth.c
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
 
@@ -24,7 +20,6 @@ set(BRISTLEMOUTH_FILES
     )
 
 set(BRISTLEMOUTH_INCLUDES
-    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/

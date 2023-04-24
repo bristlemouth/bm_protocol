@@ -220,6 +220,8 @@ add_compile_options(
 	-Wformat-overflow
 	-Wformat-signedness
 
+	-Wno-narrowing # LWIP upgrade to Cpp
+
 # In case we want faster sqrtf, etc
 	# -fno-math-errno
 	# -fsingle-precision-constant

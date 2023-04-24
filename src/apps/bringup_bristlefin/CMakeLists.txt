@@ -9,6 +9,24 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
+# Include BCMP
+add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
+
+set(BRISTLEMOUTH_FILES
+    ${SRC_DIR}/lib/middleware/bm_pubsub.c
+    ${SRC_DIR}/lib/middleware/middleware.cpp
+
+    ${BCMP_FILES}
+    )
+
+set(BRISTLEMOUTH_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/third_party/
+    ${SRC_DIR}/third_party/aligned_malloc
+    ${BCMP_INCLUDES}
+    )
+
 set(LIB_FILES
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
@@ -72,7 +90,6 @@ set(LIB_FILES
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/bcl/include
     ${SRC_DIR}/lib/bcmp
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
@@ -190,6 +207,7 @@ set(APP_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MCUBOOT_FILES}
     ${TINYUSB_FILES}
+    ${BRISTLEMOUTH_FILES}
     PARENT_SCOPE)
 
 set(APP_INCLUDES
@@ -200,6 +218,7 @@ set(APP_INCLUDES
     ${MCUBOOT_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
     ${TINYUSB_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
     PARENT_SCOPE)
 
 set(APP_LIBS
