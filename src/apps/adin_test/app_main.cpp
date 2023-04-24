@@ -301,6 +301,14 @@ static void defaultTask( void *parameters ) {
 
     bcl_init(NULL);
 
+#ifdef BSP_BRIDGE_V1_0
+#ifdef BRIDGE_AUTO_ENABLE
+    printf("Enabling 24V!\n");
+    IOWrite(&BOOST_EN, 1);
+    IOWrite(&VBUS_SW_EN, 1);
+#endif
+#endif
+
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
 #ifdef BSP_DEV_MOTE_V1_0
