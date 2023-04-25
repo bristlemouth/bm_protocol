@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "bcmp_protocol_caps.h"
+#include "bm_dfu_message_structs.h"
 
 typedef struct {
   uint16_t type;
@@ -272,6 +273,41 @@ typedef struct {
 #endif
 
 
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_img_info_t info;
+} __attribute__((packed)) bcmp_dfu_start_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_chunk_request_t chunk_req;
+} __attribute__((packed)) bcmp_dfu_payload_req_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_image_chunk_t chunk;
+} __attribute__((packed)) bcmp_dfu_payload_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_result_t result;
+} __attribute__((packed)) bcmp_dfu_end_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_result_t ack;
+} __attribute__((packed)) bcmp_dfu_ack_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_result_t err;
+} __attribute__((packed)) bcmp_dfu_abort_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_address_t addr;
+} __attribute__((packed)) bcmp_dfu_heartbeat_t;
+
 typedef enum {
   BCMP_ACK = 0x00,
   BCMP_HEARTBEAT = 0x01,
@@ -311,5 +347,5 @@ typedef enum {
   BCMP_DFU_ACK = 0xD4,
   BCMP_DFU_ABORT = 0xD5,
   BCMP_DFU_HEARTBEAT = 0xD6,
-  BCMP_DFU_BEGIN_HOST = 0xD7,
+  BCMP_DFU_LAST_MESSAGE = BCMP_DFU_HEARTBEAT,
 } bcmp_message_type_t;

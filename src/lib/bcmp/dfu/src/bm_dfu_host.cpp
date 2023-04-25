@@ -2,8 +2,8 @@
 #include <string.h>
 #include "bm_dfu.h"
 #include "bm_dfu_host.h"
-#include "bm_util.h"
-#include "safe_udp.h"
+#include "device_info.h"
+#include "external_flash_partitions.h"
 
 typedef struct dfu_host_ctx_t {
     QueueHandle_t dfu_event_queue;
@@ -13,19 +13,21 @@ typedef struct dfu_host_ctx_t {
     bm_dfu_img_info_t img_info;
     uint8_t* chunk_buf;
     uint16_t chunk_length;
-    ip6_addr_t self_addr;
-    struct netif* netif;
-    struct udp_pcb* pcb;
-    uint16_t port;
-    ip6_addr_t client_addr;
+    uint64_t self_node_id;
+    uint64_t client_node_id;
+    bcmp_dfu_tx_func_t bcmp_dfu_tx;
+    NvmPartition * dfu_partition;
+    uint32_t bytes_remaining;
 } dfu_host_ctx_t;
+
+static constexpr uint32_t FLASH_READ_TIMEOUT_MS = 5 * 1000;
 
 static dfu_host_ctx_t host_ctx;
 
 static void ack_timer_handler(TimerHandle_t tmr);
 static void heartbeat_timer_handler(TimerHandle_t tmr);
 
-static void bm_dfu_host_req_update(bool self_update);
+static void bm_dfu_host_req_update();
 
 void s_host_run(void) {}
 
@@ -39,7 +41,7 @@ void s_host_run(void) {}
  */
 static void ack_timer_handler(TimerHandle_t tmr) {
     (void) tmr;
-    bm_dfu_event_t evt = {DFU_EVENT_ACK_TIMEOUT, NULL};
+    bm_dfu_event_t evt = {DFU_EVENT_ACK_TIMEOUT, NULL,0};
 
     printf("Ack Timeout\n");
     if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
@@ -57,7 +59,7 @@ static void ack_timer_handler(TimerHandle_t tmr) {
  */
 static void heartbeat_timer_handler(TimerHandle_t tmr) {
     (void) tmr;
-    bm_dfu_event_t evt = {DFU_EVENT_HEARTBEAT_TIMEOUT, NULL};
+    bm_dfu_event_t evt = {DFU_EVENT_HEARTBEAT_TIMEOUT, NULL,0};
 
     printf("Heartbeat Timeout\n");
     if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
@@ -72,47 +74,32 @@ static void heartbeat_timer_handler(TimerHandle_t tmr) {
  *
  * @return none
  */
-static void bm_dfu_host_req_update(bool self_update) {
+static void bm_dfu_host_req_update() {
     bm_dfu_event_img_info_t update_req_evt;
+    uint16_t payload_len = sizeof(bm_dfu_event_img_info_t) + sizeof(bm_dfu_frame_header_t);
 
     printf("Sending Update to Client\n");
 
     /* Populate the appropriate event */
     update_req_evt.img_info = host_ctx.img_info;
-    memcpy(update_req_evt.addresses.src_addr, host_ctx.self_addr.addr, sizeof(update_req_evt.addresses.src_addr));
-    memcpy(update_req_evt.addresses.dst_addr, host_ctx.client_addr.addr, sizeof(update_req_evt.addresses.dst_addr));
+    update_req_evt.addresses.src_node_id =  host_ctx.self_node_id;
+    update_req_evt.addresses.dst_node_id = host_ctx.client_node_id;
 
-    if (self_update) {
-        bm_dfu_event_t evt = {DFU_EVENT_RECEIVED_UPDATE_REQUEST, NULL};
-        evt.pbuf = pbuf_alloc(PBUF_TRANSPORT, sizeof(bm_dfu_event_img_info_t) + sizeof(bm_dfu_frame_header_t), PBUF_RAM);
-        configASSERT(evt.pbuf);
+    uint8_t* buf = (uint8_t*)pvPortMalloc(payload_len);
+    configASSERT(buf);
 
-        evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
+    evtPtr->type = BCMP_DFU_START;
+    evtPtr->len = payload_len;
 
-        bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)evt.pbuf->payload;
-        header->frame_type = BM_DFU_START;
-        memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
-        bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
-
-        pbuf_ref(evt.pbuf);
-        if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
-            printf("Message could not be added to Queue\n");
-            pbuf_free(evt.pbuf);
-        }
-        pbuf_free(evt.pbuf);
+    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
+    memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
+    if(host_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(evtPtr->type), buf, payload_len)){
+        printf("Message %d sent \n",evtPtr->type);
     } else {
-        struct pbuf* buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(bm_dfu_event_img_info_t) + sizeof(bm_dfu_frame_header_t), PBUF_RAM);
-        configASSERT(buf);
-
-        bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf->payload;
-        evtPtr->type = BM_DFU_START;
-
-        bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf->payload;
-        memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
-
-        safe_udp_sendto_if(host_ctx.pcb, buf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
-        pbuf_free(buf);
-    }
+        printf("Failed to send message %d\n",evtPtr->type);
+    }       
+    vPortFree(buf);
 }
 
 /**
@@ -122,15 +109,37 @@ static void bm_dfu_host_req_update(bool self_update) {
  *
  * @return none
  */
-static void bm_dfu_host_send_chunk(void) {
-    bm_dfu_event_t evt = bm_dfu_get_current_event();
-    bm_dfu_frame_t *frame = (bm_dfu_frame_t *) evt.pbuf->payload;
-    bm_dfu_event_image_chunk_t* chunk_evt =  (bm_dfu_event_image_chunk_t*) &((uint8_t *)frame)[1];
+static void bm_dfu_host_send_chunk(bm_dfu_event_chunk_request_t* req) {
+    printf("Processing chunk id %" PRIX32 "\n",req->seq_num);
+    uint32_t payload_len = (host_ctx.bytes_remaining >= host_ctx.img_info.chunk_size) ? host_ctx.img_info.chunk_size : host_ctx.bytes_remaining;
+    uint32_t payload_len_plus_header = sizeof(bcmp_dfu_payload_t) + payload_len;
+    uint8_t* buf = (uint8_t*)pvPortMalloc(payload_len_plus_header);
+    configASSERT(buf);
+    bcmp_dfu_payload_t *payload_header = (bcmp_dfu_payload_t *)buf;
+    payload_header->header.frame_type = BCMP_DFU_PAYLOAD;
+    payload_header->chunk.addresses.src_node_id = host_ctx.self_node_id;
+    payload_header->chunk.addresses.dst_node_id = host_ctx.client_node_id;
+    payload_header->chunk.payload_length = payload_len;
 
-    memcpy(chunk_evt->addresses.src_addr, host_ctx.self_addr.addr, sizeof(host_ctx.self_addr.addr));
-    memcpy(chunk_evt->addresses.dst_addr, host_ctx.client_addr.addr, sizeof(host_ctx.client_addr.addr));
+    uint32_t flash_offset = host_ctx.img_info.image_size - host_ctx.bytes_remaining;
+    do {
+        if(!host_ctx.dfu_partition->read(flash_offset, payload_header->chunk.payload_buf, payload_len, FLASH_READ_TIMEOUT_MS)){
+            printf("Failed to read chunk from flash.\n");
+            bm_dfu_set_error(BM_DFU_ERR_FLASH_ACCESS);
+            bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
+            break;
+        }
+        if(host_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(payload_header->header.frame_type), buf, payload_len_plus_header)){
+            host_ctx.bytes_remaining -= payload_len;
+            printf("Message %d sent, payload size: %" PRIX32 ", remaining: %" PRIX32 "\n",payload_header->header.frame_type, payload_len, host_ctx.bytes_remaining);
+        } else {
+            printf("Failed to send message %d\n",payload_header->header.frame_type);
+            bm_dfu_set_error(BM_DFU_ERR_IMG_CHUNK_ACCESS);
+            bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
+        } 
+    } while(0);
 
-    safe_udp_sendto_if(host_ctx.pcb, evt.pbuf, &multicast_global_addr, host_ctx.port, host_ctx.netif);
+    vPortFree(buf);
 }
 
 /**
@@ -144,34 +153,26 @@ static void bm_dfu_host_send_chunk(void) {
 void s_host_req_update_entry(void) {
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
-    /* Check if we even have a pbuf to inspect */
-    if (! curr_evt.pbuf) {
+    /* Check if we even have a buf to inspect */
+    if (! curr_evt.buf) {
         return;
     }
 
-    bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.pbuf->payload;
+    bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.buf;
     bm_dfu_event_img_info_t* img_info_evt = (bm_dfu_event_img_info_t*) &((uint8_t *)frame)[1];
     host_ctx.img_info = img_info_evt->img_info;
+    host_ctx.bytes_remaining = host_ctx.img_info.image_size;
 
-    memcpy(host_ctx.client_addr.addr, img_info_evt->addresses.dst_addr, sizeof(img_info_evt->addresses.dst_addr));
+    memcpy(&host_ctx.client_node_id, &img_info_evt->addresses.dst_node_id, sizeof(host_ctx.client_node_id));
 
-    printf("DFU Client IPv6 Address: %08lx:%08lx:%08lx:%08lx\n", host_ctx.client_addr.addr[0],
-                                                             host_ctx.client_addr.addr[1],
-                                                             host_ctx.client_addr.addr[2],
-                                                             host_ctx.client_addr.addr[3]);
+    printf("DFU Client Note Id: %08llx\n", host_ctx.client_node_id);
 
-    /* Check if Host is being updated */
-    if (memcmp(host_ctx.self_addr.addr, host_ctx.client_addr.addr, sizeof(host_ctx.self_addr.addr)) == 0) {
-        printf("Self update\n");
-        bm_dfu_host_req_update(true);
-    } else {
-        host_ctx.ack_retry_num = 0;
-        /* Request Client Firmware Update */
-        bm_dfu_host_req_update(false);
+    host_ctx.ack_retry_num = 0;
+    /* Request Client Firmware Update */
+    bm_dfu_host_req_update();
 
-        /* Kickoff ACK timeout */
-        configASSERT(xTimerStart(host_ctx.ack_timer, 10));
-    }
+    /* Kickoff ACK timeout */
+    configASSERT(xTimerStart(host_ctx.ack_timer, 10));
 }
 
 /**
@@ -187,19 +188,16 @@ void s_host_req_update_run(void)
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
     if (curr_evt.type == DFU_EVENT_ACK_RECEIVED) {
-        configASSERT(curr_evt.pbuf);
-        bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.pbuf->payload;
-        bm_dfu_event_result_t* result_evt = (bm_dfu_event_result_t*) &((uint8_t *)frame)[1];
-
         /* Stop ACK Timer */
         configASSERT(xTimerStop(host_ctx.ack_timer, 10));
-
-        bm_dfu_send_ack(BM_DESKTOP, NULL, result_evt->success, result_evt->err_code);
+        configASSERT(curr_evt.buf);
+        bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.buf;
+        bm_dfu_event_result_t* result_evt = (bm_dfu_event_result_t*) &((uint8_t *)frame)[1];
 
         if (result_evt->success) {
             bm_dfu_set_pending_state_change(BM_DFU_STATE_HOST_UPDATE);
         } else {
-            bm_dfu_set_error(result_evt->err_code);
+            bm_dfu_set_error(static_cast<bm_dfu_err_t>(result_evt->err_code));
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
         }
     } else if (curr_evt.type == DFU_EVENT_ACK_TIMEOUT) {
@@ -208,11 +206,10 @@ void s_host_req_update_run(void)
         /* Wait for ack until max retries is reached */
         if (host_ctx.ack_retry_num >= BM_DFU_MAX_ACK_RETRIES) {
             configASSERT(xTimerStop(host_ctx.ack_timer, 10));
-            bm_dfu_send_ack(BM_DESKTOP, NULL, 0, BM_DFU_ERR_TIMEOUT);
             bm_dfu_set_error(BM_DFU_ERR_TIMEOUT);
             bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
         } else {
-            bm_dfu_host_req_update(false);
+            bm_dfu_host_req_update();
             configASSERT(xTimerStart(host_ctx.ack_timer, 10));
         }
     }
@@ -240,9 +237,9 @@ void s_host_update_run(void) {
     bm_dfu_frame_t *frame = NULL;
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
-    /* Check if we even have a pbuf to inspect */
-    if (curr_evt.pbuf) {
-        frame = (bm_dfu_frame_t *) curr_evt.pbuf->payload;
+    /* Check if we even have a buf to inspect */
+    if (curr_evt.buf) {
+        frame = (bm_dfu_frame_t *) curr_evt.buf;
     }
 
     if (curr_evt.type == DFU_EVENT_CHUNK_REQUEST) {
@@ -252,23 +249,19 @@ void s_host_update_run(void) {
         configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
 
         /* Request Next Chunk */
-        bm_dfu_req_next_chunk(BM_DESKTOP, NULL, chunk_req_evt->seq_num);
-
         /* Send Heartbeat to Client
             TODO: Make this a periodic heartbeat in case it takes a while to grab chunk from external host
         */
-        bm_dfu_send_heartbeat(&host_ctx.client_addr);
-    } else if (curr_evt.type == DFU_EVENT_IMAGE_CHUNK) {
+        bm_dfu_send_heartbeat(host_ctx.client_node_id);
+
         /* resend the frame to the client as is */
-        bm_dfu_host_send_chunk();
+        bm_dfu_host_send_chunk(chunk_req_evt);
 
         configASSERT(xTimerStart(host_ctx.heartbeat_timer, 10));
     } else if (curr_evt.type == DFU_EVENT_UPDATE_END) {
+        configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
         configASSERT(frame);
         bm_dfu_event_result_t* update_end_evt = (bm_dfu_event_result_t*) &((uint8_t *)frame)[1];
-
-        configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
-        bm_dfu_update_end(BM_DESKTOP, NULL, update_end_evt->success, update_end_evt->err_code);
 
         if (update_end_evt->success) {
             printf("Successfully updated Client\n");
@@ -276,26 +269,26 @@ void s_host_update_run(void) {
             printf("Client Update Failed\n");
         }
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
-    } else if (curr_evt.type == DFU_EVENT_HEARTBEAT) {
+    } else if (curr_evt.type == DFU_EVENT_HEARTBEAT) { // FIXME: Do we need this?
         configASSERT(xTimerStart(host_ctx.heartbeat_timer, 10));
     } else if (curr_evt.type == DFU_EVENT_HEARTBEAT_TIMEOUT) {
-        bm_dfu_update_end(BM_DESKTOP, NULL, 0, BM_DFU_ERR_TIMEOUT);
         bm_dfu_set_error(BM_DFU_ERR_TIMEOUT);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
     } else if (curr_evt.type == DFU_EVENT_ABORT) {
-        bm_dfu_update_end(BM_DESKTOP, NULL, 0, BM_DFU_ERR_ABORTED);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
     }
 }
 
-void bm_dfu_host_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif) {
+
+void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
+    configASSERT(bcmp_dfu_tx);
+    configASSERT(dfu_partition);
+    host_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
+    host_ctx.dfu_partition = dfu_partition;
     int tmr_id = 0;
 
     /* Store relevant variables */
-    host_ctx.self_addr = *netif_ip6_addr(_netif, 0);
-    host_ctx.pcb = _pcb;
-    host_ctx.port = _port;
-    host_ctx.netif = _netif;
+    host_ctx.self_node_id = getNodeId();
 
     /* Get DFU Subsystem Queue */
     host_ctx.dfu_event_queue = bm_dfu_get_event_queue();

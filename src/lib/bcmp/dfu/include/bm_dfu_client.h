@@ -9,7 +9,7 @@ extern "C"
 
 #define BM_DFU_CLIENT_CHUNK_TIMEOUT_MS  2000UL
 
-void bm_dfu_client_process_request(void);
+void bm_dfu_client_process_update_request(void);
 
 /* HFSM functions */
 void s_client_run(void);
@@ -20,7 +20,7 @@ void s_client_validating_run(void);
 void s_client_activating_entry(void);
 void s_client_activating_run(void);
 
-void bm_dfu_client_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif);
+void bm_dfu_client_init(bcmp_dfu_tx_func_t bcmp_dfu_tx);
 
 #ifdef __cplusplus
 }

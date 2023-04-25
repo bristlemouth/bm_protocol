@@ -33,6 +33,11 @@
 #include "serial_console.h"
 #include "usb.h"
 #include "watchdog.h"
+#ifndef BSP_NUCLEO_U575
+#include "w25.h"
+#include "nvmPartition.h"
+#include "external_flash_partitions.h"
+#endif 
 
 
 #include <stdio.h>
@@ -298,8 +303,13 @@ static void defaultTask( void *parameters ) {
     lpmPeripheralInactive(LPM_BOOT);
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
-
+#ifndef BSP_NUCLEO_U575
+    spiflash::W25 debugW25(&spi2, &FLASH_CS);
+    NvmPartition dfu_partition(debugW25, dfu_configuration);
+    bcl_init(&dfu_partition);
+#else
     bcl_init(NULL);
+#endif 
 
 #ifdef BSP_BRIDGE_V1_0
 #ifdef BRIDGE_AUTO_ENABLE

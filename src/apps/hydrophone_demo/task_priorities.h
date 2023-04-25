@@ -10,6 +10,7 @@
 
 #define ADIN_SERVICE_TASK_PRIORITY      14
 #define BM_L2_TX_TASK_PRIORITY          13
+#define BM_DFU_EVENT_TASK_PRIORITY      11
 
 #define GPIO_ISR_TASK_PRIORITY 6
 

@@ -99,6 +99,7 @@ set(LIB_FILES
 
 set(LIB_INCLUDES
     ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bcmp/dfu/include
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug

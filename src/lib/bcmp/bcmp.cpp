@@ -17,6 +17,8 @@
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
 
+#include "bm_dfu.h"
+
 #define BCMP_EVT_QUEUE_LEN 32
 
 // Send heartbeats every 10 seconds (and check for expired links)
@@ -63,6 +65,20 @@ void bcmp_link_change(uint8_t port, bool state) {
     bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
     configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
   }
+}
+
+/*!
+  Process a DFU message. Allocates memory that the consumer is in charge of freeing.
+  \param pbuf[in] pbuf buffer
+  \return none
+*/
+static void dfu_copy_and_process_message(struct pbuf *pbuf) {
+  configASSERT(pbuf);
+  bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
+  uint8_t* buf = (uint8_t *) pvPortMalloc((pbuf->len) - sizeof(bcmp_header_t));
+  configASSERT(buf);
+  memcpy(buf, header->payload, (pbuf->len) - sizeof(bcmp_header_t));
+  bm_dfu_process_message(buf, (pbuf->len) - sizeof(bcmp_header_t));
 }
 
 /*!
@@ -129,10 +145,10 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_DFU_PAYLOAD:
       case BCMP_DFU_END:
       case BCMP_DFU_ACK:
-      case BCMP_DFU_HEARTBEAT:
-      case BCMP_DFU_BEGIN_HOST:
-        // TODO: PUMP DFU STATE MACHINE.
+      case BCMP_DFU_HEARTBEAT:{
+        dfu_copy_and_process_message(pbuf);
         break;
+      }
       default: {
         printf("Unsupported BMCP message %04X\n", header->type);
         rval = -1;
@@ -318,6 +334,19 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
 }
 
 /*!
+  BCMP DFU packet transmit function.
+
+  \param type[in] - bcmp dfu message type
+  \param buff[in] - message payload
+  \param len[in] - message length
+  \return true if succesful false otherwise.
+*/
+static bool bcmp_dfu_tx (bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
+  configASSERT(type >= BCMP_DFU_START && type <= BCMP_DFU_LAST_MESSAGE);
+  return (bcmp_tx(&multicast_global_addr,type,buff,len) == ERR_OK);
+}
+
+/*!
   BCMP initialization
 
   \param *netif lwip network interface to use
@@ -327,12 +356,13 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition) {
   _ctx.netif = netif;
   _ctx.pcb = raw_new(IP_PROTO_BCMP);
   configASSERT(_ctx.pcb);
-  (void) dfu_partition; // TODO
 
 
   /* Create threads and Queues */
   _ctx.rx_queue = xQueueCreate(BCMP_EVT_QUEUE_LEN, sizeof(bcmp_queue_item_t));
   configASSERT(_ctx.rx_queue);
+
+  bm_dfu_init(bcmp_dfu_tx, dfu_partition);
 
   BaseType_t rval = xTaskCreate(bcmp_thread,
                      "BCMP",

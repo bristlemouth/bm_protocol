@@ -149,3 +149,59 @@ add_test(
   COMMAND
     configuration_tests
   )
+
+#
+# BCMP DFU
+#
+
+add_executable(bcmp_dfu_tests)
+target_include_directories(bcmp_dfu_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${SRC_DIR}/lib/sys
+    ${SRC_DIR}/third_party/crc
+    ${TEST_DIR}/third_party/fff
+    ${SRC_DIR}/lib/sys
+    ${SRC_DIR}/lib/bcmp/dfu/include
+    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/third_party/mcuboot/boot/bootutil/include
+    ${SRC_DIR}/lib/mcuboot/include
+    ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/drivers/abstract
+    ${SRC_DIR}/apps/bringup
+)
+
+target_sources(bcmp_dfu_tests
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/bcmp/dfu/src/bm_dfu_core.cpp
+    ${SRC_DIR}/lib/bcmp/dfu/src/bm_dfu_client.cpp
+    ${SRC_DIR}/lib/bcmp/dfu/src/bm_dfu_host.cpp
+
+    # Support files
+    ${SRC_DIR}/third_party/crc/crc16.c
+    ${SRC_DIR}/lib/common/lib_state_machine.cpp
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
+    # Mocks
+    ${TEST_DIR}/stubs/mock_mcu_boot.cpp
+    ${TEST_DIR}/stubs/mock_FreeRTOS.c
+    ${TEST_DIR}/stubs/mock_reset_reason.cpp
+    ${TEST_DIR}/stubs/mock_device_info.cpp
+    # Stubs
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c
+
+    # Unit test wrapper for test
+    bcmp_dfu_ut.cpp
+)
+
+target_link_libraries(bcmp_dfu_tests gtest gmock gtest_main)
+
+add_test(
+  NAME
+    bcmp_dfu_tests
+  COMMAND
+    bcmp_dfu_tests
+  )

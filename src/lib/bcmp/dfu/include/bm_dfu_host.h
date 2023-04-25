@@ -7,6 +7,7 @@
 #include "queue.h"
 #include "timers.h"
 #include "semphr.h"
+#include "nvmPartition.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -25,7 +26,7 @@ void s_host_req_update_run(void);
 void s_host_update_entry(void);
 void s_host_update_run(void);
 
-void bm_dfu_host_init(struct udp_pcb* _pcb, uint16_t _port, struct netif* _netif);
+void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition);
 
 #ifdef __cplusplus
 }
