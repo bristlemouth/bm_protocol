@@ -551,4 +551,35 @@ bool W25::erase(uint32_t addr, size_t len, uint32_t timeoutMs) {
     return rval;
 }
 
+bool W25::crc16(uint32_t addr, size_t len, uint16_t &crc, uint32_t timeoutMs) {
+    configASSERT((addr + len) < W25_MAX_ADDRESS);
+    crc = 0;
+    bool retval = true;
+    if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {
+        uint32_t readlen = len;
+        uint32_t offset = 0;
+        uint32_t blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
+        uint8_t* read_buf = (uint8_t *)pvPortMalloc(blocklen);
+        configASSERT(read_buf);
+        while(readlen){
+            printf("Reading addr %lu, size %lu \n", (addr + offset), blocklen);
+            if(!_read(addr + offset, read_buf, blocklen)){
+                printf("Write failed\n");
+                retval = false;
+                break;
+            }
+            crc = crc16_ccitt(crc, read_buf, blocklen);
+            offset += blocklen;
+            readlen -= blocklen;
+            blocklen = (readlen < W25_SECTOR_SIZE) ? readlen : W25_SECTOR_SIZE;
+        }
+        vPortFree(read_buf);
+        xSemaphoreGive(_mutex);
+    } else {
+        retval = false;
+        printf("Failed to acquire W25 mutex.\n");
+    }
+    return retval;
+}
+
 } // namespace spiflash

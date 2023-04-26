@@ -37,8 +37,10 @@
 #include "watchdog.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
+#include "debug_w25.h"
 #include "nvmPartition.h"
 #include "external_flash_partitions.h"
+#include "debug_nvm_cli.h"
 #endif 
 
 
@@ -305,7 +307,10 @@ static void defaultTask( void *parameters ) {
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 #ifndef BSP_NUCLEO_U575
     spiflash::W25 debugW25(&spi2, &FLASH_CS);
+    debugW25Init(&debugW25);
+    NvmPartition debug_cli_partition(debugW25, cli_configuration);
     NvmPartition dfu_partition(debugW25, dfu_configuration);
+    debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     bcl_init(&dfu_partition);
 #else
     bcl_init(NULL);

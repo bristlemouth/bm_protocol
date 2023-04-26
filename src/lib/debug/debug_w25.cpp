@@ -216,13 +216,13 @@ static BaseType_t w25Command( char *writeBuffer,
             uint32_t address = atoi(addr) & BITMASK24BIT;
             uint32_t write_len = atoi(len);
             uint32_t blocklen = (write_len < BIG_WRITE_BLOCK_LEN) ? write_len : BIG_WRITE_BLOCK_LEN;
-            uint8_t* wr_buf = (uint8_t *)pvPortMalloc(blocklen);
+            uint8_t* wr_buf = (uint8_t *)pvPortMalloc(blocklen);           
             uint32_t crc32_write = 0;
             uint32_t crc32_read = 0;
             bool first_loop = true;
             configASSERT(wr_buf);
             for(uint32_t i = 0; i < blocklen; i++) {
-                wr_buf[i] = 0xAA + ((i % 5) * 0x11);
+                wr_buf[i] = (uint8_t) i;
             }
             uint32_t offset = 0;
             do {

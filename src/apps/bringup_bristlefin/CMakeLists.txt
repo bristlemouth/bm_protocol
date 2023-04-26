@@ -85,6 +85,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc32.c
+    ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c

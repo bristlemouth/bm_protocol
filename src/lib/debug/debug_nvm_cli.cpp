@@ -27,6 +27,7 @@ static const CLI_Command_Definition_t cmdNvmCli = {
   "nvm:\n"
   " * nvm b64write <debug/dfu> <addr> <b64 data>\n"
   " * nvm b64read <debug/dfu> <addr> <bin_len>\n"
+  " * nvm crc16 <debug/dfu> <addr> <bin_len>\n"
   " * nvm erase <debug/dfu> <addr> <bin_len>\n",
   // Command function
   nvmCliCommand,
@@ -104,7 +105,11 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
                 printf("ERR Invalid addr\n");
                 break; 
             }
-            b64WriteToNvm(partition, (uint32_t)addr,(const unsigned char *)b64DataStr, b64DataLen);
+            if(!b64WriteToNvm(partition, (uint32_t)addr,(const unsigned char *)b64DataStr, b64DataLen)){
+                printf("Failed to write\n");
+            } else {
+                printf("Write success!#\n");
+            }
         } else if(strncmp("b64read", opStr,opStrLen) == 0){
             BaseType_t lenStrLen;
             const char *lenStr = FreeRTOS_CLIGetParameter(
@@ -126,9 +131,34 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
             if(!partition->read(addr,(uint8_t*)buf,len,NVM_WR_R_TIMEOUT_MS)){
                 printf("Failed to read nvm\n");
             } else {
-                b64ReadFromNvm((const unsigned char *)buf, len);
+                if(!b64ReadFromNvm((const unsigned char *)buf, len)){
+                    printf("Failed to read\n");
+                } else {
+                    printf("Read success!#\n");
+                }
             }
             vPortFree(buf);
+        } else if(strncmp("crc16", opStr,opStrLen) == 0){
+            BaseType_t lenStrLen;
+            const char *lenStr = FreeRTOS_CLIGetParameter(
+            commandString,
+            4,
+            &lenStrLen);
+            if(lenStr == NULL) {
+                printf("ERR Invalid paramters\n");
+                break;
+            }
+            uint32_t len = strtoul(lenStr, NULL, 0);;
+            if (addr + len > partition->size()){
+                printf("ERR Invalid addr\n");
+                break; 
+            }
+            uint16_t crc;
+            if(!partition->crc16(addr,len,crc,NVM_WR_R_TIMEOUT_MS)){
+                printf("Failed to get crc16\n");
+            } else {
+                printf("<crc16>0x%x#\n", crc);
+            }
         } else if(strncmp("erase", opStr,opStrLen) == 0){
             BaseType_t lenStrLen;
             const char *lenStr = FreeRTOS_CLIGetParameter(
@@ -151,7 +181,7 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
             if(!partition->erase(addr,len, NVM_WR_R_TIMEOUT_MS)){
                 printf("Failed to erase nvm\n");
             } else {
-                printf("Succesfully erased %lu bytes at addr %lx!\n",len, addr);
+                printf("Succesfully erased %lu bytes at addr %lx!#\n",len, addr);
             }
         } else {
             printf("ERR Invalid paramters\n");

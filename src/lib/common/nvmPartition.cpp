@@ -30,3 +30,8 @@ bool NvmPartition::erase(uint32_t offset, size_t len, uint32_t timeoutMs) {
 uint32_t NvmPartition::alignment(void) {
     return _storage_driver.getAlignmentBytes();
 }
+
+bool NvmPartition::crc16(uint32_t offset, size_t len, uint16_t &crc, uint32_t timeoutMs) {
+    configASSERT(offset + len + (len % _storage_driver.getAlignmentBytes()) < _partition.fa_size);
+    return _storage_driver.crc16(_partition.fa_off + offset, len, crc, timeoutMs);
+}

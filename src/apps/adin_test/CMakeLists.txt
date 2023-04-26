@@ -53,6 +53,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
+    ${SRC_DIR}/lib/debug/debug_w25.cpp
+    ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
@@ -73,6 +75,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
+    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c

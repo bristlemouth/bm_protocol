@@ -43,7 +43,7 @@ TEST_F(NvmPartitionTest, BasicTest)
   };
   MockStorageDriver _storage;
   EXPECT_CALL(_storage, getAlignmentBytes())
-    .Times(1)
+    .Times(2)
     .WillRepeatedly(Return(4096));
   EXPECT_CALL(_storage, getStorageSizeBytes())
     .Times(1)
@@ -58,6 +58,11 @@ TEST_F(NvmPartitionTest, BasicTest)
     .Times(1)
     .WillRepeatedly(Return(true));
   testPartition.read(1000, testbuf, sizeof(testbuf),100);
+  EXPECT_CALL(_storage, crc16)
+    .Times(1)
+    .WillRepeatedly(Return(true));
+  uint16_t crc;
+  testPartition.crc16(1000, 20, crc,100);
 }
 
 TEST_F(NvmPartitionTest, BadInit)
