@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #define DEBUG_USE_USART1
+#define DEBUG_USE_USART3
 #define DEBUG_USE_LPUART1
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
@@ -83,7 +84,6 @@ extern IOPinHandle_t BF_TP8;
 
 
 // SPI Interfaces
-extern SPIInterface_t spi1;
 extern SPIInterface_t spi2;
 extern SPIInterface_t spi3;
 

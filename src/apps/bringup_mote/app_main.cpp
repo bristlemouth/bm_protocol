@@ -78,6 +78,25 @@ SerialHandle_t lpuart1 = {
 };
 #endif // DEBUG_USE_LPUART1
 
+#ifndef DEBUG_USE_USART3
+SerialHandle_t usart3 = {
+  .device = USART3,
+  .name = "BM",
+  .txPin = &BM_MOSI_TX3,
+  .rxPin = &BM_SCK_RX3,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 4096,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = serialGenericRxBytesFromISR,
+  .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
+};
+#endif /// DEBUG_USE_USART3
+
 // Serial console USB device
 SerialHandle_t usbCLI   = {
   .device = (void *)0, // Using CDC 0
@@ -136,7 +155,23 @@ static const DebugGpio_t debugGpioPins[] = {
   {"bm_cs", &BM_CS, GPIO_OUT},
   {"flash_cs", &FLASH_CS, GPIO_OUT},
   {"boot_led", &BOOT_LED, GPIO_IN},
-
+  {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+  {"bf_io1", &BF_IO1, GPIO_OUT},
+  {"bf_io2", &BF_IO2, GPIO_OUT},
+  {"bf_hfio", &BF_HFIO, GPIO_OUT},
+  {"bf_3v3_en", &BF_3V3_EN, GPIO_IN},
+  {"bf_5v_en", &BF_5V_EN, GPIO_OUT},
+  {"bf_imu_int", &BF_IMU_INT, GPIO_IN},
+  {"bf_imu_rst", &BF_IMU_RST, GPIO_OUT},
+  {"bf_sdi12_oe", &BF_SDI12_OE, GPIO_OUT},
+  {"bf_tp16", &BF_TP16, GPIO_OUT},
+  {"bf_led_g1", &BF_LED_G1, GPIO_OUT},
+  {"bf_led_r1", &BF_LED_R1, GPIO_OUT},
+  {"bf_led_g2", &BF_LED_G2, GPIO_OUT},
+  {"bf_led_r2", &BF_LED_R2, GPIO_OUT},
+  {"bf_pl_buck_en", &BF_PL_BUCK_EN, GPIO_OUT},
+  {"bf_tp7", &BF_TP7, GPIO_OUT},
+  {"bf_tp8", &BF_TP8, GPIO_OUT},
 };
 
 #ifndef DEBUG_USE_LPUART1

@@ -97,6 +97,25 @@ SerialHandle_t usart1 = {
 };
 #endif /// DEBUG_USE_USART1
 
+#ifndef DEBUG_USE_USART3
+SerialHandle_t usart3 = {
+  .device = USART3,
+  .name = "BM",
+  .txPin = &BM_MOSI_TX3,
+  .rxPin = &BM_SCK_RX3,
+  .txStreamBuffer = NULL,
+  .rxStreamBuffer = NULL,
+  .txBufferSize = 4096,
+  .rxBufferSize = 512,
+  .rxBytesFromISR = serialGenericRxBytesFromISR,
+  .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
+  .processByte = NULL,
+  .data = NULL,
+  .enabled = false,
+  .flags = 0,
+};
+#endif /// DEBUG_USE_USART3
+
 // Serial console USB device
 SerialHandle_t usbCLI   = {
   .device = (void *)0, // Using CDC 0
@@ -139,7 +158,6 @@ static const DebugI2C_t debugI2CInterfaces[] = {
 };
 
 static const DebugSPI_t debugSPIInterfaces[] = {
-  {1, &spi1},
   {2, &spi2},
   {3, &spi3},
 };
@@ -195,6 +213,12 @@ extern "C" void USART1_IRQHandler(void) {
 }
 #endif // DEBUG_USE_USART1
 
+#ifndef DEBUG_USE_USART3
+extern "C" void USART3_IRQHandler(void) {
+  serialGenericUartIRQHandler(&usart3);
+}
+#endif // DEBUG_USE_USART3
+
 #ifndef DEBUG_USE_LPUART1
 extern "C" void LPUART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&lpuart1);
@@ -228,6 +252,7 @@ extern "C" int main(void) {
   MX_GPIO_Init();
   MX_LPUART1_UART_Init();
   MX_USART1_UART_Init();
+  MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();

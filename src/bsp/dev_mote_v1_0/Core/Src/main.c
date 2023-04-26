@@ -101,7 +101,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
-  MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_ADC1_Init();
@@ -112,6 +111,7 @@ int main(void)
   MX_GPDMA1_Init();
   MX_RTC_Init();
   MX_ICACHE_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
