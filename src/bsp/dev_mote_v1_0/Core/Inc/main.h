@@ -32,6 +32,7 @@ extern "C" {
 #include "stm32u5xx_ll_iwdg.h"
 #include "stm32u5xx_ll_lpuart.h"
 #include "stm32u5xx_ll_rcc.h"
+#include "stm32u5xx_ll_rtc.h"
 #include "stm32u5xx_ll_usart.h"
 #include "stm32u5xx_ll_system.h"
 #include "stm32u5xx_ll_gpio.h"

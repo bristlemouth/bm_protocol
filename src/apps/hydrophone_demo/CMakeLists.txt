@@ -41,12 +41,14 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
+    ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
+    ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
@@ -61,6 +63,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
+    ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c

@@ -6,7 +6,7 @@
 #include "gpio.h"
 #include "icache.h"
 #include "iwdg.h"
-#include "rtc.h"
+// #include "rtc.h"
 #include "usart.h"
 #include "usb_otg.h"
 
@@ -22,6 +22,7 @@
 #include "debug_bm.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
+#include "debug_rtc.h"
 #include "debug_sys.h"
 #include "gpdma.h"
 #include "gpioISR.h"
@@ -31,6 +32,7 @@
 #include "printf.h"
 #include "serial.h"
 #include "serial_console.h"
+#include "stm32_rtc.h"
 #include "usb.h"
 #include "watchdog.h"
 #ifndef BSP_NUCLEO_U575
@@ -140,14 +142,11 @@ extern "C" int main(void) {
     MX_USB_OTG_FS_PCD_Init();
     MX_GPDMA1_Init();
     MX_ICACHE_Init();
-#ifndef BSP_DEV_MOTE_V1_0
-    MX_RTC_Init();
-#endif // BSP_DEV_MOTE_V1_0
     MX_IWDG_Init();
 
     usbMspInit();
 
-    // rtcInit();
+    rtcInit();
 
     // Enable hardfault on divide-by-zero
     SCB->CCR |= 0x10;
@@ -298,6 +297,7 @@ static void defaultTask( void *parameters ) {
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
 #endif
     debugBMInit();
+    debugRTCInit();
 
     // Re-enable low power mode
     lpmPeripheralInactive(LPM_BOOT);

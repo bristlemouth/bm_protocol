@@ -8,7 +8,6 @@
 #include "gpio.h"
 #include "icache.h"
 #include "iwdg.h"
-#include "rtc.h"
 // #include "ucpd.h"
 #include "usart.h"
 #include "usb_otg.h"
@@ -24,6 +23,7 @@
 #include "cli.h"
 #include "debug_bm.h"
 #include "debug_memfault.h"
+#include "debug_rtc.h"
 #include "debug_sys.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
@@ -33,6 +33,7 @@
 #include "printf.h"
 #include "serial.h"
 #include "serial_console.h"
+#include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "usb.h"
 #include "util.h"
@@ -141,15 +142,12 @@ extern "C" int main(void) {
 #endif
   MX_USB_OTG_FS_PCD_Init();
   MX_ICACHE_Init();
-#ifdef BSP_NUCLEO_U575
-  MX_RTC_Init();
-#endif // BSP_NUCLEO_U575
   MX_GPDMA1_Init();
   MX_IWDG_Init();
 
   usbMspInit();
 
-  // rtcInit();
+  rtcInit();
 
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
@@ -259,6 +257,7 @@ static void defaultTask( void *parameters ) {
   debugSysInit();
   debugMemfaultInit(&usbCLI);
   debugBMInit();
+  debugRTCInit();
 
 #ifndef BSP_NUCLEO_U575
   IOWrite(&EXP_LED_G1, LED_OFF);

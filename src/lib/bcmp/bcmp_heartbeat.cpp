@@ -5,6 +5,7 @@
 #include "bcmp_heartbeat.h"
 #include "bcmp_info.h"
 #include "device_info.h"
+#include "uptime.h"
 
 /*!
   Send heartbeat to neighbors
@@ -14,7 +15,7 @@
 */
 err_t bcmp_send_heartbeat(uint32_t lease_duration_s) {
   bcmp_heartbeat_t heartbeat = {
-    .time_since_boot_us = (uint64_t)xTaskGetTickCount() * 1000,
+    .time_since_boot_us = uptimeGetMicroSeconds(),
     .liveliness_lease_dur_s = lease_duration_s};
   return bcmp_tx(&multicast_ll_addr, BCMP_HEARTBEAT, (uint8_t *)&heartbeat, sizeof(heartbeat));
 }

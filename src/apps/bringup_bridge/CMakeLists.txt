@@ -41,6 +41,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
+    ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/debug/debug.c
@@ -52,6 +53,7 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
+    ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/debug/debug_uart.c
@@ -69,6 +71,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
+    ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c

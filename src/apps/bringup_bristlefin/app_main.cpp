@@ -9,7 +9,6 @@
 #include "i2c.h"
 #include "icache.h"
 #include "iwdg.h"
-// #include "rtc.h"
 #include "spi.h"
 #include "usart.h"
 #include "usb_otg.h"
@@ -31,6 +30,7 @@
 #include "debug_ina232.h"
 #include "debug_memfault.h"
 #include "debug_ms5803.h"
+#include "debug_rtc.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
 #include "debug_tca9546a.h"
@@ -47,6 +47,7 @@
 #include "pca9535.h"
 #include "serial.h"
 #include "serial_console.h"
+#include "stm32_rtc.h"
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
@@ -230,12 +231,11 @@ extern "C" int main(void) {
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
-  // MX_RTC_Init();
   MX_IWDG_Init();
 
   usbMspInit();
 
-  // rtcInit();
+  rtcInit();
 
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
@@ -313,7 +313,7 @@ static void defaultTask( void *parameters ) {
 #ifndef DEBUG_USE_USART1
   debugMemfaultInit(&usart1);
 #endif // DEBUG_USE_USART1
-
+  debugRTCInit();
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
 #endif
