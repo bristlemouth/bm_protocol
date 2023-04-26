@@ -48,6 +48,7 @@ typedef struct {
     uint8_t adin_device_counter;
     uint8_t available_ports_mask;
     uint8_t available_port_mask_idx;
+    uint8_t enabled_port_mask;
     QueueHandle_t evt_queue;
 } bm_l2_ctx_t;
 
@@ -83,7 +84,7 @@ static void bm_l2_process_tx_evt(l2_queue_element_t *tx_evt) {
     for (uint32_t idx=0; idx < BM_NETDEV_TYPE_MAX; idx++) {
         switch (bm_l2_ctx.devices[idx].type) {
             case BM_NETDEV_TYPE_ADIN2111: {
-                err_t retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, (uint8_t*)tx_evt->pbuf->payload, tx_evt->pbuf->len,
+                err_t retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, static_cast<uint8_t *>(tx_evt->pbuf->payload), tx_evt->pbuf->len,
                                    (tx_evt->port_mask >> mask_idx) & ADIN2111_PORT_MASK, bm_l2_ctx.devices[idx].start_port_idx);
                 mask_idx += bm_l2_ctx.devices[idx].num_ports;
                 if (retv != ERR_OK) {
@@ -131,7 +132,7 @@ static void bm_l2_process_rx_evt(l2_queue_element_t *rx_evt) {
     }
 
     /* We need to code the RX Port into the IPV6 address passed to lwip */
-    ADD_INGRESS_PORT(((uint8_t *) rx_evt->pbuf->payload), rx_port_mask);
+    ADD_INGRESS_PORT((static_cast<uint8_t *>(rx_evt->pbuf->payload)), rx_port_mask);
 
     if (IS_GLOBAL_MULTICAST(rx_evt->pbuf->payload)) {
         uint8_t new_port_mask = bm_l2_ctx.available_ports_mask & ~(rx_port_mask);
@@ -182,17 +183,26 @@ static void _link_change_cb(void* device_handle, uint8_t port, bool state) {
   \return none
 */
 static void _handle_link_change(const void *device_handle, uint8_t port, bool state) {
-    // TODO - Calculate overall port number from device port number
-    // Using single device now so it maps 1:1
     configASSERT(device_handle);
 
     for(uint8_t device = 0; device < BM_NETDEV_COUNT; device++) {
         if(device_handle == bm_l2_ctx.devices[device].device_handle) {
+            // Get the overall port number
+            uint8_t port_idx = bm_l2_ctx.devices[device].start_port_idx + port;
+            // Keep track of what ports are enabled/disabled so we don't try and send messages
+            // out through them
+            uint8_t port_mask = 1 << (port_idx);
+            if (state){
+                bm_l2_ctx.enabled_port_mask |= port_mask;
+            } else {
+                bm_l2_ctx.enabled_port_mask &= ~port_mask;
+            }
+
             if(bm_l2_ctx.link_change_cb) {
-                bm_l2_ctx.link_change_cb(port, state);
+                bm_l2_ctx.link_change_cb(port_idx, state);
             } else {
                 printf("port%u %s\n",
-                port,
+                port_idx,
                 state ? "up" : "down");
             }
         }
@@ -248,7 +258,8 @@ err_t bm_l2_tx(struct pbuf *pbuf, uint8_t port_mask) {
     err_t retv = ERR_OK;
 
     // device_handle not needed for tx
-    l2_queue_element_t tx_evt = {NULL, port_mask, pbuf, BM_L2_TX};
+    // Don't send to ports that are offline
+    l2_queue_element_t tx_evt = {NULL, port_mask & bm_l2_ctx.enabled_port_mask, pbuf, BM_L2_TX};
 
     pbuf_ref(pbuf);
     if(xQueueSend(bm_l2_ctx.evt_queue, &tx_evt, 10) != pdTRUE) {
