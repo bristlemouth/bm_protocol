@@ -38,14 +38,15 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/pcap.c
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
+    ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -212,6 +213,9 @@ set(APP_LIBS
 
 set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
+
+    # Add network stress test functions
+    STRESS_TEST_ENABLE
     )
 
 if (DFU_HOST  STREQUAL 1)

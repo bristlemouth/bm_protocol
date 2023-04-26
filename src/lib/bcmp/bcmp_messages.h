@@ -134,6 +134,24 @@ typedef struct {
   uint64_t target_node_id;
 } __attribute__((packed)) bcmp_neighbor_table_request_t;
 
+// Type of bristlemouth port
+// TODO - move this to bristlemouth headers?
+typedef enum {
+  BM_PORT_NONE = 0,
+  BM_PORT_10BASET1L,
+  BM_PORT_10BASET1S,
+  BM_PORT_USB,
+} bm_port_e;
+
+typedef struct {
+  // Port state up/down
+  bool state;
+
+  // What type of port is this?
+  // Maps to bm_port_type_e
+  uint8_t type;
+} __attribute__((packed)) bcmp_port_info_t;
+
 typedef struct {
   // Node ID of the responding node
   uint64_t node_id;
@@ -141,21 +159,26 @@ typedef struct {
   // Length of port list
   uint8_t port_len;
 
-  // List of local BM ports and basic status information about them
-  // TODO - Switch to bcmp_port_info port_list[0]; when defined
-  uint8_t port_list[0];
+  // How many neighbors are there
+  uint16_t neighbor_len;
 
-  // Followed by neighbor info
-  // bcmp_neighbor_tableReplyNeighborInfo_t
+  // List of local BM ports and basic status information about them
+  bcmp_port_info_t port_list[0];
+
+  // Followed by neighbor list
+  // bcmp_neighbor_info_t
 } __attribute__((packed)) bcmp_neighbor_table_reply_t;
 
 typedef struct {
-  // Length of neighbor list
-  uint16_t neighbor_len;
+  // Neighbor's node_id
+  uint64_t node_id;
 
-  // List containing information about each discovered neighbor, including which port they are on, and their current status. Points to bcmp_neighbor_info*
-  uint8_t neighbor_info[0];
-} __attribute__((packed)) bcmp_neighbor_tableReplyNeighborInfo_t;
+  // Which port is this neighbor on
+  uint8_t port;
+
+  // Is this neighbor online or not?
+  uint8_t online;
+} __attribute__((packed)) bcmp_neighbor_info_t;
 
 typedef struct {
   // Node ID of the target node for which the request is being made. (Zeroed = all nodes)

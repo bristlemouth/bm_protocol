@@ -60,6 +60,13 @@ typedef struct {
     adin2111_Port_e port;
 } linkChangeEvt_t;
 
+typedef struct {
+    adin2111_DeviceHandle_t handle;
+    adin2111_Port_e port;
+    adin2111_port_stats_callback_t callback;
+    void *args;
+} portStatsReqEvt_t;
+
 static adin_rx_callback_t _rx_callback;
 static adin_link_change_callback_t _link_change_callback;
 
@@ -77,6 +84,9 @@ typedef enum {
 
     // Link change
     EVT_LINK_CHANGE,
+
+    // Port stats request
+    EVT_PORT_STATS,
 
 } ethEvtType_e;
 
@@ -121,7 +131,7 @@ static void adin2111_tx_cb(void *pCBParam, uint32_t Event, void *pArg) {
     (void) Event;
     (void) pCBParam;
 
-    txMsgEvt_t *txMsg = (txMsgEvt_t *)pArg;
+    txMsgEvt_t *txMsg = static_cast<txMsgEvt_t *>(pArg);
     if(txMsg) {
         free_tx_msg_req(txMsg);
     } else {
@@ -142,9 +152,9 @@ static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg) 
     (void) Event;
 
     // Letting callback handle checking the port state for each port
-    adi_mac_StatusRegisters_t *statusRegisters = (adi_mac_StatusRegisters_t *)pArg;
+    adi_mac_StatusRegisters_t *statusRegisters = static_cast<adi_mac_StatusRegisters_t *>(pArg);
 
-    linkChangeEvt_t *linkChangeEvt = (linkChangeEvt_t *)pvPortMalloc(sizeof(linkChangeEvt_t));
+    linkChangeEvt_t *linkChangeEvt = static_cast<linkChangeEvt_t *>(pvPortMalloc(sizeof(linkChangeEvt_t)));
     configASSERT(linkChangeEvt);
 
     linkChangeEvt->handle = (adin2111_DeviceHandle_t)pCBParam;
@@ -186,6 +196,42 @@ void _link_change(linkChangeEvt_t *linkChangeEvt) {
 }
 
 /*!
+  Read adin port statistics for a specific port
+
+  \param portStatsReqEvt_t struct with device/port information
+  \return none
+*/
+void _get_port_stats(portStatsReqEvt_t *req) {
+    configASSERT(req->handle);
+    configASSERT(req->callback);
+
+    adin_port_stats_t *stats = static_cast<adin_port_stats_t *>(pvPortMalloc(sizeof(adin_port_stats_t)));
+    memset(stats, 0, sizeof(adin_port_stats_t));
+    do {
+
+        if(adin2111_GetMseLinkQuality(req->handle, req->port, &stats->mse_link_quality) != ADI_ETH_SUCCESS) {
+            printf("Error reading adin stats\n");
+            break;
+        }
+
+        if(adin2111_FrameChkReadRxErrCnt(req->handle, req->port, &stats->frame_check_rx_err_cnt) != ADI_ETH_SUCCESS) {
+            printf("Error reading adin stats\n");
+            break;
+        }
+
+        if(adin2111_FrameChkReadErrorCnt(req->handle, req->port, &stats->frame_check_err_counters) != ADI_ETH_SUCCESS) {
+            printf("Error reading adin stats\n");
+            break;
+        }
+
+        // Let the requester know data is ready!
+        req->callback((adin2111_DeviceHandle_t)req->handle, req->port, stats, req->args);
+    } while(0);
+
+    vPortFree(stats);
+}
+
+/*!
   ADIN2111 main event thread
 
   Rx, Tx and pin IRQ events are all handled by this thread.
@@ -204,8 +250,9 @@ static void adin2111_thread(void *parameters) {
         }
 
         switch(event.type) {
+
             case EVT_ETH_TX: {
-                txMsgEvt_t *txMsg = (txMsgEvt_t *)event.data;
+                txMsgEvt_t *txMsg = static_cast<txMsgEvt_t *>(event.data);
 
                 if(!txMsg){
                     printf("Empty tx data :(\n");
@@ -226,8 +273,9 @@ static void adin2111_thread(void *parameters) {
 
                 break;
             }
+
             case EVT_ETH_RX: {
-                rxMsgEvt_t *rxMsg = (rxMsgEvt_t *)event.data;
+                rxMsgEvt_t *rxMsg = static_cast<rxMsgEvt_t *>(event.data);
 
                 pcapTxPacket(rxMsg->bufDesc.pBuf, rxMsg->bufDesc.trxSize);
 
@@ -246,17 +294,28 @@ static void adin2111_thread(void *parameters) {
 
                 break;
             }
+
             case EVT_IRQ_CB: {
                 adi_bsp_irq_callback();
                 break;
             }
-        case EVT_LINK_CHANGE: {
+
+            case EVT_LINK_CHANGE: {
                 configASSERT(event.data);
-                linkChangeEvt_t *linkChangeEvt = (linkChangeEvt_t *)event.data;
+                linkChangeEvt_t *linkChangeEvt = static_cast<linkChangeEvt_t *>(event.data);
                 _link_change(linkChangeEvt);
                 vPortFree(linkChangeEvt);
                 break;
             }
+
+            case EVT_PORT_STATS: {
+                configASSERT(event.data);
+                portStatsReqEvt_t *portStatsReqEvt = static_cast<portStatsReqEvt_t *>(event.data);
+                _get_port_stats(portStatsReqEvt);
+                vPortFree(portStatsReqEvt);
+                break;
+            }
+
             default: {
                 // Unexpected event!
                 configASSERT(0);
@@ -356,7 +415,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
                        &serviceTask);
         configASSERT(rval == pdTRUE);
 
-        adin2111_hw_start(&hDevice);
+        adin2111_hw_start(hDevice);
     } while (0);
 
     return result;
@@ -378,7 +437,7 @@ typedef struct {
 static void add_egress_port(uint8_t *buff, uint8_t port) {
     configASSERT(buff);
 
-    net_header_t *header = (net_header_t *)buff;
+    net_header_t *header = reinterpret_cast<net_header_t *>(buff);
 
     // Modify egress port byte in IP address
     uint8_t *pbyte = (uint8_t *)&header->ip6_hdr.src;
@@ -388,7 +447,7 @@ static void add_egress_port(uint8_t *buff, uint8_t port) {
     // Correct checksum to account for change in ip address
     //
     if(header->eth_hdr.type == IP_PROTO_UDP) {
-        struct udp_hdr *udp_hdr = (struct udp_hdr *)header->payload;
+        struct udp_hdr *udp_hdr = reinterpret_cast<struct udp_hdr *>(header->payload);
         // Undo 1's complement
         udp_hdr->chksum ^= 0xFFFF;
 
@@ -414,7 +473,7 @@ static void add_egress_port(uint8_t *buff, uint8_t port) {
   \return pointer to allocated message request
 */
 static rxMsgEvt_t *createRxMsgReq(adin2111_DeviceHandle_t hDevice, uint16_t buf_len) {
-    rxMsgEvt_t *rxMsg = (rxMsgEvt_t *)pvPortMalloc(sizeof(rxMsgEvt_t));
+    rxMsgEvt_t *rxMsg = static_cast<rxMsgEvt_t *>(pvPortMalloc(sizeof(rxMsgEvt_t)));
     if(rxMsg) {
         memset(rxMsg, 0x00, sizeof(rxMsgEvt_t));
         rxMsg->dev = hDevice;
@@ -422,7 +481,7 @@ static rxMsgEvt_t *createRxMsgReq(adin2111_DeviceHandle_t hDevice, uint16_t buf_
         rxMsg->bufDesc.cbFunc = adin2111_rx_cb;
 
         // Allocate alligned buffer in case we use DMA
-        rxMsg->bufDesc.pBuf = (uint8_t *)aligned_malloc(DMA_ALIGN_SIZE, buf_len);
+        rxMsg->bufDesc.pBuf = static_cast<uint8_t *>(aligned_malloc(DMA_ALIGN_SIZE, buf_len));
         if(rxMsg->bufDesc.pBuf) {
             // Clear buffer
             // TODO - use pbuf instead of malloc/copying
@@ -450,7 +509,7 @@ static rxMsgEvt_t *createRxMsgReq(adin2111_DeviceHandle_t hDevice, uint16_t buf_
 static txMsgEvt_t *createTxMsgReq(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, adin2111_Port_e port) {
     configASSERT(buf);
 
-    txMsgEvt_t *txMsg = (txMsgEvt_t *)pvPortMalloc(sizeof(txMsgEvt_t));
+    txMsgEvt_t *txMsg = static_cast<txMsgEvt_t *>(pvPortMalloc(sizeof(txMsgEvt_t)));
     if(txMsg) {
         memset(txMsg, 0x00, sizeof(txMsgEvt_t));
         txMsg->dev = hDevice;
@@ -459,7 +518,7 @@ static txMsgEvt_t *createTxMsgReq(adin2111_DeviceHandle_t hDevice, uint8_t* buf,
         txMsg->bufDesc.cbFunc = adin2111_tx_cb;
 
         // Allocate alligned buffer in case we use DMA
-        txMsg->bufDesc.pBuf = (uint8_t *)aligned_malloc(DMA_ALIGN_SIZE, buf_len);
+        txMsg->bufDesc.pBuf = static_cast<uint8_t *>(aligned_malloc(DMA_ALIGN_SIZE, buf_len));
         if(txMsg->bufDesc.pBuf) {
             // Copy data to buffer
             // TODO - use pbuf instead of malloc/copying
@@ -547,18 +606,54 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
 
 /*!
  Enables the ADIN2111 interface
- \param *dev adin device handle
+ \param dev adin device handle
  \return 0 on success
  */
-int adin2111_hw_start(adin2111_DeviceHandle_t* dev) {
-    return adin2111_Enable(*dev);
+int adin2111_hw_start(adin2111_DeviceHandle_t dev) {
+    return adin2111_Enable(dev);
 }
 
 /*!
   Disables the ADIN2111 interface
-  \param *dev adin device handle
+  \param dev adin device handle
   \return 0 on success
  */
-int adin2111_hw_stop(adin2111_DeviceHandle_t* dev) {
-    return adin2111_Disable(*dev);
+int adin2111_hw_stop(adin2111_DeviceHandle_t dev) {
+    return adin2111_Disable(dev);
+}
+
+/*!
+  Get ADIN Port stats.
+  NOTE: This function does not return the stats, but a callback function is called
+  with them when they are ready
+
+  \param dev - adin device handle
+  \param port - adin port to get stats from
+  \param callback - callback function to call with the results
+  \param *args -  args to pass to callback function
+  \return true if request successful, false otherwise
+*/
+bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port, adin2111_port_stats_callback_t callback, void *args) {
+    configASSERT(dev);
+    configASSERT(callback);
+    configASSERT(port < ADIN2111_PORT_NUM);
+
+    portStatsReqEvt_t *portStatsReqEvt = static_cast<portStatsReqEvt_t *>(pvPortMalloc(sizeof(portStatsReqEvt_t)));
+    configASSERT(portStatsReqEvt);
+    portStatsReqEvt->handle = dev;
+    portStatsReqEvt->port = port;
+    portStatsReqEvt->callback = callback;
+    portStatsReqEvt->args = args;
+
+    ethEvt_t event = {.type=EVT_PORT_STATS, .data=portStatsReqEvt};
+    bool rval = false;
+
+    if(xQueueSend(_eth_evt_queue, &event, 10) == pdTRUE) {
+        rval = true;
+    } else {
+        // Free port stats request event since we were unable to queue the request
+        vPortFree(portStatsReqEvt);
+    }
+
+    return rval;
 }

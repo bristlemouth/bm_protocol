@@ -21,6 +21,10 @@
 #include "middleware.h"
 #include "task_priorities.h"
 
+#ifdef STRESS_TEST_ENABLE
+#include "stress.h"
+#endif
+
 static struct netif     netif;
 
 // Callback function in case of link changes.
@@ -92,6 +96,10 @@ void bcl_init(NvmPartition * dfu_partition) {
     bcmp_cli_init();
 
     bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
+
+#ifdef STRESS_TEST_ENABLE
+    stress_test_init(&netif, STRESS_TEST_PORT);
+#endif
 
 }
 

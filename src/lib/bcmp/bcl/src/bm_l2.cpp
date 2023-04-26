@@ -381,3 +381,45 @@ err_t bm_l2_init(bm_l2_link_change_cb_t link_change_cb) {
 
     return retv;
 }
+
+/*!
+  Get the total number of ports
+
+  \return number of ports
+*/
+uint8_t bm_l2_get_num_ports() {
+    return BM_NETDEV_COUNT;
+}
+
+/*!
+  Get the raw device handle for a specific port
+
+  \param dev_idx - port index to get the handle from
+  \param *device_handle - pointer to variable to store device handle in
+  \param *type - pointer to variable to store the device type
+  \param *start_port_idx - pointer to variable to store the start port for this device
+  \return true if successful, false otherwise
+*/
+bool bm_l2_get_device_handle(uint8_t dev_idx, void **device_handle, bm_netdev_type_t *type, uint32_t *start_port_idx) {
+    configASSERT(device_handle);
+    configASSERT(type);
+    configASSERT(start_port_idx);
+    bool rval = false;
+    do {
+        if(dev_idx >= BM_NETDEV_COUNT) {
+            break;
+        }
+
+        *type = bm_l2_ctx.devices[dev_idx].type;
+        // adin2111_DeviceHandle_t handle = device_handle;
+        *device_handle = bm_l2_ctx.devices[dev_idx].device_handle;
+        *start_port_idx = bm_l2_ctx.devices[dev_idx].start_port_idx;
+        rval = true;
+    } while(0);
+
+    return rval;
+}
+
+bool bm_l2_get_port_state(uint8_t port) {
+    return (bool)(bm_l2_ctx.enabled_port_mask & (1 << port));
+}
