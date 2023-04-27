@@ -21,6 +21,8 @@ typedef struct dfu_core_ctx_t {
     volatile uint16_t read_buf_len;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     NvmPartition *dfu_partition;
+    TimerHandle_t update_timer;
+    update_finish_cb_t update_finish_callback;
 } dfu_core_ctx_t;
 
 static dfu_core_ctx_t dfu_ctx;
@@ -180,6 +182,10 @@ static void s_error_entry(void) {
         case BM_DFU_ERR_NONE:
         default:
             break;
+    }
+
+    if(dfu_ctx.update_finish_callback) {
+        dfu_ctx.update_finish_callback(false);
     }
 
     if(dfu_ctx.error <  BM_DFU_ERR_FLASH_ACCESS) {
@@ -506,16 +512,25 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
     }
 }
 
-bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id) {
+bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, update_finish_cb_t update_finish_callback, uint32_t timeoutMs) {
     bool ret = false;
     do {
         if(info.chunk_size > BM_DFU_MAX_CHUNK_SIZE) {
             printf("Invalid chunk size for DFU\n");
             break;
         }
+        if(getCurrentStateEnum(dfu_ctx.sm_ctx) != BM_DFU_STATE_IDLE) {
+            printf("Not ready to start update.\n");
+            if(update_finish_callback) {
+                update_finish_callback(false);
+            }
+            break;
+        }
+        dfu_ctx.update_finish_callback = update_finish_callback;
+        bm_dfu_host_set_callback(update_finish_callback);
         bm_dfu_event_t evt;
         size_t size = sizeof(bm_dfu_frame_header_t) + sizeof(bm_dfu_event_img_info_t);
-        evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+        evt.type = DFU_EVENT_BEGIN_HOST;
         uint8_t *buf = (uint8_t*) pvPortMalloc(size);
         configASSERT(buf);
         bm_dfu_frame_t *frame = (bm_dfu_frame_t *) buf;
@@ -531,6 +546,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id) {
             printf("Message could not be added to Queue\n");
             break;
         }
+        bm_dfu_host_start_update_timer(timeoutMs);
         ret = true;
     } while(0);
     return ret;

@@ -92,9 +92,8 @@ static void chunk_timer_handler(TimerHandle_t tmr) {
     (void) tmr;
     bm_dfu_event_t evt = {DFU_EVENT_CHUNK_TIMEOUT, NULL, 0};
 
-    printf("Chunk Timeout\n");
     if(xQueueSend(client_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
-        printf("Message could not be added to Queue\n");
+        configASSERT(false);
     }
 }
 

@@ -41,7 +41,8 @@
 #include "nvmPartition.h"
 #include "external_flash_partitions.h"
 #include "debug_nvm_cli.h"
-#endif
+#include "debug_dfu.h"
+#endif 
 
 
 #include <stdio.h>
@@ -311,6 +312,7 @@ static void defaultTask( void *parameters ) {
     NvmPartition debug_cli_partition(debugW25, cli_configuration);
     NvmPartition dfu_partition(debugW25, dfu_configuration);
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
+    debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition);
 #else
     bcl_init(NULL);

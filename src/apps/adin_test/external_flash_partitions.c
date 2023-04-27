@@ -1,5 +1,4 @@
 #include "external_flash_partitions.h"
-#include <stdlib.h>
 
 #define SECTOR_BUFFER_BYTES                   (4096)
 

@@ -24,6 +24,8 @@ extern const ext_flash_partition_t system_configuration;
 extern const ext_flash_partition_t user_configuration;
 extern const ext_flash_partition_t cli_configuration;
 extern const ext_flash_partition_t dfu_configuration;
+#define DFU_HEADER_OFFSET_BYTES (0) // TODO
+#define DFU_IMG_START_OFFSET_BYTES (0) // TODO
 #ifdef __cplusplus
 }
 #endif

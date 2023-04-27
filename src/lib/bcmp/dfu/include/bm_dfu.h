@@ -73,6 +73,7 @@ typedef struct {
 } bm_dfu_event_t;
 
 typedef bool (*bcmp_dfu_tx_func_t)(bcmp_message_type_t type, uint8_t *buff, uint16_t len);
+typedef void (*update_finish_cb_t)(bool success);
 
 QueueHandle_t bm_dfu_get_event_queue(void);
 bm_dfu_event_t bm_dfu_get_current_event(void);
@@ -86,7 +87,7 @@ void bm_dfu_send_heartbeat(uint64_t dst_node_id);
 
 void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition);
 void bm_dfu_process_message(uint8_t * buf, size_t len);
-bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id);
+bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, update_finish_cb_t update_finish_callback, uint32_t timeoutMs );
 
 #ifdef __cplusplus
 }

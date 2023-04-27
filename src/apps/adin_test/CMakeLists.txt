@@ -55,6 +55,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
+    ${SRC_DIR}/lib/debug/debug_dfu.cpp
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c

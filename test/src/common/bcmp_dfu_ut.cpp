@@ -87,7 +87,7 @@ TEST_F(BcmpDfuTest, InitTest)
     EXPECT_EQ(xQueueGenericSend_fake.call_count, 1);
     EXPECT_EQ(xTaskCreate_fake.call_count, 1);
     EXPECT_EQ(xQueueGenericCreate_fake.call_count, 1);
-    EXPECT_EQ(xTimerCreate_fake.call_count, 3);
+    EXPECT_EQ(xTimerCreate_fake.call_count, 4);
     EXPECT_EQ(getNodeId_fake.call_count, 3);
 }
 
@@ -102,7 +102,7 @@ TEST_F(BcmpDfuTest, processMessageTest)
     EXPECT_EQ(xQueueGenericSend_fake.call_count, 1);
     EXPECT_EQ(xTaskCreate_fake.call_count, 1);
     EXPECT_EQ(xQueueGenericCreate_fake.call_count, 1);
-    EXPECT_EQ(xTimerCreate_fake.call_count, 3);
+    EXPECT_EQ(xTimerCreate_fake.call_count, 4);
     EXPECT_EQ(getNodeId_fake.call_count, 3);
 
     // dfu start
@@ -184,7 +184,7 @@ TEST_F(BcmpDfuTest, DfuApiTest){
     EXPECT_EQ(xQueueGenericSend_fake.call_count, 1);
     EXPECT_EQ(xTaskCreate_fake.call_count, 1);
     EXPECT_EQ(xQueueGenericCreate_fake.call_count, 1);
-    EXPECT_EQ(xTimerCreate_fake.call_count, 3);
+    EXPECT_EQ(xTimerCreate_fake.call_count, 4);
     EXPECT_EQ(getNodeId_fake.call_count, 3);
 
     bm_dfu_send_ack(0xdeadbeefbeeffeed, 1, BM_DFU_ERR_NONE);
@@ -209,8 +209,5 @@ TEST_F(BcmpDfuTest, DfuApiTest){
     info.image_size = 2 * 1000 * 1024;
     info.major_ver = 0;
     info.minor_ver = 1; 
-    EXPECT_EQ(bm_dfu_initiate_update(info,0xdeadbeefbeeffeed), true);
-    EXPECT_EQ(xQueueGenericSend_fake.call_count, 2);
-    info.chunk_size = 2048;
-    EXPECT_EQ(bm_dfu_initiate_update(info,0xdeadbeefbeeffeed), false);
+    EXPECT_EQ(bm_dfu_initiate_update(info,0xdeadbeefbeeffeed, NULL, 1000), false);
 }

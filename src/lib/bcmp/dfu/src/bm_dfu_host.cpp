@@ -18,6 +18,8 @@ typedef struct dfu_host_ctx_t {
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     NvmPartition * dfu_partition;
     uint32_t bytes_remaining;
+    update_finish_cb_t update_complete_callback;
+    TimerHandle_t update_timer;
 } dfu_host_ctx_t;
 
 static constexpr uint32_t FLASH_READ_TIMEOUT_MS = 5 * 1000;
@@ -26,6 +28,7 @@ static dfu_host_ctx_t host_ctx;
 
 static void ack_timer_handler(TimerHandle_t tmr);
 static void heartbeat_timer_handler(TimerHandle_t tmr);
+static void update_timer_handler(TimerHandle_t tmr);
 
 static void bm_dfu_host_req_update();
 
@@ -43,9 +46,8 @@ static void ack_timer_handler(TimerHandle_t tmr) {
     (void) tmr;
     bm_dfu_event_t evt = {DFU_EVENT_ACK_TIMEOUT, NULL,0};
 
-    printf("Ack Timeout\n");
     if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
-        printf("Message could not be added to Queue\n");
+        configASSERT(false);
     }
 }
 
@@ -61,9 +63,24 @@ static void heartbeat_timer_handler(TimerHandle_t tmr) {
     (void) tmr;
     bm_dfu_event_t evt = {DFU_EVENT_HEARTBEAT_TIMEOUT, NULL,0};
 
-    printf("Heartbeat Timeout\n");
     if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
-        printf("Message could not be added to Queue\n");
+        configASSERT(false);
+    }
+}
+
+/**
+ * @brief Update Timer Handler Function
+ *
+ * @note Aborts DFU if timer fires.
+ *
+ * @return none
+ */
+static void update_timer_handler(TimerHandle_t tmr) {
+    (void) tmr;
+    bm_dfu_event_t evt = {DFU_EVENT_ABORT, NULL,0};
+
+    if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
+        configASSERT(false);
     }
 }
 
@@ -121,7 +138,7 @@ static void bm_dfu_host_send_chunk(bm_dfu_event_chunk_request_t* req) {
     payload_header->chunk.addresses.dst_node_id = host_ctx.client_node_id;
     payload_header->chunk.payload_length = payload_len;
 
-    uint32_t flash_offset = host_ctx.img_info.image_size - host_ctx.bytes_remaining;
+    uint32_t flash_offset = DFU_IMG_START_OFFSET_BYTES + host_ctx.img_info.image_size - host_ctx.bytes_remaining;
     do {
         if(!host_ctx.dfu_partition->read(flash_offset, payload_header->chunk.payload_buf, payload_len, FLASH_READ_TIMEOUT_MS)){
             printf("Failed to read chunk from flash.\n");
@@ -212,6 +229,11 @@ void s_host_req_update_run(void)
             bm_dfu_host_req_update();
             configASSERT(xTimerStart(host_ctx.ack_timer, 10));
         }
+    } else if (curr_evt.type == DFU_EVENT_ABORT) {
+        configASSERT(xTimerStop(host_ctx.ack_timer, 10));
+        printf("Recieved abort.\n");
+        bm_dfu_set_error(BM_DFU_ERR_TIMEOUT);
+        bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
     }
 }
 
@@ -260,6 +282,7 @@ void s_host_update_run(void) {
         configASSERT(xTimerStart(host_ctx.heartbeat_timer, 10));
     } else if (curr_evt.type == DFU_EVENT_UPDATE_END) {
         configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
+        configASSERT(xTimerStop(host_ctx.update_timer, 100));
         configASSERT(frame);
         bm_dfu_event_result_t* update_end_evt = (bm_dfu_event_result_t*) &((uint8_t *)frame)[1];
 
@@ -268,13 +291,19 @@ void s_host_update_run(void) {
         } else {
             printf("Client Update Failed\n");
         }
+        if(host_ctx.update_complete_callback) {
+            host_ctx.update_complete_callback(update_end_evt->success);
+        }
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
     } else if (curr_evt.type == DFU_EVENT_HEARTBEAT) { // FIXME: Do we need this?
         configASSERT(xTimerStart(host_ctx.heartbeat_timer, 10));
     } else if (curr_evt.type == DFU_EVENT_HEARTBEAT_TIMEOUT) {
+        configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
         bm_dfu_set_error(BM_DFU_ERR_TIMEOUT);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
     } else if (curr_evt.type == DFU_EVENT_ABORT) {
+        configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
+        printf("Recieved abort.\n");
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
     }
 }
@@ -301,4 +330,17 @@ void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partiti
     host_ctx.heartbeat_timer = xTimerCreate("DFU Host Heartbeat", (BM_DFU_HOST_HEARTBEAT_TIMEOUT_MS / portTICK_RATE_MS),
                                       pdTRUE, (void *) &tmr_id, heartbeat_timer_handler);
     configASSERT(host_ctx.heartbeat_timer);
+    host_ctx.update_timer = xTimerCreate("update timer", pdMS_TO_TICKS(BM_DFU_UPDATE_DEFAULT_TIMEOUT_MS),
+                                    pdFALSE, (void *) &tmr_id, update_timer_handler);
+    configASSERT(host_ctx.update_timer);
+}
+
+void bm_dfu_host_set_callback(update_finish_cb_t update_complete_callback) {
+    host_ctx.update_complete_callback = update_complete_callback;
+}
+
+void bm_dfu_host_start_update_timer(uint32_t timeoutMs) {
+    configASSERT(xTimerStop(host_ctx.update_timer, 100));
+    configASSERT(xTimerChangePeriod(host_ctx.update_timer, pdMS_TO_TICKS(timeoutMs), 100));
+    configASSERT(xTimerStart(host_ctx.update_timer, 100));
 }
