@@ -117,7 +117,7 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
     // Valid checksum will come out to zero, since the actual checksum
     // is included and cancels out
     if(checksum) {
-      printf("BCMP - Invalid checmsum\n");
+      printf("BCMP - Invalid checksum\n");
 
       rval = -1;
       break;
@@ -141,12 +141,15 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
         break;
       }
 
-      case BCMP_ECHO_REQUEST:
+      case BCMP_ECHO_REQUEST: {
         bcmp_process_ping_request((bcmp_echo_request_t *)header->payload, src, dst);
         break;
-      case BCMP_ECHO_REPLY:
+      }
+
+      case BCMP_ECHO_REPLY: {
         bcmp_process_ping_reply((bcmp_echo_reply_t *)header->payload);
         break;
+      }
 
       case BCMP_DFU_START:
       case BCMP_DFU_PAYLOAD_REQ:
