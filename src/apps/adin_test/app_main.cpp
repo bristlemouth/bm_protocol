@@ -41,7 +41,7 @@
 #include "nvmPartition.h"
 #include "external_flash_partitions.h"
 #include "debug_nvm_cli.h"
-#endif 
+#endif
 
 
 #include <stdio.h>
@@ -205,11 +205,11 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     return false;
 }
 
-void handle_sensor_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void handle_sensor_subscriptions(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
     if (strncmp("button", topic, topic_len) == 0) {
-        if (strncmp("on", data, data_len) == 0) {
+        if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
             IOWrite(&LED_BLUE, LED_ON);
-        } else if (strncmp("off", data, data_len) == 0) {
+        } else if (strncmp("off", reinterpret_cast<const char*>(data), data_len) == 0) {
             IOWrite(&LED_BLUE, LED_OFF);
         } else {
             // Not handled
@@ -314,7 +314,7 @@ static void defaultTask( void *parameters ) {
     bcl_init(&dfu_partition);
 #else
     bcl_init(NULL);
-#endif 
+#endif
 
 #ifdef BSP_BRIDGE_V1_0
 #ifdef BRIDGE_AUTO_ENABLE

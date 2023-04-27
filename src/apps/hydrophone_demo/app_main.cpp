@@ -177,15 +177,15 @@ extern "C" int main(void) {
   while (1){};
 }
 
-void buttonTopicSubscription(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void buttonTopicSubscription(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
     if (strncmp("button", topic, topic_len) == 0) {
-        if (strncmp("on", data, data_len) == 0) {
+        if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
 #if BSP_DEV_MOTE_HYDROPHONE
             IOWrite(&EXP_LED_R1, LED_ON);
 #else
             IOWrite(&LED_BLUE, LED_ON);
 #endif
-        } else if (strncmp("off", data, data_len) == 0) {
+        } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) == 0) {
 #if BSP_DEV_MOTE_HYDROPHONE
             IOWrite(&EXP_LED_R1, LED_OFF);
 #else
@@ -357,7 +357,7 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   return true;
 }
 
-void printDbData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void printDbData(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
   if(data_len == sizeof(float)) {
@@ -369,16 +369,16 @@ void printDbData(char* topic, uint16_t topic_len, char* data, uint16_t data_len)
   }
 }
 
-void streamAudioData(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void streamAudioData(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
 
   if(usbPcap.enabled) {
-    serialWrite(&usbPcap, reinterpret_cast<uint8_t *>(data), data_len);
+    serialWrite(&usbPcap, const_cast<uint8_t *>(data), data_len);
   }
 }
 
-void streamEnable(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void streamEnable(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
   (void)data_len;
@@ -391,7 +391,7 @@ void streamEnable(char* topic, uint16_t topic_len, char* data, uint16_t data_len
 }
 
 // Manually trigger alarm
-void alarmTriggerCb(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void alarmTriggerCb(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
   (void)data;
@@ -400,12 +400,12 @@ void alarmTriggerCb(char* topic, uint16_t topic_len, char* data, uint16_t data_l
 }
 
 // Update alarm threshold from data
-void updateThresholdCb(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void updateThresholdCb(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
 
   if(data && data_len > 0) {
-    uint32_t newThreshold = strtoul(data, 0, 10);
+    uint32_t newThreshold = strtoul(reinterpret_cast<const char *>(data), 0, 10);
     if(newThreshold > 0 && newThreshold <= 200) {
       printf("Updating alarm threshold to %" PRIu32 "dB\n", newThreshold);
       alarmDBThreshold = newThreshold;
@@ -414,12 +414,12 @@ void updateThresholdCb(char* topic, uint16_t topic_len, char* data, uint16_t dat
 }
 
 // Update alarm duration from data
-void updateDurationCb(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
+void updateDurationCb(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)topic;
   (void)topic_len;
 
   if(data && data_len > 0) {
-    uint32_t newDuration = strtoul(data, 0, 10);
+    uint32_t newDuration = strtoul(reinterpret_cast<const char *>(data), 0, 10);
 
     // Max duration of 2 minutes
     if(newDuration <= (60 * 2)) {

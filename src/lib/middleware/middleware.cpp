@@ -80,6 +80,7 @@ int32_t middleware_net_tx(struct pbuf *pbuf) {
   \param[in] port -
   \return None
 */
+// cppcheck-suppress constParameter
 static void middleware_net_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *buf,
                  const ip_addr_t *addr, u16_t port) {
 
@@ -142,11 +143,7 @@ static void middleware_net_task( void *parameters ) {
     // Do stuff with item here
     //    printf("Received %u bytes from %s\n", item.pbuf->len, );
 
-    char* delimiter = strchr( (char *) item.pbuf->payload, ':');
-
-    if (delimiter) {
-        bm_pubsub_handle_msg(item.pbuf, delimiter);
-    }
+    bm_pubsub_handle_msg(item.pbuf);
 
     // Free item
     if(item.pbuf) {

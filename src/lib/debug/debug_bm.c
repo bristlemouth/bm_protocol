@@ -53,20 +53,20 @@ static const CLI_Command_Definition_t cmdGpio = {
   -1
 };
 
-static void print_subscriptions(char* topic, uint16_t topic_len, char* data, uint16_t data_len) {
-    if (strncmp("hydrophone/db", topic, topic_len) == 0) {
+static void print_subscriptions(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+    if (strncmp("hydrophone/db", (const char *)topic, topic_len) == 0) {
         if(data_len == sizeof(float)) {
             float dbLevel;
             memcpy(&dbLevel, data, data_len);
             printf("RX %0.1f dB\n", dbLevel);
         }
-    } else if (strncmp("button", topic, topic_len) == 0){
+    } else if (strncmp("button", (const char *)topic, topic_len) == 0){
         printf("Received data on topic: %.*s\n", topic_len, topic);
         printf("Data: %.*s\n", data_len, data);
-        if (strncmp("on", data, data_len) == 0) {
+        if (strncmp("on", (const char *)data, data_len) == 0) {
             IOWrite(&LED_BLUE, 0);
             IOWrite(&ALARM_OUT, 0);
-        } else if (strncmp("off", data, data_len) == 0) {
+        } else if (strncmp("off", (const char *)data, data_len) == 0) {
             IOWrite(&LED_BLUE, 1);
             IOWrite(&ALARM_OUT, 1);
         } else {
