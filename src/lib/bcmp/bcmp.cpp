@@ -75,8 +75,8 @@ void bcmp_link_change(uint8_t port, bool state) {
 */
 static void dfu_copy_and_process_message(struct pbuf *pbuf) {
   configASSERT(pbuf);
-  bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
-  uint8_t* buf = (uint8_t *) pvPortMalloc((pbuf->len) - sizeof(bcmp_header_t));
+  bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
+  uint8_t* buf = static_cast<uint8_t *>(pvPortMalloc((pbuf->len) - sizeof(bcmp_header_t)));
   configASSERT(buf);
   memcpy(buf, header->payload, (pbuf->len) - sizeof(bcmp_header_t));
   bm_dfu_process_message(buf, (pbuf->len) - sizeof(bcmp_header_t));
@@ -107,7 +107,7 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
 
 
   do {
-    bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
+    bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
 
     uint16_t checksum = ip6_chksum_pseudo(pbuf,
                                           IP_PROTO_BCMP,
@@ -123,31 +123,30 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       break;
     }
 
-    // bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
     switch(header->type) {
       case BCMP_HEARTBEAT: {
         // Send out heartbeats
-        bcmp_process_heartbeat((bcmp_heartbeat_t *)header->payload, src, dst_port);
+        bcmp_process_heartbeat(static_cast<bcmp_heartbeat_t *>(header->payload), src, dst_port);
         break;
       }
 
       case BCMP_DEVICE_INFO_REQUEST: {
-        bcmp_process_info_request((bcmp_device_info_request_t *)header->payload, src, dst);
+        bcmp_process_info_request(static_cast<bcmp_device_info_request_t *>(header->payload), src, dst);
         break;
       }
 
       case BCMP_DEVICE_INFO_REPLY: {
-        bcmp_process_info_reply((bcmp_device_info_reply_t *)header->payload);
+        bcmp_process_info_reply(static_cast<bcmp_device_info_reply_t *>(header->payload));
         break;
       }
 
       case BCMP_ECHO_REQUEST: {
-        bcmp_process_ping_request((bcmp_echo_request_t *)header->payload, src, dst);
+        bcmp_process_ping_request(static_cast<bcmp_echo_request_t *>(header->payload), src, dst);
         break;
       }
 
       case BCMP_ECHO_REPLY: {
-        bcmp_process_ping_reply((bcmp_echo_reply_t *)header->payload);
+        bcmp_process_ping_reply(static_cast<bcmp_echo_reply_t *>(header->payload));
         break;
       }
 
@@ -212,7 +211,7 @@ static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf, cons
     }
 
     // Grab a pointer to the ip6 header so we can get the packet destination
-    struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)pbuf->payload;
+    struct ip6_hdr *ip6_hdr = static_cast<struct ip6_hdr *>(pbuf->payload);
 
     if(pbuf_remove_header(pbuf, PBUF_IP_HLEN) != 0) {
       //  restore original packet
@@ -311,7 +310,7 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
     pbuf = pbuf_alloc(PBUF_IP, len + sizeof(bcmp_header_t), PBUF_RAM);
     configASSERT(pbuf);
 
-    bcmp_header_t *header = (bcmp_header_t *)pbuf->payload;
+    bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
     header->type = (uint16_t)type;
     header->checksum = 0;
     header->flags = 0; // Unused for now
