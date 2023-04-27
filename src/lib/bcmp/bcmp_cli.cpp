@@ -91,10 +91,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
                       &node_id_str_len);
       if(node_id_str_len > 0) {
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        printf("Sending ping to %" PRIu64 "\n", node_id);
         if(bcmp_send_ping_request(node_id, &multicast_global_addr, NULL, 0) != ERR_OK) {
           printf("Error sending ping\n");
         }
+      } else {
+        printf("Invalid node_id\n");
       }
     } else {
       printf("Invalid arguments\n");
