@@ -11,6 +11,7 @@
 #include "bcmp_heartbeat.h"
 #include "bcmp_neighbors.h"
 #include "bcmp_info.h"
+#include "bcmp_ping.h"
 
 #include "debug.h"
 
@@ -79,6 +80,20 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         }
       } else {
         printf("Invalid arguments\n");
+      }
+    } else if (strncmp("ping", command, command_str_len) == 0){
+      const char *node_id_str;
+      BaseType_t node_id_str_len = 0;
+      node_id_str = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      2,
+                      &node_id_str_len);
+      if(node_id_str_len > 0) {
+        uint64_t node_id = strtoull(node_id_str, NULL, 16);
+
+        if(bcmp_send_ping_request(node_id, &multicast_global_addr, NULL, 0) != ERR_OK) {
+          printf("Error sending ping\n");
+        }
       }
     } else {
       printf("Invalid arguments\n");

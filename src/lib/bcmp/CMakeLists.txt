@@ -9,6 +9,7 @@ set(BCMP_FILES
     ${BCMP_DIR}/bcmp_heartbeat.cpp
     ${BCMP_DIR}/bcmp_info.cpp
     ${BCMP_DIR}/bcmp_neighbors.cpp
+    ${BCMP_DIR}/bcmp_ping.cpp
     ${BCMP_DIR}/dfu/src/bm_dfu_client.cpp
     ${BCMP_DIR}/dfu/src/bm_dfu_core.cpp
     ${BCMP_DIR}/dfu/src/bm_dfu_host.cpp

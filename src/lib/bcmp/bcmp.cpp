@@ -16,6 +16,7 @@
 #include "bcmp_heartbeat.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
+#include "bcmp_ping.h"
 
 #include "bm_dfu.h"
 
@@ -139,6 +140,13 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
         bcmp_process_info_reply((bcmp_device_info_reply_t *)header->payload);
         break;
       }
+
+      case BCMP_ECHO_REQUEST:
+        bcmp_process_ping_request((bcmp_echo_request_t *)header->payload, src, dst);
+        break;
+      case BCMP_ECHO_REPLY:
+        bcmp_process_ping_reply((bcmp_echo_reply_t *)header->payload);
+        break;
 
       case BCMP_DFU_START:
       case BCMP_DFU_PAYLOAD_REQ:
