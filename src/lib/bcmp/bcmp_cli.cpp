@@ -24,7 +24,8 @@ static const CLI_Command_Definition_t cmd_bcmp = {
   "bcmp",
   // Help string
   "bcmp neighbors\n"
-  "bcmp info <node_id>\n",
+  "bcmp info <node_id>\n"
+  "bcmp ping <node_id>\n",
   // Command function
   cmd_bcmp_fn,
   // Number of parameters
