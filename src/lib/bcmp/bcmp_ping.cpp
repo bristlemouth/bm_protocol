@@ -36,6 +36,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   // clear the expected payload
   if (_expected_payload != NULL) {
       vPortFree(_expected_payload);
+      _expected_payload = NULL;
       _expected_payload_len = 0;
   }
 
@@ -87,12 +88,10 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
       break;
     }
 
-    if (echo_reply->payload != NULL && _expected_payload != NULL) {
+    if (_expected_payload != NULL) {
       if (memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
         break;
       }
-    } else if ((echo_reply->payload == NULL) != (_expected_payload == NULL)) {
-      break;
     }
 
     uint64_t diff = uptimeGetMicroSeconds() - _ping_request_time;
