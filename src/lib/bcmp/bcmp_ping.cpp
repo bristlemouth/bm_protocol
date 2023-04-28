@@ -12,7 +12,7 @@ static uint64_t _ping_request_time;
 static uint32_t _bcmp_seq;
 static uint8_t* _expected_payload;
 
-err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, uint8_t* payload, uint16_t payload_len) {
+err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint8_t* payload, uint16_t payload_len) {
 
   uint16_t echo_len = sizeof(bcmp_echo_request_t) + payload_len;
 
@@ -40,7 +40,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, uint8_t* p
 
   printf("PING (%" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id, echo_req->payload_len);
 
-  err_t rval = bcmp_tx(addr, BCMP_ECHO_REQUEST, reinterpret_cast<uint8_t*>(echo_req), sizeof(*echo_req));
+  err_t rval = bcmp_tx(addr, BCMP_ECHO_REQUEST, reinterpret_cast<uint8_t*>(echo_req), echo_len);
 
   _ping_request_time = uptimeGetMicroSeconds();
 
@@ -51,7 +51,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, uint8_t* p
 
 err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr) {
 
-  return bcmp_tx(addr, BCMP_ECHO_REPLY, reinterpret_cast<uint8_t*>(echo_reply), sizeof(*echo_reply));
+  return bcmp_tx(addr, BCMP_ECHO_REPLY, reinterpret_cast<uint8_t*>(echo_reply), sizeof(*echo_reply) + echo_reply->payload_len);
 }
 
 err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src, const ip_addr_t *dst) {
@@ -76,6 +76,7 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
       if (echo_reply->payload_len > 0 && echo_reply->payload != NULL) {
         // TODO - check that the payload matches too!
         if(memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
+          printf("Payload didn't match"); // TODO - remove after done debugging
           break;
         }
       }
