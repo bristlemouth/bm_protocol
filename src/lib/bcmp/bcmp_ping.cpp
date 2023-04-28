@@ -15,6 +15,10 @@ static uint16_t _expected_payload_len = 0;
 
 err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint8_t* payload, uint16_t payload_len) {
 
+  if (payload == NULL) {
+    payload_len = 0;
+  }
+
   uint16_t echo_len = sizeof(bcmp_echo_request_t) + payload_len;
 
   uint8_t *echo_req_buff = static_cast<uint8_t *>(pvPortMalloc(echo_len));
@@ -74,17 +78,21 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
   configASSERT(echo_reply);
 
   do {
-    if(_expected_payload_len != echo_reply->payload_len) {
+    if (_expected_payload_len != echo_reply->payload_len) {
       break;
     }
+
     // TODO - once we have random numbers working we can then use a static number to check
-    if((uint16_t)getNodeId() != echo_reply->id) {
+    if ((uint16_t)getNodeId() != echo_reply->id) {
       break;
     }
-    if (echo_reply->payload_len > 0 && echo_reply->payload != NULL) {
-      if(memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
+
+    if (echo_reply->payload != NULL && _expected_payload != NULL) {
+      if (memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
         break;
       }
+    } else if ((echo_reply->payload == NULL) != (_expected_payload == NULL)) {
+      break;
     }
 
     uint64_t diff = uptimeGetMicroSeconds() - _ping_request_time;
