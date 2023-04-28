@@ -13,6 +13,15 @@ static uint32_t _bcmp_seq;
 static uint8_t* _expected_payload = NULL;
 static uint16_t _expected_payload_len = 0;
 
+/*!
+  Send ping to node(s)
+
+  \param node_id - node id to send ping to (0 for all nodes)
+  \param *addr - ip address to send to send ping request to
+  \param *payload - payload to send with ping
+  \param payload_len - length of payload to send
+  \ret ERR_OK if successful
+*/
 err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint8_t* payload, uint16_t payload_len) {
 
   if (payload == NULL) {
@@ -59,11 +68,26 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   return rval;
 }
 
+/*!
+  Send ping reply
+
+  \param *echo_reply -  echo reply message
+  \param *addr - ip address to send ping reply to
+  \ret ERR_OK if successful
+*/
 err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr) {
 
   return bcmp_tx(addr, BCMP_ECHO_REPLY, reinterpret_cast<uint8_t*>(echo_reply), sizeof(*echo_reply) + echo_reply->payload_len);
 }
 
+/*!
+  Handle ping requests
+
+  \param *echo_req - echo request message to process
+  \param *src - source ip of requester
+  \param *dst - destination ip of request (used for responding to the correct multicast address)
+  \ret ERR_OK if successful
+*/
 err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src, const ip_addr_t *dst) {
   (void) src;
   configASSERT(echo_req);
@@ -75,8 +99,18 @@ err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *
   return ERR_OK;
 }
 
+/*!
+  Handle Ping replies
+
+  \param *echo_reply - echo reply message to process
+  \param *src - source ip of requester
+  \param *dst - destination ip of request (used for responding to the correct multicast address)
+  \
+  */
 err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
   configASSERT(echo_reply);
+
+  err_t rval = ERR_VAL;
 
   do {
     if (_expected_payload_len != echo_reply->payload_len) {
@@ -96,8 +130,9 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
 
     uint64_t diff = uptimeGetMicroSeconds() - _ping_request_time;
     printf("🏓 %" PRIu16 " bytes from %" PRIx64 " bcmp_seq=%" PRIu32 " time=%" PRIu64 " ms\n", echo_reply->payload_len, echo_reply->node_id, echo_reply->seq_num, diff/1000);
+    rval = ERR_OK;
 
   } while (0);
 
-  return ERR_OK;
+  return rval;
 }
