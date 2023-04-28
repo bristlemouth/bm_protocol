@@ -90,7 +90,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
                       2,
                       &node_id_str_len);
       if(node_id_str_len > 0) {
-        uint64_t node_id = strtoull(node_id_str, NULL, 16);
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
         uint8_t payload[32] = {0};
         if(bcmp_send_ping_request(node_id, &multicast_global_addr, payload, 32) != ERR_OK) {
           printf("Error sending ping\n");

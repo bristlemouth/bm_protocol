@@ -10,7 +10,8 @@
 
 static uint64_t _ping_request_time;
 static uint32_t _bcmp_seq;
-static uint8_t* _expected_payload;
+static uint8_t* _expected_payload = NULL;
+static uint16_t _expected_payload_len = 0;
 
 err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint8_t* payload, uint16_t payload_len) {
 
@@ -28,14 +29,18 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   echo_req->seq_num = _bcmp_seq++;
   echo_req->payload_len = payload_len;
 
+  // clear the expected payload
+  if (_expected_payload != NULL) {
+      vPortFree(_expected_payload);
+      _expected_payload_len = 0;
+  }
+
   // Lets only copy the paylaod if it isn't NULL just in case
   if (payload != NULL && payload_len > 0) {
     memcpy(&echo_req->payload[0], payload, payload_len);
-    if (_expected_payload != NULL) {
-      vPortFree(_expected_payload);
-    }
     _expected_payload = static_cast<uint8_t*>(pvPortMalloc(payload_len));
     memcpy(_expected_payload, payload, payload_len);
+    _expected_payload_len = payload_len;
   }
 
   printf("PING (%" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id, echo_req->payload_len);
@@ -56,8 +61,6 @@ err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr)
 
 err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src, const ip_addr_t *dst) {
   (void) src;
-  // TODO - we will need to reply one the same port, but pass on the request onto the other port?
-  // or will it auto pass on based on the multicast and we only have to reply if we have the correct nodeID?
   configASSERT(echo_req);
   if ((echo_req->target_node_id == 0) || (getNodeId() == echo_req->target_node_id)) {
     echo_req->target_node_id = getNodeId();
@@ -71,18 +74,22 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
   configASSERT(echo_reply);
 
   do {
-    // TODO - once we have random numbers working we can then use a static number to check
-    if((uint16_t)getNodeId() == echo_reply->id){
-      if (echo_reply->payload_len > 0 && echo_reply->payload != NULL) {
-        // TODO - check that the payload matches too!
-        if(memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
-          printf("Payload didn't match"); // TODO - remove after done debugging
-          break;
-        }
-      }
-      uint64_t diff = uptimeGetMicroSeconds() - _ping_request_time;
-      printf("🏓 %" PRIu16 " bytes from %" PRIx64 " bcmp_seq=%" PRIu32 " time=%" PRIu64 " ms\n", echo_reply->payload_len, echo_reply->node_id, echo_reply->seq_num, diff/1000);
+    if(_expected_payload_len != echo_reply->payload_len) {
+      break;
     }
+    // TODO - once we have random numbers working we can then use a static number to check
+    if((uint16_t)getNodeId() != echo_reply->id) {
+      break;
+    }
+    if (echo_reply->payload_len > 0 && echo_reply->payload != NULL) {
+      if(memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
+        break;
+      }
+    }
+
+    uint64_t diff = uptimeGetMicroSeconds() - _ping_request_time;
+    printf("🏓 %" PRIu16 " bytes from %" PRIx64 " bcmp_seq=%" PRIu32 " time=%" PRIu64 " ms\n", echo_reply->payload_len, echo_reply->node_id, echo_reply->seq_num, diff/1000);
+
   } while (0);
 
   return ERR_OK;
