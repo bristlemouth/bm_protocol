@@ -126,27 +126,27 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
     switch(header->type) {
       case BCMP_HEARTBEAT: {
         // Send out heartbeats
-        bcmp_process_heartbeat(static_cast<bcmp_heartbeat_t *>(header->payload), src, dst_port);
+        bcmp_process_heartbeat(reinterpret_cast<bcmp_heartbeat_t *>(header->payload), src, dst_port);
         break;
       }
 
       case BCMP_DEVICE_INFO_REQUEST: {
-        bcmp_process_info_request(static_cast<bcmp_device_info_request_t *>(header->payload), src, dst);
+        bcmp_process_info_request(reinterpret_cast<bcmp_device_info_request_t *>(header->payload), src, dst);
         break;
       }
 
       case BCMP_DEVICE_INFO_REPLY: {
-        bcmp_process_info_reply(static_cast<bcmp_device_info_reply_t *>(header->payload));
+        bcmp_process_info_reply(reinterpret_cast<bcmp_device_info_reply_t *>(header->payload));
         break;
       }
 
       case BCMP_ECHO_REQUEST: {
-        bcmp_process_ping_request(static_cast<bcmp_echo_request_t *>(header->payload), src, dst);
+        bcmp_process_ping_request(reinterpret_cast<bcmp_echo_request_t *>(header->payload), src, dst);
         break;
       }
 
       case BCMP_ECHO_REPLY: {
-        bcmp_process_ping_reply(static_cast<bcmp_echo_reply_t *>(header->payload));
+        bcmp_process_ping_reply(reinterpret_cast<bcmp_echo_reply_t *>(header->payload));
         break;
       }
 
