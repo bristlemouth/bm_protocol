@@ -13,12 +13,12 @@ CLI_WRITE_SIZE = 128
 CHUNK_SIZE = 512
 
 # Header Payload
-DFU_HEADER = namedtuple(
+DFU_HEADER = namedtuple( # NOTE: Must be in sync with bm_dfu_message_structs.h
     "DFU_HEADER",
-    "img_size chunk_size img_crc maj min",
+    "img_size chunk_size img_crc maj min filter_key",
 )
 # https://docs.python.org/3/library/struct.html#format-characters
-DFU_HEADER_STRUCT_ENCODING = "<LHHBB"
+DFU_HEADER_STRUCT_ENCODING = "<LHHBBL"
 
 NVM_DFU_WRITE_CMD_STR = "nvm b64write dfu"
 NVM_DFU_CRC16_CMD_STR = "nvm crc16 dfu"
@@ -86,7 +86,8 @@ def main(img_path:str, port:str, baud:int) -> None:
         CHUNK_SIZE,
         img_crc,
         major,
-        minor
+        minor,
+        0
     )
     header_payload = struct.pack(DFU_HEADER_STRUCT_ENCODING, *header)
     b64_header_payload = b64encode(header_payload).decode()

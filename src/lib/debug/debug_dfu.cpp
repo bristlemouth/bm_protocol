@@ -31,7 +31,7 @@ void debugDfuInit(NvmPartition *dfu_cli_partition) {
 
 void updateSuccessCallback(bool success) {
     if(success){
-        printf("update successfull\n");
+        printf("update successful\n");
     } else {
         printf("update failed\n");
     }

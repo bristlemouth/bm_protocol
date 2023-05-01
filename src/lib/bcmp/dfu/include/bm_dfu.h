@@ -31,6 +31,7 @@ typedef enum {
     BM_DFU_ERR_TIMEOUT,
     BM_DFU_ERR_BM_FRAME,
     BM_DFU_ERR_ABORTED,
+    BM_DFU_ERR_WRONG_VER,
     // All errors below this are "fatal"
     BM_DFU_ERR_FLASH_ACCESS,
 } bm_dfu_err_t;
@@ -42,6 +43,8 @@ enum BM_DFU_HFSM_STATES {
     BM_DFU_STATE_CLIENT,
     BM_DFU_STATE_CLIENT_RECEIVING,
     BM_DFU_STATE_CLIENT_VALIDATING,
+    BM_DFU_STATE_CLIENT_REBOOT_REQ,
+    BM_DFU_STATE_CLIENT_REBOOT_DONE,
     BM_DFU_STATE_CLIENT_ACTIVATING,
     BM_DFU_STATE_HOST,
     BM_DFU_STATE_HOST_REQ_UPDATE,
@@ -64,6 +67,9 @@ enum BM_DFU_EVT_TYPE {
     DFU_EVENT_HEARTBEAT,
     DFU_EVENT_ABORT,
     DFU_EVENT_BEGIN_HOST,
+    DFU_EVENT_REBOOT_REQUEST,
+    DFU_EVENT_REBOOT,
+    DFU_EVENT_BOOT_COMPLETE,
 };
 
 typedef struct {
@@ -71,6 +77,17 @@ typedef struct {
     uint8_t * buf;
     size_t len;
 } bm_dfu_event_t;
+
+#define DFU_REBOOT_MAGIC (0xBADC0FFE)
+
+typedef struct  __attribute__((__packed__)) {
+  uint32_t magic;
+  uint8_t major;
+  uint8_t minor;
+  uint64_t host_node_id;
+} ReboootClientUpdateInfo_t;
+
+extern ReboootClientUpdateInfo_t client_update_reboot_info __attribute__((section(".noinit")));
 
 typedef bool (*bcmp_dfu_tx_func_t)(bcmp_message_type_t type, uint8_t *buff, uint16_t len);
 typedef void (*update_finish_cb_t)(bool success);

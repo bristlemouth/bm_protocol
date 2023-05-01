@@ -331,6 +331,21 @@ typedef struct {
   bm_dfu_event_address_t addr;
 } __attribute__((packed)) bcmp_dfu_heartbeat_t;
 
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_address_t addr;
+} __attribute__((packed)) bcmp_dfu_reboot_req_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_address_t addr;
+} __attribute__((packed)) bcmp_dfu_reboot_t;
+
+typedef struct {
+  bm_dfu_frame_header_t header;
+  bm_dfu_event_address_t addr;
+} __attribute__((packed)) bcmp_dfu_boot_complete_t;
+
 typedef enum {
   BCMP_ACK = 0x00,
   BCMP_HEARTBEAT = 0x01,
@@ -370,5 +385,8 @@ typedef enum {
   BCMP_DFU_ACK = 0xD4,
   BCMP_DFU_ABORT = 0xD5,
   BCMP_DFU_HEARTBEAT = 0xD6,
-  BCMP_DFU_LAST_MESSAGE = BCMP_DFU_HEARTBEAT,
+  BCMP_DFU_REBOOT_REQ = 0xD7,
+  BCMP_DFU_REBOOT = 0xD8,
+  BCMP_DFU_BOOT_COMPLETE = 0xD9,
+  BCMP_DFU_LAST_MESSAGE = BCMP_DFU_BOOT_COMPLETE,
 } bcmp_message_type_t;

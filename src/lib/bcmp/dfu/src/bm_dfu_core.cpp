@@ -21,9 +21,10 @@ typedef struct dfu_core_ctx_t {
     volatile uint16_t read_buf_len;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     NvmPartition *dfu_partition;
-    TimerHandle_t update_timer;
     update_finish_cb_t update_finish_callback;
 } dfu_core_ctx_t;
+
+ReboootClientUpdateInfo_t client_update_reboot_info __attribute__((section(".noinit")));
 
 static dfu_core_ctx_t dfu_ctx;
 
@@ -33,6 +34,7 @@ static void bm_dfu_send_nop_event(void);
 static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state);
 
 static void s_init_run(void);
+static void s_idle_entry(void);
 static void s_idle_run(void);
 static void s_error_run(void) {}
 static void s_error_entry(void);
@@ -50,7 +52,7 @@ static const libSmState_t dfu_states[BM_NUM_DFU_STATES] = {
         .stateName = "Idle",
         .run = s_idle_run,
         .onStateExit = NULL,
-        .onStateEntry = NULL,
+        .onStateEntry = s_idle_entry,
     },
     {
         .stateEnum = BM_DFU_STATE_ERROR,
@@ -79,6 +81,20 @@ static const libSmState_t dfu_states[BM_NUM_DFU_STATES] = {
         .run = s_client_validating_run,
         .onStateExit = NULL,
         .onStateEntry = s_client_validating_entry,
+    },
+    {
+        .stateEnum = BM_DFU_STATE_CLIENT_REBOOT_REQ,
+        .stateName = "Client Reboot Request",
+        .run = s_client_reboot_req_run,
+        .onStateExit = NULL,
+        .onStateEntry = s_client_reboot_req_entry,
+    },
+    {
+        .stateEnum = BM_DFU_STATE_CLIENT_REBOOT_DONE,
+        .stateName = "Client Reboot Done",
+        .run = s_client_update_done_run,
+        .onStateExit = NULL,
+        .onStateEntry = s_client_update_done_entry,
     },
     {
         .stateEnum = BM_DFU_STATE_CLIENT_ACTIVATING,
@@ -128,8 +144,16 @@ static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state){
 
 static void s_init_run(void) {
     if (dfu_ctx.current_event.type == DFU_EVENT_INIT_SUCCESS) {
-        bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
+        if (client_update_reboot_info.magic == DFU_REBOOT_MAGIC) {
+            bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_REBOOT_DONE);
+        } else {
+            bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
+        }
     }
+}
+
+static void s_idle_entry(void) {
+    memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
 }
 
 static void s_idle_run(void) {
@@ -267,6 +291,27 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
                 printf("Message could not be added to Queue\n");
             }
             break;
+        case BCMP_DFU_REBOOT_REQ:
+            evt.type = DFU_EVENT_REBOOT_REQUEST;
+            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
+                vPortFree(buf);
+                printf("Message could not be added to Queue\n");
+            }
+            break;
+        case BCMP_DFU_REBOOT:
+            evt.type = DFU_EVENT_REBOOT;
+            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
+                vPortFree(buf);
+                printf("Message could not be added to Queue\n");
+            }
+            break;
+        case BCMP_DFU_BOOT_COMPLETE:
+            evt.type = DFU_EVENT_BOOT_COMPLETE;
+            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
+                vPortFree(buf);
+                printf("Message could not be added to Queue\n");
+            }
+            break;
         default:
             configASSERT(false);
         }
@@ -311,6 +356,7 @@ void bm_dfu_set_error(bm_dfu_err_t error) {
 void bm_dfu_set_pending_state_change(uint8_t new_state) {
     dfu_ctx.pending_state_change = 1;
     dfu_ctx.new_state = new_state;
+    printf("Transitioning to state: %s\n", dfu_states[new_state].stateName);
     bm_dfu_send_nop_event();
 }
 

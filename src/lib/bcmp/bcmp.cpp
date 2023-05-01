@@ -145,7 +145,12 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_DFU_PAYLOAD:
       case BCMP_DFU_END:
       case BCMP_DFU_ACK:
-      case BCMP_DFU_HEARTBEAT:{
+      case BCMP_DFU_ABORT:
+      case BCMP_DFU_HEARTBEAT:
+      case BCMP_DFU_REBOOT_REQ:
+      case BCMP_DFU_REBOOT:
+      case BCMP_DFU_BOOT_COMPLETE:
+      {
         dfu_copy_and_process_message(pbuf);
         break;
       }
