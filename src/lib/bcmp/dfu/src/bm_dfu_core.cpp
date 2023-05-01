@@ -18,13 +18,16 @@ typedef struct dfu_core_ctx_t {
     uint8_t new_state;
     bm_dfu_err_t error;
     uint64_t self_node_id;
-    volatile uint16_t read_buf_len;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     NvmPartition *dfu_partition;
     update_finish_cb_t update_finish_callback;
 } dfu_core_ctx_t;
 
+#ifndef CI_TEST
 ReboootClientUpdateInfo_t client_update_reboot_info __attribute__((section(".noinit")));
+#else // CI_TEST
+ReboootClientUpdateInfo_t client_update_reboot_info;
+#endif // CI_TEST
 
 static dfu_core_ctx_t dfu_ctx;
 
@@ -370,30 +373,20 @@ void bm_dfu_set_pending_state_change(uint8_t new_state) {
  * @return none
  */
 void bm_dfu_send_ack(uint64_t dst_node_id, uint8_t success, bm_dfu_err_t err_code) {
-    bm_dfu_event_result_t ack_evt;
-    uint16_t payload_len = sizeof(bm_dfu_event_result_t) + sizeof(bm_dfu_frame_header_t);
+    bcmp_dfu_ack_t ack_msg;
 
     /* Stuff ACK Event */
-    ack_evt.success = success;
-    ack_evt.err_code = err_code;
+    ack_msg.ack.success = success;
+    ack_msg.ack.err_code = err_code;
+    ack_msg.ack.addresses.dst_node_id = dst_node_id;
+    ack_msg.ack.addresses.src_node_id = dfu_ctx.self_node_id;
+    ack_msg.header.frame_type = BCMP_DFU_ACK;
 
-    memcpy(&ack_evt.addresses.src_node_id, &dfu_ctx.self_node_id, sizeof(ack_evt.addresses.src_node_id));
-    memcpy(&ack_evt.addresses.dst_node_id, &dst_node_id, sizeof(ack_evt.addresses.dst_node_id));
-    uint8_t* buf = (uint8_t*) pvPortMalloc(payload_len);
-    configASSERT(buf);
-
-    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
-    evtPtr->type = BCMP_DFU_ACK;
-    evtPtr->len = payload_len;
-    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
-    memcpy(&header[1], &ack_evt, sizeof(ack_evt));
-
-    if(dfu_ctx.bcmp_dfu_tx((bcmp_message_type_t)evtPtr->type, buf, payload_len)){
-        printf("Message %d sent \n",evtPtr->type);
+    if(dfu_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(ack_msg.header.frame_type), reinterpret_cast<uint8_t*>(&ack_msg), sizeof(ack_msg))){
+        printf("Message %d sent \n",ack_msg.header.frame_type);
     } else {
-        printf("Failed to send message %d\n",evtPtr->type);
+        printf("Failed to send message %d\n",ack_msg.header.frame_type);
     }
-    vPortFree(buf);
 }
 
 /**
@@ -406,29 +399,19 @@ void bm_dfu_send_ack(uint64_t dst_node_id, uint8_t success, bm_dfu_err_t err_cod
  */
 void bm_dfu_req_next_chunk(uint64_t dst_node_id, uint16_t chunk_num)
 {
-    bm_dfu_event_chunk_request_t chunk_req_evt;
-    uint16_t payload_len = sizeof(bm_dfu_event_chunk_request_t) + sizeof(bm_dfu_frame_header_t);
+    bcmp_dfu_payload_req_t chunk_req_msg;
 
     /* Stuff Chunk Request Event */
-    chunk_req_evt.seq_num = chunk_num;
-    
-    memcpy(&chunk_req_evt.addresses.src_node_id, &dfu_ctx.self_node_id, sizeof(chunk_req_evt.addresses.src_node_id));
-    memcpy(&chunk_req_evt.addresses.dst_node_id, &dst_node_id, sizeof(chunk_req_evt.addresses.dst_node_id));
-    uint8_t* buf = (uint8_t*)pvPortMalloc(payload_len);
-    configASSERT(buf);
+    chunk_req_msg.chunk_req.seq_num = chunk_num;
+    chunk_req_msg.chunk_req.addresses.src_node_id = dfu_ctx.self_node_id;
+    chunk_req_msg.chunk_req.addresses.dst_node_id = dst_node_id;
+    chunk_req_msg.header.frame_type = BCMP_DFU_PAYLOAD_REQ;
 
-    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
-    evtPtr->type = BCMP_DFU_PAYLOAD_REQ;
-    evtPtr->len = payload_len;
-    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
-    memcpy(&header[1], &chunk_req_evt, sizeof(chunk_req_evt));
-
-    if(dfu_ctx.bcmp_dfu_tx((bcmp_message_type_t)evtPtr->type, buf, payload_len)){
-        printf("Message %d sent \n",evtPtr->type);
+    if(dfu_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(chunk_req_msg.header.frame_type), reinterpret_cast<uint8_t*>(&chunk_req_msg), sizeof(chunk_req_msg))){
+        printf("Message %d sent \n", chunk_req_msg.header.frame_type);
     } else {
-        printf("Failed to send message %d\n",evtPtr->type);
+        printf("Failed to send message %d\n", chunk_req_msg.header.frame_type);
     }       
-    vPortFree(buf);
 }
 
 /**
@@ -441,30 +424,20 @@ void bm_dfu_req_next_chunk(uint64_t dst_node_id, uint16_t chunk_num)
  * @return none
  */
 void bm_dfu_update_end(uint64_t dst_node_id, uint8_t success, bm_dfu_err_t err_code) {
-    bm_dfu_event_result_t update_end_evt;
-    uint16_t payload_len = sizeof(bm_dfu_event_result_t) + sizeof(bm_dfu_frame_header_t);
+    bcmp_dfu_end_t update_end_msg;
 
     /* Stuff Update End Event */
-    update_end_evt.success = success;
-    update_end_evt.err_code = err_code;
-    memcpy(&update_end_evt.addresses.src_node_id, &dfu_ctx.self_node_id, sizeof(update_end_evt.addresses.src_node_id));
-    memcpy(&update_end_evt.addresses.dst_node_id, &dst_node_id, sizeof(update_end_evt.addresses.dst_node_id));
-    uint8_t* buf =(uint8_t *)pvPortMalloc(payload_len);
-    configASSERT(buf);
+    update_end_msg.result.success = success;
+    update_end_msg.result.err_code = err_code;
+    update_end_msg.result.addresses.dst_node_id = dst_node_id;
+    update_end_msg.result.addresses.src_node_id = dfu_ctx.self_node_id;
+    update_end_msg.header.frame_type = BCMP_DFU_END;
 
-    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
-    evtPtr->type = BCMP_DFU_END;
-    evtPtr->len = payload_len;
-
-    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
-    memcpy(&header[1], &update_end_evt, sizeof(update_end_evt));
-
-    if(dfu_ctx.bcmp_dfu_tx((bcmp_message_type_t)evtPtr->type, buf, payload_len)){
-        printf("Message %d sent \n",evtPtr->type);
+    if(dfu_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(update_end_msg.header.frame_type), reinterpret_cast<uint8_t*>(&update_end_msg), sizeof(update_end_msg))){
+        printf("Message %d sent \n",update_end_msg.header.frame_type);
     } else {
-        printf("Failed to send message %d\n",evtPtr->type);
+        printf("Failed to send message %d\n",update_end_msg.header.frame_type);
     }       
-    vPortFree(buf);
 }
 
 /**
@@ -475,28 +448,16 @@ void bm_dfu_update_end(uint64_t dst_node_id, uint8_t success, bm_dfu_err_t err_c
  * @return none
  */
 void bm_dfu_send_heartbeat(uint64_t dst_node_id) {
-    bm_dfu_event_address_t heartbeat_evt;
-    uint16_t payload_len = sizeof(bcmp_dfu_heartbeat_t);
+    bcmp_dfu_heartbeat_t heartbeat_msg;
+    heartbeat_msg.addr.dst_node_id = dst_node_id;
+    heartbeat_msg.addr.src_node_id = dfu_ctx.self_node_id;
+    heartbeat_msg.header.frame_type = BCMP_DFU_HEARTBEAT;
 
-    heartbeat_evt.src_node_id = dfu_ctx.self_node_id;
-    heartbeat_evt.dst_node_id = dst_node_id;
-
-    uint8_t* buf = (uint8_t *)pvPortMalloc(payload_len);
-    configASSERT(buf);
-
-    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
-    evtPtr->type = BCMP_DFU_HEARTBEAT;
-    evtPtr->len = payload_len;
-
-    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
-    memcpy(&header[1], &heartbeat_evt, sizeof(heartbeat_evt));
-
-    if(dfu_ctx.bcmp_dfu_tx((bcmp_message_type_t)evtPtr->type, buf, payload_len)){
-        printf("Message %d sent \n",evtPtr->type);
+    if(dfu_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(heartbeat_msg.header.frame_type), reinterpret_cast<uint8_t*>(&heartbeat_msg), sizeof(heartbeat_msg))){
+        printf("Message %d sent \n",heartbeat_msg.header.frame_type);
     } else {
-        printf("Failed to send message %d\n",evtPtr->type);
+        printf("Failed to send message %d\n",heartbeat_msg.header.frame_type);
     }       
-    vPortFree(buf);
 }
 
 /* This thread consumes events from the event queue and progresses the state machine */

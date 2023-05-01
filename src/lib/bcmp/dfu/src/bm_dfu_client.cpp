@@ -57,30 +57,19 @@ static void bm_dfu_client_transition_to_error(bm_dfu_err_t err);
  * @return none
  */
 static void bm_dfu_client_abort(void) {
-    bm_dfu_event_result_t abort_evt;
-    uint16_t payload_len = sizeof(bm_dfu_event_result_t) + sizeof(bm_dfu_frame_header_t);
+    bcmp_dfu_abort_t abort_msg;
 
     /* Populate the appropriate event */
-    abort_evt.addresses.src_node_id = client_ctx.self_node_id;
-    abort_evt.addresses.dst_node_id = client_ctx.host_node_id;
-    abort_evt.err_code = BM_DFU_ERR_ABORTED;
-    abort_evt.success = 0;
-
-    uint8_t *buf = (uint8_t*)pvPortMalloc(payload_len);
-    configASSERT(buf);
-
-    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
-    evtPtr->type = BCMP_DFU_ABORT;
-    evtPtr->len = payload_len;
-
-    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
-    memcpy(&header[1], &abort_evt, sizeof(abort_evt));
-    if(client_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(evtPtr->type), buf, payload_len)){
-        printf("Message %d sent \n",evtPtr->type);
+    abort_msg.err.addresses.dst_node_id = client_ctx.host_node_id;
+    abort_msg.err.addresses.src_node_id = client_ctx.self_node_id;
+    abort_msg.err.err_code = BM_DFU_ERR_ABORTED;
+    abort_msg.err.success = 0;
+    abort_msg.header.frame_type = BCMP_DFU_ABORT;
+    if(client_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(abort_msg.header.frame_type), reinterpret_cast<uint8_t*>(&abort_msg), sizeof(abort_msg))){
+        printf("Message %d sent \n",abort_msg.header.frame_type);
     } else {
-        printf("Failed to send message %d\n",evtPtr->type);
+        printf("Failed to send message %d\n",abort_msg.header.frame_type);
     }
-    vPortFree(buf);
 }
 
 static void bm_dfu_client_send_reboot_request() {

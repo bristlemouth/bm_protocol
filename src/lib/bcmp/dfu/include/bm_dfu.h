@@ -87,7 +87,11 @@ typedef struct  __attribute__((__packed__)) {
   uint64_t host_node_id;
 } ReboootClientUpdateInfo_t;
 
+#ifndef CI_TEST
 extern ReboootClientUpdateInfo_t client_update_reboot_info __attribute__((section(".noinit")));
+#else // CI_TEST
+extern ReboootClientUpdateInfo_t client_update_reboot_info;
+#endif // CI_TEST
 
 typedef bool (*bcmp_dfu_tx_func_t)(bcmp_message_type_t type, uint8_t *buff, uint16_t len);
 typedef void (*update_finish_cb_t)(bool success);

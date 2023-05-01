@@ -94,31 +94,20 @@ static void update_timer_handler(TimerHandle_t tmr) {
  * @return none
  */
 static void bm_dfu_host_req_update() {
-    bm_dfu_event_img_info_t update_req_evt;
-    uint16_t payload_len = sizeof(bm_dfu_event_img_info_t) + sizeof(bm_dfu_frame_header_t);
+    bcmp_dfu_start_t update_start_req_evt;
 
     printf("Sending Update to Client\n");
 
     /* Populate the appropriate event */
-    update_req_evt.img_info = host_ctx.img_info;
-    update_req_evt.addresses.src_node_id =  host_ctx.self_node_id;
-    update_req_evt.addresses.dst_node_id = host_ctx.client_node_id;
-
-    uint8_t* buf = (uint8_t*)pvPortMalloc(payload_len);
-    configASSERT(buf);
-
-    bm_dfu_event_t *evtPtr = (bm_dfu_event_t *)buf;
-    evtPtr->type = BCMP_DFU_START;
-    evtPtr->len = payload_len;
-
-    bm_dfu_frame_header_t *header = (bm_dfu_frame_header_t *)buf;
-    memcpy(&header[1], &update_req_evt, sizeof(update_req_evt));
-    if(host_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(evtPtr->type), buf, payload_len)){
-        printf("Message %d sent \n",evtPtr->type);
+    update_start_req_evt.info.img_info = host_ctx.img_info;
+    update_start_req_evt.info.addresses.src_node_id = host_ctx.self_node_id;
+    update_start_req_evt.info.addresses.dst_node_id = host_ctx.client_node_id;
+    update_start_req_evt.header.frame_type = BCMP_DFU_START;
+    if(host_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(update_start_req_evt.header.frame_type), reinterpret_cast<uint8_t *>(&update_start_req_evt), sizeof(update_start_req_evt))){
+        printf("Message %d sent \n",update_start_req_evt.header.frame_type);
     } else {
-        printf("Failed to send message %d\n",evtPtr->type);
+        printf("Failed to send message %d\n",update_start_req_evt.header.frame_type);
     }       
-    vPortFree(buf);
 }
 
 /**
