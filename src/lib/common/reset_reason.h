@@ -17,6 +17,7 @@ typedef enum {
     RESET_REASON_BOOTLOADER,
     RESET_REASON_MCUBOOT,
     RESET_REASON_CONFIG,
+    RESET_REASON_UPDATE_FAILED,
 
     RESET_REASON_INVALID,   // make sure this is always the last enum
     // If adding additional reset reasons, make sure they fit inside

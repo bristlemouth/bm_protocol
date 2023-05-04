@@ -29,11 +29,11 @@ void debugDfuInit(NvmPartition *dfu_cli_partition) {
     FreeRTOS_CLIRegisterCommand( &cmdDfu );
 }
 
-void updateSuccessCallback(bool success) {
+void updateSuccessCallback(bool success, bm_dfu_err_t err) {
     if(success){
         printf("update successful\n");
     } else {
-        printf("update failed\n");
+        printf("update failed, err: %d\n", err);
     }
 }
 

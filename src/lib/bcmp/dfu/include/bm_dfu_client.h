@@ -12,7 +12,6 @@ extern "C"
 void bm_dfu_client_process_update_request(void);
 
 /* HFSM functions */
-void s_client_run(void);
 void s_client_receiving_entry(void);
 void s_client_receiving_run(void);
 void s_client_validating_entry(void);

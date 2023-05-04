@@ -48,6 +48,7 @@ static void bm_dfu_client_abort(void);
 static void bm_dfu_client_send_reboot_request();
 static void bm_dfu_client_send_boot_complete(uint64_t host_node_id);
 static void bm_dfu_client_transition_to_error(bm_dfu_err_t err);
+static void bm_dfu_client_fail_update_and_reboot(void);
 
 /**
  * @brief Send DFU Abort to Host
@@ -226,18 +227,9 @@ void bm_dfu_client_process_update_request(void) {
     chunk_size = img_info_evt->img_info.chunk_size;
     minor_version = img_info_evt->img_info.minor_ver;
     major_version = img_info_evt->img_info.major_ver;
+    client_ctx.host_node_id = img_info_evt->addresses.src_node_id;
 
-
-    memcpy((uint8_t *) &client_ctx.host_node_id, (uint8_t *) &img_info_evt->addresses.src_node_id, sizeof( img_info_evt->addresses.src_node_id));
-
-    // Save image update info to noinit
-    client_update_reboot_info.major = major_version;
-    client_update_reboot_info.minor = minor_version;
-    client_update_reboot_info.host_node_id = client_ctx.host_node_id;
-    client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
-
-    /* TODO: Need to check min/major version numbers */
-    if (1) {
+    if (img_info_evt->img_info.gitSHA != getGitSHA()) {
         client_ctx.image_size = image_size;
 
         /* We calculating the number of chunks that the client will be requesting based on the
@@ -270,25 +262,29 @@ void bm_dfu_client_process_update_request(void) {
                 } else {
                     bm_dfu_send_ack(client_ctx.host_node_id, 1, BM_DFU_ERR_NONE);
 
+                    // Save image update info to noinit
+                    client_update_reboot_info.major = major_version;
+                    client_update_reboot_info.minor = minor_version;
+                    client_update_reboot_info.host_node_id = client_ctx.host_node_id;
+                    client_update_reboot_info.gitSHA = img_info_evt->img_info.gitSHA;
+                    client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
+
                     /* (zephyr) TODO: Fix this. Is this needed for FreeRTOS */
                     vTaskDelay(10); // Needed so ACK can properly be sent/processed
                     bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_RECEIVING);
 
                 }
             } else {
+                printf("Image too large\n");
                 bm_dfu_send_ack(client_ctx.host_node_id, 0, BM_DFU_ERR_TOO_LARGE);
-                bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
-
             }
         }
     } else {
+        printf("Same version requested\n");
         bm_dfu_send_ack(client_ctx.host_node_id, 0, BM_DFU_ERR_SAME_VER);
-        bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
-
     }
 }
 
-void s_client_run(void) {}
 void s_client_validating_run(void) {}
 void s_client_activating_run(void) {}
 
@@ -371,6 +367,18 @@ void s_client_receiving_run(void) {
             bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
             configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
         }
+    } else if (curr_evt.type == DFU_EVENT_RECEIVED_UPDATE_REQUEST) { // The host dropped our previous ack to the image, and we need to sync up.
+        configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        bm_dfu_send_ack(client_ctx.host_node_id, 1, BM_DFU_ERR_NONE); 
+        // Start image from the beginning
+        client_ctx.current_chunk = 0;
+        client_ctx.chunk_retry_num = 0;
+        client_ctx.img_page_byte_counter = 0;
+        client_ctx.img_flash_offset = 0;
+        client_ctx.running_crc16 = 0;
+        vTaskDelay(100); // Allow host to process ACK and Get ready to send chunk.
+        bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
+        configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
     }
     /* TODO: (IMPLEMENT THIS PERIODICALLY ON HOST SIDE)
        If host is still waiting for chunk, it will send a heartbeat to client */
@@ -478,13 +486,13 @@ void s_client_reboot_req_run(void) {
  */
 void s_client_update_done_entry(void) {
     client_ctx.chunk_retry_num = 0;
-    if(getVersionInfo()->maj == client_update_reboot_info.major && getVersionInfo()->min == client_update_reboot_info.minor) {
+    if(getGitSHA() == client_update_reboot_info.gitSHA) {
         bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
         /* Kickoff Chunk timeout */
         configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
     } else {
         bm_dfu_update_end(client_update_reboot_info.host_node_id, false, BM_DFU_ERR_WRONG_VER);
-        bm_dfu_client_transition_to_error(BM_DFU_ERR_WRONG_VER);
+        bm_dfu_client_fail_update_and_reboot();
     }
 }
 
@@ -510,7 +518,7 @@ void s_client_update_done_run(void) {
         /* Try requesting confirmation until max retries is reached */
         if (client_ctx.chunk_retry_num >= BM_DFU_MAX_CHUNK_RETRIES) {
             bm_dfu_client_abort();
-            bm_dfu_client_transition_to_error(BM_DFU_ERR_TIMEOUT);
+            bm_dfu_client_fail_update_and_reboot();
         } else {
             /* Request confirmation */
             bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
@@ -550,3 +558,18 @@ static void bm_dfu_client_transition_to_error(bm_dfu_err_t err) {
     bm_dfu_set_error(err);
     bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
 }
+
+static void bm_dfu_client_fail_update_and_reboot(void) {
+    memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
+    vTaskDelay(100); // Wait a bit for any previous messages sent.
+    resetSystem(RESET_REASON_UPDATE_FAILED); // Revert to the previous image.
+}
+
+/*!
+ * UNIT TEST FUNCTIONS BELOW HERE
+ */
+#ifdef CI_TEST
+void bm_dfu_test_set_client_fa(const struct flash_area *fa) {
+    client_ctx.fa = fa;
+}
+#endif //CI_TEST

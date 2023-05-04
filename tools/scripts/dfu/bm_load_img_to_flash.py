@@ -15,10 +15,10 @@ CHUNK_SIZE = 512
 # Header Payload
 DFU_HEADER = namedtuple( # NOTE: Must be in sync with bm_dfu_message_structs.h
     "DFU_HEADER",
-    "img_size chunk_size img_crc maj min filter_key",
+    "img_size chunk_size img_crc maj min filter_key gitSHA",
 )
 # https://docs.python.org/3/library/struct.html#format-characters
-DFU_HEADER_STRUCT_ENCODING = "<LHHBBL"
+DFU_HEADER_STRUCT_ENCODING = "<LHHBBLL"
 
 NVM_DFU_WRITE_CMD_STR = "nvm b64write dfu"
 NVM_DFU_CRC16_CMD_STR = "nvm crc16 dfu"
@@ -62,6 +62,7 @@ def main(img_path:str, port:str, baud:int) -> None:
     fw_ver = getVersionFromBin(abs_path)
     major = int(fw_ver["version"].split(".")[0])
     minor = int(fw_ver["version"].split(".")[1])
+    gitSHA = int(fw_ver["sha"],16)
     ser = serial.Serial(
         port=port,
         baudrate=baud,
@@ -78,7 +79,7 @@ def main(img_path:str, port:str, baud:int) -> None:
     # Get image characteristics
     img_size = len(img_data)
     img_crc = crc16(img_data)
-    print(f"Image Info: - size: {img_size}, crc16:{img_crc}, major: {major}, minor: {minor}")
+    print(f"Image Info: - size: {img_size}, crc16:{img_crc}, major: {major}, minor: {minor}, gitSHA: {gitSHA}")
 
     # send header
     header = DFU_HEADER(
@@ -87,7 +88,8 @@ def main(img_path:str, port:str, baud:int) -> None:
         img_crc,
         major,
         minor,
-        0
+        0,
+        gitSHA
     )
     header_payload = struct.pack(DFU_HEADER_STRUCT_ENCODING, *header)
     b64_header_payload = b64encode(header_payload).decode()

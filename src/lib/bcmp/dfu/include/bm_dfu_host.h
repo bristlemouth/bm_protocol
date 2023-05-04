@@ -21,7 +21,6 @@ extern "C"
 
 typedef int (*bm_dfu_chunk_req_cb)(uint16_t chunk_num, uint16_t *chunk_len, uint8_t *buf, uint16_t buf_len);
 
-void s_host_run(void);
 void s_host_req_update_entry(void);
 void s_host_req_update_run(void);
 void s_host_update_entry(void);

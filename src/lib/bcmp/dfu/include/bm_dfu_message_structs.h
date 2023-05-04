@@ -8,6 +8,7 @@ typedef struct __attribute__((__packed__)) bm_dfu_img_info_s {
     uint8_t major_ver;
     uint8_t minor_ver;
     uint32_t filter_key; // Will be used later for image rejection.
+    uint32_t gitSHA;
 } bm_dfu_img_info_t;
 
 typedef struct __attribute__((__packed__)) bm_dfu_frame_header_s {

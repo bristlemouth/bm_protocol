@@ -172,6 +172,7 @@ target_include_directories(bcmp_dfu_tests
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/apps/bringup
+    ${SRC_DIR}/lib/mcuboot/include/flash_map_backend
 )
 
 target_sources(bcmp_dfu_tests

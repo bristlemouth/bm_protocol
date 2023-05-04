@@ -5,6 +5,8 @@
 #include "mock_device_info.h"
 #include "nvmPartition.h"
 #include "mock_storage_driver.h"
+#include "flash_map_backend.h"
+#include "mock_reset_reason.h"
 extern "C" {
 #include "mock_FreeRTOS.h"
 }
@@ -41,6 +43,10 @@ class BcmpDfuTest : public ::testing::Test {
         RESET_FAKE(xTimerCreate);
         RESET_FAKE(getNodeId);
         RESET_FAKE(fake_bcmp_tx_func);
+        RESET_FAKE(xTimerGenericCommand);
+        RESET_FAKE(getVersionInfo);
+        RESET_FAKE(resetSystem);
+        RESET_FAKE(getGitSHA);
         fake_q = (QueueHandle_t)malloc(sizeof(QueueHandle_t));
         fake_timer = (TimerHandle_t)malloc(sizeof(QueueHandle_t));
         EXPECT_CALL(_storage, getAlignmentBytes())
@@ -56,6 +62,16 @@ class BcmpDfuTest : public ::testing::Test {
             .Times(AtLeast(0))
             .WillRepeatedly(Return(true));
         testPartition = new NvmPartition(_storage, _test_configuration);
+        xQueueGenericSend_fake.return_val = pdPASS;
+        xTaskCreate_fake.return_val = pdPASS;
+        xQueueGenericCreate_fake.return_val = fake_q;
+        xTimerCreate_fake.return_val = fake_timer;
+        xTimerGenericCommand_fake.return_val = pdPASS;
+        getNodeId_fake.return_val = 0xdeadbeefbeeffeed;
+        fake_bcmp_tx_func_fake.return_val = true;
+        getVersionInfo_fake.return_val = &test_info;
+        getGitSHA_fake.return_val = 0xd00dd00d;
+        memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
     }
 
   void TearDown() override {
@@ -74,15 +90,30 @@ class BcmpDfuTest : public ::testing::Test {
         .fa_off = 4096,
         .fa_size = 10000,
     };
+    const struct flash_area fa = {
+        .fa_id = 1,
+        .fa_device_id = 2,
+        .pad16 = 0,
+        .fa_off = 0,
+        .fa_size = 2000000,
+    };
+    const versionInfo_t test_info = {
+        .magic = 0xbaadd00dd00dbaad,
+        .gitSHA = 0xd00dd00d,
+        .maj = 1,
+        .min = 7,
+        .rev = 0,
+        .hwVersion = 1,
+        .flags = 0,
+        .versionStrLen = 5,
+        .versionStr = {"test"},
+    };
+    static constexpr size_t CHUNK_SIZE = 512;
+    static constexpr size_t IMAGE_SIZE = 2048;
 };
 
 TEST_F(BcmpDfuTest, InitTest)
 {
-    xQueueGenericSend_fake.return_val = pdPASS;
-    xTaskCreate_fake.return_val = pdPASS;
-    xQueueGenericCreate_fake.return_val = fake_q;
-    xTimerCreate_fake.return_val = fake_timer;
-    getNodeId_fake.return_val = 0xdeadbeefbeeffeed;
     bm_dfu_init(fake_bcmp_tx_func, testPartition);
     EXPECT_EQ(xQueueGenericSend_fake.call_count, 1);
     EXPECT_EQ(xTaskCreate_fake.call_count, 1);
@@ -93,11 +124,6 @@ TEST_F(BcmpDfuTest, InitTest)
 
 TEST_F(BcmpDfuTest, processMessageTest)
 {
-    xQueueGenericSend_fake.return_val = pdPASS;
-    xTaskCreate_fake.return_val = pdPASS;
-    xQueueGenericCreate_fake.return_val = fake_q;
-    xTimerCreate_fake.return_val = fake_timer;
-    getNodeId_fake.return_val = 0xdeadbeefbeeffeed;
     bm_dfu_init(fake_bcmp_tx_func, testPartition);
     EXPECT_EQ(xQueueGenericSend_fake.call_count, 1);
     EXPECT_EQ(xTaskCreate_fake.call_count, 1);
@@ -175,11 +201,6 @@ TEST_F(BcmpDfuTest, processMessageTest)
 }
 
 TEST_F(BcmpDfuTest, DfuApiTest){
-    xQueueGenericSend_fake.return_val = pdPASS;
-    xTaskCreate_fake.return_val = pdPASS;
-    xQueueGenericCreate_fake.return_val = fake_q;
-    xTimerCreate_fake.return_val = fake_timer;
-    getNodeId_fake.return_val = 0xdeadbeefbeeffeed;
     bm_dfu_init(fake_bcmp_tx_func, testPartition);
     EXPECT_EQ(xQueueGenericSend_fake.call_count, 1);
     EXPECT_EQ(xTaskCreate_fake.call_count, 1);
@@ -209,5 +230,733 @@ TEST_F(BcmpDfuTest, DfuApiTest){
     info.image_size = 2 * 1000 * 1024;
     info.major_ver = 0;
     info.minor_ver = 1; 
+    info.gitSHA = 0xd00dd00d;
     EXPECT_EQ(bm_dfu_initiate_update(info,0xdeadbeefbeeffeed, NULL, 1000), false);
+}
+
+TEST_F(BcmpDfuTest, clientGolden) {
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    bcmp_dfu_start_t dfu_start_msg;
+    dfu_start_msg.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.info.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.info.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.info.img_info.major_ver = 1;
+    dfu_start_msg.info.img_info.minor_ver = 7;
+    dfu_start_msg.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+
+    // Chunk
+    evt.type = DFU_EVENT_IMAGE_CHUNK;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE);
+    evt.len = sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE;
+    bcmp_dfu_payload_t dfu_payload_msg;
+    dfu_payload_msg.header.frame_type = BCMP_DFU_PAYLOAD;
+    dfu_payload_msg.chunk.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_payload_msg.chunk.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_payload_msg.chunk.payload_length = CHUNK_SIZE;
+    memcpy(evt.buf, &dfu_payload_msg, sizeof(dfu_payload_msg));
+    memset(evt.buf+sizeof(dfu_payload_msg),0xa5,CHUNK_SIZE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 512
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING); 
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1024
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1536
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 2048
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_VALIDATING);
+
+    // Validating
+    evt.type = DFU_EVENT_NONE;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); 
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_REQ);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_REBOOT_REQ);
+
+    // Reboot
+    evt.type = DFU_EVENT_REBOOT;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_reboot_t));
+    evt.len = sizeof(bcmp_dfu_reboot_t);
+    bcmp_dfu_reboot_t dfu_reboot_msg;
+    dfu_reboot_msg.header.frame_type = BCMP_DFU_REBOOT;
+    dfu_reboot_msg.addr.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_reboot_msg.addr.dst_node_id = 0xdeadbeefbeeffeed;
+    memcpy(evt.buf, &dfu_reboot_msg, sizeof(dfu_reboot_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_ACTIVATING); // We reboot in this step. 
+    // See ClientImageHasUpdated for state behavior after reboot.
+}
+
+TEST_F(BcmpDfuTest, clientGoldenImageHasUpdated) {
+    // Set the reboot info.
+    client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
+    client_update_reboot_info.host_node_id = 0xbeefbeefdaadbaad;
+    client_update_reboot_info.major = 1;
+    client_update_reboot_info.minor = 7;
+    client_update_reboot_info.gitSHA = 0xdeadd00d;
+    getGitSHA_fake.return_val = 0xdeadd00d;
+
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_BOOT_COMPLETE);
+
+    // REBOOT_DONE
+    evt.type = DFU_EVENT_UPDATE_END;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_end_t));
+    evt.len = sizeof(bcmp_dfu_end_t);
+    bcmp_dfu_end_t bcmp_end_msg;
+    bcmp_end_msg.header.frame_type = BCMP_DFU_END;
+    bcmp_end_msg.result.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    bcmp_end_msg.result.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    bcmp_end_msg.result.err_code = BM_DFU_ERR_NONE;
+    bcmp_end_msg.result.success = 1;
+    memcpy(evt.buf, &bcmp_end_msg, sizeof(bcmp_end_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_END);
+}
+
+TEST_F(BcmpDfuTest, clientResyncHost) {
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    bcmp_dfu_start_t dfu_start_msg;
+    dfu_start_msg.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.info.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.info.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.info.img_info.major_ver = 1;
+    dfu_start_msg.info.img_info.minor_ver = 7;
+    dfu_start_msg.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // Get a DFU_EVENT_RECEIVED_UPDATE_REQUEST in BM_DFU_STATE_CLIENT_RECEIVING state
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+}
+
+
+TEST_F(BcmpDfuTest, hostGolden) {
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // HOST REQUEST
+    evt.type = DFU_EVENT_BEGIN_HOST;
+    evt.buf = (uint8_t*)malloc(sizeof(dfu_host_start_event_t));
+    evt.len = sizeof(dfu_host_start_event_t);
+    dfu_host_start_event_t dfu_start_msg;
+    dfu_start_msg.start.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.start.info.addresses.src_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.start.info.addresses.dst_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.start.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.start.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.start.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.start.info.img_info.major_ver = 1;
+    dfu_start_msg.start.info.img_info.minor_ver = 7;
+    dfu_start_msg.timeoutMs = 30000;
+    dfu_start_msg.finish_cb = NULL;
+    dfu_start_msg.start.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(dfu_start_msg));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_REQ_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_START);
+
+    // HOST UPDATE
+    evt.type = DFU_EVENT_ACK_RECEIVED;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_ack_t));
+    evt.len = sizeof(bcmp_dfu_ack_t);
+    bcmp_dfu_ack_t dfu_ack_msg;
+    dfu_ack_msg.header.frame_type = BCMP_DFU_ACK;
+    dfu_ack_msg.ack.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_ack_msg.ack.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_ack_msg.ack.err_code = BM_DFU_ERR_NONE;
+    dfu_ack_msg.ack.success = 1;
+    memcpy(evt.buf, &dfu_ack_msg, sizeof(bcmp_dfu_ack_t));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
+
+    // CHUNK REQUEST
+    evt.type = DFU_EVENT_CHUNK_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_payload_req_t));
+    evt.len = sizeof(bcmp_dfu_payload_req_t);
+    bcmp_dfu_payload_req_t dfu_payload_req_msg;
+    dfu_payload_req_msg.header.frame_type = BCMP_DFU_PAYLOAD_REQ;
+    dfu_payload_req_msg.chunk_req.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_payload_req_msg.chunk_req.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_payload_req_msg.chunk_req.seq_num  = 0;
+    memcpy(evt.buf, &dfu_payload_req_msg, sizeof(dfu_payload_req_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD);
+
+    // REBOOT REQUEST
+    evt.type = DFU_EVENT_REBOOT_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_reboot_req_t));
+    evt.len = sizeof(bcmp_dfu_reboot_req_t);
+    bcmp_dfu_reboot_req_t dfu_reboot_req_msg;
+    dfu_reboot_req_msg.header.frame_type = BCMP_REBOOT_REQUEST;
+    dfu_reboot_req_msg.addr.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_reboot_req_msg.addr.src_node_id = 0xbeefbeefdaadbaad;
+    memcpy(evt.buf, &dfu_reboot_req_msg, sizeof(dfu_reboot_req_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_REBOOT);
+
+    // REBOOT COMPLETE
+    evt.type = DFU_EVENT_BOOT_COMPLETE;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_boot_complete_t));
+    evt.len = sizeof(bcmp_dfu_boot_complete_t);
+    bcmp_dfu_boot_complete_t dfu_reboot_done_msg;
+    dfu_reboot_done_msg.header.frame_type = BCMP_REBOOT_REQUEST;
+    dfu_reboot_done_msg.addr.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_reboot_done_msg.addr.src_node_id = 0xbeefbeefdaadbaad;
+    memcpy(evt.buf, &dfu_reboot_done_msg, sizeof(dfu_reboot_done_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_END);
+
+    // DFU EVENT 
+    evt.type = DFU_EVENT_UPDATE_END;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_end_t));
+    evt.len = sizeof(bcmp_dfu_end_t);
+    bcmp_dfu_end_t dfu_end_msg;
+    dfu_end_msg.header.frame_type = BCMP_DFU_END;
+    dfu_end_msg.result.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_end_msg.result.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_end_msg.result.err_code = BM_DFU_ERR_NONE;
+    dfu_end_msg.result.success = 1;
+    memcpy(evt.buf, &dfu_reboot_done_msg, sizeof(dfu_reboot_done_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+    
+}
+
+TEST_F(BcmpDfuTest, HostReqUpdateFail){
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // HOST REQUEST
+    evt.type = DFU_EVENT_BEGIN_HOST;
+    evt.buf = (uint8_t*)malloc(sizeof(dfu_host_start_event_t));
+    evt.len = sizeof(dfu_host_start_event_t);
+    dfu_host_start_event_t dfu_start_msg;
+    dfu_start_msg.start.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.start.info.addresses.src_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.start.info.addresses.dst_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.start.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.start.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.start.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.start.info.img_info.major_ver = 1;
+    dfu_start_msg.start.info.img_info.minor_ver = 7;
+    dfu_start_msg.timeoutMs = 30000;
+    dfu_start_msg.finish_cb = NULL;
+    dfu_start_msg.start.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(dfu_start_msg));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_REQ_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_START);
+
+    evt.type = DFU_EVENT_ACK_TIMEOUT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_REQ_UPDATE); // retry 1
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); 
+    evt.type = DFU_EVENT_NONE;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+
+    // HOST REQUEST
+    evt.type = DFU_EVENT_BEGIN_HOST;
+    evt.buf = (uint8_t*)malloc(sizeof(dfu_host_start_event_t));
+    evt.len = sizeof(dfu_host_start_event_t);
+    memcpy(evt.buf, &dfu_start_msg, sizeof(dfu_host_start_event_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_REQ_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_START);
+
+    // ABORT
+    evt.type = DFU_EVENT_ABORT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); 
+    evt.type = DFU_EVENT_NONE;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+}
+
+TEST_F(BcmpDfuTest, HostUpdateFail){
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // HOST REQUEST
+    evt.type = DFU_EVENT_BEGIN_HOST;
+    evt.buf = (uint8_t*)malloc(sizeof(dfu_host_start_event_t));
+    evt.len = sizeof(dfu_host_start_event_t);
+    dfu_host_start_event_t dfu_start_msg;
+    dfu_start_msg.start.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.start.info.addresses.src_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.start.info.addresses.dst_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.start.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.start.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.start.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.start.info.img_info.major_ver = 1;
+    dfu_start_msg.start.info.img_info.minor_ver = 7;
+    dfu_start_msg.timeoutMs = 30000;
+    dfu_start_msg.finish_cb = NULL;
+    dfu_start_msg.start.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(dfu_start_msg));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_REQ_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_START);
+
+    // HOST UPDATE
+    evt.type = DFU_EVENT_ACK_RECEIVED;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_ack_t));
+    evt.len = sizeof(bcmp_dfu_ack_t);
+    bcmp_dfu_ack_t dfu_ack_msg;
+    dfu_ack_msg.header.frame_type = BCMP_DFU_ACK;
+    dfu_ack_msg.ack.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_ack_msg.ack.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_ack_msg.ack.err_code = BM_DFU_ERR_NONE;
+    dfu_ack_msg.ack.success = 1;
+    memcpy(evt.buf, &dfu_ack_msg, sizeof(bcmp_dfu_ack_t));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
+
+    // ABORT
+    evt.type = DFU_EVENT_ABORT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); 
+    evt.type = DFU_EVENT_NONE;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+
+   // HOST REQUEST
+    evt.type = DFU_EVENT_BEGIN_HOST;
+    evt.buf = (uint8_t*)malloc(sizeof(dfu_host_start_event_t));
+    evt.len = sizeof(dfu_host_start_event_t);
+    memcpy(evt.buf, &dfu_start_msg, sizeof(dfu_start_msg));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_REQ_UPDATE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_START);
+
+    // HOST UPDATE
+    evt.type = DFU_EVENT_ACK_RECEIVED;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_ack_t));
+    evt.len = sizeof(bcmp_dfu_ack_t);
+    memcpy(evt.buf, &dfu_ack_msg, sizeof(bcmp_dfu_ack_t));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
+
+    // HEARTBEAT TIMEOUT
+    evt.type = DFU_EVENT_HEARTBEAT_TIMEOUT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); 
+    evt.type = DFU_EVENT_NONE;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+
+}
+
+TEST_F(BcmpDfuTest, ClientRecvFail){
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    bcmp_dfu_start_t dfu_start_msg;
+    dfu_start_msg.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.info.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.info.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.info.img_info.major_ver = 1;
+    dfu_start_msg.info.img_info.minor_ver = 7;
+    dfu_start_msg.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+
+    evt.type = DFU_EVENT_CHUNK_TIMEOUT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 1
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 2
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 3
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 4
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 5
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR);
+    evt.type = DFU_EVENT_NONE;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+}
+
+TEST_F(BcmpDfuTest, ClientValidateFail){
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    bcmp_dfu_start_t dfu_start_msg;
+    dfu_start_msg.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.info.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.info.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.info.img_info.crc16 = 0xDEAD; // bad CRC
+    dfu_start_msg.info.img_info.major_ver = 1;
+    dfu_start_msg.info.img_info.minor_ver = 7;
+    dfu_start_msg.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+
+    // Chunk
+    evt.type = DFU_EVENT_IMAGE_CHUNK;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE);
+    evt.len = sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE;
+    bcmp_dfu_payload_t dfu_payload_msg;
+    dfu_payload_msg.header.frame_type = BCMP_DFU_PAYLOAD;
+    dfu_payload_msg.chunk.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_payload_msg.chunk.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_payload_msg.chunk.payload_length = CHUNK_SIZE;
+    memcpy(evt.buf, &dfu_payload_msg, sizeof(dfu_payload_msg));
+    memset(evt.buf+sizeof(dfu_payload_msg),0xa5,CHUNK_SIZE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 512
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING); 
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1024
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1536
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 2048
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_VALIDATING);
+
+   // Validating
+    evt.type = DFU_EVENT_NONE;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); 
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); // FAILED to validate CRC
+    evt.type = DFU_EVENT_NONE;
+    EXPECT_EQ(bm_dfu_get_error(),BM_DFU_ERR_BAD_CRC); 
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+
+    // Chunk
+    evt.type = DFU_EVENT_IMAGE_CHUNK;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE);
+    evt.len = sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE;
+    memcpy(evt.buf, &dfu_payload_msg, sizeof(dfu_payload_msg));
+    memset(evt.buf+sizeof(dfu_payload_msg),0xa5,CHUNK_SIZE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 512
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING); 
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1024
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1536
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    dfu_payload_msg.chunk.payload_length = 1;
+    memcpy(evt.buf, &dfu_payload_msg, sizeof(dfu_payload_msg));
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1537
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_VALIDATING);
+
+   // Validating
+    evt.type = DFU_EVENT_NONE;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); 
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); // Image offest does not equal image length.
+    evt.type = DFU_EVENT_NONE;
+    EXPECT_EQ(bm_dfu_get_error(),BM_DFU_ERR_MISMATCH_LEN); 
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+}
+
+TEST_F(BcmpDfuTest, ClientRebootReqFail){
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    bcmp_dfu_start_t dfu_start_msg;
+    dfu_start_msg.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.info.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.info.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.info.img_info.chunk_size = CHUNK_SIZE;
+    dfu_start_msg.info.img_info.crc16 = 0x2fDf; 
+    dfu_start_msg.info.img_info.major_ver = 1;
+    dfu_start_msg.info.img_info.minor_ver = 7;
+    dfu_start_msg.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_history[0], BCMP_DFU_ACK);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+
+    // Chunk
+    evt.type = DFU_EVENT_IMAGE_CHUNK;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE);
+    evt.len = sizeof(bcmp_dfu_payload_t) + CHUNK_SIZE;
+    bcmp_dfu_payload_t dfu_payload_msg;
+    dfu_payload_msg.header.frame_type = BCMP_DFU_PAYLOAD;
+    dfu_payload_msg.chunk.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_payload_msg.chunk.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_payload_msg.chunk.payload_length = CHUNK_SIZE;
+    memcpy(evt.buf, &dfu_payload_msg, sizeof(dfu_payload_msg));
+    memset(evt.buf+sizeof(dfu_payload_msg),0xa5,CHUNK_SIZE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 512
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING); 
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1024
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 1536
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_PAYLOAD_REQ);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_RECEIVING);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // 2048
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_VALIDATING);
+
+    // Validating
+    evt.type = DFU_EVENT_NONE;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); 
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_REQ);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_REBOOT_REQ);
+
+    evt.type = DFU_EVENT_CHUNK_TIMEOUT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 1
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_REQ);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 2
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_REQ);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 3
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_REQ);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 4
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_REQ);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 5
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR);
+    evt.type = DFU_EVENT_NONE;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+}
+
+TEST_F(BcmpDfuTest, RebootDoneFail) {
+    // Set the reboot info.
+    client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
+    client_update_reboot_info.host_node_id = 0xbeefbeefdaadbaad;
+    client_update_reboot_info.major = 0; // Incorrect major
+    client_update_reboot_info.minor = 7;
+    client_update_reboot_info.gitSHA = 0xbaaddead;
+
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    EXPECT_EQ(resetSystem_fake.arg0_val, RESET_REASON_UPDATE_FAILED);
+
+    // Set the reboot info.
+    RESET_FAKE(resetSystem);
+    client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
+    client_update_reboot_info.host_node_id = 0xbeefbeefdaadbaad;
+    client_update_reboot_info.major = 1; 
+    client_update_reboot_info.minor = 7;
+    client_update_reboot_info.gitSHA = 0xdeadd00d;
+    getGitSHA_fake.return_val = 0xdeadd00d;
+
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    EXPECT_EQ(fake_bcmp_tx_func_fake.arg0_val, BCMP_DFU_BOOT_COMPLETE);
+    evt.type = DFU_EVENT_CHUNK_TIMEOUT;
+    evt.buf = NULL;
+    evt.len = 0;
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 1
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 2
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 3
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 4
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_CLIENT_REBOOT_DONE);
+    bm_dfu_test_set_dfu_event_and_run_sm(evt); // retry 5
+    EXPECT_EQ(resetSystem_fake.arg0_val, RESET_REASON_UPDATE_FAILED);
 }

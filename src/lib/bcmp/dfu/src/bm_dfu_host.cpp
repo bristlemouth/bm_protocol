@@ -34,8 +34,6 @@ static void bm_dfu_host_req_update();
 static void bm_dfu_host_send_reboot();
 static void bm_dfu_host_transition_to_error(bm_dfu_err_t err);
 
-void s_host_run(void) {}
-
 /**
  * @brief ACK Timer Handler function
  *
@@ -185,8 +183,7 @@ void s_host_req_update_entry(void) {
     bm_dfu_event_img_info_t* img_info_evt = (bm_dfu_event_img_info_t*) &((uint8_t *)frame)[1];
     host_ctx.img_info = img_info_evt->img_info;
     host_ctx.bytes_remaining = host_ctx.img_info.image_size;
-
-    memcpy(&host_ctx.client_node_id, &img_info_evt->addresses.dst_node_id, sizeof(host_ctx.client_node_id));
+    host_ctx.client_node_id = img_info_evt->addresses.dst_node_id;
 
     printf("DFU Client Note Id: %08llx\n", host_ctx.client_node_id);
 
@@ -306,7 +303,7 @@ void s_host_update_run(void) {
             printf("Client Update Failed\n");
         }
         if(host_ctx.update_complete_callback) {
-            host_ctx.update_complete_callback(update_end_evt->success);
+            host_ctx.update_complete_callback(update_end_evt->success, static_cast<bm_dfu_err_t>(update_end_evt->err_code));
         }
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
     } else if (curr_evt.type == DFU_EVENT_HEARTBEAT_TIMEOUT) {
