@@ -56,10 +56,12 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
+    ${SRC_DIR}/lib/debug/debug_ms5803.cpp
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
     ${SRC_DIR}/lib/debug/debug_uart.c
+    ${SRC_DIR}/lib/debug/debug_tca9546a.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
@@ -74,12 +76,14 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
+    ${SRC_DIR}/lib/drivers/ms5803.cpp
     # ${SRC_DIR}/lib/drivers/mic.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
+    ${SRC_DIR}/lib/drivers/tca9546a.cpp
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
-    ${SRC_DIR}/lib/drivers/stm32_adc.c
+    # ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/lwip/lwip_support.c

@@ -4,7 +4,7 @@
 
 // Peripheral
 #include "main.h"
-#include "adc.h"
+// #include "adc.h"
 #include "gpdma.h"
 #include "i2c.h"
 #include "icache.h"
@@ -29,9 +29,11 @@
 #include "debug_i2c.h"
 #include "debug_ina232.h"
 #include "debug_memfault.h"
+#include "debug_ms5803.h"
 #include "debug_rtc.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
+#include "debug_tca9546a.h"
 #include "debug_uart.h"
 #include "debug_w25.h"
 #include "nvmPartition.h"
@@ -43,10 +45,12 @@
 #include "io.h"
 #include "lpm.h"
 #include "memfault_platform_core.h"
+#include "ms5803.h"
 #include "pca9535.h"
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
+#include "tca9546a.h"
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
@@ -149,10 +153,12 @@ static const DebugGpio_t debugGpioPins[] = {
   {"adin_int", &ADIN_INT, GPIO_IN},
   {"adin_pwr", &ADIN_PWR, GPIO_OUT},
   {"adin_rst", &ADIN_RST, GPIO_OUT},
+  {"i2c_mux_rst", &I2C_MUX_RESET, GPIO_OUT},
   {"gpio1", &GPIO1, GPIO_OUT},
   {"gpio2", &GPIO2, GPIO_IN},
   {"bm_int", &BM_INT, GPIO_IN},
   {"bm_cs", &BM_CS, GPIO_OUT},
+  {"vbus_bf_en", &VBUS_BF_EN, GPIO_OUT},
   {"flash_cs", &FLASH_CS, GPIO_OUT},
   {"boot_led", &BOOT_LED, GPIO_IN},
   {"vusb_detect", &VUSB_DETECT, GPIO_IN},
@@ -180,12 +186,16 @@ extern "C" void LPUART1_IRQHandler(void) {
 }
 #endif // DEBUG_USE_LPUART1
 
+static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
+
 static INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
 static INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
   &debugIna2,
 };
+
+static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 
 static HTU21D debugHTU(&i2c1);
 
@@ -261,6 +271,14 @@ static void defaultTask( void *parameters ) {
 
   usbInit(&VUSB_DETECT, usb_is_connected);
 
+  if(bristlefinTCA.init()){
+    bristlefinTCA.setChannel(TCA::CH_1);
+  }
+
+  debugPressure.init();
+
+  debugTCA9546AInit(&bristlefinTCA);
+
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
   debugAdinRawInit();
@@ -271,6 +289,7 @@ static void defaultTask( void *parameters ) {
   debugINA232Init(debugIna, NUM_INA232_DEV);
   debugMemfaultInit(&usbCLI);
   debugHtu21dInit(&debugHTU);
+  debugMs5803Init(&debugPressure);
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);

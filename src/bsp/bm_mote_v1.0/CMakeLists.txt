@@ -3,7 +3,7 @@ set(COMMON_BSP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../common)
 set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/bsp.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/bsp_pins.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/adc.c
+        # ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/adc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/i2c.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/icache.c
@@ -21,8 +21,8 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usb_otg.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpdma.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc_ex.c
+        # ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc.c
+        # ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_adc_ex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_cortex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_dma.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_dma_ex.c

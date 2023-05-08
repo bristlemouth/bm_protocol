@@ -42,7 +42,7 @@
 #include "external_flash_partitions.h"
 #include "debug_nvm_cli.h"
 #include "debug_dfu.h"
-#endif 
+#endif
 
 
 #include <stdio.h>
@@ -60,6 +60,14 @@
     #define LED_BLUE LED_G
     #define ALARM_OUT LED_R
     #define USER_BUTTON BOOT
+
+    // LEDS are active low
+    #define LED_ON (0)
+    #define LED_OFF (1)
+#elif BSP_MOTE_V1_0
+    #define LED_BLUE GPIO1
+    #define ALARM_OUT GPIO2
+    #define USER_BUTTON BOOT_LED
 
     // LEDS are active low
     #define LED_ON (0)
@@ -126,9 +134,11 @@ SerialHandle_t usbPcap   = {
 
 const char* publication_topics = "button";
 
+#ifndef BSP_MOTE_V1_0
 extern "C" void USART1_IRQHandler(void) {
     serialGenericUartIRQHandler(&usart1);
 }
+#endif // BM_MOTE_V1_0
 
 extern "C" int main(void) {
 
@@ -141,7 +151,9 @@ extern "C" int main(void) {
 
     SystemPower_Config_ext();
     MX_GPIO_Init();
+#ifndef BSP_MOTE_V1_0
     MX_USART1_UART_Init();
+#endif // BM_MOTE_V1_0
     MX_USB_OTG_FS_PCD_Init();
     MX_GPDMA1_Init();
     MX_ICACHE_Init();

@@ -12,6 +12,7 @@ IOPinHandle_t BM_SCK_RX3 = {&STM32PinDriver, &(STM32Pin_t){BM_SCK_RX3_GPIO_Port,
 IOPinHandle_t BM_MISO = {&STM32PinDriver, &(STM32Pin_t){BM_MISO_GPIO_Port, BM_MISO_Pin, NULL, NULL}};
 IOPinHandle_t BM_MOSI_TX3 = {&STM32PinDriver, &(STM32Pin_t){BM_MOSI_TX3_GPIO_Port, BM_MOSI_TX3_Pin, NULL, NULL}};
 IOPinHandle_t BM_INT = {&STM32PinDriver, &(STM32Pin_t){BM_INT_GPIO_Port, BM_INT_Pin, NULL, NULL}}; // TODO setup int handlers?
+IOPinHandle_t VBUS_BF_EN = {&STM32PinDriver, &(STM32Pin_t){VBUS_BF_EN_GPIO_Port, VBUS_BF_EN_Pin, NULL, NULL}};
 IOPinHandle_t FLASH_SCK = {&STM32PinDriver, &(STM32Pin_t){FLASH_SCK_GPIO_Port, FLASH_SCK_Pin, NULL, NULL}};
 IOPinHandle_t FLASH_MISO = {&STM32PinDriver, &(STM32Pin_t){FLASH_MISO_GPIO_Port, FLASH_MISO_Pin, NULL, NULL}};
 IOPinHandle_t FLASH_MOSI = {&STM32PinDriver, &(STM32Pin_t){FLASH_MOSI_GPIO_Port, FLASH_MOSI_Pin, NULL, NULL}};
@@ -32,7 +33,7 @@ extern PCA9535Device_t bristlefinIOExpander;
 IOPinHandle_t BF_IO1 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 0, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_IO2 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 1, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_HFIO = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 2, PCA9535_MODE_OUTPUT}};
-IOPinHandle_t BF_3V3_EN = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 3, PCA9535_MODE_OUTPUT}};
+IOPinHandle_t BF_3V3_EN = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 3, PCA9535_MODE_INPUT}};
 IOPinHandle_t BF_5V_EN = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 4, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_IMU_INT = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 5, PCA9535_MODE_INPUT}};
 IOPinHandle_t BF_IMU_RST = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 6, PCA9535_MODE_OUTPUT}};

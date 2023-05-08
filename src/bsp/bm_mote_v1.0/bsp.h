@@ -17,8 +17,6 @@ extern "C" {
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
-#define VBUS_SENSE_CH ADC_CHANNEL_3
-
 void bspInit();
 
 // Pin definitions
@@ -26,11 +24,13 @@ extern IOPinHandle_t GPIO2;
 extern IOPinHandle_t GPIO1;
 extern IOPinHandle_t VUSB_DETECT;
 extern IOPinHandle_t IOEXP_INT;
+extern IOPinHandle_t I2C_MUX_RESET;
 extern IOPinHandle_t BM_CS;
 extern IOPinHandle_t BM_SCK_RX3;
 extern IOPinHandle_t BM_MISO;
 extern IOPinHandle_t BM_MOSI_TX3;
 extern IOPinHandle_t BM_INT;
+extern IOPinHandle_t VBUS_BF_EN;
 extern IOPinHandle_t FLASH_SCK;
 extern IOPinHandle_t FLASH_MISO;
 extern IOPinHandle_t FLASH_MOSI;
@@ -74,7 +74,6 @@ extern SPIInterface_t spi3;
 // I2C Interfaces
 extern I2CInterface_t i2c1;
 
-uint32_t adcGetSampleMv(uint32_t channel);
 bool usb_is_connected();
 
 typedef struct adin_pins_s {
@@ -84,9 +83,13 @@ typedef struct adin_pins_s {
 	IOPinHandle_t *reset;
 } adin_pins_t;
 
-#define I2C_INA_MAIN_ADDR  (0x42)
+#define I2C_INA_MAIN_ADDR  (0x43)
 #define I2C_INA_PODL_ADDR  (0x41)
 #define NUM_INA232_DEV (2)
+
+#define TCA9546A_ADDR (0x70)
+
+#define MS5803_ADDR (0x77)
 
 #ifdef __cplusplus
 }

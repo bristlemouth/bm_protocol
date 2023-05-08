@@ -2,10 +2,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "adc.h"
 #include "i2c.h"
 #include "io.h"
-#include "io_adc.h"
 #include "main.h"
 #include "pca9535.h"
 #include "spi.h"
@@ -62,8 +60,10 @@ void bspInit() {
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
 
+  IOWrite(&I2C_MUX_RESET, 1);
+
   // Initialize the IO Expander
-  if(pca9535Init(&bristlefinIOExpander)== pdPASS) {
+  if (pca9535Init(&bristlefinIOExpander) == pdPASS) {
     IORegisterCallback(&IOEXP_INT, pca9535IRQHandler, &bristlefinIOExpander);
   }
 
@@ -73,7 +73,6 @@ void bspInit() {
   IOWrite(&BF_LED_G2, 0);
   IOWrite(&BF_LED_R2, 0);
 
-  IOConfigure(&ADIN_RST, NULL);
   IOConfigure(&BF_IO1, NULL);
   IOConfigure(&BF_IO2, NULL);
   IOConfigure(&BF_HFIO, NULL);
@@ -86,26 +85,14 @@ void bspInit() {
   IOConfigure(&BF_PL_BUCK_EN, NULL);
   IOConfigure(&BF_TP7, NULL);
   IOConfigure(&BF_TP8, NULL);
+  IOConfigure(&BF_LED_G1, NULL);
+  IOConfigure(&BF_LED_R1, NULL);
+  IOConfigure(&BF_LED_G2, NULL);
+  IOConfigure(&BF_LED_R2, NULL);
 
-}
+  // Turn off the BUCK by default (it's enabled when low)
+  IOWrite(&BF_PL_BUCK_EN, 1);
 
-// Helper function for sampling ADC on STM32
-uint32_t adcGetSampleMv(uint32_t channel) {
-  int32_t result = 0;
-
-  ADC_ChannelConfTypeDef config = {};
-
-  config.Rank = ADC_REGULAR_RANK_1;
-  config.SamplingTime = ADC_SAMPLETIME_814CYCLES;
-  config.SingleDiff = ADC_SINGLE_ENDED;
-  config.OffsetNumber = ADC_OFFSET_NONE;
-  config.Offset = 0;
-
-  config.Channel = channel;
-  IOAdcChannelConfig(&hadc1, &config);
-
-  IOAdcReadMv(&hadc1, &result);
-  return ((uint32_t)result);
 }
 
 bool usb_is_connected() {

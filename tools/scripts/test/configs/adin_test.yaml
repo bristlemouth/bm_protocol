@@ -13,3 +13,11 @@
     bsp: dev_mote_v1_0
     build_type: Debug
     use_bootloader: True
+
+- name: adin_test on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: adin_test
+    bsp: bm_mote_v1.0
+    build_type: Debug
+    use_bootloader: True
