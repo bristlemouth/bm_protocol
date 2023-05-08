@@ -47,6 +47,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
+    ${SRC_DIR}/lib/sys/ram_partitions.c
+    ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -56,6 +58,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/debug/debug_dfu.cpp
+    ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
+    ${SRC_DIR}/lib/debug/debug_configuration.cpp
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
@@ -74,6 +78,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c
@@ -82,6 +87,11 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     )
 
 set(LIB_INCLUDES
@@ -103,6 +113,9 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/lib/bridge
+    ${SRC_DIR}/lib/sys
+    ${SRC_DIR}/third_party/tinycbor/src
     )
 
 #
@@ -228,11 +241,6 @@ message(STATUS "DFU HOST AND CLIENT")
 else()
 list(APPEND APP_DEFINES "BM_DFU_HOST=0")
 message(STATUS "DFU CLIENT ONLY")
-endif()
-
-if (BRIDGE_AUTO_ENABLE STREQUAL 1)
-list(APPEND APP_DEFINES "BRIDGE_AUTO_ENABLE")
-message(STATUS "AUTO ENABLE BRIDGE 24V!")
 endif()
 
 if (NOT ${USE_BOOTLOADER})

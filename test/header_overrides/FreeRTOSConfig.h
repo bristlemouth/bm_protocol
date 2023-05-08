@@ -141,4 +141,6 @@ placed into the low power state respectively. */
 #define pvPortMalloc malloc
 #define vPortFree free
 
+void xTaskSetTickCount(uint32_t xCurrentTickCount);
+
 #endif /* FREERTOS_CONFIG_H */

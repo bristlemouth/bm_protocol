@@ -206,3 +206,50 @@ add_test(
   COMMAND
     bcmp_dfu_tests
   )
+
+#
+# Bridge Power Controller
+#
+
+add_executable(bridge_power_controller_tests)
+target_include_directories(bridge_power_controller_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${TEST_DIR}/third_party/fff
+    ${SRC_DIR}/lib/sys
+    ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/bridge
+
+)
+
+target_sources(bridge_power_controller_tests
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
+
+    # Support files
+    ${SRC_DIR}/lib/common/util.c
+
+    # Mocks
+    ${TEST_DIR}/stubs/mock_FreeRTOS.c
+    ${TEST_DIR}/stubs/mock_stm32_rtc.cpp
+  
+    # Stubs
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c
+
+
+    # Unit test wrapper for test
+    bridgePowerController_ut.cpp
+)
+
+target_link_libraries(bridge_power_controller_tests gtest gmock gtest_main)
+
+add_test(
+  NAME
+    bridge_power_controller_tests
+  COMMAND
+    bridge_power_controller_tests
+  )
