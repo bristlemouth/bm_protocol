@@ -33,6 +33,7 @@
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
+#include "stress.h"
 #include "usb.h"
 #include "watchdog.h"
 #ifndef BSP_NUCLEO_U575
@@ -46,7 +47,7 @@
 #include "debug_bridge_power_controller.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
-#endif 
+#endif
 
 
 #include <stdio.h>
@@ -195,6 +196,19 @@ extern "C" int main(void) {
     while (1){};
 }
 
+bool start_stress(const void *pinHandle, uint8_t value, void *args) {
+    (void)pinHandle;
+    (void)args;
+    static bool started;
+
+    if(!started && value) {
+        started = true;
+        stress_start_tx((2 * 1024)/8);
+    }
+
+    return false;
+}
+
 const char buttonTopic[] = "button";
 const char on_str[] = "on";
 const char off_str[] = "off";
@@ -310,7 +324,11 @@ static void defaultTask( void *parameters ) {
 #endif
 
     debugSysInit();
-    debugMemfaultInit(&usart1);
+    if(usb_is_connected()) {
+        debugMemfaultInit(&usbCLI);
+    } else {
+        debugMemfaultInit(&usart1);
+    }
 
 #ifdef BSP_BRIDGE_V1_0
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
@@ -318,10 +336,14 @@ static void defaultTask( void *parameters ) {
     debugBMInit();
     debugRTCInit();
 
+    // Disabling now for hard mode testing
     // Re-enable low power mode
-    lpmPeripheralInactive(LPM_BOOT);
+    // lpmPeripheralInactive(LPM_BOOT);
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
+#ifdef BSP_DEV_MOTE_V1_0
+    gpioISRRegisterCallback(&BOOT_LED, start_stress);
+#endif
 #ifndef BSP_NUCLEO_U575
     spiflash::W25 debugW25(&spi2, &FLASH_CS);
     debugW25Init(&debugW25);
@@ -346,7 +368,7 @@ static void defaultTask( void *parameters ) {
     printf("Enabling 24V!\n");
     IOWrite(&BOOST_EN, 1);
     IOWrite(&VBUS_SW_EN, 1);
-#else 
+#else
     uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_MS;
     debug_configuration_system.getConfig("sampleIntervalMs",sampleIntervalMs);
     uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_MS;

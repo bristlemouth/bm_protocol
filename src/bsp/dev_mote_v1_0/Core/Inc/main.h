@@ -115,6 +115,7 @@ void SystemPower_Config_ext(void);
 #define ADIN_MOSI_GPIO_Port GPIOB
 #define BOOT_LED_Pin LL_GPIO_PIN_3
 #define BOOT_LED_GPIO_Port GPIOH
+#define BOOT_LED_EXTI_IRQn EXTI3_IRQn
 #define ADIN_INT_Pin LL_GPIO_PIN_8
 #define ADIN_INT_GPIO_Port GPIOB
 #define ADIN_INT_EXTI_IRQn EXTI8_IRQn
