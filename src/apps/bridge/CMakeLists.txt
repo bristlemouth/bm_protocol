@@ -6,17 +6,22 @@ add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 # Include TinyUSB
 add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 
+
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
 add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
+# Include BM_NCP files
+add_subdirectory(${SRC_DIR}/lib/bm_ncp bm_ncp)
+
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
 
     ${BCMP_FILES}
+    ${BM_NCP_FILES}
     )
 
 set(BRISTLEMOUTH_INCLUDES
@@ -25,6 +30,7 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}
+    ${BM_NCP_INCLUDES}
     )
 
 set(LIB_FILES
@@ -32,34 +38,30 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
     ${SRC_DIR}/lib/common/enumToStr.c
-    ${SRC_DIR}/lib/common/freertos_cpp_overrides.cpp
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
+    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/pcap.c
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
+    ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/debug/debug.c
-    ${SRC_DIR}/lib/debug/debug_adin_raw.c
-    ${SRC_DIR}/lib/debug/debug_htu.cpp
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
-    # ${SRC_DIR}/lib/debug/debug_mic.cpp
-    ${SRC_DIR}/lib/debug/debug_i2c.c
-    ${SRC_DIR}/lib/debug/debug_ina232.cpp
     ${SRC_DIR}/lib/debug/debug_rtc.c
-    ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
-    ${SRC_DIR}/lib/debug/debug_uart.c
     ${SRC_DIR}/lib/debug/debug_w25.cpp
-    ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
-    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
+    ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
+    ${SRC_DIR}/lib/debug/debug_dfu.cpp
+
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -67,22 +69,20 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
-    ${SRC_DIR}/lib/drivers/htu21d.cpp
-    ${SRC_DIR}/lib/drivers/ina232.cpp
-    ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
-    ${SRC_DIR}/lib/drivers/stm32_rtc.c
-    ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
+    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
+    ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
+    ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
+    ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/bm_pubsub.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
-    ${SRC_DIR}/third_party/crc/crc32.c
+    ${SRC_DIR}/third_party/cobs-c/cobs.c
     ${SRC_DIR}/third_party/crc/crc16.c
+    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
@@ -95,25 +95,23 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
-    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
-    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
+    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/lwip
-    ${SRC_DIR}/lib/mcuboot
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
-    ${SRC_DIR}/third_party/aligned_malloc
+    ${SRC_DIR}/third_party/aligned_malloc/
+    ${SRC_DIR}/third_party/cobs-c
     ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
     )
 
-if (USE_BOOTLOADER STREQUAL 1)
 #
 # MCUBoot files/includes
 #
@@ -141,7 +139,6 @@ set(MCUBOOT_FILES
 
     ${SRC_DIR}/lib/drivers/stm32_flash_u5.c
 
-    ${SRC_DIR}/lib/mcuboot/mcuboot_cli.c
     ${SRC_DIR}/lib/mcuboot/port_flash.c
     ${SRC_DIR}/lib/mcuboot/port_misc.c
     )
@@ -151,7 +148,6 @@ set(MCUBOOT_INCLUDES
     ${MCUBOOT_DIR}/boot/boot_serial/include
 
     # FreeRTOS port
-    ${SRC_DIR}/lib/mcuboot/
     ${SRC_DIR}/lib/mcuboot/include
 
     ${SRC_DIR}/lib/drivers/
@@ -186,7 +182,6 @@ set_source_files_properties(
     PROPERTIES
     COMPILE_FLAGS "-Wno-unused-parameter -Wno-format -Wno-unused-but-set-variable"
     )
-endif() # USE_BOOTLOADER = 1
 
 set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS
@@ -203,24 +198,24 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
-    ${LIB_FILES}
-    ${FREERTOS_FILES}
-    ${MEMFAULT_SOURCES}
-    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MCUBOOT_FILES}
-    ${TINYUSB_FILES}
+    ${FREERTOS_FILES}
+    ${LIB_FILES}
     ${BRISTLEMOUTH_FILES}
+    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+    ${MEMFAULT_SOURCES}
+    ${TINYUSB_FILES}
     PARENT_SCOPE)
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${LIB_INCLUDES}
     ${FREERTOS_INCLUDES}
-    ${MEMFAULT_INCLUDES}
-    ${MCUBOOT_INCLUDES}
+    ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
-    ${TINYUSB_INCLUDES}
     ${BRISTLEMOUTH_INCLUDES}
+    ${MCUBOOT_INCLUDES}
+    ${MEMFAULT_INCLUDES}
+    ${TINYUSB_INCLUDES}
     PARENT_SCOPE)
 
 set(APP_LIBS
@@ -229,9 +224,27 @@ set(APP_LIBS
 
 set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
-    NO_NETWORK
-    DEBUG_USE_USART3
+
+    # Add network stress test functions
+    STRESS_TEST_ENABLE
     )
+
+if (DFU_HOST  STREQUAL 1)
+list(APPEND APP_DEFINES "BM_DFU_HOST=1")
+message(STATUS "DFU HOST AND CLIENT")
+else()
+list(APPEND APP_DEFINES "BM_DFU_HOST=0")
+message(STATUS "DFU CLIENT ONLY")
+endif()
+
+if (BRIDGE_AUTO_ENABLE STREQUAL 1)
+list(APPEND APP_DEFINES "BRIDGE_AUTO_ENABLE")
+message(STATUS "AUTO ENABLE BRIDGE 24V!")
+endif()
+
+if (NOT ${USE_BOOTLOADER})
+     message(SEND_ERROR "USE_BOOTLOADER is not set.")
+endif()
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)

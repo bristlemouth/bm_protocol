@@ -16,3 +16,6 @@
 [submodule "src/third_party/tinycbor"]
 	path = src/third_party/tinycbor
 	url = https://github.com/sofarocean/tinycbor.git
+[submodule "src/third_party/cobs-c"]
+	path = src/third_party/cobs-c
+	url = https://github.com/sofarocean/cobs-c.git

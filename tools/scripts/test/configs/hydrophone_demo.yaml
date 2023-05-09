@@ -1,10 +1,10 @@
-- name: hydrophone_demo on nucleo_u575 - Debug (w/ bootloader)
-  type: build_fw
-  args:
-    app: hydrophone_demo
-    bsp: nucleo_u575
-    build_type: Debug
-    use_bootloader: True
+# - name: hydrophone_demo on nucleo_u575 - Debug (w/ bootloader)
+#   type: build_fw
+#   args:
+#     app: hydrophone_demo
+#     bsp: nucleo_u575
+#     build_type: Debug
+#     use_bootloader: True
 
 - name: hydrophone_demo on dev_mote_hydrophone - Debug (w/ bootloader)
   type: build_fw

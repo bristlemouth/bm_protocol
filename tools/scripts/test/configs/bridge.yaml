@@ -1,0 +1,7 @@
+- name: bridge on bridge - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: bridge
+    bsp: bridge_v1_0
+    build_type: Debug
+    use_bootloader: True

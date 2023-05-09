@@ -38,6 +38,7 @@ jobs:
 
       - name: Checkout submodules
         run: |
+          git submodule update --init src/third_party/cobs-c
           git submodule update --init src/third_party/lwip
           git submodule update --init src/third_party/mcuboot
           git submodule update --init src/third_party/memfault-firmware-sdk

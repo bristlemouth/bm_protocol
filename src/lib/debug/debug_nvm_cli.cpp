@@ -80,7 +80,7 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
             printf("ERR Invalid paramters\n");
             break;
         }
-        
+
         BaseType_t addrStrLen;
         const char *addrStr = FreeRTOS_CLIGetParameter(
         commandString,
@@ -103,7 +103,7 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
             }
             if (addr + b64DataLen > partition->size()){
                 printf("ERR Invalid addr\n");
-                break; 
+                break;
             }
             if(!b64WriteToNvm(partition, (uint32_t)addr,(const unsigned char *)b64DataStr, b64DataLen)){
                 printf("Failed to write\n");
@@ -120,10 +120,10 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
                 printf("ERR Invalid paramters\n");
                 break;
             }
-            uint32_t len = strtoul(lenStr, NULL, 0);;
+            uint32_t len = strtoul(lenStr, NULL, 0);
             if (addr + len > partition->size()){
                 printf("ERR Invalid addr\n");
-                break; 
+                break;
             }
             char* buf = (char*)pvPortMalloc(len+1);
             configASSERT(buf);
@@ -151,7 +151,7 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
             uint32_t len = strtoul(lenStr, NULL, 0);;
             if (addr + len > partition->size()){
                 printf("ERR Invalid addr\n");
-                break; 
+                break;
             }
             uint16_t crc;
             if(!partition->crc16(addr,len,crc,NVM_WR_R_TIMEOUT_MS)){
@@ -172,11 +172,11 @@ static BaseType_t nvmCliCommand( char *writeBuffer,
             uint32_t len = strtoul(lenStr, NULL, 0);;
             if (addr + len > partition->size()){
                 printf("ERR Invalid addr\n");
-                break; 
+                break;
             }
             if((uint32_t)addr % partition->alignment() != 0){
                 printf("ERR Invalid addr, must be %lu aligned\n", partition->alignment());
-                break; 
+                break;
             }
             if(!partition->erase(addr,len, NVM_WR_R_TIMEOUT_MS)){
                 printf("Failed to erase nvm\n");
