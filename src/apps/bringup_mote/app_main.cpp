@@ -155,7 +155,7 @@ static const DebugGpio_t debugGpioPins[] = {
   {"adin_rst", &ADIN_RST, GPIO_OUT},
   {"i2c_mux_rst", &I2C_MUX_RESET, GPIO_OUT},
   {"gpio1", &GPIO1, GPIO_OUT},
-  {"gpio2", &GPIO2, GPIO_IN},
+  {"gpio2", &GPIO2, GPIO_OUT},
   {"bm_int", &BM_INT, GPIO_IN},
   {"bm_cs", &BM_CS, GPIO_OUT},
   {"vbus_bf_en", &VBUS_BF_EN, GPIO_OUT},
@@ -210,6 +210,7 @@ extern "C" int main(void) {
   SystemPower_Config_ext();
   MX_GPIO_Init();
   MX_LPUART1_UART_Init();
+  MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();

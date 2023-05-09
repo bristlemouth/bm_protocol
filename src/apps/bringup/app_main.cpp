@@ -168,7 +168,7 @@ static const DebugGpio_t debugGpioPins[] = {
   {"adin_int", &ADIN_INT, GPIO_IN},
   {"adin_pwr", &ADIN_PWR, GPIO_OUT},
   {"gpio1", &GPIO1, GPIO_OUT},
-  {"gpio2", &GPIO2, GPIO_IN},
+  {"gpio2", &GPIO2, GPIO_OUT},
   {"bm_int", &BM_INT, GPIO_IN},
   {"bm_cs", &BM_CS, GPIO_OUT},
   {"flash_cs", &FLASH_CS, GPIO_OUT},
