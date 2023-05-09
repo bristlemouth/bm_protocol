@@ -32,27 +32,9 @@ void MX_ICACHE_Init(void)
 
   /* USER CODE END ICACHE_Init 0 */
 
-  ICACHE_RegionConfigTypeDef pRegionConfig = {0};
-
   /* USER CODE BEGIN ICACHE_Init 1 */
 
   /* USER CODE END ICACHE_Init 1 */
-
-  /** Configure and enable a region for memory remapping.
-  */
-  if (HAL_ICACHE_Disable() != HAL_OK)
-  {
-    Error_Handler();
-  }
-  pRegionConfig.BaseAddress = 0x0;
-  pRegionConfig.RemapAddress = 0x0;
-  pRegionConfig.Size = ICACHE_REGIONSIZE_2MB;
-  pRegionConfig.TrafficRoute = ICACHE_MASTER1_PORT;
-  pRegionConfig.OutputBurstType = ICACHE_OUTPUT_BURST_WRAP;
-  if (HAL_ICACHE_EnableRemapRegion(ICACHE_REGION_0, &pRegionConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
 
   /** Enable instruction cache in 1-way (direct mapped cache)
   */
