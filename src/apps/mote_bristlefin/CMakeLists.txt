@@ -69,6 +69,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
+    ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
@@ -84,6 +85,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
     ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
+    ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c

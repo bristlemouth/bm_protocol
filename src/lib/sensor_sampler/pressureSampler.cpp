@@ -61,8 +61,6 @@ static sensor_t pressureSensor = {
 
 
 void pressureSamplerInit(MS5803 *sensor) {
-
   _pressureSensor = sensor;
-
   sensorSamplerAdd(&pressureSensor, "BARO");
 }

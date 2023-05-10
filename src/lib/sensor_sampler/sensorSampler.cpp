@@ -52,7 +52,7 @@ static void sensorSampleTask( void *parameters );
 */
 void checkSensors() {
   // logPrint(SYSLog, LOG_LEVEL_DEBUG, "Running sensor checks.\n");
-  printf("Running sensor checks.\n");
+  // printf("Running sensor checks.\n");
 
   // Check all sensors to see if they are due for a sample update
   for(uint32_t sensorIdx = 0; sensorIdx < numSensors; sensorIdx++) {

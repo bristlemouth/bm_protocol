@@ -123,7 +123,10 @@ extern "C" void USART3_IRQHandler(void) {
 
 static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
 
-extern MS5803 debugPressure;
+// Only needed if we want the debug commands too
+// extern MS5803 debugPressure;
+// extern HTU21D debugHTU;
+// extern INA::INA232 *debugIna;
 
 extern "C" int main(void) {
 
