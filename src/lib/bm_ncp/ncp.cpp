@@ -35,15 +35,13 @@ int32_t ncp_tx(ncp_message_t type, const uint8_t *buff, size_t len) {
 
     ncp_packet_t *ncp_message = reinterpret_cast<ncp_packet_t *>(ncp_tx_buff);
 
-
-
     ncp_message->type = type;
     ncp_message->flags = 0; // Unused for now
     ncp_message->crc16 = 0;
     memcpy(ncp_message->payload, buff, len);
 
     // and then we need to calculate the crc16 on the buffer only?
-    ncp_message->crc16 = crc16_ccitt(ncp_message->crc16, ncp_message->payload, len);
+    ncp_message->crc16 = crc16_ccitt(ncp_message->crc16, ncp_tx_buff, len);
 
     uint16_t ncp_message_len = sizeof(ncp_packet_t) + len;
     if(!_tx_fn(ncp_tx_buff, ncp_message_len)) {
