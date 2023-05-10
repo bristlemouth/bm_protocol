@@ -50,8 +50,11 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
+    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
+    ${SRC_DIR}/lib/sys/ram_partitions.c
+    ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_bm.c
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -61,6 +64,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/debug/debug_dfu.cpp
+    ${SRC_DIR}/lib/debug/debug_configuration.cpp
+    ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
@@ -88,12 +93,18 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     )
 
 set(LIB_INCLUDES
     ${SRC_DIR}/lib/bcmp
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
+    ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/drivers/adin2111/include
@@ -110,6 +121,8 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/lib/sys/
+    ${SRC_DIR}/third_party/tinycbor/src
     )
 
 #
@@ -205,6 +218,7 @@ set(APP_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MEMFAULT_SOURCES}
     ${TINYUSB_FILES}
+    ${BM_NCP_FILES}
     PARENT_SCOPE)
 
 set(APP_INCLUDES
@@ -216,6 +230,7 @@ set(APP_INCLUDES
     ${MCUBOOT_INCLUDES}
     ${MEMFAULT_INCLUDES}
     ${TINYUSB_INCLUDES}
+    ${BM_NCP_INCLUDES}
     PARENT_SCOPE)
 
 set(APP_LIBS

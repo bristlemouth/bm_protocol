@@ -109,11 +109,11 @@ void BridgePowerController::_update(void) {
                 if(_subSamplingEnabled){ // Subsampling Enabled
                     if(now >=_nextSubSampleIntervalTimeTimestamp && now < _nextSubSampleIntervalTimeTimestamp + _subsampleDurationMs){
                         powerBusAndSetSignal(true);
-                        time_to_sleep_ms = _subsampleDurationMs;
+                        time_to_sleep_ms = MAX(_subsampleDurationMs,MIN_TASK_SLEEP_MS);
                         break;
                     } else if(now >= _nextSubSampleIntervalTimeTimestamp && now >=  _nextSubSampleIntervalTimeTimestamp + _subsampleDurationMs){
                         _nextSubSampleIntervalTimeTimestamp = now + (_subsampleIntervalMs - _subsampleDurationMs);
-                        time_to_sleep_ms = _subsampleIntervalMs - _subsampleDurationMs;
+                        time_to_sleep_ms = MAX((_subsampleIntervalMs - _subsampleDurationMs), MIN_TASK_SLEEP_MS);
                         if(_nextSubSampleIntervalTimeTimestamp != now) { // Prevent bus thrash
                             powerBusAndSetSignal(false);
                         }
@@ -121,13 +121,13 @@ void BridgePowerController::_update(void) {
                     }
                 } else { // Subsampling disabled 
                     powerBusAndSetSignal(true);
-                    time_to_sleep_ms = _sampleDurationMs;
+                    time_to_sleep_ms = MAX(_sampleDurationMs, MIN_TASK_SLEEP_MS);
                     break;
                 }
             } else if (now >= _nextSampleIntervalTimeTimestamp && now >= _nextSampleIntervalTimeTimestamp + _sampleDurationMs) {
                 _nextSampleIntervalTimeTimestamp = now + (_sampleIntervalMs - _sampleDurationMs);
                 _nextSubSampleIntervalTimeTimestamp = now + (_sampleIntervalMs - _sampleDurationMs);
-                time_to_sleep_ms = _sampleIntervalMs - _sampleDurationMs;
+                time_to_sleep_ms = MAX((_sampleIntervalMs - _sampleDurationMs), MIN_TASK_SLEEP_MS);
                 if(_nextSampleIntervalTimeTimestamp != now) { // Prevent bus thrash
                     powerBusAndSetSignal(false);
                 }

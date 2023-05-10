@@ -32,6 +32,7 @@
 #include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
+#include "ncp.h"
 #include "ncp_uart.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
@@ -43,9 +44,18 @@
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
+#include "configuration.h"
+#include "debug_configuration.h"
+#include "ram_partitions.h"
+#include "bridgePowerController.h"
+#include "debug_bridge_power_controller.h"
 
 #include <stdio.h>
 #include <string.h>
+
+#ifndef BSP_BRIDGE_V1_0
+#error "BRIDGE BSP REQUIRED"
+#endif
 
 #define LED_BLUE LED_G
 #define ALARM_OUT LED_R
@@ -54,7 +64,6 @@
 // LEDS are active low
 #define LED_ON (0)
 #define LED_OFF (1)
-
 
 static void defaultTask(void *parameters);
 
@@ -179,7 +188,7 @@ extern "C" int main(void) {
 
     while (1){};
 }
-
+const char printfTopic[] = "printf";
 const char buttonTopic[] = "button";
 const char on_str[] = "on";
 const char off_str[] = "off";
@@ -216,13 +225,18 @@ void handle_sensor_subscriptions(const char* topic, uint16_t topic_len, const ui
         } else {
             // Not handled
         }
+    } else if(strncmp("printf", topic, topic_len) == 0){
+        printf("Topic: %.*s\n", topic_len, topic);
+        printf("Data: %.*s\n", data_len, data);
+        if(ncp_tx(BM_NCP_LOG, (uint8_t*)data, data_len) != 0){
+            printf("Failed to forward to NCP.\n");
+        }
     } else {
         printf("Topic: %.*s\n", topic_len, topic);
         printf("Data: %.*s\n", data_len, data);
     }
 }
 
-#ifdef BSP_BRIDGE_V1_0
 // TODO - move this to some debug file?
 static const DebugGpio_t debugGpioPins[] = {
   {"adin_cs", &ADIN_CS, GPIO_OUT},
@@ -240,7 +254,6 @@ static const DebugGpio_t debugGpioPins[] = {
   {"led_r", &LED_R, GPIO_OUT},
   {"tp10", &TP10, GPIO_OUT},
 };
-#endif
 
 static void defaultTask( void *parameters ) {
     (void)parameters;
@@ -291,22 +304,44 @@ static void defaultTask( void *parameters ) {
 
     spiflash::W25 debugW25(&spi2, &FLASH_CS);
     debugW25Init(&debugW25);
+    NvmPartition debug_user_partition(debugW25, user_configuration);
+    NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
+    NvmPartition debug_system_partition(debugW25, system_configuration);
+    cfg::Configuration debug_configuration_user(debug_user_partition,ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
+    cfg::Configuration debug_configuration_hardware(debug_hardware_partition,ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
+    cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+    debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
     NvmPartition debug_cli_partition(debugW25, cli_configuration);
     NvmPartition dfu_partition(debugW25, dfu_configuration);
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition);
     ncpInit(&usart3);
-
     debug_ncp_init();
 
-#ifdef BSP_BRIDGE_V1_0
-#ifdef BRIDGE_AUTO_ENABLE
-    printf("Enabling 24V!\n");
+    if(!isRTCSet()){ // FIXME. Hack to enable the bridge power controller functionality.
+        RTCTimeAndDate_t datetime;
+        datetime.year = 2023;
+        datetime.month = 05;
+        datetime.day = 04;
+        rtcSet(&datetime);
+    }
+    uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_MS;
+    debug_configuration_system.getConfig("sampleIntervalMs",sampleIntervalMs);
+    uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_MS;
+    debug_configuration_system.getConfig("sampleDurationMs",sampleDurationMs);
+    uint32_t subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_MS;
+    debug_configuration_system.getConfig("subSampleIntervalMs",subSampleIntervalMs);
+    uint32_t subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_MS;
+    debug_configuration_system.getConfig("subsampleDurationMs",subsampleDurationMs);
+    uint32_t subsampleEnabled = 1;  // FIXME default set to enable dfor testing.
+    debug_configuration_system.getConfig("subsampleEnabled",subsampleEnabled);
+    uint32_t bridgePowerControllerEnabled = 1; // FIXME Default set to enabled for testing.
+    debug_configuration_system.getConfig("bridgePowerControllerEnabled", bridgePowerControllerEnabled);
+    printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
-    IOWrite(&VBUS_SW_EN, 1);
-#endif
-#endif
+    BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,
+        sampleDurationMs, subSampleIntervalMs, subsampleDurationMs, static_cast<bool>(subsampleEnabled), static_cast<bool>(bridgePowerControllerEnabled));
 
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
@@ -317,6 +352,13 @@ static void defaultTask( void *parameters ) {
     subscription.topic_len = sizeof(buttonTopic) - 1; // Don't care about Null terminator
     subscription.cb = handle_sensor_subscriptions;
     bm_pubsub_subscribe(&subscription);
+
+    bm_sub_t printf_subscription;
+
+    printf_subscription.topic = const_cast<char *>(printfTopic);
+    printf_subscription.topic_len = sizeof(printfTopic) - 1;
+    printf_subscription.cb = handle_sensor_subscriptions;
+    bm_pubsub_subscribe(&printf_subscription);
 
     while(1) {
         /* Do nothing */

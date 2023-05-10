@@ -17,11 +17,11 @@ static const CLI_Command_Definition_t cmd_debug_ncp = {
   // Command string
   "ncp",
   // Help string
-  "ncp <message>\n",
+  "ncp <log/debug> <message>\n",
   // Command function
   cmd_debug_ncp_fn,
   // Number of parameters
-  1
+  -1
 };
 
 
@@ -33,18 +33,46 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
   (void) commandString;
 
   do {
-    const char *parameter;
-    BaseType_t parameter_str_len;
-    parameter = FreeRTOS_CLIGetParameter(
+    const char *target;
+    BaseType_t target_str_len;
+    target = FreeRTOS_CLIGetParameter(
                     commandString,
                     1,
-                    &parameter_str_len);
-
-    if (ncp_tx(BM_NCP_DEBUG, reinterpret_cast<const uint8_t *>(parameter), parameter_str_len)) {
-      printf("Failed to send!\n");
-    } else {
-      printf("Sent!\n");
+                    &target_str_len);
+    
+    if(target == NULL) {
+      printf("Invalid params\n");
+      break;
     }
+  
+    const char *msg;
+    BaseType_t msg_str_len;
+    msg = FreeRTOS_CLIGetParameter(
+                    commandString,
+                    2,
+                    &msg_str_len);
+
+    if(msg == NULL) {
+      printf("Invalid params\n");
+      break;
+    }
+
+    if(strncmp("debug", target, target_str_len) == 0) {
+      if (ncp_tx(BM_NCP_DEBUG, reinterpret_cast<const uint8_t *>(msg), msg_str_len)) {
+        printf("Failed to send!\n");
+      } else {
+        printf("Sent!\n");
+      }
+    } else if (strncmp("log", target, target_str_len) == 0) {
+      if (ncp_tx(BM_NCP_LOG, reinterpret_cast<const uint8_t *>(msg), msg_str_len)) {
+        printf("Failed to send!\n");
+      } else {
+        printf("Sent!\n");
+      }
+    } else {
+      printf("Invalid params\n");
+    }
+
 
   } while(0);
 

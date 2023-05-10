@@ -20,6 +20,3 @@ typedef struct {
 
 void ncpInit(SerialHandle_t *ncpUartHandle);
 // bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?
-
-bool ncpTx(ncp_message_t type, uint8_t *buff, size_t len);
-BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);

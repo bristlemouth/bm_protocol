@@ -31,6 +31,7 @@ static TaskHandle_t ncpRXTaskHandle;
 static SerialHandle_t *ncpSerialHandle = NULL;
 
 static void ncpRXTask(void *parameters);
+static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
 
 // Send out cobs encoded message over serial port
 static bool cobs_tx(const uint8_t *buff, size_t len) {
@@ -156,7 +157,7 @@ extern "C" void USART3_IRQHandler(void) {
 #endif
 
 // cppcheck-suppress constParameter
-BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
+static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
   ( void ) handle;
 
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
