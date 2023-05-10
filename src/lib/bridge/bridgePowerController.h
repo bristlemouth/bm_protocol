@@ -31,8 +31,8 @@ public:
     static constexpr uint32_t ON = (1 << 1); 
     static constexpr uint32_t DEFAULT_SAMPLE_INTERVAL_MS = (5 * 60 * 1000); 
     static constexpr uint32_t DEFAULT_SAMPLE_DURATION_MS = (5 * 60 * 1000); 
-    static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_MS = (10 * 1000); 
-    static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_MS = (1 * 1000); 
+    static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_MS = (60 * 1000); 
+    static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_MS = (30 * 1000); 
     static constexpr uint32_t MIN_SAMPLE_INTERVAL_MS = (60 * 1000);
     static constexpr uint32_t MIN_SAMPLE_DURATION_MS = (60 * 1000);
     static constexpr uint32_t MAX_SAMPLE_INTERVAL_MS = (24 * 60 * 60 * 1000);

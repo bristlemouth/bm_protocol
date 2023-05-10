@@ -326,15 +326,15 @@ static void defaultTask( void *parameters ) {
         datetime.day = 04;
         rtcSet(&datetime);
     }
-    uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_MS;
+    uint32_t sampleIntervalMs = (20 * 60 * 1000); // FIXME test default 20 min interval
     debug_configuration_system.getConfig("sampleIntervalMs",sampleIntervalMs);
-    uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_MS;
+    uint32_t sampleDurationMs = (5 * 60 * 1000); // FIXME test default 5 min duration
     debug_configuration_system.getConfig("sampleDurationMs",sampleDurationMs);
     uint32_t subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_MS;
     debug_configuration_system.getConfig("subSampleIntervalMs",subSampleIntervalMs);
     uint32_t subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_MS;
     debug_configuration_system.getConfig("subsampleDurationMs",subsampleDurationMs);
-    uint32_t subsampleEnabled = 1;  // FIXME default set to enable dfor testing.
+    uint32_t subsampleEnabled = 0;
     debug_configuration_system.getConfig("subsampleEnabled",subsampleEnabled);
     uint32_t bridgePowerControllerEnabled = 1; // FIXME Default set to enabled for testing.
     debug_configuration_system.getConfig("bridgePowerControllerEnabled", bridgePowerControllerEnabled);
