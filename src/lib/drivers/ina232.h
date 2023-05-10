@@ -52,6 +52,7 @@ public:
   bool measurePower();
   void getPower(float &voltage, float &current);
   uint32_t getTotalConversionTimeMs();
+  uint16_t getAddr();
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);

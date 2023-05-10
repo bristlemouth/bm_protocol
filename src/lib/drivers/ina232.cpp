@@ -320,3 +320,12 @@ void INA232::getPower(float &voltage, float &current) {
   voltage = _voltage;
   current = _current;
 }
+
+/*!
+  Get the devices I2C address
+
+  \param[out] the I2C address of the INA
+*/
+uint16_t INA232::getAddr() {
+  return _addr;
+}
