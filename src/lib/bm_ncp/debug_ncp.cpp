@@ -40,7 +40,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
                     1,
                     &parameter_str_len);
 
-    if (ncp_tx(BCMP_NCP_DEBUG, reinterpret_cast<const uint8_t *>(parameter), parameter_str_len)) {
+    if (ncp_tx(BM_NCP_DEBUG, reinterpret_cast<const uint8_t *>(parameter), parameter_str_len)) {
       printf("Failed to send!\n");
     } else {
       printf("Sent!\n");

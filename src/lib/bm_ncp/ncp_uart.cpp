@@ -53,6 +53,37 @@ static bool cobs_tx(const uint8_t *buff, size_t len) {
   return rval;
 }
 
+static ncp_callbacks_t ncp_callbacks;
+
+bool ncp_pub(const char *topic, uint64_t node_id, const uint8_t *payload, size_t len) {
+  printf("Pub data on topic \"%s\" from %" PRIx64 "\n", topic, node_id);
+  (void)payload;
+  (void)len;
+  return false;
+}
+
+bool ncp_sub(const char *topic) {
+  printf("Subscribe request for \"%s\"\n", topic);
+  return false;
+}
+
+bool ncp_unsub(const char *topic) {
+  printf("Unsubscribe request for \"%s\"\n", topic);
+  return false;
+}
+
+bool ncp_log(uint64_t node_id, const uint8_t *data, size_t len) {
+  printf("NCP Log from %" PRIx64 ": %.*s\n", node_id, (int)len, data);
+
+  return false;
+}
+
+bool ncp_debug(const uint8_t *data, size_t len) {
+  printf("NCP debug: %.*s\n", (int)len, data);
+
+  return false;
+}
+
 void ncpInit(SerialHandle_t *ncpUartHandle){
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
@@ -80,8 +111,13 @@ void ncpInit(SerialHandle_t *ncpUartHandle){
               &ncpRXTaskHandle);
   configASSERT(rval == pdTRUE);
 
-  // Set NCP tx function
-  ncp_set_tx_fn(cobs_tx);
+  ncp_callbacks.tx_fn = cobs_tx;
+  ncp_callbacks.pub_fn = ncp_pub;
+  ncp_callbacks.sub_fn = ncp_sub;
+  ncp_callbacks.unsub_fn = ncp_unsub;
+  ncp_callbacks.log_fn = ncp_log;
+  ncp_callbacks.debug_fn = ncp_debug;
+  ncp_set_callbacks(&ncp_callbacks);
 
   serialEnable(ncpSerialHandle);
 }
@@ -147,7 +183,7 @@ BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len
       break;
     }
 
-    if(ncpRXBuffIdx <= 1) {
+    if(ncpRXBuffIdx <= sizeof(ncp_packet_t)) {
       // Empty packet, reset current buffer
       ncpRXBuffIdx = 0;
       break;
