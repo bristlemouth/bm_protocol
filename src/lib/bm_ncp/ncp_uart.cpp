@@ -56,30 +56,30 @@ static bool cobs_tx(const uint8_t *buff, size_t len) {
 
 static ncp_callbacks_t ncp_callbacks;
 
-bool ncp_pub(const char *topic, uint64_t node_id, const uint8_t *payload, size_t len) {
-  printf("Pub data on topic \"%s\" from %" PRIx64 "\n", topic, node_id);
+bool ncp_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len) {
+  printf("Pub data on topic \"%.*s\" from %" PRIx64 "\n", topic_len, topic, node_id);
   (void)payload;
   (void)len;
   return false;
 }
 
-bool ncp_sub(const char *topic) {
-  printf("Subscribe request for \"%s\"\n", topic);
+bool ncp_sub_cb(const char *topic, uint16_t topic_len) {
+  printf("Subscribe request for \"%.*s\"\n", topic_len, topic);
   return false;
 }
 
-bool ncp_unsub(const char *topic) {
-  printf("Unsubscribe request for \"%s\"\n", topic);
+bool ncp_unsub_cb(const char *topic, uint16_t topic_len) {
+  printf("Unsubscribe request for \"%.*s\"\n", topic_len, topic);
   return false;
 }
 
-bool ncp_log(uint64_t node_id, const uint8_t *data, size_t len) {
+bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {
   printf("NCP Log from %" PRIx64 ": %.*s\n", node_id, (int)len, data);
 
   return false;
 }
 
-bool ncp_debug(const uint8_t *data, size_t len) {
+bool ncp_debug_cb(const uint8_t *data, size_t len) {
   printf("NCP debug: %.*s\n", (int)len, data);
 
   return false;
@@ -113,11 +113,11 @@ void ncpInit(SerialHandle_t *ncpUartHandle){
   configASSERT(rval == pdTRUE);
 
   ncp_callbacks.tx_fn = cobs_tx;
-  ncp_callbacks.pub_fn = ncp_pub;
-  ncp_callbacks.sub_fn = ncp_sub;
-  ncp_callbacks.unsub_fn = ncp_unsub;
-  ncp_callbacks.log_fn = ncp_log;
-  ncp_callbacks.debug_fn = ncp_debug;
+  ncp_callbacks.pub_fn = ncp_pub_cb;
+  ncp_callbacks.sub_fn = ncp_sub_cb;
+  ncp_callbacks.unsub_fn = ncp_unsub_cb;
+  ncp_callbacks.log_fn = ncp_log_cb;
+  ncp_callbacks.debug_fn = ncp_debug_cb;
   ncp_set_callbacks(&ncp_callbacks);
 
   serialEnable(ncpSerialHandle);

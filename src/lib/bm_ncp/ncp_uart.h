@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "ncp_messages.h"
 // TODO - Will we eventually need this - probably for ota updates etc..
 // #include "bm_dfu_message_structs.h"
 #include "bsp.h"
