@@ -177,7 +177,8 @@ extern "C" int main(void) {
   while (1){};
 }
 
-void buttonTopicSubscription(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void buttonTopicSubscription(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
 #if BSP_DEV_MOTE_HYDROPHONE
@@ -357,7 +358,8 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   return true;
 }
 
-void printDbData(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void printDbData(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
   (void)topic;
   (void)topic_len;
   if(data_len == sizeof(float)) {
@@ -369,7 +371,8 @@ void printDbData(const char* topic, uint16_t topic_len, const uint8_t* data, uin
   }
 }
 
-void streamAudioData(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void streamAudioData(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
   (void)topic;
   (void)topic_len;
 
@@ -378,7 +381,8 @@ void streamAudioData(const char* topic, uint16_t topic_len, const uint8_t* data,
   }
 }
 
-void streamEnable(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void streamEnable(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
   (void)topic;
   (void)topic_len;
   (void)data_len;
@@ -391,7 +395,8 @@ void streamEnable(const char* topic, uint16_t topic_len, const uint8_t* data, ui
 }
 
 // Manually trigger alarm
-void alarmTriggerCb(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void alarmTriggerCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
   (void)topic;
   (void)topic_len;
   (void)data;
@@ -400,7 +405,8 @@ void alarmTriggerCb(const char* topic, uint16_t topic_len, const uint8_t* data, 
 }
 
 // Update alarm threshold from data
-void updateThresholdCb(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void updateThresholdCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
   (void)topic;
   (void)topic_len;
 
@@ -414,7 +420,8 @@ void updateThresholdCb(const char* topic, uint16_t topic_len, const uint8_t* dat
 }
 
 // Update alarm duration from data
-void updateDurationCb(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void updateDurationCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
   (void)topic;
   (void)topic_len;
 

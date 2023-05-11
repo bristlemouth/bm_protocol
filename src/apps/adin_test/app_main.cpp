@@ -236,7 +236,8 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     return false;
 }
 
-void handle_sensor_subscriptions(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+    (void)node_id;
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
             IOWrite(&LED_BLUE, LED_ON);

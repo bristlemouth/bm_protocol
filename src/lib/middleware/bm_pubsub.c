@@ -166,10 +166,11 @@ bool bm_pubsub_publish(bm_pub_t* pub) {
 
 /*!
   Handle incoming data that we are subscribed to.
+  \param[in] node_id - node id for sender
   \param[in] *pbuf - pbuf with incoming data
   \return None
 */
-void bm_pubsub_handle_msg(struct pbuf *pbuf) {
+void bm_pubsub_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
   bm_pubsub_header_t *header = (bm_pubsub_header_t *)pbuf->payload;
   uint16_t data_len = pbuf->len - sizeof(bm_pubsub_header_t) - header->topic_len;
 
@@ -178,7 +179,7 @@ void bm_pubsub_handle_msg(struct pbuf *pbuf) {
   bm_sub_node_t* ptr = get_sub(header->topic, header->topic_len);
 
   if (ptr && ptr->sub.cb) {
-    ptr->sub.cb(header->topic, header->topic_len, (const uint8_t *)&header->topic[header->topic_len], data_len);
+    ptr->sub.cb(node_id, header->topic, header->topic_len, (const uint8_t *)&header->topic[header->topic_len], data_len);
   }
 }
 

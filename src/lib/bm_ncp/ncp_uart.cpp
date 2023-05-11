@@ -11,6 +11,7 @@
 #include "task_priorities.h"
 #include "ncp.h"
 #include "ncp_uart.h"
+#include "bm_pubsub.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -56,21 +57,37 @@ static bool cobs_tx(const uint8_t *buff, size_t len) {
 
 static ncp_callbacks_t ncp_callbacks;
 
+static void ncp_uart_pub_cb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  ncp_pub(node_id, topic, topic_len, data, data_len);
+}
+
 bool ncp_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len) {
   printf("Pub data on topic \"%.*s\" from %" PRIx64 "\n", topic_len, topic, node_id);
   (void)payload;
   (void)len;
+
+  //
+  // Ignoring published data from spotter right now
+  //
   return false;
 }
 
 bool ncp_sub_cb(const char *topic, uint16_t topic_len) {
-  printf("Subscribe request for \"%.*s\"\n", topic_len, topic);
-  return false;
+  bm_sub_t subscription;
+
+  subscription.topic = const_cast<char *>(topic);
+  subscription.topic_len = topic_len;
+  subscription.cb = ncp_uart_pub_cb;
+  return bm_pubsub_subscribe(&subscription);
 }
 
 bool ncp_unsub_cb(const char *topic, uint16_t topic_len) {
-  printf("Unsubscribe request for \"%.*s\"\n", topic_len, topic);
-  return false;
+  bm_sub_t subscription;
+
+  subscription.topic = const_cast<char *>(topic);
+  subscription.topic_len = topic_len;
+  subscription.cb = ncp_uart_pub_cb;
+  return bm_pubsub_unsubscribe(&subscription);
 }
 
 bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {

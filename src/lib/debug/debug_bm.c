@@ -53,7 +53,8 @@ static const CLI_Command_Definition_t cmdGpio = {
   -1
 };
 
-static void print_subscriptions(const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+  (void)node_id;
     if (strncmp("hydrophone/db", (const char *)topic, topic_len) == 0) {
         if(data_len == sizeof(float)) {
             float dbLevel;
