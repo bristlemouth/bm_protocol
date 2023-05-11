@@ -15,12 +15,17 @@ static INA::INA232** _inaSensors;
 
 #define INA_STR_LEN 80
 
+/*
+  sensorSampler function to take power sample(s)
+
+  \return true if successful false otherwise
+*/
 static bool powerSample() {
   float voltage, current;
   bool success = false;
   bool rval = true;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-  const char printfTopic[] = "printf";
+  const char powerTopic[] = "power";
   for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
     do {
       success = _inaSensors[dev_num]->measurePower();
@@ -30,18 +35,24 @@ static bool powerSample() {
     } while( !success && (--retriesRemaining > 0));
 
     if(success) {
-      // pub to printf or log topic
+      // pub to power topic
       bm_pub_t publication;
 
-      char data[INA_STR_LEN];
+      struct {
+        uint16_t address;
+        float voltage;
+        float current;
+      } _powerData;
 
-      int data_len = snprintf(data, INA_STR_LEN, "dev_addr: %" PRIx16 " voltage %f, current %f, power %f\n", _inaSensors[dev_num]->getAddr(), voltage, current, voltage*current);
+      _powerData.address = _inaSensors[dev_num]->getAddr();
+      _powerData.voltage = voltage;
+      _powerData.current = current;
 
-      publication.topic = const_cast<char *>(printfTopic);
-      publication.topic_len = sizeof(printfTopic) - 1 ; // Don't care about Null terminator
+      publication.topic = const_cast<char *>(powerTopic);
+      publication.topic_len = sizeof(powerTopic) - 1 ; // Don't care about Null terminator
 
-      publication.data = const_cast<char *>(data);
-      publication.data_len = data_len - 1; // Don't care about Null terminator
+      publication.data = reinterpret_cast<char *>(&_powerData);
+      publication.data_len = sizeof(_powerData);
 
       bm_pubsub_publish(&publication);
     }
@@ -50,6 +61,11 @@ static bool powerSample() {
   return rval;
 }
 
+/*
+  sensorSampler function to initialize the power monitor('s)
+
+  \return true if successful false otherwise
+*/
 static bool powerInit() {
   bool rval = true;
   for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){

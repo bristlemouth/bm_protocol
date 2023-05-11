@@ -13,7 +13,19 @@
 
 static HTU21D* _htu21d;
 
-#define HTU_STR_LEN 50
+
+static void publish_float(const char *topic, size_t topic_len, float *value) {
+  // pub to topic
+  bm_pub_t publication;
+
+  publication.topic = const_cast<char *>(topic);
+  publication.topic_len = topic_len - 1 ; // Don't care about Null terminator
+
+  publication.data = reinterpret_cast<char *>(value);
+  publication.data_len = sizeof(float); // Don't care about Null terminator
+
+  bm_pubsub_publish(&publication);
+}
 
 /*
   sensorSampler function to initialize HTU
@@ -33,27 +45,16 @@ static bool htuSample() {
   float temperature, humidity;
   bool success = false;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-  const char printfTopic[] = "printf";
+  const char humidityTopic[] = "humidity";
+  const char temperatureTopic[] = "temperature";
 
   do {
     success = _htu21d->read(temperature, humidity);
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    // pub to printf or log topic
-    bm_pub_t publication;
-
-    char data[HTU_STR_LEN];
-
-    int data_len = snprintf(data, HTU_STR_LEN, "humidity %f, temp %f\n", humidity, temperature);
-
-    publication.topic = const_cast<char *>(printfTopic);
-    publication.topic_len = sizeof(printfTopic) - 1 ; // Don't care about Null terminator
-
-    publication.data = const_cast<char *>(data);
-    publication.data_len = data_len - 1; // Don't care about Null terminator
-
-    bm_pubsub_publish(&publication);
+    publish_float(humidityTopic, sizeof(humidityTopic), &humidity);
+    publish_float(temperatureTopic, sizeof(temperatureTopic), &temperature);
   }
 
   return success;

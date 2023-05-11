@@ -13,41 +13,53 @@
 
 static MS5803* _pressureSensor;
 
-#define PRESSURE_STR_LEN 50
+/*
+  sensorSampler function to take barometer sample
 
+  \return true if successful false otherwise
+*/
 static bool baroSample() {
   float temperature, pressure;
   bool success = false;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-  const char printfTopic[] = "printf";
+  const char baroTopic[] = "pressure";
 
   do {
     success = _pressureSensor->readPTRaw(pressure, temperature);
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    // pub to printf or log topic
+    // pub to pressure topic
     bm_pub_t publication;
 
-    char data[PRESSURE_STR_LEN];
+    int data_len = sizeof(float);
 
-    int data_len = snprintf(data, PRESSURE_STR_LEN, "pressure %f, temp %f\n", pressure, temperature);
+    publication.topic = const_cast<char *>(baroTopic);
+    publication.topic_len = sizeof(baroTopic) - 1 ; // Don't care about Null terminator
 
-    publication.topic = const_cast<char *>(printfTopic);
-    publication.topic_len = sizeof(printfTopic) - 1 ; // Don't care about Null terminator
-
-    publication.data = const_cast<char *>(data);
-    publication.data_len = data_len - 1; // Don't care about Null terminator
+    publication.data = reinterpret_cast<char *>(&pressure);
+    publication.data_len = data_len; // Don't care about Null terminator
 
     bm_pubsub_publish(&publication);
   }
 
   return success;
 }
+
+/*
+  sensorSampler function to initialize the barometer
+
+  \return true if successful false otherwise
+*/
 static bool baroInit() {
   return _pressureSensor->init();
 }
 
+/*
+  sensorSampler function to check the barometer
+
+  \return true if successful false otherwise
+*/
 static bool baroCheck() {
   return _pressureSensor->checkPROM();
 }

@@ -29,6 +29,12 @@
     #define ALARM_OUT GPIO2
 #endif
 
+#define NUM_FLOAT_TOPICS (3)
+static const char *float_topics[NUM_FLOAT_TOPICS] = {
+  "humidity",
+  "temperature",
+  "pressure",
+};
 
 static BaseType_t neighborsCommand( char *writeBuffer,
                                   size_t writeBufferLen,
@@ -55,28 +61,48 @@ static const CLI_Command_Definition_t cmdGpio = {
 
 static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
   (void)node_id;
-    if (strncmp("hydrophone/db", (const char *)topic, topic_len) == 0) {
-        if(data_len == sizeof(float)) {
-            float dbLevel;
-            memcpy(&dbLevel, data, data_len);
-            printf("RX %0.1f dB\n", dbLevel);
-        }
-    } else if (strncmp("button", (const char *)topic, topic_len) == 0){
-        printf("Received data on topic: %.*s\n", topic_len, topic);
-        printf("Data: %.*s\n", data_len, data);
-        if (strncmp("on", (const char *)data, data_len) == 0) {
-            IOWrite(&LED_BLUE, 0);
-            IOWrite(&ALARM_OUT, 0);
-        } else if (strncmp("off", (const char *)data, data_len) == 0) {
-            IOWrite(&LED_BLUE, 1);
-            IOWrite(&ALARM_OUT, 1);
-        } else {
-            // Not handled
-        }
-    } else {
-        printf("Received data on topic: %.*s\n", topic_len, topic);
-        printf("Data: %.*s\n", data_len, data);
+
+  for(int i = 0; i < NUM_FLOAT_TOPICS; i++) {
+    if(strncmp(topic, float_topics[i], topic_len) == 0){
+      float float_data;
+      memcpy(&float_data, data, data_len);
+      printf("Received data on topic: %.*s\n", topic_len, topic);
+      printf("Data: %f\n", float_data);
+      return;
     }
+  }
+
+  if (strncmp("hydrophone/db", (const char *)topic, topic_len) == 0) {
+      if(data_len == sizeof(float)) {
+        float dbLevel;
+        memcpy(&dbLevel, data, data_len);
+        printf("RX %0.1f dB\n", dbLevel);
+      }
+  } else if (strncmp("button", (const char *)topic, topic_len) == 0){
+      printf("Received data on topic: %.*s\n", topic_len, topic);
+      printf("Data: %.*s\n", data_len, data);
+      if (strncmp("on", (const char *)data, data_len) == 0) {
+          IOWrite(&LED_BLUE, 0);
+          IOWrite(&ALARM_OUT, 0);
+      } else if (strncmp("off", (const char *)data, data_len) == 0) {
+          IOWrite(&LED_BLUE, 1);
+          IOWrite(&ALARM_OUT, 1);
+      } else {
+          // Not handled
+      }
+  } else if (strncmp("power", (const char *)topic, topic_len) == 0) {
+      printf("Received data on topic: %.*s\n", topic_len, topic);
+      struct {
+          uint16_t address;
+          float voltage;
+          float current;
+      } _powerData;
+      memcpy(&_powerData, data, data_len);
+      printf("Data: address: %" PRIx16 " current: %f voltage: %f power: %f\n", _powerData.address, _powerData.current, _powerData.voltage, (_powerData.voltage*_powerData.current));
+  } else {
+      printf("Received data on topic: %.*s\n", topic_len, topic);
+      printf("Data: %.*s\n", data_len, data);
+  }
 }
 
 void debugBMInit(void) {
