@@ -131,7 +131,7 @@ set(HW_VERSION 0)
 # They _should_ be able to override any of the above variables
 add_subdirectory(bsp/${BSP})
 
-set(LWIP_COMPILER_FLAGS
+set(LIB_COMPILER_FLAGS
 	-g
 	-ggdb
 
@@ -149,8 +149,6 @@ set(LWIP_COMPILER_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
-	-DMEMFAULT_USE_GNU_BUILD_ID=1
-
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
@@ -164,6 +162,8 @@ set(LWIP_COMPILER_FLAGS
 	${BSP_CPU_FLAGS}
 	)
 
+set(LWIP_COMPILER_FLAGS ${LIB_COMPILER_FLAGS})
+set(BM_SERIAL_COMPILER_FLAGS ${LIB_COMPILER_FLAGS})
 
 add_subdirectory(apps/${APP})
 set(APP_NAME ${APP})
@@ -340,8 +340,6 @@ target_include_directories(${EXECUTABLE} PRIVATE
 	)
 
 target_link_libraries(${EXECUTABLE} ${APP_LIBS})
-
-
 
 target_linker_map(${EXECUTABLE})
 

@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "stm32u5xx_ll_usart.h"
 #include "task_priorities.h"
-#include "ncp.h"
+#include "bm_serial.h"
 #include "ncp_uart.h"
 #include "bm_pubsub.h"
 
@@ -55,13 +55,13 @@ static bool cobs_tx(const uint8_t *buff, size_t len) {
   return rval;
 }
 
-static ncp_callbacks_t ncp_callbacks;
+static bm_serial_callbacks_t bm_serial_callbacks;
 
 static void ncp_uart_pub_cb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
-  ncp_pub(node_id, topic, topic_len, data, data_len);
+  bm_serial_pub(node_id, topic, topic_len, data, data_len);
 }
 
-bool ncp_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len) {
+bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len) {
   printf("Pub data on topic \"%.*s\" from %" PRIx64 "\n", topic_len, topic, node_id);
   (void)payload;
   (void)len;
@@ -72,7 +72,7 @@ bool ncp_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const u
   return false;
 }
 
-bool ncp_sub_cb(const char *topic, uint16_t topic_len) {
+bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
   bm_sub_t subscription;
 
   subscription.topic = const_cast<char *>(topic);
@@ -81,7 +81,7 @@ bool ncp_sub_cb(const char *topic, uint16_t topic_len) {
   return bm_pubsub_subscribe(&subscription);
 }
 
-bool ncp_unsub_cb(const char *topic, uint16_t topic_len) {
+bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
   bm_sub_t subscription;
 
   subscription.topic = const_cast<char *>(topic);
@@ -129,13 +129,13 @@ void ncpInit(SerialHandle_t *ncpUartHandle){
               &ncpRXTaskHandle);
   configASSERT(rval == pdTRUE);
 
-  ncp_callbacks.tx_fn = cobs_tx;
-  ncp_callbacks.pub_fn = ncp_pub_cb;
-  ncp_callbacks.sub_fn = ncp_sub_cb;
-  ncp_callbacks.unsub_fn = ncp_unsub_cb;
-  ncp_callbacks.log_fn = ncp_log_cb;
-  ncp_callbacks.debug_fn = ncp_debug_cb;
-  ncp_set_callbacks(&ncp_callbacks);
+  bm_serial_callbacks.tx_fn = cobs_tx;
+  bm_serial_callbacks.pub_fn = bm_serial_pub_cb;
+  bm_serial_callbacks.sub_fn = bm_serial_sub_cb;
+  bm_serial_callbacks.unsub_fn = bm_serial_unsub_cb;
+  bm_serial_callbacks.log_fn = ncp_log_cb;
+  bm_serial_callbacks.debug_fn = ncp_debug_cb;
+  bm_serial_set_callbacks(&bm_serial_callbacks);
 
   serialEnable(ncpSerialHandle);
 }
@@ -158,9 +158,9 @@ void ncpRXTask( void *parameters) {
 
     // Decode the COBS
     cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN, ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
-    ncp_packet_t *packet = reinterpret_cast<ncp_packet_t *>(ncpRXBuffDecoded);
+    bm_serial_packet_t *packet = reinterpret_cast<bm_serial_packet_t *>(ncpRXBuffDecoded);
 
-    ncp_process_packet(packet, cobs_result.out_len);
+    bm_serial_process_packet(packet, cobs_result.out_len);
   }
 }
 
@@ -201,7 +201,7 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
       break;
     }
 
-    if(ncpRXBuffIdx <= sizeof(ncp_packet_t)) {
+    if(ncpRXBuffIdx <= sizeof(bm_serial_packet_t)) {
       // Empty packet, reset current buffer
       ncpRXBuffIdx = 0;
       break;

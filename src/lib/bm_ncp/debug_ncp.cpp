@@ -5,7 +5,7 @@
 // FreeRTOS+CLI includes.
 #include "FreeRTOS_CLI.h"
 
-#include "ncp.h"
+#include "bm_serial.h"
 
 #include "debug.h"
 
@@ -65,7 +65,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
         break;
       }
 
-      if (ncp_tx(BM_NCP_DEBUG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
+      if (bm_serial_tx(BM_NCP_DEBUG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
         printf("Failed to send!\n");
       } else {
         printf("Sent!\n");
@@ -76,7 +76,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
         break;
       }
 
-      if (ncp_tx(BM_NCP_LOG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
+      if (bm_serial_tx(BM_NCP_LOG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
         printf("Failed to send!\n");
       } else {
         printf("Sent!\n");
@@ -88,7 +88,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
       }
 
       // TODO - get and use node id
-      if(ncp_pub(0, arg1, arg1_str_len, reinterpret_cast<const uint8_t *>(arg2), arg2_str_len) == 0) {
+      if(bm_serial_pub(0, arg1, arg1_str_len, reinterpret_cast<const uint8_t *>(arg2), arg2_str_len) == 0) {
         printf("OK\n");
       } else {
         printf("ERR\n");
@@ -98,7 +98,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
         printf("Invalid params\n");
         break;
       }
-      if(ncp_sub(arg1, arg1_str_len) == 0) {
+      if(bm_serial_sub(arg1, arg1_str_len) == 0) {
         printf("OK\n");
       } else {
         printf("ERR\n");
@@ -108,7 +108,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
         printf("Invalid params\n");
         break;
       }
-      if(ncp_unsub(arg1, arg1_str_len) == 0) {
+      if(bm_serial_unsub(arg1, arg1_str_len) == 0) {
         printf("OK\n");
       } else {
         printf("ERR\n");

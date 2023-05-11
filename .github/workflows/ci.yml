@@ -38,6 +38,7 @@ jobs:
 
       - name: Checkout submodules
         run: |
+          git submodule update --init src/lib/bm_serial
           git submodule update --init src/third_party/cobs-c
           git submodule update --init src/third_party/lwip
           git submodule update --init src/third_party/mcuboot

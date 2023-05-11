@@ -19,3 +19,6 @@
 [submodule "src/third_party/cobs-c"]
 	path = src/third_party/cobs-c
 	url = https://github.com/sofarocean/cobs-c.git
+[submodule "src/lib/bm_serial"]
+	path = src/lib/bm_serial
+	url = https://github.com/wavespotter/bm_serial.git

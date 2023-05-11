@@ -206,6 +206,7 @@ set(LWIP_INCLUDE_DIRS
 )
 
 include(${LWIP_DIR}/src/Filelists.cmake)
+include(${SRC_DIR}/lib/bm_serial/CMakeLists.txt)
 # include(${LWIP_DIR}/contrib/Filelists.cmake)
 
 set(APP_FILES
@@ -231,9 +232,13 @@ set(APP_INCLUDES
     ${MEMFAULT_INCLUDES}
     ${TINYUSB_INCLUDES}
     ${BM_NCP_INCLUDES}
+    ${BM_SERIAL_INCLUDES}
     PARENT_SCOPE)
 
 set(APP_LIBS
+    # I hate this, but if bm_serial goes after lwipcore
+    # we get some hardfaults on the lwip library and I don't know why😭
+    bm_serial
     lwipcore
     PARENT_SCOPE)
 
