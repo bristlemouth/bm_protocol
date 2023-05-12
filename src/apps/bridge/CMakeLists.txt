@@ -205,9 +205,21 @@ set(LWIP_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# Set lwip specific defines and add to project
+set(LWIP_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LWIP_DIR}/src/Filelists.cmake)
+
+# Set bm_serial specific defines and add to project
+set(BM_SERIAL_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${SRC_DIR}/lib/bm_serial/CMakeLists.txt)
-# include(${LWIP_DIR}/contrib/Filelists.cmake)
+
+# Add libraries to project
+set(APP_LIBS
+    # I hate this, but if bm_serial goes after lwipcore
+    # we get some hardfaults on the lwip library and I don't know why😭
+    bm_serial
+    lwipcore
+    PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
@@ -233,13 +245,6 @@ set(APP_INCLUDES
     ${TINYUSB_INCLUDES}
     ${BM_NCP_INCLUDES}
     ${BM_SERIAL_INCLUDES}
-    PARENT_SCOPE)
-
-set(APP_LIBS
-    # I hate this, but if bm_serial goes after lwipcore
-    # we get some hardfaults on the lwip library and I don't know why😭
-    bm_serial
-    lwipcore
     PARENT_SCOPE)
 
 set(APP_DEFINES

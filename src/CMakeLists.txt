@@ -131,7 +131,8 @@ set(HW_VERSION 0)
 # They _should_ be able to override any of the above variables
 add_subdirectory(bsp/${BSP})
 
-set(LIB_COMPILER_FLAGS
+# This MUST be after the BSP include to get ${BSP_CPU_FLAGS}
+set(COMPILE_FLAGS
 	-g
 	-ggdb
 
@@ -149,10 +150,13 @@ set(LIB_COMPILER_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
+	-DMEMFAULT_USE_GNU_BUILD_ID=1
+
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
 	-Wno-format
+	-Wno-narrowing
 
 # In case we want faster sqrtf, etc
 	# -fno-math-errno
@@ -160,12 +164,13 @@ set(LIB_COMPILER_FLAGS
 	# -ffast-math
 
 	${BSP_CPU_FLAGS}
+
+	-DCBOR_CUSTOM_ALLOC_INCLUDE="tinycbor_alloc.h"
+    -DCBOR_PARSER_MAX_RECURSIONS=10
 	)
 
-set(LWIP_COMPILER_FLAGS ${LIB_COMPILER_FLAGS})
-set(BM_SERIAL_COMPILER_FLAGS ${LIB_COMPILER_FLAGS})
-
 add_subdirectory(apps/${APP})
+
 set(APP_NAME ${APP})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(APP_NAME ${APP_NAME}-dbg)
@@ -196,41 +201,7 @@ add_compile_definitions(
 	APP_NAME="${APP_NAME}"
 	)
 
-add_compile_options(
-	-g
-	-ggdb
-
-	# Necessary to prevent newlib's printf from stomping on our definition
-	-fno-builtin-printf
-
-	$<$<CONFIG:Debug>:-Og>
-	$<$<CONFIG:Release>:-O2>
-
-	-ffile-prefix-map=${SRC_DIR}=.
-	-fdebug-prefix-map=${SRC_DIR}=.
-	-fdebug-prefix-map=${CMAKE_BINARY_DIR}=.
-	-fdebug-prefix-map=$ENV{CONDA_PREFIX}=.
-
-	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
-
-	-DMEMFAULT_USE_GNU_BUILD_ID=1
-
-	-Wformat=2
-	-Wformat-overflow
-	-Wformat-signedness
-
-	-Wno-narrowing # LWIP upgrade to Cpp
-
-# In case we want faster sqrtf, etc
-	# -fno-math-errno
-	# -fsingle-precision-constant
-	# -ffast-math
-
-	${BSP_CPU_FLAGS}
-	-DCBOR_CUSTOM_ALLOC_INCLUDE="tinycbor_alloc.h"
-    -DCBOR_PARSER_MAX_RECURSIONS=10
-	)
+add_compile_options(${COMPILE_FLAGS})
 
 # set(LINKER_FILE spotter_stm32l496)
 set(LINKER_FILE bs_stm32u575)
@@ -339,6 +310,7 @@ target_include_directories(${EXECUTABLE} PRIVATE
 	${APP_INCLUDES}
 	)
 
+# Link any libraries the application might have included
 target_link_libraries(${EXECUTABLE} ${APP_LIBS})
 
 target_linker_map(${EXECUTABLE})

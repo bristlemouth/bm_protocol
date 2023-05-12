@@ -208,8 +208,9 @@ set(LWIP_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# Set lwip specific defines and add to project
+set(LWIP_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LWIP_DIR}/src/Filelists.cmake)
-# include(${LWIP_DIR}/contrib/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
