@@ -65,7 +65,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
         break;
       }
 
-      if (bm_serial_tx(BM_NCP_DEBUG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
+      if (bm_serial_tx(BM_SERIAL_DEBUG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
         printf("Failed to send!\n");
       } else {
         printf("Sent!\n");
@@ -76,7 +76,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
         break;
       }
 
-      if (bm_serial_tx(BM_NCP_LOG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
+      if (bm_serial_tx(BM_SERIAL_LOG, reinterpret_cast<const uint8_t *>(arg1), arg1_str_len)) {
         printf("Failed to send!\n");
       } else {
         printf("Sent!\n");

@@ -229,7 +229,7 @@ void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t t
     } else if(strncmp("printf", topic, topic_len) == 0){
         printf("Topic: %.*s\n", topic_len, topic);
         printf("Data: %.*s\n", data_len, data);
-        if(bm_serial_tx(BM_NCP_LOG, const_cast<uint8_t*>(data), data_len) != 0){
+        if(bm_serial_tx(BM_SERIAL_LOG, const_cast<uint8_t*>(data), data_len) != 0){
             printf("Failed to forward to NCP.\n");
         }
     } else {

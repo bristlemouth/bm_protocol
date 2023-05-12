@@ -3,15 +3,17 @@
 #include "task.h"
 #include "queue.h"
 
+#include "bm_pubsub.h"
+#include "bm_serial.h"
 #include "bsp.h"
 #include "cobs.h"
 #include "crc.h"
 #include "debug.h"
+#include "device_info.h"
+#include "ncp_uart.h"
+#include "stm32_rtc.h"
 #include "stm32u5xx_ll_usart.h"
 #include "task_priorities.h"
-#include "bm_serial.h"
-#include "ncp_uart.h"
-#include "bm_pubsub.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -61,7 +63,7 @@ static void ncp_uart_pub_cb(uint64_t node_id, const char* topic, uint16_t topic_
   bm_serial_pub(node_id, topic, topic_len, data, data_len);
 }
 
-bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len) {
+static bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len) {
   printf("Pub data on topic \"%.*s\" from %" PRIx64 "\n", topic_len, topic, node_id);
   (void)payload;
   (void)len;
@@ -72,7 +74,7 @@ bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, c
   return false;
 }
 
-bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
+static bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
   bm_sub_t subscription;
 
   subscription.topic = const_cast<char *>(topic);
@@ -81,7 +83,7 @@ bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
   return bm_pubsub_subscribe(&subscription);
 }
 
-bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
+static bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
   bm_sub_t subscription;
 
   subscription.topic = const_cast<char *>(topic);
@@ -90,16 +92,51 @@ bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
   return bm_pubsub_unsubscribe(&subscription);
 }
 
-bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {
+static bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {
   printf("NCP Log from %" PRIx64 ": %.*s\n", node_id, (int)len, data);
 
   return false;
 }
 
-bool ncp_debug_cb(const uint8_t *data, size_t len) {
+static bool ncp_debug_cb(const uint8_t *data, size_t len) {
   printf("NCP debug: %.*s\n", (int)len, data);
 
   return false;
+}
+
+static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
+  RTCTimeAndDate_t rtc_time = {
+    .year = time->year,
+    .month = time->month,
+    .day = time->day,
+    .hour = time->hour,
+    .minute = time->minute,
+    .second = time->second,
+    .ms = (time->us / 1000),
+  };
+
+  printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n",
+    rtc_time.year,
+    rtc_time.month,
+    rtc_time.day,
+    rtc_time.hour,
+    rtc_time.minute,
+    rtc_time.second,
+    rtc_time.ms);
+
+  // NOTE: rtcSet ignores milliseconds right now
+  return (rtcSet(&rtc_time) == pdPASS);
+}
+
+// Used by spotter to request a self test
+static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
+  (void)node_id;
+  (void)result;
+  printf("Running self test\n");
+  // TODO - actually run some sort of test 🤷‍♂️
+
+  // Send back a "PASS"
+  return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
 void ncpInit(SerialHandle_t *ncpUartHandle){
@@ -135,6 +172,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle){
   bm_serial_callbacks.unsub_fn = bm_serial_unsub_cb;
   bm_serial_callbacks.log_fn = ncp_log_cb;
   bm_serial_callbacks.debug_fn = ncp_debug_cb;
+  bm_serial_callbacks.rtc_set_fn = bm_serial_rtc_cb;
+  bm_serial_callbacks.self_test_fn = bm_serial_self_test_cb;
   bm_serial_set_callbacks(&bm_serial_callbacks);
 
   serialEnable(ncpSerialHandle);
