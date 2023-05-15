@@ -42,7 +42,7 @@ static bool powerSample() {
         uint16_t address;
         float voltage;
         float current;
-      } _powerData;
+      } __attribute__((packed)) _powerData;
 
       _powerData.address = _inaSensors[dev_num]->getAddr();
       _powerData.voltage = voltage;
