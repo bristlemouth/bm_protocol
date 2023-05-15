@@ -11,7 +11,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-static INA::INA232** _inaSensors;
+using namespace INA;
+
+static INA232** _inaSensors;
 
 #define INA_STR_LEN 80
 
@@ -69,7 +71,16 @@ static bool powerSample() {
 static bool powerInit() {
   bool rval = true;
   for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
-    rval &= _inaSensors[dev_num]->init();
+    if (_inaSensors[dev_num]->init()){
+      // set shunt to 10mOhms
+      _inaSensors[dev_num]->setShuntValue(0.01);
+
+      //Set normal sampling speed
+      _inaSensors[dev_num]->setBusConvTime(CT_1100);
+      _inaSensors[dev_num]->setShuntConvTime(CT_1100);
+      _inaSensors[dev_num]->setAvg(AVG_256);
+      rval &= true;
+    }
   }
   return rval;
 }

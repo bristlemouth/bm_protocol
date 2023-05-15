@@ -59,7 +59,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/debug/debug_dfu.cpp
-    ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
@@ -83,7 +82,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
     ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp

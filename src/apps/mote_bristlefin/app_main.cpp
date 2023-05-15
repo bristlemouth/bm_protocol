@@ -48,8 +48,6 @@
 #include "external_flash_partitions.h"
 #include "debug_nvm_cli.h"
 #include "debug_dfu.h"
-#include "bridgePowerController.h"
-#include "debug_bridge_power_controller.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
 #endif

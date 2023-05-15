@@ -96,7 +96,7 @@ static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t to
           uint16_t address;
           float voltage;
           float current;
-      } _powerData;
+      }  __attribute__((packed)) _powerData;
       memcpy(&_powerData, data, data_len);
       printf("Data: address: %" PRIx16 " current: %f voltage: %f power: %f\n", _powerData.address, _powerData.current, _powerData.voltage, (_powerData.voltage*_powerData.current));
   } else {
