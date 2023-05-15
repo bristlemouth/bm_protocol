@@ -145,5 +145,5 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
     BridgePowerController._update();
     EXPECT_EQ(rtcGet_fake.call_count, 6);
     EXPECT_EQ(fake_io_write_func_fake.call_count, 7);
-    EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 0);
+    EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 1);
 }

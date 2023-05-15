@@ -45,6 +45,7 @@ public:
 private:
     static constexpr uint32_t MIN_TASK_SLEEP_MS = (1 * 1000);
     static constexpr uint32_t INIT_POWER_ON_TIMEOUT_MS = (2 * 60 * 1000);
+    static constexpr char bm_printf_topic[] = "bm_printf";
 
 private:
     IOPinHandle_t &_BusPowerPin;

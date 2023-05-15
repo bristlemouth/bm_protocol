@@ -222,7 +222,6 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/bridge
-
 )
 
 target_sources(bridge_power_controller_tests
@@ -236,7 +235,9 @@ target_sources(bridge_power_controller_tests
     # Mocks
     ${TEST_DIR}/stubs/mock_FreeRTOS.c
     ${TEST_DIR}/stubs/mock_stm32_rtc.cpp
-  
+    ${TEST_DIR}/stubs/mock_bm_serial.cpp
+    ${TEST_DIR}/stubs/mock_device_info.cpp
+
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c
 

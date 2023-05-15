@@ -5,6 +5,8 @@
 #include "stm32_rtc.h"
 #include "util.h"
 #include <stdio.h>
+#include "bm_serial.h"
+#include "device_info.h"
 
 BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs, uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subSamplingEnabled, bool powerControllerEnabled) :
 _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
@@ -76,6 +78,9 @@ void BridgePowerController::powerBusAndSetSignal(bool on) {
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     IOWrite(&_BusPowerPin, on);
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
+    static char buffer[25];
+    int len = snprintf(buffer, 25, "Bridge bus power: %d", static_cast<int>(on));
+    bm_serial_pub(getNodeId(), bm_printf_topic, sizeof(bm_printf_topic)-1, reinterpret_cast<const uint8_t *>(buffer) ,len);
 }
 
 bool BridgePowerController::isBridgePowerOn(void) {
