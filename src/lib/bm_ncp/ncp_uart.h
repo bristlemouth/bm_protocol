@@ -7,6 +7,7 @@
 // #include "bm_dfu_message_structs.h"
 #include "bsp.h"
 #include "serial.h"
+#include "nvmPartition.h"
 
 #define NCP_BUFF_LEN 2048
 
@@ -17,5 +18,5 @@ typedef struct {
   // TODO - Define other bridge configs?
 } NCPConfig_t;
 
-void ncpInit(SerialHandle_t *ncpUartHandle);
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition);
 // bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?

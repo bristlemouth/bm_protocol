@@ -17,6 +17,7 @@ typedef struct dfu_core_ctx_t {
     uint8_t new_state;
     bm_dfu_err_t error;
     uint64_t self_node_id;
+    uint64_t client_node_id;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     NvmPartition *dfu_partition;
     update_finish_cb_t update_finish_callback;
@@ -152,6 +153,7 @@ static void s_idle_run(void) {
         /* Host */
         dfu_host_start_event_t *start_event = reinterpret_cast<dfu_host_start_event_t*>(dfu_ctx.current_event.buf);
         dfu_ctx.update_finish_callback = start_event->finish_cb;
+        dfu_ctx.client_node_id = start_event->start.info.addresses.dst_node_id;
         bm_dfu_host_set_callback(dfu_ctx.update_finish_callback);
         bm_dfu_host_start_update_timer(start_event->timeoutMs);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_HOST_REQ_UPDATE);
@@ -207,7 +209,7 @@ static void s_error_entry(void) {
     }
 
     if(dfu_ctx.update_finish_callback) {
-        dfu_ctx.update_finish_callback(false, dfu_ctx.error);
+        dfu_ctx.update_finish_callback(false, dfu_ctx.error, dfu_ctx.client_node_id);
     }
 
     if(dfu_ctx.error <  BM_DFU_ERR_FLASH_ACCESS) {
@@ -524,7 +526,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
         if(getCurrentStateEnum(dfu_ctx.sm_ctx) != BM_DFU_STATE_IDLE) {
             printf("Not ready to start update.\n");
             if(update_finish_callback) {
-                update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS);
+                update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS, dest_node_id);
             }
             break;
         }
@@ -546,7 +548,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
         if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
             vPortFree(buf);
             if(update_finish_callback) {
-                update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS);
+                update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS, dest_node_id);
             }
             printf("Message could not be added to Queue\n");
             break;

@@ -72,7 +72,7 @@ enum BM_DFU_EVT_TYPE {
 };
 
 typedef bool (*bcmp_dfu_tx_func_t)(bcmp_message_type_t type, uint8_t *buff, uint16_t len);
-typedef void (*update_finish_cb_t)(bool success, bm_dfu_err_t error);
+typedef void (*update_finish_cb_t)(bool success, bm_dfu_err_t error, uint64_t node_id);
 
 typedef struct {
     uint8_t type;

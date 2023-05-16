@@ -317,7 +317,7 @@ static void defaultTask( void *parameters ) {
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition);
-    ncpInit(&usart3);
+    ncpInit(&usart3, &dfu_partition);
     debug_ncp_init();
 
     if(!isRTCSet()){ // FIXME. Hack to enable the bridge power controller functionality.

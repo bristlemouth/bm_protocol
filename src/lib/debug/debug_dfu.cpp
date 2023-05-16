@@ -29,9 +29,9 @@ void debugDfuInit(NvmPartition *dfu_cli_partition) {
     FreeRTOS_CLIRegisterCommand( &cmdDfu );
 }
 
-void updateSuccessCallback(bool success, bm_dfu_err_t err) {
+void updateSuccessCallback(bool success, bm_dfu_err_t err, uint64_t node_id) {
     if(success){
-        printf("update successful\n");
+        printf("update successful %" PRIx64 "\n", node_id);
     } else {
         printf("update failed, err: %d\n", err);
     }

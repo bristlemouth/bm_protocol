@@ -14,6 +14,7 @@
 #include "stm32_rtc.h"
 #include "stm32u5xx_ll_usart.h"
 #include "task_priorities.h"
+#include "ncp_dfu.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -139,7 +140,7 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
-void ncpInit(SerialHandle_t *ncpUartHandle){
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition){
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
 
@@ -155,6 +156,9 @@ void ncpInit(SerialHandle_t *ncpUartHandle){
 
   // Set the rxBytesFromISR to the custom NCP one
   ncpSerialHandle->rxBytesFromISR = ncpRXBytesFromISR;
+
+  configASSERT(dfu_partition);
+  ncp_dfu_init(dfu_partition);
 
   // Create the task
   BaseType_t rval = xTaskCreate(
@@ -174,9 +178,13 @@ void ncpInit(SerialHandle_t *ncpUartHandle){
   bm_serial_callbacks.debug_fn = ncp_debug_cb;
   bm_serial_callbacks.rtc_set_fn = bm_serial_rtc_cb;
   bm_serial_callbacks.self_test_fn = bm_serial_self_test_cb;
+  bm_serial_callbacks.dfu_start_fn = ncp_dfu_start_cb;
+  bm_serial_callbacks.dfu_chunk_fn = ncp_dfu_chunk_cb;
+  bm_serial_callbacks.dfu_end_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
 
   serialEnable(ncpSerialHandle);
+  ncp_dfu_check_for_update();
 }
 
 void ncpRXTask( void *parameters) {

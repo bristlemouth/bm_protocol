@@ -303,7 +303,7 @@ void s_host_update_run(void) {
             printf("Client Update Failed\n");
         }
         if(host_ctx.update_complete_callback) {
-            host_ctx.update_complete_callback(update_end_evt->success, static_cast<bm_dfu_err_t>(update_end_evt->err_code));
+            host_ctx.update_complete_callback(update_end_evt->success, static_cast<bm_dfu_err_t>(update_end_evt->err_code), host_ctx.client_node_id);
         }
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
     } else if (curr_evt.type == DFU_EVENT_HEARTBEAT_TIMEOUT) {
