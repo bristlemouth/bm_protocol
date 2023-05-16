@@ -289,7 +289,10 @@ static void defaultTask( void *parameters ) {
       pcapInit(&usbPcap);
 
 #ifndef BSP_DEV_MOTE_V1_0
-    } else {
+
+    }
+#ifndef BSP_MOTE_V1_0
+    else {
       startSerialConsole(&usart1);
       serialEnable(&usart1);
 
@@ -299,6 +302,7 @@ static void defaultTask( void *parameters ) {
 
       printf("WARNING: PCAP support requires USB connection.\n");
     }
+#endif // BCP_MOTE_V1_0
 #endif // BSP_DEV_MOTE_V1_0
     startCLI();
     // pcapInit(&usbPcap);
