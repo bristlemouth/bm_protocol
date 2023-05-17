@@ -37,10 +37,16 @@ _nextSampleIntervalTimeTimestamp(0), _nextSubSampleIntervalTimeTimestamp(0), _rt
                 128 * 4,
                 this,
                 BRIDGE_POWER_TASK_PRIORITY,
-                NULL);
+                &_task_handle);
     configASSERT(rval == pdTRUE);
 }
 
+/*!
+* Enable / disable the power control. If the power control is disabled (and RTC is set) the bus is ON.
+* If the the power control is disabled and RTC is not set, the bus is OFF
+* If power control is enabled, bus control is set by the min/max control parameters.
+* \param[in] : enable - true if power control is enabled, false if off.
+*/
 void BridgePowerController::powerControlEnable(bool enable) {
     _powerControlEnabled = enable;
     if(enable){
@@ -53,6 +59,7 @@ void BridgePowerController::powerControlEnable(bool enable) {
     } else {
         printf("Bridge power controller disabled\n");
     }
+    xTaskNotify(_task_handle, enable, eNoAction); // Notify the power controller task that the state has changed.
 }
 
 bool BridgePowerController::isPowerControlEnabled() { return _powerControlEnabled; }
@@ -162,7 +169,13 @@ void BridgePowerController::_update(void) {
         }
 
     } while(0);
-    vTaskDelay(pdMS_TO_TICKS(time_to_sleep_ms));
+#ifndef CI_TEST
+    uint32_t taskNotifyValue = 0;
+    xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, pdMS_TO_TICKS(time_to_sleep_ms));
+#else // CI_TEST
+    vTaskDelay(time_to_sleep_ms); // FIXME fix this in test.
+#endif // CI_TEST
+
 }
 
 bool BridgePowerController::nowTimestampMs(uint32_t &timestamp) {

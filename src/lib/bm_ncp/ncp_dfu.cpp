@@ -24,14 +24,24 @@ typedef struct  __attribute__((__packed__)) {
 #define REBOOT_DELAY_MS             (1 * 1000)
 #define COPY_BUFFER_SIZE            (1024)
 #define REBOOT_MAGIC                (0xbaadc0de)
+#define POWER_CONTROLLER_TIMEOUT_MS (5 * 1000)
 
-static NvmPartition* _dfu_cli_partition;
-static const struct flash_area *_fa;
+typedef struct {
+    NvmPartition* dfu_cli_partition;
+    BridgePowerController * power_controller;
+    bool power_controller_was_enabled;
+    const struct flash_area * fa;
+} ncp_dfu_ctx_t;
+
+static ncp_dfu_ctx_t _ctx;
 static NcpReboootUpdateInfo_t _reboot_info __attribute__((section(".noinit")));
 
 static void _ncp_dfu_finish(bool success, bm_dfu_err_t err, uint64_t node_id) {
     memset(&_reboot_info, 0, sizeof(_reboot_info));
     bm_serial_dfu_send_finish(node_id, success, err);
+    if(_ctx.power_controller_was_enabled){
+        _ctx.power_controller->powerControlEnable(true);
+    }
 }
 
 static void _update_success_cb(bool success, bm_dfu_err_t err, uint64_t node_id) {
@@ -42,7 +52,7 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
     static uint8_t copy_buffer[COPY_BUFFER_SIZE];
     bool rval = false;
     do {
-        if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &_fa) != 0) {
+        if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &_ctx.fa) != 0) {
             break;
         }
         // COPY DFU partition to internal flash
@@ -50,16 +60,16 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
         uint32_t bytes_remaining = dfu_start->image_size;
         while(bytes_remaining) {
             size_t chunk_size = MIN(bytes_remaining, COPY_BUFFER_SIZE); 
-            if(!_dfu_cli_partition->read(offset + DFU_IMG_START_OFFSET_BYTES, copy_buffer,chunk_size, FLASH_WRITE_READ_TIMEOUT_MS)){
+            if(!_ctx.dfu_cli_partition->read(offset + DFU_IMG_START_OFFSET_BYTES, copy_buffer,chunk_size, FLASH_WRITE_READ_TIMEOUT_MS)){
                 break;
             }
-            if(flash_area_write(_fa, offset, copy_buffer, chunk_size) != 0){
+            if(flash_area_write(_ctx.fa, offset, copy_buffer, chunk_size) != 0){
                 break;
             }
             offset += chunk_size;
             bytes_remaining -= chunk_size;
         }
-        flash_area_close(_fa);
+        flash_area_close(_ctx.fa);
         if(!bytes_remaining) {
             _reboot_info.gitSHA = dfu_start->gitSHA;
             _reboot_info.magic = REBOOT_MAGIC;
@@ -91,7 +101,7 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
     bool rval = false;
     do {
         uint16_t computed_crc16;
-        if(!_dfu_cli_partition->crc16(DFU_IMG_START_OFFSET_BYTES, dfu_start->image_size, computed_crc16, IMG_CRC_TIMEOUT_MS)){
+        if(!_ctx.dfu_cli_partition->crc16(DFU_IMG_START_OFFSET_BYTES, dfu_start->image_size, computed_crc16, IMG_CRC_TIMEOUT_MS)){
             break;
         }
         if(computed_crc16 != dfu_start->crc16) {
@@ -100,7 +110,18 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
         if(getNodeId() == dfu_start->node_id){
             rval = _do_self_update(dfu_start);
         } else {
-            rval = _do_bcmp_update(dfu_start);
+            // We want to disable power control here (which will leave the bus ON, allowing a node to be updated)
+            if(_ctx.power_controller->isPowerControlEnabled()){ // If we were already disabled, we don't need to do this.
+                _ctx.power_controller->powerControlEnable(false);
+                _ctx.power_controller_was_enabled = true;
+            } else {
+                _ctx.power_controller_was_enabled = false;
+            }
+            // Wait for the power control to set the bus ON
+            if(_ctx.power_controller->waitForSignal(true, pdMS_TO_TICKS(POWER_CONTROLLER_TIMEOUT_MS))){
+                printf("Bus is ON! Queueing node update\n");
+                rval = _do_bcmp_update(dfu_start);
+            }
         }
     } while(0);
     if(!rval) {
@@ -111,7 +132,7 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
  
 bool ncp_dfu_chunk_cb(uint32_t offset, size_t length, uint8_t * data) {
     bool rval = false;
-    if(_dfu_cli_partition->write(DFU_IMG_START_OFFSET_BYTES + offset, data,length, FLASH_WRITE_READ_TIMEOUT_MS)){
+    if(_ctx.dfu_cli_partition->write(DFU_IMG_START_OFFSET_BYTES + offset, data,length, FLASH_WRITE_READ_TIMEOUT_MS)){
         if (bm_serial_dfu_send_chunk(offset, 0, NULL) == BM_SERIAL_OK) {
             rval = true;
         }
@@ -121,9 +142,12 @@ bool ncp_dfu_chunk_cb(uint32_t offset, size_t length, uint8_t * data) {
     return rval;
 }
 
-void ncp_dfu_init(NvmPartition *dfu_cli_partition) {
+void ncp_dfu_init(NvmPartition *dfu_cli_partition, BridgePowerController *power_controller) {
     configASSERT(dfu_cli_partition);
-    _dfu_cli_partition = dfu_cli_partition;
+    configASSERT(power_controller);
+    _ctx.dfu_cli_partition = dfu_cli_partition;
+    _ctx.power_controller = power_controller;
+    _ctx.power_controller_was_enabled = false;
 }
 
 void ncp_dfu_check_for_update(void) {

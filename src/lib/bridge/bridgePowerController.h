@@ -2,7 +2,7 @@
 
 #include "FreeRTOS.h"
 #include "event_groups.h"
-
+#include "task.h"
 #include "io.h"
 
 #include <stdint.h>
@@ -60,5 +60,6 @@ private:
     bool _initDone;
     bool _subSamplingEnabled;
     EventGroupHandle_t _busPowerEventGroup;
+    TaskHandle_t _task_handle;
 };
 

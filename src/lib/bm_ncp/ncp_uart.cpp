@@ -140,7 +140,7 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
-void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition){
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller){
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
 
@@ -158,7 +158,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition){
   ncpSerialHandle->rxBytesFromISR = ncpRXBytesFromISR;
 
   configASSERT(dfu_partition);
-  ncp_dfu_init(dfu_partition);
+  configASSERT(power_controller);
+  ncp_dfu_init(dfu_partition, power_controller);
 
   // Create the task
   BaseType_t rval = xTaskCreate(

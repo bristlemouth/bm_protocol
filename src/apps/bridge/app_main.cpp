@@ -317,8 +317,6 @@ static void defaultTask( void *parameters ) {
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition);
-    ncpInit(&usart3, &dfu_partition);
-    debug_ncp_init();
 
     if(!isRTCSet()){ // FIXME. Hack to enable the bridge power controller functionality.
         RTCTimeAndDate_t datetime;
@@ -343,6 +341,8 @@ static void defaultTask( void *parameters ) {
     IOWrite(&BOOST_EN, 1);
     BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,
         sampleDurationMs, subSampleIntervalMs, subsampleDurationMs, static_cast<bool>(subsampleEnabled), static_cast<bool>(bridgePowerControllerEnabled));
+    ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
+    debug_ncp_init();
 
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
