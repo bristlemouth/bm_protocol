@@ -64,6 +64,8 @@ void BridgePowerController::powerControlEnable(bool enable) {
 
 bool BridgePowerController::isPowerControlEnabled() { return _powerControlEnabled; }
 
+bool BridgePowerController::initPeriodElapsed() {return _initDone; }
+
 bool BridgePowerController::waitForSignal(bool on, TickType_t ticks_to_wait) {
     bool rval = true;
     EventBits_t signal_to_wait_on = (on) ? BridgePowerController::ON : BridgePowerController::OFF;

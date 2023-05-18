@@ -18,6 +18,7 @@ public:
     bool isSubsampleEnabled();
     bool waitForSignal(bool on, TickType_t ticks_to_wait);
     bool isBridgePowerOn(void);
+    bool initPeriodElapsed(void);
 
     // Shim function for FreeRTOS compatibility, should not be called as part of the public API.
     void _update(void); // PRIVATE
