@@ -24,6 +24,11 @@ if (NOT DEFINED APP)
 	return()
 endif()
 
+# Default to USE_BOOTLOADER unless otherwise set
+if (NOT USE_BOOTLOADER STREQUAL 0 AND NOT APP STREQUAL "bootloader")
+set(USE_BOOTLOADER 1)
+endif()
+
 # Make sure we don't try to use MCUBoot signing/etc with the actual bootloader app
 if (APP STREQUAL "bootloader" AND USE_BOOTLOADER STREQUAL 1)
 	message(SEND_ERROR "Cannot build bootloader app with USE_BOOTLOADER defined!")
@@ -517,18 +522,21 @@ add_custom_target(debug_tui
 )
 
 if (APP STREQUAL "bootloader")
+# Added || exit 0 since dfu-flash reports an error even when it succeeds
+# It says dfu-util: "Error during download get_status" after flashing and resetting
+# This way make won't freak out
 add_custom_target(dfu_flash
-	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${FLASH_START}:leave -D ${EXECUTABLE}.bin
+	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${FLASH_START}:leave -D ${EXECUTABLE}.bin || exit 0
 	DEPENDS ${EXECUTABLE}
 )
 elseif(USE_BOOTLOADER STREQUAL 1)
 add_custom_target(dfu_flash
-	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${APP_FLASH_ADDR}:leave -D ${EXECUTABLE}.dfu.bin
+	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${APP_FLASH_ADDR}:leave -D ${EXECUTABLE}.dfu.bin || exit 0
 	DEPENDS ${EXECUTABLE}
 )
 else()
 add_custom_target(dfu_flash
-	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${APP_FLASH_ADDR}:leave -D ${EXECUTABLE}.bin
+	COMMAND dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s ${APP_FLASH_ADDR}:leave -D ${EXECUTABLE}.bin || exit 0
 	DEPENDS ${EXECUTABLE}
 )
 endif()

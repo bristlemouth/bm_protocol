@@ -1,4 +1,7 @@
-## Bristlemouth Firmware
+# Bristlemouth Firmware
+
+## Developer Guide (in progress)
+If you already have your development environment set up, check out the [DEVELOPER.md](DEVELOPER.md) file for some quick start guides, etc...
 
 ## Initial setup
 ### Install conda
@@ -56,7 +59,7 @@ Whenever you pull new project changes (specifically those that update environmen
 
 ### Set up Pre-commit
 
-~This will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
+This will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
 
 ```
 pre-commit install
@@ -76,19 +79,19 @@ The environment variables needed for the project are listed in `.env.example`. Y
 Bristlemouth uses several submodules to include third party libraries, etc. These files might not have been downloaded when cloning/pulling. If that's the case, run `git submodule update --init` to download them.
 
 A couple things to note about submodules
-- The submodule folders do not update SHAs automatically. If we need updated scripts, run `git submodule update --remote tools/scripts/fleet-mfg`
+- The submodule folders do not update SHAs automatically. If we need updated scripts, run `git submodule update --remote path/to/submodule`
 
 
 ## Building/Flashing - Command-line
 
 ### Configure CMake
 
-This follows a pretty standard cmake process. First you create a directory for this particular build/configuration. You can either create a top level directory for each build (/cmake-build-debug, /cmake-build-blinky) or one top level directory with individual build subdirectories (/cmake-build/bristlemouth, /cmake-build/blinky). The `cmake-build` prefix is in the .gitignore, so however you structure the different folders they should still begin with that.
+This follows a pretty standard cmake process. First you create a directory for this particular build/configuration. You can either create a top level directory for each build (/cmake-build-debug, /cmake-build-bridge) or one top level directory with individual build subdirectories (/cmake-build/bristlemouth, /cmake-build/bridge). The `cmake-build` prefix is in the .gitignore, so however you structure the different folders they should still begin with that.
 
 ```
 # Sub-directory example
-$ mkdir -p cmake-build/blinky
-$ cd cmake-build/blinky
+$ mkdir -p cmake-build/bridge
+$ cd cmake-build/bridge
 ```
 
 Then you run cmake and tell it where the toolchain file is located, which BSP(board support package) to use, as well as which application. Pay attention to the `../` relative paths in the args - depending on how your cmake build directories are set up, you might have to replace them with `../..`.
@@ -96,10 +99,10 @@ Then you run cmake and tell it where the toolchain file is located, which BSP(bo
 
 ```
 # If you have individual top-level build directores for each app
-$  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=nucleo_u575 -DAPP=blinky -DCMAKE_BUILD_TYPE=Debug
+$  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Debug
 
 # If you have one top-level build dir with different sub-dirs for each app
-$  cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=nucleo_u575 -DAPP=blinky -DCMAKE_BUILD_TYPE=Debug
+$  cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Debug
 ```
 
 You can optionally set the build type to release (it defaults to Debug) by appending `-DCMAKE_BUILD_TYPE=Release` to the command.
@@ -109,19 +112,38 @@ You can optionally set the build type to release (it defaults to Debug) by appen
 Once inside the build directory you can just run:
 
 ```
-$ cmake --build .
+make
 ```
 
 or
 
 ```
-make
+$ cmake --build .
 ```
 
 If you want to enable parallel builds, add `-j` to either of those commands.
 
+### Bootloader
+Before flashing your application, you **MUST** first build/flash the bootloader. This only needs to happen once per device.
+
+To configure:
+
+```
+$ mkdir -p cmake-build/bootloader
+$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bootloader -DAPP=bootloader -DCMAKE_BUILD_TYPE=Release
+```
+
+To build and flash (`dfu_flash` can also be used here):
+
+```
+make -j flash
+```
+
+
 ### Flashing/Debugging
 To flash using openOCD/STLink (more debugger support to be added later), you can just run:
+
+**NOTE: You will need to flash the bootloader before you can use any application. This only has to be done once**
 
 ```
 $ make flash
@@ -133,17 +155,16 @@ To run the GDB debugger, you can use:
 $ make debug
 ```
 
-After flashing, you should see the red and blue lights blinking on the STM32U575 Nucleo development board. You can also open up a usb/serial terminal to see the printf output. For example on MacOS: `pyserial-miniterm /dev/cu.usbmodem3303 115200`
-
-### Static Analysis
-To run cppcheck static analysis checker (https://sourceforge.net/p/cppcheck/wiki/ListOfChecks/)
-```
-$ make cppcheck
-```
+After flashing, you should see the red and blue lights blinking on the STM32U575 Nucleo development board. You can also open up a usb/serial terminal to see the printf output. For example on MacOS: `pyserial-miniterm /dev/cu.usbmodem0000083039671`
 
 #### USB dfu-util
 
-TODO: Update with STM32U5 instructions
+You can also take advantage of the built-in usb bootloader in the STM32U575 to flash the device. You'll need to have [dfu-util](http://dfu-util.sourceforge.net/) installed. On MacOS just `brew install dfu-util`, on Ubuntu just `apt-get install dfu-util` (I do hope to add it to the conda environment, but it's not a high priority right now.)
+
+Once the device is in DFU mode, you can run `dfu-util -l` to see if the device is detected. To flash it with the latest firmware, just run `make dfu_flash`!
+
+`make dfu_flash` can be used with both the bootloader and main applications.
+
 
 ### Uploading .elf to Memfault
 

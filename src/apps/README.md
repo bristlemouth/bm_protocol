@@ -10,5 +10,5 @@ For example:
 cd src/apps/
 cp -r bringup supercoolnewapp
 cd ../../build
-cmake .. -DCMAKE_TOOL CHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=xMoonJelly_v0 -DAPP=supercoolnewapp
+cmake .. -DCMAKE_TOOL CHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=supercoolnewapp
 ```
