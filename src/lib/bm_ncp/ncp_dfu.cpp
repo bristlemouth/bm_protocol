@@ -25,6 +25,7 @@ typedef struct  __attribute__((__packed__)) {
 #define COPY_BUFFER_SIZE            (1024)
 #define REBOOT_MAGIC                (0xbaadc0de)
 #define POWER_CONTROLLER_TIMEOUT_MS (5 * 1000)
+#define INTERNAL_FLASH_PAGE_SIZE    (0x2000)
 
 typedef struct {
     NvmPartition* dfu_cli_partition;
@@ -53,6 +54,14 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
     bool rval = false;
     do {
         if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &_ctx.fa) != 0) {
+            printf("Failed to open internal flash\n");
+            break;
+        }
+        uint32_t image_flash_size = dfu_start->image_size;
+        image_flash_size += (INTERNAL_FLASH_PAGE_SIZE - 1);
+        image_flash_size &= ~(INTERNAL_FLASH_PAGE_SIZE - 1);
+        if(flash_area_erase(_ctx.fa, 0, image_flash_size) != 0) {
+            printf("Failed to erase flash.\n");
             break;
         }
         // COPY DFU partition to internal flash
@@ -61,9 +70,11 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
         while(bytes_remaining) {
             size_t chunk_size = MIN(bytes_remaining, COPY_BUFFER_SIZE); 
             if(!_ctx.dfu_cli_partition->read(offset + DFU_IMG_START_OFFSET_BYTES, copy_buffer,chunk_size, FLASH_WRITE_READ_TIMEOUT_MS)){
+                printf("Failed to read dfu partition\n");
                 break;
             }
             if(flash_area_write(_ctx.fa, offset, copy_buffer, chunk_size) != 0){
+                printf("Failed to flash area write\n");
                 break;
             }
             offset += chunk_size;
