@@ -190,7 +190,6 @@ static void stress_test_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *buf,
       item.pbuf = buf;
       item.type = STRESS_EVT_RX;
 
-      pbuf_ref(item.pbuf);
       if(xQueueSend(_ctx.evt_queue, &item, 0) != pdTRUE) {
         printf("Error sending to Queue\n");
         // buf will be freed below
@@ -394,11 +393,6 @@ static void stress_test_task( void *parameters ) {
         configASSERT(0);
       }
     }
-
-    if(item.pbuf) {
-      pbuf_free(item.pbuf);
-    }
-
     //
     // Do stuff with item here
     //    printf("Received %u bytes from %s\n", item.pbuf->len, );
