@@ -270,25 +270,11 @@ static void defaultTask( void *parameters ) {
 
     startIWDGTask();
     startSerial();
-    // Use USB for serial console if USB is connected on boot
-    // Otherwise use ST-Link serial port
-    if(usb_is_connected()) {
-      startSerialConsole(&usbCLI);
-      // Serial device will be enabled automatically when console connects
-      // so no explicit serialEnable is required
 
-      pcapInit(&usbPcap);
-
-    } else {
-      startSerialConsole(&usart3);
-      serialEnable(&usart3);
-
-#if BM_DFU_HOST
-      printf("WARNING: USB must be connected to use DFU mode. This serial port will be used by the serial console instead.\n");
-#endif
-
-      printf("WARNING: PCAP support requires USB connection.\n");
-    }
+    startSerialConsole(&usbCLI);
+    // Serial device will be enabled automatically when console connects
+    // so no explicit serialEnable is required
+    pcapInit(&usbPcap);
 
     startCLI();
     // pcapInit(&usbPcap);
@@ -308,11 +294,7 @@ static void defaultTask( void *parameters ) {
     }
 
     debugSysInit();
-    if(usb_is_connected()) {
-        debugMemfaultInit(&usbCLI);
-    } else {
-        debugMemfaultInit(&usart3);
-    }
+    debugMemfaultInit(&usbCLI);
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
     debugBMInit();

@@ -68,24 +68,6 @@
 static void defaultTask(void *parameters);
 
 // Serial console (when no usb present)
-SerialHandle_t usart1 = {
-  .device = USART1,
-  .name = "usart1",
-  .txPin = NULL,
-  .rxPin = NULL,
-  .txStreamBuffer = NULL,
-  .rxStreamBuffer = NULL,
-  .txBufferSize = 1024,
-  .rxBufferSize = 512,
-  .rxBytesFromISR = serialGenericRxBytesFromISR,
-  .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-  .processByte = NULL,
-  .data = NULL,
-  .enabled = false,
-  .flags = 0,
-};
-
-// Serial console (when no usb present)
 SerialHandle_t usart3 = {
   .device = USART3,
   .name = "usart3",
@@ -261,24 +243,12 @@ static void defaultTask( void *parameters ) {
 
     startIWDGTask();
     startSerial();
-    // Use USB for serial console if USB is connected on boot
-    // Otherwise use ST-Link serial port
-    if(usb_is_connected()) {
-      startSerialConsole(&usbCLI);
-      // Serial device will be enabled automatically when console connects
-      // so no explicit serialEnable is required
-
-      pcapInit(&usbPcap);
-
-    } else {
-      startSerialConsole(&usart1);
-      serialEnable(&usart1);
-
-      printf("WARNING: PCAP support requires USB connection.\n");
-    }
+    startSerialConsole(&usbCLI);
+    // Serial device will be enabled automatically when console connects
+    // so no explicit serialEnable is required
+    pcapInit(&usbPcap);
 
     startCLI();
-    // pcapInit(&usbPcap);
 
     gpioISRStartTask();
 
@@ -292,7 +262,7 @@ static void defaultTask( void *parameters ) {
     usbInit(&VUSB_DETECT, usb_is_connected);
 
     debugSysInit();
-    debugMemfaultInit(&usart1);
+    debugMemfaultInit(&usbCLI);
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
     debugBMInit();
