@@ -119,6 +119,34 @@ static void middleware_net_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *b
 }
 
 /*!
+  Publish data to local device (self)
+  \param[in] *pbuf - pbuf with pub data
+  \return None
+*/
+int32_t bm_middleware_local_pub(struct pbuf *pbuf) {
+  int32_t rval = 0;
+
+  configASSERT(pbuf);
+
+  netQueueItem_t queueItem;
+  queueItem.pbuf = pbuf;
+
+  memcpy(&queueItem.addr, netif_ip6_addr(_ctx.netif, 1), sizeof(queueItem.addr));
+
+  // add one to reference count since we'll be using it in two places
+  pbuf_ref(pbuf);
+  if(xQueueSend(_ctx.netQueue, &queueItem, 0) != pdTRUE) {
+      printf("Error sending to Queue\n");
+
+      // JK, don't retain it since we didn't send it out
+      pbuf_free(pbuf);
+      rval = -1;
+  }
+
+  return rval;
+}
+
+/*!
   Middleware network processing task. Will receive middleware packets in queue from
   middleware_net_rx_cb and process them.
   \param[in] *parameters - unused

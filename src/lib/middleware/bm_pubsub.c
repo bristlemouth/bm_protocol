@@ -151,6 +151,13 @@ bool bm_pubsub_publish(bm_pub_t* pub) {
     memcpy((void *)header->topic, pub->topic, pub->topic_len);
     memcpy((void *)&header->topic[header->topic_len], pub->data, pub->data_len);
 
+    // If we have a local subscription, submit it to the local queue as well
+    if (get_sub(pub->topic, pub->topic_len)) {
+      // Submit to local queue as well. Function will pbuf_ref(pbuf) since it
+      // will be used elsewhere
+      bm_middleware_local_pub(pbuf);
+    }
+
     if (middleware_net_tx(pbuf)) {
       retv = false;
     }
