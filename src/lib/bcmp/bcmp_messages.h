@@ -270,32 +270,64 @@ typedef struct {
   uint64_t target_node_id;
 } __attribute__((packed)) bcmp_net_assert_quiet_t;
 
-// TODO
-#if 0
-typedef struct {
+typedef enum {
+  BCMP_CFG_TYPE_UINT32,
+  BCMP_CFG_TYPE_INT32,
+  BCMP_CFG_TYPE_FLOAT,
+  BCMP_CFG_TYPE_STR,
+  BCMP_CFG_TYPE_BYTES,
+} bcmp_config_type_e;
 
+#define BCMP_CFG_MAX_KEY_LEN (50)
+
+typedef struct {
+  // Node ID of the target node for which the request is being made.
+  uint64_t target_node_id;
+  // Data type of configuration
+  bcmp_config_type_e type;
+  // String length of the key (without terminator)
+  uint8_t key_length;
+  // Null terminated key
+  char key[BCMP_CFG_MAX_KEY_LEN];
 } __attribute__((packed)) bcmp_config_get_t;
 
 typedef struct {
-
+  // Node ID of the target node for which the request is being made.
+  uint64_t target_node_id;
+  // Length of data 
+  uint32_t data_length;
+  // data
+  uint8_t data[0];
 } __attribute__((packed)) bcmp_config_value_t;
 
 typedef struct {
-
-} __attribute__((packed)) bcmp_config_set_t;
+  // Node ID of the target node for which the request is being made.
+  uint64_t target_node_id;
+  // Data type of configuration
+  bcmp_config_type_e type;
+  // String length of the key (without terminator)
+  uint8_t key_length;
+  // Null terminated key
+  char key[BCMP_CFG_MAX_KEY_LEN];
+  // Length of data 
+  uint32_t data_length;
+  // data
+  uint8_t data[0];
+} __attribute__((packed)) bcmp_config_set_key_t;
 
 typedef struct {
-
+  // Node ID of the target node for which the request is being made.
+  uint64_t target_node_id;
 } __attribute__((packed)) bcmp_config_commit_t;
 
 typedef struct {
-
+  // Node ID of the target node for which the request is being made.
+  uint64_t target_node_id;
+  // True if there are changes to be committed, false otherwise.
+  bool committed;
 } __attribute__((packed)) bcmp_config_status_t;
 
 // DFU stuff goes below
-#endif
-
-
 typedef struct {
   bm_dfu_frame_header_t header;
   bm_dfu_event_img_info_t info;
