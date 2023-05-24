@@ -43,8 +43,9 @@ jobs:
           git submodule update --init src/third_party/lwip
           git submodule update --init src/third_party/mcuboot
           git submodule update --init src/third_party/memfault-firmware-sdk
-          git submodule update --init src/third_party/tinyusb
+          git submodule update --init src/third_party/micropython
           git submodule update --init src/third_party/tinycbor
+          git submodule update --init src/third_party/tinyusb
           git submodule update --init test/third_party/fff
 
       - name: Run Tests

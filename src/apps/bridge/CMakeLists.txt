@@ -67,6 +67,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
 
+    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -77,12 +78,11 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
-    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
-    ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/drivers/w25.cpp
+    ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/cobs-c/cobs.c
@@ -93,27 +93,28 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
     ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
     ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     )
 
 set(LIB_INCLUDES
     ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
-    ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
+    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
-    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/lib/sys/
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc/
     ${SRC_DIR}/third_party/cobs-c
@@ -121,7 +122,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
-    ${SRC_DIR}/lib/sys/
     ${SRC_DIR}/third_party/tinycbor/src
     )
 
@@ -219,7 +219,7 @@ set(APP_LIBS
     # we get some hardfaults on the lwip library and I don't know why😭
     bm_serial
     lwipcore
-    PARENT_SCOPE)
+    )
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
@@ -232,7 +232,7 @@ set(APP_FILES
     ${MEMFAULT_SOURCES}
     ${TINYUSB_FILES}
     ${BM_NCP_FILES}
-    PARENT_SCOPE)
+    )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -245,7 +245,7 @@ set(APP_INCLUDES
     ${TINYUSB_INCLUDES}
     ${BM_NCP_INCLUDES}
     ${BM_SERIAL_INCLUDES}
-    PARENT_SCOPE)
+    )
 
 set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
@@ -267,10 +267,44 @@ list(APPEND APP_DEFINES "BRIDGE_AUTO_ENABLE")
 message(STATUS "AUTO ENABLE BRIDGE 24V!")
 endif()
 
+
+if (USE_MICROPYTHON STREQUAL 1)
+include(${SRC_DIR}/lib/micropython/CMakeLists.txt)
+
+list(APPEND APP_DEFINES "USE_MICROPYTHON")
+list(APPEND APP_LIBS micropython)
+list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
+list(APPEND APP_FILES
+        ${SRC_DIR}/lib/micropython/micropython_freertos.c
+        ${SRC_DIR}/lib/micropython/mphalport.c)
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/micropython/mphalport.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/micropython/micropython_freertos.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+endif()
+
+
 if (NOT ${USE_BOOTLOADER})
      message(SEND_ERROR "USE_BOOTLOADER is not set.")
 endif()
 
-# Send APP_DEFINES to parent scope (otherwise we can't append to the
-# list above)
+# Send APP_* defines to parent scope (otherwise we can't append to the lists above)
 set(APP_DEFINES "${APP_DEFINES}" PARENT_SCOPE)
+set(APP_LIBS "${APP_LIBS}" PARENT_SCOPE)
+set(APP_FILES "${APP_FILES}" PARENT_SCOPE)
+set(APP_INCLUDES "${APP_INCLUDES}" PARENT_SCOPE)

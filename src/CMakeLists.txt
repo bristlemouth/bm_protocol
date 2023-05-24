@@ -155,8 +155,6 @@ set(COMPILE_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
-	-DMEMFAULT_USE_GNU_BUILD_ID=1
-
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
@@ -172,6 +170,36 @@ set(COMPILE_FLAGS
 
 	-DCBOR_CUSTOM_ALLOC_INCLUDE="tinycbor_alloc.h"
 	-DCBOR_PARSER_MAX_RECURSIONS=10
+	)
+
+set(MICROPY_COMPILER_FLAGS
+	-g
+	-ggdb
+
+	# Necessary to prevent newlib's printf from stomping on our definition
+	-fno-builtin-printf
+
+	-fomit-frame-pointer
+
+	$<$<CONFIG:Debug>:-Og>
+	$<$<CONFIG:Release>:-O2>
+
+	-ffile-prefix-map=${SRC_DIR}=.
+	-fdebug-prefix-map=${SRC_DIR}=.
+	-fdebug-prefix-map=${CMAKE_BINARY_DIR}=.
+	-fdebug-prefix-map=$ENV{CONDA_PREFIX}=.
+
+	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+
+	-Wno-unused-parameter
+
+# In case we want faster sqrtf, etc
+	# -fno-math-errno
+	# -fsingle-precision-constant
+	# -ffast-math
+
+	${BSP_CPU_FLAGS}
 	)
 
 add_subdirectory(apps/${APP})

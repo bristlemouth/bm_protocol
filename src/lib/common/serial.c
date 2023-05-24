@@ -360,7 +360,7 @@ void serialTxTask( void *parameters ) {
   \param *buff buffer of data to write
   \param len buffer length
 */
-void serialWrite(SerialHandle_t *handle, uint8_t *buff, size_t len) {
+void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len) {
   configASSERT(handle != NULL);
   configASSERT(buff != NULL);
 

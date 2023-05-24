@@ -50,6 +50,10 @@
 #include "bridgePowerController.h"
 #include "debug_bridge_power_controller.h"
 
+#ifdef USE_MICROPYTHON
+#include "micropython_freertos.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 
@@ -330,6 +334,10 @@ static void defaultTask( void *parameters ) {
     printf_subscription.topic_len = sizeof(printfTopic) - 1;
     printf_subscription.cb = handle_sensor_subscriptions;
     bm_pubsub_subscribe(&printf_subscription);
+
+#ifdef USE_MICROPYTHON
+    micropython_freertos_init(&usbCLI);
+#endif
 
     while(1) {
         /* Do nothing */

@@ -99,7 +99,7 @@ void serialGenericRxTask(void *parameters);
 void serialTxTask(void *parameters);
 void startSerial();
 
-void serialWrite(SerialHandle_t *handle, uint8_t *buff, size_t len);
+void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len);
 void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len);
 
 xQueueHandle serialGetTxQueue();
