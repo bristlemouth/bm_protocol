@@ -206,6 +206,42 @@ bool Configuration::getConfig(const char * key, uint8_t *value, size_t &value_le
     return rval;
 }
 
+/*!
+* Get the cbor encoded buffer for a given key.
+* \param key[in] - null terminated key
+* \param value[out] - value buffer
+* \param value_len[in/out] -  in: buffer size, out :buffer len
+* \returns - true if success, false otherwise.
+*/
+bool Configuration::getConfigCbor(const char * key, uint8_t *value, size_t &value_len) {
+    configASSERT(key);
+    configASSERT(value);
+    bool rval = false; 
+
+    CborValue it;
+    CborParser parser;
+    uint8_t keyIdx;
+    do {
+        if(!prepareCborParser(key, it, parser)){
+            break;
+        }
+        if(!cbor_value_is_valid(&it)){
+            break;
+        }
+        if(!findKeyIndex(key, strlen(key), keyIdx)){
+            break;
+        }
+        size_t buffer_size = sizeof(_ram_partition->values[keyIdx].valueBuffer);
+        if(value_len < buffer_size || value_len == 0){
+            break;
+        }
+        memcpy(value, _ram_partition->values[keyIdx].valueBuffer, buffer_size);
+        value_len = buffer_size;
+        rval = true;
+    } while(0);
+    return rval;
+} 
+
 bool Configuration::prepareCborEncoder(const char * key, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists) {
     configASSERT(key);
     bool rval = false;
@@ -371,6 +407,90 @@ bool Configuration::setConfig(const char * key, const uint8_t *value, size_t val
     return rval;
 }
 
+
+/*!
+* Sets any cbor conifguration to a given key,
+* \param key[in] -  null terminated key
+* \param value[in] - value buffer
+* \param value_len[in] - buffer len
+* \returns - true if success, false otherwise.
+*/
+bool Configuration::setConfigCbor(const char * key, uint8_t *value, size_t value_len) {
+    configASSERT(key);
+    configASSERT(value);
+    CborValue it;
+    CborParser parser;
+    uint8_t keyIdx;
+    bool rval = false;
+    do {
+        if(strlen(key) > MAX_KEY_LEN_BYTES) {
+            break;
+        }
+        if(value_len > MAX_STR_LEN_BYTES || value_len == 0) {
+            break;
+        }
+        if(cbor_parser_init(value, value_len, 0, &parser, &it) != CborNoError){
+            break;
+        }
+        if(!cbor_value_is_valid(&it)){
+            break;
+        }
+        if(!findKeyIndex(key, strlen(key), keyIdx)){
+            if(_ram_partition->header.numKeys >= MAX_NUM_KV) {
+                break;
+            }
+            keyIdx = _ram_partition->header.numKeys;
+            if(snprintf(_ram_partition->keys[keyIdx].keyBuffer,sizeof(_ram_partition->keys[keyIdx].keyBuffer),"%s",key) < 0){
+                break;
+            }
+        }
+        ConfigDataTypes_e type;
+        if(!cborTypeToConfigType(&it,type)) {
+            break;
+        }
+        _ram_partition->keys[keyIdx].valueType = type;
+        memcpy(_ram_partition->values[keyIdx].valueBuffer, value, value_len);
+        if(keyIdx == _ram_partition->header.numKeys){
+            _ram_partition->header.numKeys++;
+        }
+        rval = true;
+    } while(0);
+    return rval;
+}
+
+/*!
+* Sets any cbor conifguration to a given key,
+* \param cbor[in] -  cbor type to convert from
+* \param configType[out] - config type to convert to
+* \returns - true if success, false otherwise.
+*/
+bool Configuration::cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType) {
+    bool rval = true;
+    do {
+        if(cbor_value_is_integer(value)){
+            if(cbor_value_is_unsigned_integer(value)){
+                configType = UINT32;
+                break;
+            } else {
+                configType = INT32;
+                break;
+            }
+        } else if(cbor_value_is_byte_string(value)){
+            configType = BYTES;
+            break;
+        } else if(cbor_value_is_text_string(value)){
+            configType = STR;
+            break;
+        } else if (cbor_value_is_float(value)){
+            configType = FLOAT;
+            break;
+        }
+        rval = false;
+    } while(0);
+    return rval;
+}
+
+
 /*!
 * Gets a list of the keys stored in the configuration.
 * \param num_stored_key[out] - number of keys stored
@@ -443,5 +563,43 @@ bool Configuration::saveConfig(void) {
     } while(0);
     return rval;
 }
+
+ bool Configuration::getValueSize(const char * key, size_t &size) {
+    configASSERT(key);
+    bool rval = false;
+    CborValue it;
+    CborParser parser;
+    do {
+        if(!prepareCborParser(key, it, parser)){
+            break;
+        }
+        ConfigDataTypes_e configType;
+        if(!cborTypeToConfigType(&it, configType)){
+            break;
+        }
+        switch(configType){
+            case UINT32:{
+                size = sizeof(uint32_t);
+                break;
+            }
+            case INT32:{
+                size = sizeof(int32_t);
+                break;
+            }
+            case FLOAT: {
+                size = sizeof(float);
+                break;
+            }
+            case STR:
+            case BYTES:{
+                if(cbor_value_get_string_length(&it,&size) != CborNoError){
+                    return false;
+                }
+            }
+        }
+        rval = true;
+    } while(0);
+    return rval;
+ }
 
 } // namespace cfg

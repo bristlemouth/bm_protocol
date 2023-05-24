@@ -46,17 +46,21 @@ public:
     bool getConfig(const char * key, float &value);
     bool getConfig(const char * key, char *value, size_t &value_len);
     bool getConfig(const char * key, uint8_t *value, size_t &value_len);
+    bool getConfigCbor(const char * key, uint8_t *value, size_t &value_len);
     bool setConfig(const char * key, uint32_t value);
     bool setConfig(const char * key, int32_t value);
     bool setConfig(const char * key, float value);
     bool setConfig(const char * key, const char *value);
     bool setConfig(const char * key, const uint8_t *value, size_t value_len);
     const ConfigKey_t* getStoredKeys(uint8_t &num_stored_keys);
+    bool setConfigCbor(const char * key, uint8_t *value, size_t value_len);
     bool removeKey(const char * key);
     bool configFull(void);
     static const char* dataTypeEnumToStr(ConfigDataTypes_e type);
     bool saveConfig(void);
+    bool getValueSize(const char * key, size_t &size);
 private:
+    bool cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType);
     bool findKeyIndex(const char * key, size_t len, uint8_t &idx);
     bool prepareCborParser(const char * key, CborValue &it, CborParser &parser);
     bool prepareCborEncoder(const char * key, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists);

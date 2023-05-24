@@ -222,3 +222,77 @@ TEST_F(ConfigurationTest, NoKeyToRemove)
   Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);
   EXPECT_EQ(config.removeKey("foo"), false);
 }
+
+TEST_F(ConfigurationTest, cborGetSet){
+    uint8_t cborBuffer[MAX_STR_LEN_BYTES];
+    const ext_flash_partition_t test_configuration = {
+        .fa_off = 4096,
+        .fa_size = 10000,
+    };
+    NvmPartition testPartition(_storage, test_configuration);
+    Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);
+    uint8_t num_keys;
+    const ConfigKey_t *key_list = NULL;
+    key_list = config.getStoredKeys(num_keys);
+    EXPECT_EQ(num_keys,0);
+    EXPECT_EQ((key_list != NULL), true);
+
+    uint32_t foo = 42;
+    uint32_t result_foo = 0;
+    EXPECT_EQ(config.setConfig("foo", foo),true);
+    EXPECT_EQ(config.getConfig("foo", result_foo),true);
+    EXPECT_EQ(foo, result_foo);
+    key_list = config.getStoredKeys(num_keys);
+    EXPECT_EQ(num_keys,1);
+    EXPECT_EQ(strncmp("foo", key_list[0].keyBuffer, sizeof("foo")),0);
+    size_t buffer_size = sizeof(cborBuffer);
+    EXPECT_EQ(config.getConfigCbor("foo", cborBuffer, buffer_size), true);
+    EXPECT_EQ(config.setConfigCbor("bar", cborBuffer, buffer_size), true);
+    key_list = config.getStoredKeys(num_keys);
+    EXPECT_EQ(num_keys,2);
+    uint32_t result_bar;
+    EXPECT_EQ(config.getConfig("bar", result_bar),true);
+    EXPECT_EQ(foo, result_bar);
+    size_t bar_size;
+    EXPECT_EQ(config.getValueSize("bar", bar_size),true);
+    EXPECT_EQ(bar_size, sizeof(foo));
+
+    buffer_size = sizeof(cborBuffer);
+    const char * silly = "The quick brown fox jumps over the lazy dog";
+    EXPECT_EQ(config.setConfig("silly", silly),true);
+    EXPECT_EQ(config.getConfigCbor("silly", cborBuffer, buffer_size),true);
+    EXPECT_EQ(config.setConfigCbor("bar", cborBuffer, buffer_size), true);
+    key_list = config.getStoredKeys(num_keys);
+    EXPECT_EQ(num_keys,3);
+    char silly_bar[100];
+    size_t size = sizeof(silly_bar);
+    EXPECT_EQ(config.getConfig("bar", silly_bar, size),true);
+    EXPECT_EQ(strncmp(silly,silly_bar,strlen(silly)),0);
+    EXPECT_EQ(config.getValueSize("bar", bar_size),true);
+    EXPECT_EQ(bar_size, strlen(silly));
+}
+
+TEST_F(ConfigurationTest, BadCborGetSet){
+    uint8_t cborBuffer[MAX_STR_LEN_BYTES];
+    size_t buffer_size = sizeof(cborBuffer);
+    memset(cborBuffer, 0xFF, buffer_size);
+    const ext_flash_partition_t test_configuration = {
+        .fa_off = 4096,
+        .fa_size = 10000,
+    };
+    NvmPartition testPartition(_storage, test_configuration);
+    Configuration config(testPartition,ram_hardware_configuration,RAM_HARDWARE_CONFIG_SIZE_BYTES);
+    uint8_t num_keys;
+    const ConfigKey_t *key_list = NULL;
+    key_list = config.getStoredKeys(num_keys);
+    EXPECT_EQ(num_keys,0);
+    EXPECT_EQ((key_list != NULL), true);
+    EXPECT_EQ(config.getConfigCbor("foo", cborBuffer, buffer_size), false); // Key doesn't exist.
+    EXPECT_EQ(config.setConfigCbor("foo", cborBuffer, buffer_size), false); // Invalid cbor buffer.
+    uint32_t foo = 42;
+    EXPECT_EQ(config.setConfig("foo", foo),true);
+    EXPECT_EQ(config.getConfigCbor("foo", cborBuffer, buffer_size), true);
+    EXPECT_EQ(config.setConfigCbor("a super long key string that shouldn't work", cborBuffer, buffer_size), false); // key string too long.
+    key_list = config.getStoredKeys(num_keys);
+    EXPECT_EQ(num_keys,1);
+}
