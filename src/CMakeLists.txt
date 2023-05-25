@@ -202,12 +202,14 @@ set(MICROPY_COMPILER_FLAGS
 	${BSP_CPU_FLAGS}
 	)
 
-add_subdirectory(apps/${APP})
 
 set(APP_NAME ${APP})
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(APP_NAME ${APP_NAME}-dbg)
 endif()
+add_subdirectory(apps/${APP})
+
 set(EXECUTABLE ${BSP}-${APP_NAME}.elf)
 
 # Compute addresses to be used later for flashing device and padding images
@@ -231,7 +233,6 @@ add_compile_definitions(
 	MCUBOOT_BOOT_MAX_ALIGN=${MCUBOOT_BOOT_MAX_ALIGN}
 	$<$<CONFIG:Debug>:BUILD_DEBUG=1>
 	$<$<CONFIG:Release>:BUILD_DEBUG=0>
-	APP_NAME="${APP_NAME}"
 	)
 
 add_compile_options(${COMPILE_FLAGS})

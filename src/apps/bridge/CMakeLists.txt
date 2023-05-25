@@ -248,6 +248,7 @@ set(APP_INCLUDES
     )
 
 set(APP_DEFINES
+    APP_NAME="${APP_NAME}"
     CFG_TUSB_MCU=OPT_MCU_STM32U5
 
     # Add network stress test functions
@@ -272,7 +273,9 @@ if (USE_MICROPYTHON STREQUAL 1)
 include(${SRC_DIR}/lib/micropython/CMakeLists.txt)
 
 list(APPEND APP_DEFINES "USE_MICROPYTHON")
+list(APPEND APP_DEFINES "MICROPY_HEAP_SIZE=1024*64;${MICROPY_DEFINITIONS}")
 list(APPEND APP_LIBS micropython)
+# list(APPEND APP_LIBS usermod)
 list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
 list(APPEND APP_FILES
         ${SRC_DIR}/lib/micropython/micropython_freertos.c

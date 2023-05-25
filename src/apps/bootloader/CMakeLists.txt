@@ -121,6 +121,7 @@ set(APP_INCLUDES
     PARENT_SCOPE)
 
 set(APP_DEFINES
+    APP_NAME="${APP_NAME}"
     IS_BOOTLOADER
 
     # Uncomment these for MCUBoot logging over SWO

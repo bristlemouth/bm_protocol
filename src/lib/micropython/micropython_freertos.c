@@ -18,15 +18,13 @@
 
 #include "mphalport.h"
 
-#define MICROPYTHON_HEAP_SIZE (1024*128)
-
 // static TaskHandle_t micropython_task_handle;
 // static void micropython_task(void *parameters);
 static SerialHandle_t *_serial_handle;
 
 // Using micropython specific heap for now
 // TODO - put this in separate memory area with linker
-static uint8_t upy_heap[MICROPYTHON_HEAP_SIZE];
+static uint8_t upy_heap[MICROPY_HEAP_SIZE] __attribute__((aligned(4)));
 
 //
 // Commented out while we use the REPL for testing

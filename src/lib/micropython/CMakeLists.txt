@@ -7,6 +7,9 @@ set(MICROPY_PORT_DIR    ${SRC_DIR}/lib/micropython)
 set(MICROPY_DIR         ${SRC_DIR}/third_party/micropython)
 set(MICROPY_TARGET      micropython)
 
+set(USER_C_MODULES ${MICROPY_PORT_DIR}/modules/micropython.cmake)
+include(${MICROPY_DIR}/py/usermod.cmake)
+
 include(${MICROPY_DIR}/py/py.cmake)
 include(${MICROPY_DIR}/extmod/extmod.cmake)
 
@@ -54,21 +57,30 @@ list(TRANSFORM MICROPY_SOURCE_LIB PREPEND ${MICROPY_DIR}/lib/)
 set(MICROPY_SOURCE_QSTR
     ${MICROPY_SOURCE_PY}
     ${MICROPY_SOURCE_EXTMOD}
+    ${MICROPY_SOURCE_USERMOD}
     ${MICROPY_SOURCE_SHARED}
     ${MICROPY_SOURCE_LIB}
     ${MICROPY_SOURCE_PORT}
 )
 
-set(MICROPY_INCLUDE_DIRS
+set(MICROPY_ONLY_INCLUDE_DIRS
     ${MICROPY_INC_CORE}
     ${MICROPY_PORT_DIR}
     ${CMAKE_BINARY_DIR}
     )
 
+set(MICROPY_INCLUDE_DIRS
+    ${MICROPY_ONLY_INCLUDE_DIRS}
+    ${APP_INCLUDES}
+    ${BSP_INCLUDES}
+    )
+
+message("APP DEFINES ${APP_DEFINES}")
 
 set(MICROPY_DEFINITIONS
-    MICROPY_HEAP_SIZE=1024*64
     MP_CONFIGFILE="mpconfigport.h"
+    ${BSP_DEFINES}
+    ${APP_DEFINES}
     )
 
 add_library(micropython EXCLUDE_FROM_ALL ${MICROPY_SOURCE_QSTR})
@@ -76,6 +88,9 @@ target_compile_options(micropython PRIVATE ${MICROPY_COMPILER_FLAGS})
 target_compile_definitions(micropython PRIVATE ${MICROPY_DEFINITIONS})
 target_include_directories(micropython PRIVATE ${MICROPY_INCLUDE_DIRS})
 
+# Make sure `make clean` removes genhdr directory. Otherwise re-building might fail
+set_target_properties(micropython PROPERTIES ADDITIONAL_CLEAN_FILES "${CMAKE_BINARY_DIR}/genhdr")
+
 include(${MICROPY_DIR}/py/mkrules.cmake)
 
-set(MICROPY_INCLUDE_DIRS ${MICROPY_INCLUDE_DIRS} PARENT_SCOPE)
+set(MICROPY_INCLUDE_DIRS ${MICROPY_ONLY_INCLUDE_DIRS} PARENT_SCOPE)
