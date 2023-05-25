@@ -348,17 +348,17 @@ static void defaultTask( void *parameters ) {
     IOWrite(&VBUS_SW_EN, 1);
 #else
     uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_MS;
-    debug_configuration_system.getConfig("sampleIntervalMs",sampleIntervalMs);
+    debug_configuration_system.getConfig("sampleIntervalMs",strlen("sampleIntervalMs"),sampleIntervalMs);
     uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_MS;
-    debug_configuration_system.getConfig("sampleDurationMs",sampleDurationMs);
+    debug_configuration_system.getConfig("sampleDurationMs",strlen("sampleDurationMs"),sampleDurationMs);
     uint32_t subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_MS;
-    debug_configuration_system.getConfig("subSampleIntervalMs",subSampleIntervalMs);
+    debug_configuration_system.getConfig("subSampleIntervalMs",strlen("subSampleIntervalMs"),subSampleIntervalMs);
     uint32_t subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_MS;
-    debug_configuration_system.getConfig("subsampleDurationMs",subsampleDurationMs);
+    debug_configuration_system.getConfig("subsampleDurationMs",strlen("subsampleDurationMs"),subsampleDurationMs);
     uint32_t subsampleEnabled = 0;
-    debug_configuration_system.getConfig("subsampleEnabled",subsampleEnabled);
+    debug_configuration_system.getConfig("subsampleEnabled",strlen("subsampleEnabled"),subsampleEnabled);
     uint32_t bridgePowerControllerEnabled = 0;
-    debug_configuration_system.getConfig("bridgePowerControllerEnabled", bridgePowerControllerEnabled);
+    debug_configuration_system.getConfig("bridgePowerControllerEnabled", strlen("bridgePowerControllerEnabled"), bridgePowerControllerEnabled);
     printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
     BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,

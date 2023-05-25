@@ -115,16 +115,10 @@ static BaseType_t configurationCommand( char *writeBuffer,
                 printf("ERR Invalid paramters\n");
                 break;
             }
-            char keyStrBuf[MAX_STR_LEN_BYTES];
-            if(!strncpy(keyStrBuf,keystr, keyStrLen+1)){
-                printf("Failed to write buffer\n");
-                break;
-            }
-            keyStrBuf[keyStrLen] = '\0';
             if(strncmp("uint",typestr,typeStrLen) == 0){
                 char * ptr;
                 uint32_t value = strtol(valuestr, &ptr, 10);
-                if(config->setConfig(keyStrBuf, value)){
+                if(config->setConfig(keystr,keyStrLen, value)){
                     printf("set %lu\n", value);
                 } else{
                     printf("failed to set %lu\n", value);
@@ -132,7 +126,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             } else if(strncmp("int",typestr, typeStrLen) == 0){
                 char * ptr;
                 int32_t value = strtol(valuestr, &ptr, 10);
-                if(config->setConfig(keyStrBuf, value)){
+                if(config->setConfig(keystr,keyStrLen, value)){
                     printf("set %ld\n", value);
                 } else{
                     printf("failed to set %ld\n", value);
@@ -143,19 +137,19 @@ static BaseType_t configurationCommand( char *writeBuffer,
                     printf("ERR Invalid paramters\n");
                     break;
                 }
-                if(config->setConfig(keyStrBuf, value)){
+                if(config->setConfig(keystr,keyStrLen, value)){
                     printf("set %f\n", value);
                 } else{
                     printf("failed to set %fd\n", value);
                 }
             } else if(strncmp("str",typestr,typeStrLen ) == 0){
-                if(config->setConfig(keyStrBuf, valuestr)){
+                if(config->setConfig(keystr,keyStrLen, valuestr,valueStrLen)){
                     printf("set %s\n", valuestr);
                 } else{
                     printf("failed to set %sd\n", valuestr);
                 }
             } else if(strncmp("bytestr",typestr, typeStrLen) == 0){
-                if(config->setConfig(keyStrBuf, (uint8_t *)valuestr, strlen(valuestr) + 1)){
+                if(config->setConfig(keystr,keyStrLen, (uint8_t *)valuestr, strlen(valuestr) + 1)){
                     printf("set %s\n", valuestr);
                 } else{
                     printf("failed to set %sd\n", valuestr);
@@ -183,53 +177,47 @@ static BaseType_t configurationCommand( char *writeBuffer,
                 printf("ERR Invalid paramters\n");
                 break;
             }
-            char keyStrBuf[MAX_STR_LEN_BYTES];
-            if(!strncpy(keyStrBuf,keystr, keyStrLen+1)){
-                printf("Failed to write buffer\n");
-                break;
-            }
-            keyStrBuf[keyStrLen] = '\0';
             if(strncmp("uint",typestr, typeStrLen) == 0){
                 uint32_t value;
-                if(config->getConfig(keyStrBuf, value)){
+                if(config->getConfig(keystr,keyStrLen, value)){
                     printf("get %lu\n", value);
                 } else{
-                    printf("failed to get %s\n", keyStrBuf);
+                    printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("int",typestr, typeStrLen) == 0){
                 int32_t value;
-                if(config->getConfig(keyStrBuf, value)){
+                if(config->getConfig(keystr,keyStrLen, value)){
                     printf("get %ld\n", value);
                 } else{
-                    printf("failed to get %s\n", keyStrBuf);
+                    printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("float",typestr, typeStrLen) == 0){
                 float value;
-                if(config->getConfig(keyStrBuf, value)){
+                if(config->getConfig(keystr,keyStrLen, value)){
                     printf("get %f\n", value);
                 } else{
-                    printf("failed to get %s\n", keyStrBuf);
+                    printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("str",typestr, typeStrLen) == 0){
                 char strbuf[MAX_STR_LEN_BYTES];
                 size_t strlen = sizeof(strbuf);
-                if(config->getConfig(keyStrBuf, strbuf, strlen)){
+                if(config->getConfig(keystr,keyStrLen, strbuf, strlen)){
                     strbuf[strlen] = '\0';
                     printf("get %s\n", strbuf);
                 } else{
-                    printf("failed to get %s\n", keyStrBuf);
+                    printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("bytestr",typestr, typeStrLen) == 0){
                 uint8_t bytes[MAX_STR_LEN_BYTES];
                 size_t bytelen = sizeof(bytes);
-                if(config->getConfig(keyStrBuf, bytes, bytelen)){
+                if(config->getConfig(keystr,keyStrLen, bytes, bytelen)){
                     printf("get bytes:");
                     for(size_t i = 0; i < bytelen; i++){
                         printf("%02x:", bytes[i]);
                     }
                     printf("\n");
                 } else{
-                    printf("failed to get %s\n", keyStrBuf);
+                    printf("failed to get %s\n", keystr);
                 }
             } else {
                 printf("ERR Invalid paramters\n");
@@ -241,7 +229,13 @@ static BaseType_t configurationCommand( char *writeBuffer,
             const ConfigKey_t *keys = config->getStoredKeys(num_keys);
             printf("num keys: %u\n", num_keys);
             for(int i = 0; i < num_keys; i++){
-                printf("%s : %s\n", keys[i].keyBuffer, Configuration::dataTypeEnumToStr(keys[i].valueType));
+                size_t keybufSize = keys[i].keyLen + 1;
+                char * keybuf = (char *) pvPortMalloc(keybufSize);
+                configASSERT(keybuf);
+                memcpy(keybuf, keys[i].keyBuffer, keybufSize);
+                keybuf[keys[i].keyLen] = '\0';
+                printf("%s : %s\n", keybuf, Configuration::dataTypeEnumToStr(keys[i].valueType));
+                vPortFree(keybuf);
             }
         } else if (strncmp("del", parameter, parameterStringLength) == 0) {
             BaseType_t keyStrLen;
@@ -253,16 +247,10 @@ static BaseType_t configurationCommand( char *writeBuffer,
                 printf("ERR Invalid paramters\n");
                 break;
             }
-            char keyStrBuf[MAX_STR_LEN_BYTES];
-            if(!strncpy(keyStrBuf,keystr, keyStrLen+1)){
-                printf("Failed to write buffer\n");
-                break;
-            }
-            keyStrBuf[keyStrLen] = '\0';
-            if(config->removeKey(keyStrBuf)){
-                printf("Removed key %s\n",keyStrBuf);
+            if(config->removeKey(keystr, keyStrLen)){
+                printf("Removed key %s\n",keystr);
             } else {
-                printf("Failed to remove key %s\n",keyStrBuf);
+                printf("Failed to remove key %s\n",keystr);
             }
         } else if (strncmp("save", parameter, parameterStringLength) == 0) {
             if(!config->saveConfig()){

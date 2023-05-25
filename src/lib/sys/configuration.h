@@ -25,6 +25,7 @@ typedef struct ConfigPartitionHeader {
 
 typedef struct ConfigKey {
     char keyBuffer[MAX_KEY_LEN_BYTES];
+    size_t keyLen;
     ConfigDataTypes_e valueType;
 } __attribute__((packed, aligned(1))) ConfigKey_t;
 
@@ -41,29 +42,29 @@ typedef struct ConfigPartition {
 class Configuration {
 public:
     Configuration(NvmPartition &flash_partition, uint8_t *ram_partition, size_t ram_partition_size);
-    bool getConfig(const char * key, uint32_t &value);
-    bool getConfig(const char * key, int32_t &value);
-    bool getConfig(const char * key, float &value);
-    bool getConfig(const char * key, char *value, size_t &value_len);
-    bool getConfig(const char * key, uint8_t *value, size_t &value_len);
-    bool getConfigCbor(const char * key, uint8_t *value, size_t &value_len);
-    bool setConfig(const char * key, uint32_t value);
-    bool setConfig(const char * key, int32_t value);
-    bool setConfig(const char * key, float value);
-    bool setConfig(const char * key, const char *value);
-    bool setConfig(const char * key, const uint8_t *value, size_t value_len);
+    bool getConfig(const char * key, size_t key_len, uint32_t &value);
+    bool getConfig(const char * key, size_t key_len, int32_t &value);
+    bool getConfig(const char * key, size_t key_len, float &value);
+    bool getConfig(const char * key, size_t key_len, char *value, size_t &value_len);
+    bool getConfig(const char * key, size_t key_len, uint8_t *value, size_t &value_len);
+    bool getConfigCbor(const char * key, size_t key_len, uint8_t *value, size_t &value_len);
+    bool setConfig(const char * key, size_t key_len, uint32_t value);
+    bool setConfig(const char * key, size_t key_len, int32_t value);
+    bool setConfig(const char * key, size_t key_len, float value);
+    bool setConfig(const char * key, size_t key_len, const char *value, size_t value_len);
+    bool setConfig(const char * key, size_t key_len, const uint8_t *value, size_t value_len);
     const ConfigKey_t* getStoredKeys(uint8_t &num_stored_keys);
-    bool setConfigCbor(const char * key, uint8_t *value, size_t value_len);
-    bool removeKey(const char * key);
+    bool setConfigCbor(const char * key, size_t key_len, uint8_t *value, size_t value_len);
+    bool removeKey(const char * key, size_t key_len);
     bool configFull(void);
     static const char* dataTypeEnumToStr(ConfigDataTypes_e type);
     bool saveConfig(void);
-    bool getValueSize(const char * key, size_t &size);
+    bool getValueSize(const char * key, size_t key_len, size_t &size);
 private:
     bool cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType);
     bool findKeyIndex(const char * key, size_t len, uint8_t &idx);
-    bool prepareCborParser(const char * key, CborValue &it, CborParser &parser);
-    bool prepareCborEncoder(const char * key, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists);
+    bool prepareCborParser(const char * key, size_t key_len, CborValue &it, CborParser &parser);
+    bool prepareCborEncoder(const char * key, size_t key_len, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists);
     bool loadAndVerifyNvmConfig(void);
 
     static constexpr uint32_t CONFIG_START_OFFSET_IN_BYTES = 0;
