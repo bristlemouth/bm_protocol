@@ -211,7 +211,6 @@ void bm_dfu_client_process_update_request(void) {
     uint16_t chunk_size;
     uint8_t minor_version;
     uint8_t major_version;
-    uint32_t image_flash_size;
 
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
@@ -220,8 +219,8 @@ void bm_dfu_client_process_update_request(void) {
         return;
     }
 
-    bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.buf;
-    bm_dfu_event_img_info_t* img_info_evt = (bm_dfu_event_img_info_t*) &((uint8_t *)frame)[1];
+    bm_dfu_frame_t *frame = reinterpret_cast<bm_dfu_frame_t *>(curr_evt.buf);
+    bm_dfu_event_img_info_t* img_info_evt = (bm_dfu_event_img_info_t*) &(reinterpret_cast<uint8_t *>(frame))[1];
 
     image_size = img_info_evt->img_info.image_size;
     chunk_size = img_info_evt->img_info.chunk_size;
@@ -250,8 +249,7 @@ void bm_dfu_client_process_update_request(void) {
             if(client_ctx.fa->fa_size > image_size) {
                 /* Erase memory in secondary image slot */
                 printf("Erasing flash\n");
-
-                image_flash_size = image_size;
+                uint32_t image_flash_size  = image_size;
                 image_flash_size += (0x2000 - 1);
                 image_flash_size &= ~(0x2000 - 1);
 
@@ -325,8 +323,8 @@ void s_client_receiving_run(void) {
 
     if (curr_evt.type == DFU_EVENT_IMAGE_CHUNK) {
         configASSERT(curr_evt.buf);
-        bm_dfu_frame_t *frame = (bm_dfu_frame_t *) curr_evt.buf;
-        bm_dfu_event_image_chunk_t* image_chunk_evt = (bm_dfu_event_image_chunk_t*) &((uint8_t *)frame)[1];
+        bm_dfu_frame_t *frame = reinterpret_cast<bm_dfu_frame_t *>(curr_evt.buf);
+        bm_dfu_event_image_chunk_t* image_chunk_evt = (bm_dfu_event_image_chunk_t*) &(reinterpret_cast<uint8_t *>(frame))[1];
 
         /* Stop Chunk Timer */
         configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
@@ -369,7 +367,7 @@ void s_client_receiving_run(void) {
         }
     } else if (curr_evt.type == DFU_EVENT_RECEIVED_UPDATE_REQUEST) { // The host dropped our previous ack to the image, and we need to sync up.
         configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
-        bm_dfu_send_ack(client_ctx.host_node_id, 1, BM_DFU_ERR_NONE); 
+        bm_dfu_send_ack(client_ctx.host_node_id, 1, BM_DFU_ERR_NONE);
         // Start image from the beginning
         client_ctx.current_chunk = 0;
         client_ctx.chunk_retry_num = 0;

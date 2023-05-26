@@ -224,10 +224,10 @@ static void s_error_entry(void) {
 void bm_dfu_process_message(uint8_t *buf, size_t len) {
     configASSERT(buf);
     bm_dfu_event_t evt;
-    bm_dfu_frame_t *frame = (bm_dfu_frame_t *)buf;
+    bm_dfu_frame_t *frame = reinterpret_cast<bm_dfu_frame_t *>(buf);
 
     /* If this node is not the intended destination, then discard and continue to wait on queue */
-    if (dfu_ctx.self_node_id != ((bm_dfu_event_address_t *)frame->payload)->dst_node_id) {
+    if (dfu_ctx.self_node_id != (reinterpret_cast<bm_dfu_event_address_t *>(frame->payload))->dst_node_id) {
         vPortFree(buf);
         return;
     }
@@ -408,7 +408,7 @@ void bm_dfu_req_next_chunk(uint64_t dst_node_id, uint16_t chunk_num)
         printf("Message %d sent \n", chunk_req_msg.header.frame_type);
     } else {
         printf("Failed to send message %d\n", chunk_req_msg.header.frame_type);
-    }       
+    }
 }
 
 /**
@@ -434,7 +434,7 @@ void bm_dfu_update_end(uint64_t dst_node_id, uint8_t success, bm_dfu_err_t err_c
         printf("Message %d sent \n",update_end_msg.header.frame_type);
     } else {
         printf("Failed to send message %d\n",update_end_msg.header.frame_type);
-    }       
+    }
 }
 
 /**
@@ -454,7 +454,7 @@ void bm_dfu_send_heartbeat(uint64_t dst_node_id) {
         printf("Message %d sent \n",heartbeat_msg.header.frame_type);
     } else {
         printf("Failed to send message %d\n",heartbeat_msg.header.frame_type);
-    }       
+    }
 }
 
 /* This thread consumes events from the event queue and progresses the state machine */
@@ -533,7 +533,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
         bm_dfu_event_t evt;
         size_t size = sizeof(dfu_host_start_event_t);
         evt.type = DFU_EVENT_BEGIN_HOST;
-        uint8_t *buf = (uint8_t*) pvPortMalloc(size);
+        uint8_t *buf = static_cast<uint8_t*>(pvPortMalloc(size));
         configASSERT(buf);
 
         dfu_host_start_event_t *start_event = reinterpret_cast<dfu_host_start_event_t*>(buf);

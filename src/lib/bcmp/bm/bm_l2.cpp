@@ -12,6 +12,12 @@
 #define NETIF_LINK_SPEED_BPS        10000000
 #define ETHERNET_MTU                1500
 
+#define ADD_EGRESS_PORT(addr, port) (addr[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + EGRESS_PORT_IDX] = port)
+#define ADD_INGRESS_PORT(addr, port) (addr[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, src) + INGRESS_PORT_IDX] = port)
+#define IS_GLOBAL_MULTICAST(addr) ( ( static_cast<uint8_t *>(addr) )[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest)] == 0xFFU && \
+                                    ( static_cast<uint8_t *>(addr) )[sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest) + 1] == 0x03U )
+
+
 #define EVT_QUEUE_LEN (32)
 
 typedef struct {
