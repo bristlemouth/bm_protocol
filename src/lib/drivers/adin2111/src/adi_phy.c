@@ -728,7 +728,7 @@ static adi_eth_Result_e setSoftwarePowerdown(adi_phy_Device_t *hDevice, bool ena
     adi_eth_Result_e    result = ADI_ETH_SUCCESS;
     uint16_t            val16;
     uint16_t            bitval;
-    bool                swpd;
+    bool                swpd = false;
     int32_t             iter = ADI_PHY_SOFT_PD_ITER;
 
     if (hDevice->irqPending)
@@ -1962,4 +1962,3 @@ adi_phy_DriverEntry_t phyDriverEntry =
     PHY_FrameChkReadRxErrCnt,
     PHY_FrameChkReadErrorCnt,
 };
-

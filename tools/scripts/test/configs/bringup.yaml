@@ -3,7 +3,7 @@
   args:
     app: bringup
     bsp: dev_mote_v1_0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True
 
 - name: bringup_bristlefin on dev_mote_bristlefin_v1_0 - Debug (w/ bootloader)
@@ -11,7 +11,7 @@
   args:
     app: bringup_bristlefin
     bsp: dev_mote_bristlefin_v1_0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True
 
 - name: bringup_bridge on bridge_v1_0 - Debug (w/ bootloader)
@@ -19,7 +19,7 @@
   args:
     app: bringup_bridge
     bsp: bridge_v1_0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True
 
 - name: bringup_mote on bm_mote_v1.0 - Debug (w/ bootloader)
@@ -27,5 +27,5 @@
   args:
     app: bringup_mote
     bsp: bm_mote_v1.0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True

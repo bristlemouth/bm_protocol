@@ -43,14 +43,14 @@
 #define LWIP_IGMP                         LWIP_IPV4
 #define LWIP_ICMP                         LWIP_IPV4
 
-#define LWIP_SNMP                         LWIP_UDP
+#define LWIP_SNMP                         0
 #define MIB2_STATS                        LWIP_SNMP
 #ifdef LWIP_HAVE_MBEDTLS
 #define LWIP_SNMP_V3                      (LWIP_SNMP)
 #endif
 
-#define LWIP_DNS                          LWIP_UDP
-#define LWIP_MDNS_RESPONDER               LWIP_UDP
+#define LWIP_DNS                          0
+#define LWIP_MDNS_RESPONDER               0
 
 #define LWIP_NUM_NETIF_CLIENT_DATA        (LWIP_MDNS_RESPONDER)
 
@@ -58,11 +58,11 @@
 #define LWIP_NETIF_LOOPBACK               1
 #define LWIP_LOOPBACK_MAX_PBUFS           10
 
-#define TCP_LISTEN_BACKLOG                1
+#define TCP_LISTEN_BACKLOG                0
 
-#define LWIP_COMPAT_SOCKETS               1
-#define LWIP_SO_RCVTIMEO                  1
-#define LWIP_SO_RCVBUF                    1
+#define LWIP_COMPAT_SOCKETS               0
+#define LWIP_SO_RCVTIMEO                  0
+#define LWIP_SO_RCVBUF                    0
 
 // We MUST use core locking since we're using the raw API, which is not
 // thread safe on it's own
@@ -74,8 +74,7 @@
 #define LWIP_NETIF_STATUS_CALLBACK        1
 #define LWIP_NETIF_EXT_STATUS_CALLBACK    1
 
-/* WIP: Added by Aadu */
-#define TCPIP_MBOX_SIZE                   10
+#define TCPIP_MBOX_SIZE                   16
 #define TCPIP_THREAD_STACKSIZE            8192
 #define LWIP_IPV6_MLD                     (LWIP_IPV6)
 
@@ -234,7 +233,7 @@ a lot of data that needs to be copied, this should be set high. */
 /* Define IP_FORWARD to 1 if you wish to have the ability to forward
    IP packets across network interfaces. If you are going to run lwIP
    on a device with only one network interface, define this to 0. */
-#define IP_FORWARD              1
+#define IP_FORWARD              0
 
 /* IP reassembly and segmentation.These are orthogonal even
  * if they both deal with IP fragments */
@@ -299,7 +298,7 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* ---------- PPP options ---------- */
 
-#define PPP_SUPPORT             1      /* Set > 0 for PPP */
+#define PPP_SUPPORT             1     /* Set > 0 for PPP */
 
 #if PPP_SUPPORT
 

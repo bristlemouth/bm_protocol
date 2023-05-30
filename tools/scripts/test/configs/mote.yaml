@@ -3,5 +3,5 @@
   args:
     app: mote_bristlefin
     bsp: bm_mote_v1.0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True

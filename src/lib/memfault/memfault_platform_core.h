@@ -10,17 +10,14 @@
 
 #define MEMFAULT_COREDUMP_CHUNK_SIZE 4096
 
-#if BUILD_DEBUG == 1
+// Change this for smaller coredumps!
 #define MEMFAULT_PLATFORM_COREDUMP_CAPTURE_STACK_ONLY 0
-#else
-#define MEMFAULT_PLATFORM_COREDUMP_CAPTURE_STACK_ONLY 1
-#endif
 
 /*
   Worst-case single-task stack size to make sure the whole stack is saved. Currently,
   the largest task stacks are configMINIMAL_STACK_SIZE * 3 * 4 bytes, which equals 1536 bytes.
 */
-#define MAX_STACK_SIZE 1536
+#define MAX_STACK_SIZE 8192
 
 #ifdef __cplusplus
 extern "C" {

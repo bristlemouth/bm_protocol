@@ -56,12 +56,12 @@ static const CLI_Command_Definition_t cmdDebug = {
   // Help string
   "debug:\n"
   " * reset - Reset device\n"
+  " * mem - Get some memory statistics\n"
+  " * tasks - Print task statistics\n"
 #if BUILD_DEBUG
   " * crash - Generate crash\n"
   " * hardfault - Generate hardfault\n"
   " * null - Dereference null pointer\n"
-  " * mem - Get some memory statistics\n"
-  " * tasks - Print task statistics\n"
   " * hang - Hang the process\n"
 #endif
   " * bootloader - Restart and enter bootloader\n",
@@ -317,18 +317,15 @@ static BaseType_t debugCommand(char *writeBuffer,
   } else if (strncmp("null", parameter, parameterStringLength) == 0) {
     volatile uint32_t * temp = NULL;
     *temp = 0x1234; // cppcheck-suppress nullPointer
+  } else if (strncmp("hang", parameter, parameterStringLength) == 0) {
+    while(1){};
+#endif // BUILD_DEBUG
   } else if (strncmp("mem", parameter, parameterStringLength) == 0) {
     getHeapStats();
 #if configUSE_TRACE_FACILITY == 1
   } else if (strncmp("tasks", parameter, parameterStringLength) == 0) {
     getSysStats();
 #endif // configUSE_TRACE_FACILITY
-  } else if (strncmp("hang", parameter, parameterStringLength) == 0) {
-    while(1){};
-#else // BUILD_DEBUG
-    (void)getSysStats;
-    (void)getHeapStats;
-#endif // BUILD_DEBUG
   } else if (strncmp("bootloader", parameter, parameterStringLength) == 0) {
     rebootIntoROMBootloader();
   } else {

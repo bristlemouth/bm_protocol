@@ -3,7 +3,7 @@
   args:
     app: bridge
     bsp: bridge_v1_0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True
 
 - name: bridge w/upy on bridge - Debug (w/ bootloader)
@@ -11,6 +11,6 @@
   args:
     app: bridge
     bsp: bridge_v1_0
-    build_type: Debug
+    build_type: Release
     use_bootloader: True
     defines: -DUSE_MICROPYTHON=1

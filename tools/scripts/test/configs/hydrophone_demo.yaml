@@ -3,7 +3,7 @@
 #   args:
 #     app: hydrophone_demo
 #     bsp: nucleo_u575
-#     build_type: Debug
+#     build_type: Release
 #     use_bootloader: True
 
 - name: hydrophone_demo on dev_mote_hydrophone - Debug (w/ bootloader)
@@ -11,5 +11,5 @@
   args:
     app: hydrophone_demo
     bsp: dev_mote_hydrophone
-    build_type: Debug
+    build_type: Release
     use_bootloader: True
