@@ -37,7 +37,7 @@ static void bm_dfu_host_transition_to_error(bm_dfu_err_t err);
  *
  * @note Puts ACK Timeout event into DFU Subsystem event queue
  *
- * @param *tmr    Pointer to Zephyr Timer struct
+ * @param *tmr    Pointer to Timer struct
  * @return none
  */
 static void ack_timer_handler(TimerHandle_t tmr) {
@@ -54,7 +54,7 @@ static void ack_timer_handler(TimerHandle_t tmr) {
  *
  * @note Puts Heartbeat Timeout event into DFU Subsystem event queue
  *
- * @param *tmr    Pointer to Zephyr Timer struct
+ * @param *tmr    Pointer to Timer struct
  * @return none
  */
 static void heartbeat_timer_handler(TimerHandle_t tmr) {
@@ -166,7 +166,6 @@ static void bm_dfu_host_send_reboot() {
  *
  * @note The Host sends an update request to the client and starts the ACK timeout timer
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_host_req_update_entry(void) {
@@ -198,7 +197,6 @@ void s_host_req_update_entry(void) {
  *
  * @note The state is waiting on an ACK from the client to begin the update. Returns to idle state on timeout
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_host_req_update_run(void)

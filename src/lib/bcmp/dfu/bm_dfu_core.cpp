@@ -165,7 +165,6 @@ static void s_idle_run(void) {
  *
  * @note The Host processes the current error state and either proceeds to the IDLE state or stays in Error (fatal)
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 static void s_error_entry(void) {
@@ -323,7 +322,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
  * @note Used by DFU host and client contexts to put events into the Subsystem Queue
  *
  * @param none
- * @return QueueHandle_t to DFU Subsystem Zephyr Message Queue
+ * @return QueueHandle_t to DFU Subsystem event Queue
  */
 QueueHandle_t bm_dfu_get_event_queue(void) {
     return dfu_event_queue;

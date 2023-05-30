@@ -102,7 +102,7 @@ static void bm_dfu_client_send_boot_complete(uint64_t host_node_id) {
  *
  * @note Puts Chunk Timeout event into DFU Subsystem event queue
  *
- * @param *tmr    Pointer to Zephyr Timer struct
+ * @param *tmr    Timer handler
  * @return none
  */
 static void chunk_timer_handler(TimerHandle_t tmr) {
@@ -267,7 +267,7 @@ void bm_dfu_client_process_update_request(void) {
                     client_update_reboot_info.gitSHA = img_info_evt->img_info.gitSHA;
                     client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
 
-                    /* (zephyr) TODO: Fix this. Is this needed for FreeRTOS */
+                    /* TODO: Fix this. Is this needed for FreeRTOS */
                     vTaskDelay(10); // Needed so ACK can properly be sent/processed
                     bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_RECEIVING);
 
@@ -292,7 +292,6 @@ void s_client_activating_run(void) {}
  *
  * @note Client will send the first request for image chunk 0 from the host and kickoff a Chunk timeout timer
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_client_receiving_entry(void) {
@@ -315,7 +314,6 @@ void s_client_receiving_entry(void) {
  *
  * @note Client will periodically request specific image chunks from the Host
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_client_receiving_run(void) {
@@ -390,7 +388,6 @@ void s_client_receiving_run(void) {
  *
  * @note If the CRC and image lengths match, move to Client Activation State
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_client_validating_entry(void)
@@ -418,7 +415,6 @@ void s_client_validating_entry(void)
  *
  * @note Upon confirmation to update recepit from the host, the device will set pending image bit and reboot
  *
- * @param *o    Required by zephyr smf library for state functions
  * @return none
  */
 void s_client_activating_entry(void)
