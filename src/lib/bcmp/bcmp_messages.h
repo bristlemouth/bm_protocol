@@ -271,61 +271,71 @@ typedef struct {
 } __attribute__((packed)) bcmp_net_assert_quiet_t;
 
 typedef enum {
-  BCMP_CFG_TYPE_UINT32,
-  BCMP_CFG_TYPE_INT32,
-  BCMP_CFG_TYPE_FLOAT,
-  BCMP_CFG_TYPE_STR,
-  BCMP_CFG_TYPE_BYTES,
-} bcmp_config_type_e;
-
-#define BCMP_CFG_MAX_KEY_LEN (50)
+  BCMP_CFG_PARTITION_USER,
+  BCMP_CFG_PARTITION_SYSTEM,
+} bcmp_config_partition_e;
 
 typedef struct {
   // Node ID of the target node for which the request is being made.
   uint64_t target_node_id;
-  // Data type of configuration
-  bcmp_config_type_e type;
+  // Node ID of the source node
+  uint64_t source_node_id;
+  // message payload
+  uint8_t payload[0];
+} __attribute__((packed)) bcmp_config_header_t;
+
+typedef struct {
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
   // String length of the key (without terminator)
   uint8_t key_length;
-  // Null terminated key
-  char key[BCMP_CFG_MAX_KEY_LEN];
+  // Key string
+  char key[0];
 } __attribute__((packed)) bcmp_config_get_t;
 
 typedef struct {
-  // Node ID of the target node for which the request is being made.
-  uint64_t target_node_id;
-  // Length of data 
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
+  // Length of cbor buffer 
   uint32_t data_length;
-  // data
+  // cbor buffer
   uint8_t data[0];
 } __attribute__((packed)) bcmp_config_value_t;
 
 typedef struct {
-  // Node ID of the target node for which the request is being made.
-  uint64_t target_node_id;
-  // Data type of configuration
-  bcmp_config_type_e type;
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
   // String length of the key (without terminator)
   uint8_t key_length;
-  // Null terminated key
-  char key[BCMP_CFG_MAX_KEY_LEN];
-  // Length of data 
+  // Length of cbor encoded data buffer
   uint32_t data_length;
-  // data
-  uint8_t data[0];
-} __attribute__((packed)) bcmp_config_set_key_t;
+  // cbor encoded data
+  uint8_t keyAndData[0];
+} __attribute__((packed)) bcmp_config_set_t;
 
 typedef struct {
-  // Node ID of the target node for which the request is being made.
-  uint64_t target_node_id;
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
 } __attribute__((packed)) bcmp_config_commit_t;
 
 typedef struct {
-  // Node ID of the target node for which the request is being made.
-  uint64_t target_node_id;
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
+} __attribute__((packed)) bcmp_config_status_request_t;
+
+typedef struct {
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
   // True if there are changes to be committed, false otherwise.
   bool committed;
-} __attribute__((packed)) bcmp_config_status_t;
+} __attribute__((packed)) bcmp_config_status_response_t;
+
 
 // DFU stuff goes below
 typedef struct {
@@ -408,7 +418,8 @@ typedef enum {
   BCMP_CONFIG_VALUE = 0xA1,
   BCMP_CONFIG_SET = 0xA2,
   BCMP_CONFIG_COMMIT = 0xA3,
-  BCMP_CONFIG_STATUS = 0xA4,
+  BCMP_CONFIG_STATUS_REQUEST = 0xA4,
+  BCMP_CONFIG_STATUS_RESPONSE = 0xA5,
 
   BCMP_DFU_START = 0xD0,
   BCMP_DFU_PAYLOAD_REQ = 0xD1,

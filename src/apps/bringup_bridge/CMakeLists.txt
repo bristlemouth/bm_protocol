@@ -44,6 +44,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
+    ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_adin_raw.c
     ${SRC_DIR}/lib/debug/debug_htu.cpp
@@ -88,6 +89,11 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     )
 
 set(LIB_INCLUDES
@@ -105,12 +111,14 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/mcuboot
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/third_party/tinycbor/src
     )
 
 if (USE_BOOTLOADER STREQUAL 1)

@@ -6,6 +6,7 @@ set(BCMP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BCMP_FILES
     ${BCMP_DIR}/bcmp.cpp
     ${BCMP_DIR}/bcmp_cli.cpp
+    ${BCMP_DIR}/bcmp_config.cpp
     ${BCMP_DIR}/bcmp_heartbeat.cpp
     ${BCMP_DIR}/bcmp_info.cpp
     ${BCMP_DIR}/bcmp_neighbors.cpp

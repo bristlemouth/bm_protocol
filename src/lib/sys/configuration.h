@@ -60,8 +60,9 @@ public:
     static const char* dataTypeEnumToStr(ConfigDataTypes_e type);
     bool saveConfig(void);
     bool getValueSize(const char * key, size_t key_len, size_t &size);
+    bool needsCommit(void);
+    static bool cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType);
 private:
-    bool cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType);
     bool findKeyIndex(const char * key, size_t len, uint8_t &idx);
     bool prepareCborParser(const char * key, size_t key_len, CborValue &it, CborParser &parser);
     bool prepareCborEncoder(const char * key, size_t key_len, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists);
@@ -74,5 +75,6 @@ private:
     NvmPartition &_flash_partition;
     size_t _ram_partition_size;
     ConfigPartition_t* _ram_partition;
+    bool _needs_commit;
 };
 } // namespace cfg

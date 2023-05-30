@@ -290,7 +290,7 @@ static void defaultTask( void *parameters ) {
     NvmPartition dfu_partition(debugW25, dfu_configuration);
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     debugDfuInit(&dfu_partition);
-    bcl_init(&dfu_partition);
+    bcl_init(&dfu_partition,&debug_configuration_user, &debug_configuration_system);
 
     if(!isRTCSet()){ // FIXME. Hack to enable the bridge power controller functionality.
         RTCTimeAndDate_t datetime;

@@ -17,6 +17,7 @@
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
 #include "bcmp_ping.h"
+#include "bcmp_config.h"
 
 #include "bm_dfu.h"
 
@@ -147,6 +148,16 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
 
       case BCMP_ECHO_REPLY: {
         bcmp_process_ping_reply(reinterpret_cast<bcmp_echo_reply_t *>(header->payload));
+        break;
+      }
+
+      case BCMP_CONFIG_GET:
+      case BCMP_CONFIG_SET:
+      case BCMP_CONFIG_VALUE:
+      case BCMP_CONFIG_COMMIT:
+      case BCMP_CONFIG_STATUS_REQUEST:
+      case BCMP_CONFIG_STATUS_RESPONSE: {
+        bcmp_process_config_message(static_cast<bcmp_message_type_t>(header->type), header->payload);
         break;
       }
 
@@ -367,7 +378,7 @@ static bool bcmp_dfu_tx (bcmp_message_type_t type, uint8_t *buff, uint16_t len) 
   \param *netif lwip network interface to use
   \return none
 */
-void bcmp_init(struct netif* netif, NvmPartition * dfu_partition) {
+void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration* user_cfg, Configuration* sys_cfg){
   _ctx.netif = netif;
   _ctx.pcb = raw_new(IP_PROTO_BCMP);
   configASSERT(_ctx.pcb);
@@ -378,6 +389,7 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition) {
   configASSERT(_ctx.rx_queue);
 
   bm_dfu_init(bcmp_dfu_tx, dfu_partition);
+  bcmp_config_init(user_cfg, sys_cfg);
 
   BaseType_t rval = xTaskCreate(bcmp_thread,
                      "BCMP",

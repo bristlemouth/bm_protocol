@@ -1,10 +1,10 @@
-- name: adin_test on nucleo_u575 - Debug (w/ bootloader)
-  type: build_fw
-  args:
-    app: adin_test
-    bsp: nucleo_u575
-    build_type: Debug
-    use_bootloader: True
+# - name: adin_test on nucleo_u575 - Debug (w/ bootloader)
+#   type: build_fw
+#   args:
+#     app: adin_test
+#     bsp: nucleo_u575
+#     build_type: Debug
+#     use_bootloader: True
 
 - name: adin_test on dev_mote_v1_0 - Debug (w/ bootloader)
   type: build_fw

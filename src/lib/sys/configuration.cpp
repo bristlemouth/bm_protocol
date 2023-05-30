@@ -11,7 +11,7 @@
 #endif // CBOR_PARSER_MAX_RECURSIONS
 namespace cfg {
 
-Configuration::Configuration(NvmPartition& flash_partition, uint8_t *ram_partition, size_t ram_partition_size):_flash_partition(flash_partition), _ram_partition_size(ram_partition_size) {
+Configuration::Configuration(NvmPartition& flash_partition, uint8_t *ram_partition, size_t ram_partition_size):_flash_partition(flash_partition), _ram_partition_size(ram_partition_size), _needs_commit(false) {
     configASSERT(_ram_partition);
     configASSERT(_ram_partition_size >= sizeof(ConfigPartition_t));
     _ram_partition = reinterpret_cast<ConfigPartition_t*>(ram_partition);
@@ -290,6 +290,7 @@ bool Configuration::setConfig(const char * key, size_t key_len, uint32_t value) 
         if(!keyExists){
             _ram_partition->header.numKeys++;
         }
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -319,6 +320,7 @@ bool Configuration::setConfig(const char * key, size_t key_len, int32_t value) {
         if(!keyExists){
             _ram_partition->header.numKeys++;
         }
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -348,6 +350,7 @@ bool Configuration::setConfig(const char * key, size_t key_len, float value) {
         if(!keyExists){
             _ram_partition->header.numKeys++;
         }
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -377,6 +380,7 @@ bool Configuration::setConfig(const char * key, size_t key_len, const char *valu
         if(!keyExists){
             _ram_partition->header.numKeys++;
         }
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -407,6 +411,7 @@ bool Configuration::setConfig(const char * key, size_t key_len, const uint8_t *v
         if(!keyExists){
             _ram_partition->header.numKeys++;
         }
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -459,6 +464,7 @@ bool Configuration::setConfigCbor(const char * key, size_t key_len, uint8_t *val
         if(keyIdx == _ram_partition->header.numKeys){
             _ram_partition->header.numKeys++;
         }
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -525,6 +531,7 @@ bool Configuration::removeKey(const char * key, size_t key_len) {
             memmove(&_ram_partition->values[keyIdx],&_ram_partition->values[keyIdx+1], (_ram_partition->header.numKeys - 1 - keyIdx) * sizeof(ConfigValue_t)); // shift values
         }
         _ram_partition->header.numKeys--;
+        _needs_commit = true;
         rval = true;
     } while(0);
     return rval;
@@ -607,5 +614,9 @@ bool Configuration::saveConfig(void) {
     } while(0);
     return rval;
  }
+ 
+bool Configuration::needsCommit(void) {
+    return _needs_commit;
+}
 
 } // namespace cfg

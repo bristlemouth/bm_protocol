@@ -12,20 +12,25 @@
 #include "bcmp_neighbors.h"
 #include "bcmp_info.h"
 #include "bcmp_ping.h"
+#include "bcmp_config.h"
+#include "util.h"
 
 #include "debug.h"
 
 static BaseType_t cmd_bcmp_fn( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString);
-
 static const CLI_Command_Definition_t cmd_bcmp = {
   // Command string
   "bcmp",
   // Help string
   "bcmp neighbors\n"
   "bcmp info <node_id>\n"
-  "bcmp ping <node_id>\n",
+  "bcmp ping <node_id>\n"
+  "bcmp cfg get <node_id> <partition(u/s)> <key>\n"
+  "bcmp cfg set <node_id> <partition(u/s)> <type(u/i/f/s/b)> <key> <value>\n"
+  "bcmp cfg commit <node_id> <partition(u/s)>\n"
+  "bcmp cfg status <node_id> <partition(u/s)>\n",
   // Command function
   cmd_bcmp_fn,
   // Number of parameters
@@ -97,6 +102,260 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         }
       } else {
         printf("Invalid node_id\n");
+      }
+    } else if(strncmp("cfg", command, command_str_len) == 0) {
+      const char *cmd_id_str;
+      BaseType_t cmd_id_str_len = 0;
+      cmd_id_str = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      2,
+                      &cmd_id_str_len);
+      if(!cmd_id_str) {
+        printf("Invalid arguments\n");
+        break;
+      }
+      if(strncmp("get", cmd_id_str, cmd_id_str_len) == 0) {
+        const char *node_id_str;
+        BaseType_t node_id_str_len = 0;
+        node_id_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        3,
+                        &node_id_str_len);
+        const char *part_str;
+        BaseType_t part_str_len = 0;
+        part_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        4,
+                        &part_str_len);
+        const char *key_str;
+        BaseType_t key_str_str_len = 0;
+        key_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        5,
+                        &key_str_str_len);
+        if(!key_str || !part_str || !node_id_str){
+          printf("Invalid arguments\n");
+          break;
+        }
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        bcmp_config_partition_e partition;
+        if (strncmp("u", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_USER;
+        } else if (strncmp("s", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_SYSTEM;
+        } else {
+          printf("Invalid arguments\n");
+          break;
+        }
+        err_t err;
+        if(!bcmp_config_get(node_id,partition,key_str_str_len,key_str,err)){
+          printf("Failed to send message config get\n");
+        } else {
+          printf("Succesfully sent config get msg\n");
+        }
+      } else if (strncmp("set", cmd_id_str, cmd_id_str_len) == 0) {
+        const char *node_id_str;
+        BaseType_t node_id_str_len = 0;
+        node_id_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        3,
+                        &node_id_str_len);
+        const char *part_str;
+        BaseType_t part_str_len = 0;
+        part_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        4,
+                        &part_str_len);
+        const char *type_str;
+        BaseType_t type_str_str_len = 0;
+        type_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        5,
+                        &type_str_str_len);
+        const char *key_str;
+        BaseType_t key_str_str_len = 0;
+        key_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        6,
+                        &key_str_str_len);
+        const char *value_str;
+        BaseType_t value_str_str_len = 0;
+        value_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        7,
+                        &value_str_str_len);
+        if(!key_str || !part_str || !type_str || !node_id_str || !value_str){
+          printf("Invalid arguments\n");
+          break;
+        }
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        bcmp_config_partition_e partition;
+        if (strncmp("u", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_USER;
+        } else if (strncmp("s", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_SYSTEM;
+        } else {
+          printf("Invalid arguments\n");
+          break;
+        }
+        cfg::ConfigDataTypes_e type;
+        if (strncmp("u", type_str, type_str_str_len) == 0){
+          type = cfg::ConfigDataTypes_e::UINT32;
+        } else if (strncmp("i", type_str, type_str_str_len) == 0) {
+          type = cfg::ConfigDataTypes_e::INT32;
+        } else if (strncmp("f", type_str, type_str_str_len) == 0) {
+          type = cfg::ConfigDataTypes_e::FLOAT;
+        } else if (strncmp("s", type_str, type_str_str_len) == 0) {
+          type = cfg::ConfigDataTypes_e::STR;
+        } else if (strncmp("b", type_str, type_str_str_len) == 0) {
+          type = cfg::ConfigDataTypes_e::BYTES;
+        } else {
+          printf("Invalid arguments\n");
+          break;
+        }
+        err_t err;
+        size_t buffer_size = cfg::MAX_STR_LEN_BYTES;
+        uint8_t* cbor_buf = (uint8_t*) pvPortMalloc(buffer_size);
+        configASSERT(cbor_buf);
+        memset(cbor_buf, 0, cfg::MAX_STR_LEN_BYTES);
+        CborEncoder encoder;
+        cbor_encoder_init(&encoder, cbor_buf, buffer_size, 0);
+        switch(type){
+          case cfg::ConfigDataTypes_e::UINT32: {
+            uint32_t val = strtoul(value_str,NULL,0);
+            if(cbor_encode_uint(&encoder, val)!= CborNoError) {
+                break;
+            }
+            if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
+              printf("Failed to send message config set\n");
+            } else {
+              printf("Succesfully sent config set msg\n");
+            }
+            break;
+          }
+          case cfg::ConfigDataTypes_e::INT32: {
+            int32_t val = strtol(value_str,NULL,0);
+            if(cbor_encode_int(&encoder, val)!= CborNoError) {
+                break;
+            }
+            if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
+              printf("Failed to send message config get\n");
+            } else {
+              printf("Succesfully sent config get msg\n");
+            }
+            break;
+          }
+          case cfg::ConfigDataTypes_e::FLOAT: {
+            float val;
+            if(!bStrtof(const_cast<char *>(value_str), &val)){
+              printf("Invalid param\n");
+              break;
+            }
+            if(cbor_encode_float(&encoder, val)!= CborNoError) {
+                break;
+            }
+            if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
+              printf("Failed to send message config get\n");
+            } else {
+              printf("Succesfully sent config get msg\n");
+            }
+            break;
+          }
+          case cfg::ConfigDataTypes_e::STR: {
+            if(cbor_encode_text_stringz(&encoder, value_str)!= CborNoError) {
+                break;
+            }
+            if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
+              printf("Failed to send message config get\n");
+            } else {
+              printf("Succesfully sent config get msg\n");
+            }
+            break;
+          }
+          case cfg::ConfigDataTypes_e::BYTES: {
+            if(cbor_encode_byte_string(&encoder, reinterpret_cast<const uint8_t*>(value_str), strlen(value_str))!= CborNoError) {
+                break;
+            }
+            if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
+              printf("Failed to send message config get\n");
+            } else {
+              printf("Succesfully sent config get msg\n");
+            }
+            break;
+          }
+          default:
+            break;
+        }
+        vPortFree(cbor_buf);
+      } else if (strncmp("commit", cmd_id_str, cmd_id_str_len) == 0) {
+        const char *node_id_str;
+        BaseType_t node_id_str_len = 0;
+        node_id_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        3,
+                        &node_id_str_len);
+        const char *part_str;
+        BaseType_t part_str_len = 0;
+        part_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        4,
+                        &part_str_len);
+        if(!part_str || !node_id_str){
+          printf("Invalid arguments\n");
+          break;
+        }
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        bcmp_config_partition_e partition;
+        if (strncmp("u", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_USER;
+        } else if (strncmp("s", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_SYSTEM;
+        } else {
+          printf("Invalid arguments\n");
+          break;
+        }
+        err_t err;
+        if(!bcmp_config_commit(node_id,partition,err)){
+          printf("Failed to send config commit\n");
+        } else {
+          printf("Succesfull config commit send\n");
+        }
+      } else if (strncmp("status", cmd_id_str, cmd_id_str_len) == 0) {
+        const char *node_id_str;
+        BaseType_t node_id_str_len = 0;
+        node_id_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        3,
+                        &node_id_str_len);
+        const char *part_str;
+        BaseType_t part_str_len = 0;
+        part_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        4,
+                        &part_str_len);
+        if(!part_str || !node_id_str){
+          printf("Invalid arguments\n");
+          break;
+        }
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        bcmp_config_partition_e partition;
+        if (strncmp("u", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_USER;
+        } else if (strncmp("s", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_SYSTEM;
+        } else {
+          printf("Invalid arguments\n");
+          break;
+        }
+        err_t err;
+        if(!bcmp_config_status_request(node_id,partition,err)){
+          printf("Failed to send status request \n");
+        } else {
+          printf("Succesfull status request send\n");
+        }
+      } else {
+        printf("Invalid arguments\n");
+        break;
       }
     } else {
       printf("Invalid arguments\n");

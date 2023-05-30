@@ -318,7 +318,7 @@ static void defaultTask( void *parameters ) {
     debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     debugDfuInit(&dfu_partition);
-    bcl_init(&dfu_partition);
+    bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
     sensorsInit();
     // TODO - get this from the nvm cfg's!
