@@ -361,6 +361,27 @@ typedef struct {
   bool committed;
 } __attribute__((packed)) bcmp_config_status_response_t;
 
+typedef struct {
+  bcmp_config_header_t header;
+  // Partition id
+  bcmp_config_partition_e partition;
+  // String length of the key (without terminator)
+  uint8_t key_length;
+  // Key string
+  char key[0];
+} __attribute__((packed)) bcmp_config_delete_key_request_t;
+
+typedef struct {
+  bcmp_config_header_t header;
+  // success
+  bool success;
+  // Partition id
+  bcmp_config_partition_e partition;
+  // String length of the key (without terminator)
+  uint8_t key_length;
+  // Key string
+  char key[0];
+} __attribute__((packed)) bcmp_config_delete_key_response_t;
 
 // DFU stuff goes below
 typedef struct {
@@ -449,6 +470,8 @@ typedef enum {
   BCMP_CONFIG_COMMIT = 0xA3,
   BCMP_CONFIG_STATUS_REQUEST = 0xA4,
   BCMP_CONFIG_STATUS_RESPONSE = 0xA5,
+  BCMP_CONFIG_DELETE_REQUEST = 0xA6,
+  BCMP_CONFIG_DELETE_RESPONSE = 0xA7,
 
   BCMP_DFU_START = 0xD0,
   BCMP_DFU_PAYLOAD_REQ = 0xD1,

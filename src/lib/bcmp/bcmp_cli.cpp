@@ -32,6 +32,7 @@ static const CLI_Command_Definition_t cmd_bcmp = {
   "bcmp cfg set <node_id> <partition(u/s)> <type(u/i/f/s/b)> <key> <value>\n"
   "bcmp cfg commit <node_id> <partition(u/s)>\n"
   "bcmp cfg status <node_id> <partition(u/s)>\n"
+  "bcmp cfg del <node_id> <partition(u/s)> <key>\n"
   "bcmp time set <node_id> <utc_us>\n"
   "bcmp time get <node_id>\n",
   // Command function
@@ -355,6 +356,44 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           printf("Failed to send status request \n");
         } else {
           printf("Succesfull status request send\n");
+        }
+      } else if (strncmp("del", cmd_id_str, cmd_id_str_len) == 0){
+        const char *node_id_str;
+        BaseType_t node_id_str_len = 0;
+        node_id_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        3,
+                        &node_id_str_len);
+        const char *part_str;
+        BaseType_t part_str_len = 0;
+        part_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        4,
+                        &part_str_len);
+        const char *key_str;
+        BaseType_t key_str_str_len = 0;
+        key_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        5,
+                        &key_str_str_len);
+        if(!key_str || !part_str || !node_id_str){
+          printf("Invalid arguments\n");
+          break;
+        }
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        bcmp_config_partition_e partition;
+        if (strncmp("u", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_USER;
+        } else if (strncmp("s", part_str, part_str_len) == 0) {
+          partition = BCMP_CFG_PARTITION_SYSTEM;
+        } else {
+          printf("Invalid arguments\n");
+          break;
+        }
+        if(bcmp_config_del_key(node_id, partition, key_str_str_len, key_str)){
+          printf("Successfully sent del key request\n");
+        } else {
+          printf("Failed to send del key request\n");
         }
       } else {
         printf("Invalid arguments\n");

@@ -164,7 +164,9 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_CONFIG_VALUE:
       case BCMP_CONFIG_COMMIT:
       case BCMP_CONFIG_STATUS_REQUEST:
-      case BCMP_CONFIG_STATUS_RESPONSE: {
+      case BCMP_CONFIG_STATUS_RESPONSE:
+      case BCMP_CONFIG_DELETE_REQUEST:
+      case BCMP_CONFIG_DELETE_RESPONSE: {
         bcmp_process_config_message(static_cast<bcmp_message_type_t>(header->type), header->payload);
         break;
       }

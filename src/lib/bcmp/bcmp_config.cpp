@@ -294,6 +294,71 @@ static void bcmp_process_value_message(bcmp_config_value_t * msg) {
     } while(0);
 }
 
+bool bcmp_config_del_key(uint64_t target_node_id, bcmp_config_partition_e partition, size_t key_len, const char * key) {
+    configASSERT(key);
+    bool rval = false;
+    size_t msg_size = sizeof(bcmp_config_delete_key_request_t) + key_len;
+    bcmp_config_delete_key_request_t * del_msg = (bcmp_config_delete_key_request_t * )pvPortMalloc(msg_size);
+    configASSERT(del_msg);
+    del_msg->header.target_node_id = target_node_id;
+    del_msg->header.source_node_id = getNodeId();
+    del_msg->partition = partition;
+    del_msg->key_length = key_len;
+    memcpy(del_msg->key, key, key_len);
+    if(bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_DELETE_REQUEST, reinterpret_cast<uint8_t*>(del_msg), msg_size) == ERR_OK) {
+        rval = true;
+    }
+    vPortFree(del_msg);
+    return rval;
+}
+
+static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bcmp_config_partition_e partition, size_t key_len, const char * key, bool success) {
+    configASSERT(key);
+    bool rval = false;
+    size_t msg_size = sizeof(bcmp_config_delete_key_response_t) + key_len;
+    bcmp_config_delete_key_response_t * del_resp = (bcmp_config_delete_key_response_t * )pvPortMalloc(msg_size);
+    configASSERT(del_resp);
+    del_resp->header.target_node_id = target_node_id;
+    del_resp->header.source_node_id = getNodeId();
+    del_resp->partition = partition;
+    del_resp->key_length = key_len;
+    memcpy(del_resp->key, key, key_len);
+    del_resp->success = success;
+    if(bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_DELETE_RESPONSE, reinterpret_cast<uint8_t*>(del_resp), msg_size) == ERR_OK) {
+        rval = true;
+    }
+    vPortFree(del_resp);
+    return rval;
+}
+
+static void bcmp_process_del_request_message(bcmp_config_delete_key_request_t * msg) { 
+    configASSERT(msg);
+    do {
+        Configuration *cfg;
+        if(msg->partition == BCMP_CFG_PARTITION_USER){
+            cfg = _usr_cfg;
+        } else if (msg->partition == BCMP_CFG_PARTITION_SYSTEM){
+            cfg = _sys_cfg;
+        } else {
+            break;
+        }
+        bool success = cfg->removeKey(msg->key,msg->key_length);
+        if(!bcmp_config_send_del_key_response(msg->header.source_node_id, msg->partition, msg->key_length, msg->key, success)){
+            printf("Failed to send del key resp\n");
+        }
+    } while(0);
+}
+
+static void bcmp_process_del_response_message(bcmp_config_delete_key_response_t * msg) {
+    configASSERT(msg);
+    char * keyprintbuf = (char * )pvPortMalloc(msg->key_length + 1); 
+    memcpy(keyprintbuf, msg->key, msg->key_length);
+    keyprintbuf[msg->key_length] = '\0';
+    printf("Node Id:%" PRIx64 " Key Delete Response - Key: %s, Partition: %d, Success %d\n", msg->header.source_node_id,
+            keyprintbuf, msg->partition, msg->success);
+    vPortFree(keyprintbuf);
+}
+
 void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* payload) {
     do {
         bcmp_config_header_t * msg_header = reinterpret_cast<bcmp_config_header_t *>(payload);
@@ -326,6 +391,16 @@ void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* pay
             case BCMP_CONFIG_VALUE: {
                 bcmp_config_value_t *msg = reinterpret_cast<bcmp_config_value_t *>(payload);
                 bcmp_process_value_message(msg);
+                break;
+            }
+            case BCMP_CONFIG_DELETE_REQUEST: {
+                bcmp_config_delete_key_request_t *msg = reinterpret_cast<bcmp_config_delete_key_request_t *>(payload);
+                bcmp_process_del_request_message(msg);
+                break;
+            }
+            case BCMP_CONFIG_DELETE_RESPONSE: {
+                bcmp_config_delete_key_response_t *msg = reinterpret_cast<bcmp_config_delete_key_response_t *>(payload);
+                bcmp_process_del_response_message(msg);
                 break;
             }
             default:
