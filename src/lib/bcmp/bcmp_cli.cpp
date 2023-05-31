@@ -14,6 +14,7 @@
 #include "bcmp_ping.h"
 #include "bcmp_config.h"
 #include "util.h"
+#include "bcmp_time.h"
 
 #include "debug.h"
 
@@ -30,7 +31,9 @@ static const CLI_Command_Definition_t cmd_bcmp = {
   "bcmp cfg get <node_id> <partition(u/s)> <key>\n"
   "bcmp cfg set <node_id> <partition(u/s)> <type(u/i/f/s/b)> <key> <value>\n"
   "bcmp cfg commit <node_id> <partition(u/s)>\n"
-  "bcmp cfg status <node_id> <partition(u/s)>\n",
+  "bcmp cfg status <node_id> <partition(u/s)>\n"
+  "bcmp time set <node_id> <utc_us>\n"
+  "bcmp time get <node_id>\n",
   // Command function
   cmd_bcmp_fn,
   // Number of parameters
@@ -352,6 +355,54 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           printf("Failed to send status request \n");
         } else {
           printf("Succesfull status request send\n");
+        }
+      } else {
+        printf("Invalid arguments\n");
+        break;
+      }
+    } 
+    else if(strncmp("time", command, command_str_len) == 0) {
+      const char *cmdstr;
+      BaseType_t cmdstr_len = 0;
+      cmdstr = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      2,
+                      &cmdstr_len);
+      const char *node_id_str;
+      BaseType_t node_id_str_len = 0;
+      node_id_str = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      3,
+                      &node_id_str_len);
+      if (!cmdstr || !node_id_str) {
+        printf("Invalid arguments\n");
+        break;
+      }
+      uint64_t node_id = strtoull(node_id_str, NULL, 0);
+      if (strncmp("set", cmdstr, cmdstr_len) == 0) { 
+        const char *utc_us_str;
+        BaseType_t utc_us_str_len = 0;
+        utc_us_str = FreeRTOS_CLIGetParameter(
+                        commandString,
+                        4,
+                        &utc_us_str_len);
+        if(!utc_us_str) {
+          printf("Invaid params\n");
+          break;
+        }
+        uint64_t utc_us = strtoull(utc_us_str, NULL, 0);
+        if(!bcmp_time_set_time(node_id, utc_us)) {
+          printf("bcmp set time failed to be sent\n");
+          break;
+        } else {
+          printf("succesfully sent time set cmd\n");
+        }
+      } else if (strncmp("get", cmdstr, cmdstr_len) == 0) { 
+        if(!bcmp_time_get_time(node_id)){
+          printf("bcmp get time failed to be sent\n");
+          break;
+        } else {
+          printf("succesfully sent time get cmd\n");
         }
       } else {
         printf("Invalid arguments\n");

@@ -165,7 +165,7 @@ target_include_directories(bcmp_dfu_tests
     ${SRC_DIR}/third_party/crc
     ${TEST_DIR}/third_party/fff
     ${SRC_DIR}/lib/sys
-    ${SRC_DIR}/lib/bcmp/dfu/include
+    ${SRC_DIR}/lib/bcmp/dfu
     ${SRC_DIR}/lib/bcmp
     ${SRC_DIR}/third_party/mcuboot/boot/bootutil/include
     ${SRC_DIR}/lib/mcuboot/include
@@ -178,9 +178,9 @@ target_include_directories(bcmp_dfu_tests
 target_sources(bcmp_dfu_tests
     PRIVATE
     # File we're testing
-    ${SRC_DIR}/lib/bcmp/dfu/src/bm_dfu_core.cpp
-    ${SRC_DIR}/lib/bcmp/dfu/src/bm_dfu_client.cpp
-    ${SRC_DIR}/lib/bcmp/dfu/src/bm_dfu_host.cpp
+    ${SRC_DIR}/lib/bcmp/dfu/bm_dfu_core.cpp
+    ${SRC_DIR}/lib/bcmp/dfu/bm_dfu_client.cpp
+    ${SRC_DIR}/lib/bcmp/dfu/bm_dfu_host.cpp
 
     # Support files
     ${SRC_DIR}/third_party/crc/crc16.c

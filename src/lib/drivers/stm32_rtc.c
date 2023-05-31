@@ -104,7 +104,7 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   return rval;
 }
 
-BaseType_t rtcSet(RTCTimeAndDate_t *timeAndDate) {
+BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   BaseType_t rval = pdPASS;
 
   configASSERT(timeAndDate != NULL);

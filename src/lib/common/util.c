@@ -137,8 +137,10 @@ bool bStrtod(char *numStr, double *dVal) {
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24UL)
+#define MICROSECONDS_PER_SECOND (1000000)
 
 static const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31}; // API starts months from 1, this array starts from 0
+static const uint8_t monthDaysLeapYear[]={31,29,31,30,31,30,31,31,30,31,30,31}; // API starts months from 1, this array starts from 0
 
 /*!
   Convert date (YYYYMMDDhhmmss) into unix timestamp(UTC)
@@ -177,6 +179,61 @@ uint32_t utcFromDateTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour
   seconds+= second;
   return seconds;
 }
+
+#define DAYS_PER_YEAR (365)
+#define DAYS_PER_LEAP_YEAR (DAYS_PER_YEAR + 1)
+
+static uint32_t getDaysForYear(uint32_t year) {
+  return LEAP_YEAR(year - 1970) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR;
+}
+
+static const uint8_t * getDaysPerMonth(uint32_t year) {
+  return LEAP_YEAR(year - 1970) ? monthDaysLeapYear : monthDays;
+}
+
+/*!
+  Convert unix timestamp(UTC) in microseconds to date (YYYYMMDDhhmmss)
+
+  \param[in] utc_us - utc in microseconds
+  \param[out] utcDateTime - date time 
+  \return None
+*/
+void dateTimeFromUtc(uint64_t utc_us, utcDateTime_t *dateTime) {
+  configASSERT(dateTime);
+  
+  // year
+  uint64_t days = (utc_us / MICROSECONDS_PER_SECOND) / SECS_PER_DAY;
+  dateTime->year = 1970;
+  while( days >= getDaysForYear(dateTime->year) ) {
+    days -= getDaysForYear(dateTime->year);
+    dateTime->year++;
+  }
+
+  // months
+  const uint8_t * monthDays = getDaysPerMonth(dateTime->year);
+  dateTime->month = 1;
+  while(days >= monthDays[dateTime->month-1]){
+    days -= monthDays[dateTime->month-1];
+    dateTime->month++;
+  }
+
+  // days
+  dateTime->day = days + 1;
+
+  uint64_t secondsRemaining = (utc_us / MICROSECONDS_PER_SECOND) % SECS_PER_DAY;
+  // hours
+  dateTime->hour = secondsRemaining / SECS_PER_HOUR;
+
+  // minutes
+  dateTime->min = (secondsRemaining / SECS_PER_MIN) % SECS_PER_MIN;
+
+  // seconds 
+  dateTime->sec = secondsRemaining % SECS_PER_MIN;
+
+  // useconds
+  dateTime->usec = utc_us % MICROSECONDS_PER_SECOND;
+}
+
 
 /*!
   Calculate time remaining relative to start time, current time, and timeout.

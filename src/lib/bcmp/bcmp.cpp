@@ -18,6 +18,7 @@
 #include "bcmp_neighbors.h"
 #include "bcmp_ping.h"
 #include "bcmp_config.h"
+#include "bcmp_time.h"
 
 #include "bm_dfu.h"
 
@@ -148,6 +149,13 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
 
       case BCMP_ECHO_REPLY: {
         bcmp_process_ping_reply(reinterpret_cast<bcmp_echo_reply_t *>(header->payload));
+        break;
+      }
+
+      case BCMP_SYSTEM_TIME_REQUEST:
+      case BCMP_SYSTEM_TIME_RESPONSE:
+      case BCMP_SYSTEM_TIME_SET: {
+        bcmp_time_process_time_message(static_cast<bcmp_message_type_t>(header->type), header->payload);
         break;
       }
 

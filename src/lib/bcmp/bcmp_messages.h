@@ -220,6 +220,31 @@ typedef struct {
 } __attribute__((packed)) bcmp_neighbor_proto_reply_t;
 
 typedef struct {
+  // Node ID of the target node for which the request is being made.
+  uint64_t target_node_id;
+  // Node ID of the source node
+  uint64_t source_node_id;
+  // message payload
+  uint8_t payload[0];
+} __attribute__((packed)) bcmp_system_time_header_t;
+
+typedef struct {
+  bcmp_system_time_header_t header;
+} __attribute__((packed)) bcmp_system_time_request_t;
+
+typedef struct {
+  bcmp_system_time_header_t header;
+  // time
+  uint64_t utc_time_us;
+} __attribute__((packed)) bcmp_system_time_response_t;
+
+typedef struct {
+  bcmp_system_time_header_t header;
+  // time
+  uint64_t utc_time_us;
+} __attribute__((packed)) bcmp_system_time_set_t;
+
+typedef struct {
   // Node ID of the target node for which the request is being made. (Zeroed = all nodes)
   uint64_t target_node_id;
 } __attribute__((packed)) bcmp_netstat_request_t;
@@ -404,6 +429,10 @@ typedef enum {
   BCMP_RESOURCE_TABLE_REPLY = 0x0B,
   BCMP_NEIGHBOR_PROTO_REQUEST = 0x0C,
   BCMP_NEIGHBOR_PROTO_REPLY = 0x0D,
+
+  BCMP_SYSTEM_TIME_REQUEST = 0x10,
+  BCMP_SYSTEM_TIME_RESPONSE = 0x11,
+  BCMP_SYSTEM_TIME_SET = 0x12,
 
   BCMP_NET_STAT_REQUEST = 0xB0,
   BCMP_NET_STAT_REPLY = 0xB1,
