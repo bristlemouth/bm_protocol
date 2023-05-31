@@ -166,7 +166,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
             // TODO
 
         } else if (strncmp("sub", parameter,parameterStringLength) == 0) {
-            const char *topic = FreeRTOS_CLIGetParameter(
+            const char *topicStr = FreeRTOS_CLIGetParameter(
                             commandString,
                             2,
                             &parameterStringLength);
@@ -176,18 +176,16 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            bm_sub_t subscription;
-            subscription.topic_len = parameterStringLength;
-            subscription.topic = pvPortMalloc(subscription.topic_len);
-            configASSERT(subscription.topic);
-            memcpy(subscription.topic, topic, subscription.topic_len);
-            subscription.cb = print_subscriptions;
+            char *topic = pvPortMalloc(parameterStringLength+1);
+            configASSERT(topic);
+            memcpy(topic, topicStr, parameterStringLength);
+            topic[parameterStringLength] = 0;
 
-            bm_pubsub_subscribe(&subscription);
-            vPortFree(subscription.topic);
+            bm_sub(topic, print_subscriptions);
+            vPortFree(topic);
 
         } else if (strncmp("unsub", parameter,parameterStringLength) == 0) {
-            const char *topic = FreeRTOS_CLIGetParameter(
+            const char *topicStr = FreeRTOS_CLIGetParameter(
                             commandString,
                             2,
                             &parameterStringLength);
@@ -197,18 +195,16 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            bm_sub_t subscription;
-            subscription.topic_len = parameterStringLength;
-            subscription.topic = pvPortMalloc(subscription.topic_len);
-            configASSERT(subscription.topic);
-            memcpy(subscription.topic, topic, subscription.topic_len);
-            subscription.cb = NULL;
+            char *topic = pvPortMalloc(parameterStringLength+1);
+            configASSERT(topic);
+            memcpy(topic, topicStr, parameterStringLength);
+            topic[parameterStringLength] = 0;
 
-            bm_pubsub_unsubscribe(&subscription);
-            vPortFree(subscription.topic);
+            bm_unsub(topic, print_subscriptions);
+            vPortFree(topic);
 
         } else if (strncmp("pub", parameter,parameterStringLength) == 0) {
-            const char *topic = FreeRTOS_CLIGetParameter(
+            const char *topicStr = FreeRTOS_CLIGetParameter(
                             commandString,
                             2,
                             &parameterStringLength);
@@ -218,13 +214,12 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            bm_pub_t publication;
-            publication.topic_len = parameterStringLength;
-            publication.topic = pvPortMalloc(publication.topic_len);
-            configASSERT(publication.topic);
-            memcpy(publication.topic, topic, publication.topic_len);
+            char *topic = pvPortMalloc(parameterStringLength+1);
+            configASSERT(topic);
+            memcpy(topic, topicStr, parameterStringLength);
+            topic[parameterStringLength] = 0;
 
-            const char *data = FreeRTOS_CLIGetParameter(
+            const char *dataStr = FreeRTOS_CLIGetParameter(
                             commandString,
                             3,
                             &parameterStringLength);
@@ -234,16 +229,16 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            publication.data_len = parameterStringLength;
-            publication.data = pvPortMalloc(publication.data_len);
-            configASSERT(publication.data);
-            memcpy(publication.data, data, publication.data_len);
+            uint8_t *data = pvPortMalloc(parameterStringLength+1);
+            configASSERT(data);
+            memcpy(data, dataStr, parameterStringLength);
+            data[parameterStringLength] = 0;
 
-            bm_pubsub_publish(&publication);
-            vPortFree(publication.topic);
-            vPortFree(publication.data);
+            bm_pub(topic, data, parameterStringLength);
+            vPortFree(topic);
+            vPortFree(data);
         } else if (strncmp("print", parameter,parameterStringLength) == 0) {
-            bm_pubsub_print_subs();
+            bm_print_subs();
         } else {
             printf("ERR Invalid parameters\n");
             break;

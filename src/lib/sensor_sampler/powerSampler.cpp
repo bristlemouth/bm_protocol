@@ -37,8 +37,6 @@ static bool powerSample() {
     } while( !success && (--retriesRemaining > 0));
 
     if(success) {
-      // pub to power topic
-      bm_pub_t publication;
 
       struct {
         uint16_t address;
@@ -50,13 +48,7 @@ static bool powerSample() {
       _powerData.voltage = voltage;
       _powerData.current = current;
 
-      publication.topic = const_cast<char *>(powerTopic);
-      publication.topic_len = sizeof(powerTopic) - 1 ; // Don't care about Null terminator
-
-      publication.data = reinterpret_cast<char *>(&_powerData);
-      publication.data_len = sizeof(_powerData);
-
-      bm_pubsub_publish(&publication);
+      bm_pub(powerTopic, &_powerData, sizeof(_powerData));
     }
     rval &= success;
   }

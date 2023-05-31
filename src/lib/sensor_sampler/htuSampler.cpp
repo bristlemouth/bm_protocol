@@ -13,18 +13,8 @@
 
 static HTU21D* _htu21d;
 
-
-static void publish_float(const char *topic, size_t topic_len, float *value) {
-  // pub to topic
-  bm_pub_t publication;
-
-  publication.topic = const_cast<char *>(topic);
-  publication.topic_len = topic_len - 1 ; // Don't care about Null terminator
-
-  publication.data = reinterpret_cast<char *>(value);
-  publication.data_len = sizeof(float); // Don't care about Null terminator
-
-  bm_pubsub_publish(&publication);
+static void publish_float(const char *topic, float &value) {
+  bm_pub(topic, &value, sizeof(float));
 }
 
 /*
@@ -53,8 +43,8 @@ static bool htuSample() {
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    publish_float(humidityTopic, sizeof(humidityTopic), &humidity);
-    publish_float(temperatureTopic, sizeof(temperatureTopic), &temperature);
+    publish_float(humidityTopic, humidity);
+    publish_float(temperatureTopic, temperature);
   }
 
   return success;

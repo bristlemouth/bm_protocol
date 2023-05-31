@@ -171,7 +171,7 @@ static void middleware_net_task( void *parameters ) {
     // Do stuff with item here
     //    printf("Received %u bytes from %s\n", item.pbuf->len, );
 
-    bm_pubsub_handle_msg(ip_to_nodeid(&item.addr), item.pbuf);
+    bm_handle_msg(ip_to_nodeid(&item.addr), item.pbuf);
 
     // Free item
     if(item.pbuf) {

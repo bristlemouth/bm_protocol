@@ -196,21 +196,11 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
 
-    bm_pub_t publication;
-
-
-    publication.topic = const_cast<char *>(buttonTopic);
-    publication.topic_len = sizeof(buttonTopic) - 1; // Don't care about Null terminator
-
     if(value) {
-        publication.data = const_cast<char *>(on_str);
-        publication.data_len = sizeof(on_str) - 1; // Don't care about Null terminator
+        bm_pub(buttonTopic, on_str, sizeof(on_str) - 1);
     } else {
-        publication.data = const_cast<char *>(off_str);
-        publication.data_len = sizeof(off_str) - 1; // Don't care about Null terminator
+        bm_pub(buttonTopic, off_str, sizeof(off_str) - 1);
     }
-
-    bm_pubsub_publish(&publication);
 
     return false;
 }
@@ -325,12 +315,7 @@ static void defaultTask( void *parameters ) {
     sensorConfig_t sensorConfig = { .sensorCheckIntervalS=10 };
     sensorSamplerInit(&sensorConfig);
 
-    bm_sub_t subscription;
-
-    subscription.topic = const_cast<char *>(buttonTopic);
-    subscription.topic_len = sizeof(buttonTopic) - 1; // Don't care about Null terminator
-    subscription.cb = handle_sensor_subscriptions;
-    bm_pubsub_subscribe(&subscription);
+    bm_sub(buttonTopic, handle_sensor_subscriptions);
 
     // Turn of the bristlefin leds
     IOWrite(&BF_LED_G1, LED_OFF);

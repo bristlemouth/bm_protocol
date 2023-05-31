@@ -29,18 +29,7 @@ static bool baroSample() {
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    // pub to pressure topic
-    bm_pub_t publication;
-
-    int data_len = sizeof(float);
-
-    publication.topic = const_cast<char *>(baroTopic);
-    publication.topic_len = sizeof(baroTopic) - 1 ; // Don't care about Null terminator
-
-    publication.data = reinterpret_cast<char *>(&pressure);
-    publication.data_len = data_len; // Don't care about Null terminator
-
-    bm_pubsub_publish(&publication);
+    bm_pub(baroTopic, &pressure, sizeof(float));
   }
 
   return success;

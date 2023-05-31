@@ -291,8 +291,6 @@ static void defaultTask( void *parameters ) {
   }
 }
 
-bm_pub_t hydroDbPub;
-bm_pub_t hydroStreamPub;
 const char buttonTopic[] = "button";
 const char hydroDbTopic[] = "hydrophone/db";
 const char hydroStreamTopic[] = "hydrophone/stream";
@@ -331,27 +329,27 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   (void)samples;
   (void)numSamples;
   float dbLevel = micGetDB(samples, numSamples);
-  hydroDbPub.data = reinterpret_cast<char *>(&dbLevel);
-  hydroDbPub.data_len = sizeof(float);
-  bm_pubsub_publish(&hydroDbPub);
+
+  bm_pub(hydroDbTopic, &dbLevel, sizeof(float));
 
   if(streamEnabled) {
     for(uint32_t idx = 0; idx < MIN(numSamples, MIC_SAMPLES_PER_PACKET); idx++) {
       streamData.samples[idx] = (int16_t)(samples[idx] >> 8);
     }
     streamData.header.numSamples = MIN(numSamples, MIC_SAMPLES_PER_PACKET);
-    hydroStreamPub.data = (char *)&streamData.header;
-    hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
-    bm_pubsub_publish(&hydroStreamPub);
+
+    bm_pub(hydroStreamTopic,
+              &streamData.header,
+              (sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples));
 
     if(numSamples > MIC_SAMPLES_PER_PACKET) {
       for(uint32_t idx = MIC_SAMPLES_PER_PACKET; idx < numSamples; idx++) {
         streamData.samples[idx - MIC_SAMPLES_PER_PACKET] = (int16_t)(samples[idx] >> 8);
       }
       streamData.header.numSamples = (numSamples - MIC_SAMPLES_PER_PACKET);
-      hydroStreamPub.data = (char *)&streamData.header;
-      hydroStreamPub.data_len = sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples;
-      bm_pubsub_publish(&hydroStreamPub);
+      bm_pub(hydroStreamTopic,
+              &streamData.header,
+              (sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples));
     }
   }
 
@@ -467,12 +465,6 @@ static void hydrophoneTask( void *parameters ) {
   // Default alarm duration (1 second)
   alarmDurationS = 1;
 
-  hydroDbPub.topic = const_cast<char *>(hydroDbTopic);
-  hydroDbPub.topic_len = sizeof(hydroDbTopic) - 1;
-
-  hydroStreamPub.topic = const_cast<char *>(hydroStreamTopic);
-  hydroStreamPub.topic_len = sizeof(hydroStreamTopic) - 1;
-
   // These won't change
   streamData.header.magic = AUDIO_MAGIC;
   streamData.header.sampleRate = 50000;
@@ -482,16 +474,9 @@ static void hydrophoneTask( void *parameters ) {
     publication_topics = "hydrophone/db | hydrophone/stream";
 
     // Hydrophone audio stream enable/disable
-    bm_sub_t sub;
-    sub.topic = const_cast<char *>(hydroStreamEnableTopic);
-    sub.topic_len = sizeof(hydroStreamEnableTopic) - 1;
-    sub.cb = streamEnable;
-    bm_pubsub_subscribe(&sub);
 
-    sub.topic = const_cast<char *>(buttonTopic);
-    sub.topic_len = sizeof(buttonTopic) - 1;
-    sub.cb = buttonTopicSubscription;
-    bm_pubsub_subscribe(&sub);
+    bm_sub(hydroStreamEnableTopic, streamEnable);
+    bm_sub(buttonTopic, buttonTopicSubscription);
 
     while(1) {
       // "sample long time"
@@ -509,35 +494,19 @@ static void hydrophoneTask( void *parameters ) {
 
     // serialEnable(&usbPcap);
 
-    bm_sub_t sub;
     // Hydrophone dB level
-    sub.topic = const_cast<char *>(hydroDbTopic);
-    sub.topic_len = sizeof(hydroDbTopic) - 1;
-    sub.cb = printDbData;
-    bm_pubsub_subscribe(&sub);
+    bm_sub(hydroDbTopic, printDbData);
 
     // alarm threshold level
-    sub.topic = const_cast<char *>(alarmThresholdTopic);
-    sub.topic_len = sizeof(alarmThresholdTopic) - 1;
-    sub.cb = updateThresholdCb;
-    bm_pubsub_subscribe(&sub);
+    bm_sub(alarmThresholdTopic, updateThresholdCb);
 
     // alarm duration
-    sub.topic = const_cast<char *>(alarmDurationTopic);
-    sub.topic_len = sizeof(alarmDurationTopic) - 1;
-    sub.cb = updateDurationCb;
-    bm_pubsub_subscribe(&sub);
+    bm_sub(alarmDurationTopic, updateDurationCb);
 
     // alarm duration in seconds
-    sub.topic = const_cast<char *>(alarmTriggerTopic);
-    sub.topic_len = sizeof(alarmTriggerTopic) - 1;
-    sub.cb = alarmTriggerCb;
-    bm_pubsub_subscribe(&sub);
+    bm_sub(alarmTriggerTopic, alarmTriggerCb);
 
-    sub.topic = const_cast<char *>(buttonTopic);
-    sub.topic_len = sizeof(buttonTopic) - 1;
-    sub.cb = buttonTopicSubscription;
-    bm_pubsub_subscribe(&sub);
+    bm_sub(buttonTopic, buttonTopicSubscription);
 
     while(1) {
       if(alarmTimer > 0) {
@@ -570,41 +539,26 @@ void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
     }
 
     case 1: {
-      bm_pub_t publication;
-      publication.topic = const_cast<char *>(hydroStreamEnableTopic);
-      publication.topic_len = sizeof(hydroStreamEnableTopic) - 1;
-
-      publication.data_len = 1;
-
       if ( dtr ) {
         // Enable audio streaming
 
         // Hydrophone audio stream!
-        bm_sub_t sub;
-        sub.topic = const_cast<char *>(hydroStreamTopic);
-        sub.topic_len = sizeof(hydroStreamTopic) - 1;
-        sub.cb = streamAudioData;
-        bm_pubsub_subscribe(&sub);
+        bm_sub(hydroStreamTopic, streamAudioData);
 
         serialEnable(&usbPcap);
         xStreamBufferReset(usbPcap.txStreamBuffer);
         xStreamBufferReset(usbPcap.rxStreamBuffer);
-        publication.data = const_cast<char *>("1");
+
+        bm_pub(hydroStreamEnableTopic, "1", 1);
         printf("bm pub %s 1\n", hydroStreamEnableTopic);
       } else {
         // Disable audio streaming
-
-            // Hydrophone audio stream!
-        bm_sub_t sub;
-        sub.topic = const_cast<char *>(hydroStreamTopic);
-        sub.topic_len = sizeof(hydroStreamTopic) - 1;
-        sub.cb = NULL;
-        bm_pubsub_unsubscribe(&sub);
+        bm_unsub(hydroStreamTopic, streamAudioData);
         serialDisable(&usbPcap);
-        publication.data = const_cast<char *>("0");
+
+        bm_pub(hydroStreamEnableTopic, "0", 1);
         printf("bm pub %s 0\n", hydroStreamEnableTopic);
       }
-      bm_pubsub_publish(&publication);
       break;
     }
 

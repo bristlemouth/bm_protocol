@@ -76,21 +76,11 @@ static bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t nod
 }
 
 static bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
-  bm_sub_t subscription;
-
-  subscription.topic = const_cast<char *>(topic);
-  subscription.topic_len = topic_len;
-  subscription.cb = ncp_uart_pub_cb;
-  return bm_pubsub_subscribe(&subscription);
+  return bm_sub_wl(topic, topic_len, ncp_uart_pub_cb);
 }
 
 static bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
-  bm_sub_t subscription;
-
-  subscription.topic = const_cast<char *>(topic);
-  subscription.topic_len = topic_len;
-  subscription.cb = ncp_uart_pub_cb;
-  return bm_pubsub_unsubscribe(&subscription);
+  return bm_unsub_wl(topic, topic_len, ncp_uart_pub_cb);
 }
 
 static bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {
