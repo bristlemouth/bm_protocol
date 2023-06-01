@@ -10,6 +10,7 @@
 #include "bsp.h"
 #include "debug.h"
 #include "bm_pubsub.h"
+#include "bm_printf.h"
 #include "lwip/inet.h"
 
 #ifdef BSP_DEV_MOTE_V1_0
@@ -52,6 +53,7 @@ static const CLI_Command_Definition_t cmdGpio = {
   " * bm sub <topic>\n"
   " * bm unsub <topic>\n"
   " * bm pub <topic> <data>\n"
+  " * bm printf <string>\n"
   " * bm print\n",
   // Command function
   neighborsCommand,
@@ -99,7 +101,10 @@ static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t to
       }  __attribute__((packed)) _powerData;
       memcpy(&_powerData, data, data_len);
       printf("Data: address: %" PRIx16 " current: %f voltage: %f power: %f\n", _powerData.address, _powerData.current, _powerData.voltage, (_powerData.voltage*_powerData.current));
-  } else {
+    } else if (strncmp("printf", topic, topic_len) == 0) {
+        printf("Topic: %.*s\n", topic_len, topic);
+        printf("data: %.*s\n", ((bm_print_publication_t *)data)->data_len, &((bm_print_publication_t *)data)->fnameAndData[((bm_print_publication_t *)data)->fname_len]);
+    } else {
       printf("Received data on topic: %.*s\n", topic_len, topic);
       printf("Data: %.*s\n", data_len, data);
   }
@@ -239,6 +244,22 @@ static BaseType_t neighborsCommand( char *writeBuffer,
             vPortFree(data);
         } else if (strncmp("print", parameter,parameterStringLength) == 0) {
             bm_print_subs();
+        } else if (strncmp("printf", parameter,parameterStringLength) == 0) {
+            const char *dataStr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR topic required\n");
+                break;
+            }
+            size_t dataLen = strnlen(dataStr, 128);
+            bm_printf(0, "%.*s", dataLen, dataStr);
+        } else if (strncmp("fprintf", parameter,parameterStringLength) == 0) {
+            // bm_fprintf(0, "test_file.log", "hello there in a file\n");
+        } else if (strncmp("fappend", parameter,parameterStringLength) == 0) {
+            // bm_file_append(0, "test_file_append.log", "hello there appended");
         } else {
             printf("ERR Invalid parameters\n");
             break;
