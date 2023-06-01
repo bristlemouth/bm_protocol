@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "adi_mac.h"
 #include "adin2111.h"
 #include "lwip/netif.h"
 
@@ -10,11 +9,11 @@
 extern "C" {
 #endif
 
+// Maximum frame size for the ADIN2111
+#define ETH_MAX_FRAME_SIZE (MAX_FRAME_SIZE)
+
 #define ADIN2111_PORT_MASK  0x03
 #define QUEUE_NUM_ENTRIES   8
-
-/* Extra 4 bytes for FCS and 2 bytes for the frame header */
-#define MAX_FRAME_BUF_SIZE  (MAX_FRAME_SIZE + 4 + 2)
 
 typedef struct {
   adi_phy_MseLinkQuality_t mse_link_quality;

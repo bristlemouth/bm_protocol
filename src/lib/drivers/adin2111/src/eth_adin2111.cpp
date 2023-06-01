@@ -27,6 +27,10 @@
 
 #include "pcap.h"
 
+
+/* Extra 4 bytes for FCS and 2 bytes for the frame header */
+#define MAX_FRAME_BUF_SIZE  (MAX_FRAME_SIZE + 4 + 2)
+
 #define DMA_ALIGN_SIZE (4)
 
 static TaskHandle_t serviceTask = NULL;

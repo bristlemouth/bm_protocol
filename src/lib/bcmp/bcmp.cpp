@@ -27,6 +27,9 @@
 // Send heartbeats every 10 seconds (and check for expired links)
 #define BCMP_HEARTBEAT_S 10
 
+// 1500 MTU minus ipv6 header
+#define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
+
 typedef struct {
   struct netif* netif;
   struct raw_pcb *pcb;
@@ -329,11 +332,16 @@ static void bcmp_thread(void *parameters) {
   \return ERR_OK on success, something else otherwise
 */
 err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
-    struct pbuf *pbuf;
+  err_t rval;
 
-    configASSERT((uint32_t)len + sizeof(bcmp_header_t) < UINT16_MAX);
+  do {
+    if((uint32_t)len + sizeof(bcmp_header_t) > MAX_PAYLOAD_LEN) {
+      // Payload too big, don't try to transmit.
+      rval = ERR_VAL;
+      break;
+    }
 
-    pbuf = pbuf_alloc(PBUF_IP, len + sizeof(bcmp_header_t), PBUF_RAM);
+    struct pbuf *pbuf = pbuf_alloc(PBUF_IP, len + sizeof(bcmp_header_t), PBUF_RAM);
     configASSERT(pbuf);
 
     bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
@@ -351,11 +359,11 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
                                           len + sizeof(bcmp_header_t),
                                           src_ip, dst);
 
-    err_t rval = raw_sendto_if_src( _ctx.pcb,
-                                    pbuf,
-                                    dst,
-                                    _ctx.netif,
-                                    src_ip); // Using link-local address
+    rval = raw_sendto_if_src( _ctx.pcb,
+                              pbuf,
+                              dst,
+                              _ctx.netif,
+                              src_ip); // Using link-local address
 
     // We're done with this pbuf
     // raw_sendto_if_src eventually calls bm_l2_tx, which does a pbuf_ref
@@ -365,8 +373,9 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
     if(rval != ERR_OK) {
       printf("Error sending BMCP packet %d\n", rval);
     }
+  } while(0);
 
-    return rval;
+  return rval;
 }
 
 /*!

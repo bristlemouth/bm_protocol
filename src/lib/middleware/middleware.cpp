@@ -14,6 +14,8 @@
 
 #define NET_QUEUE_LEN 64
 
+#define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr) - sizeof(struct udp_hdr))
+
 typedef struct {
     struct netif* netif;
     struct udp_pcb* pcb;
@@ -67,8 +69,15 @@ void bm_middleware_init(struct netif* netif, uint16_t port) {
   \return 0 if OK nonzero otherwise (see udp_send for error codes)
 */
 int32_t middleware_net_tx(struct pbuf *pbuf) {
-  // TODO - Do we always send global multicast or link local?
-  return safe_udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, _ctx.port, _ctx.netif);
+  int32_t rval = -1;
+
+  // Don't try to transmit if the payload is too big
+  if(pbuf->len <= MAX_PAYLOAD_LEN){
+    // TODO - Do we always send global multicast or link local?
+    rval = safe_udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, _ctx.port, _ctx.netif);
+  }
+
+  return rval;
 }
 
 /*!

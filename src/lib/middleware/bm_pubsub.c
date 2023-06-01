@@ -11,7 +11,7 @@ typedef struct {
   uint8_t flags;
   uint8_t topic_len;
   const char topic[0];
-} __attribute__((packed)) bm_header_t;
+} __attribute__((packed)) bm_pubsub_header_t;
 
 // Used for callback linked-list
 typedef struct bm_cb_node_s {
@@ -276,14 +276,14 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
 
   do {
 
-    uint16_t message_size = sizeof(bm_header_t) + topic_len + len;
+    uint16_t message_size = sizeof(bm_pubsub_header_t) + topic_len + len;
     struct pbuf *pbuf = pbuf_alloc(PBUF_TRANSPORT, message_size, PBUF_RAM);
     if(!pbuf) {
       retv = false;
       break;
     }
 
-    bm_header_t *header = (bm_header_t *)pbuf->payload;
+    bm_pubsub_header_t *header = (bm_pubsub_header_t *)pbuf->payload;
     // TODO actually set the type here
     header->type = 0;
     header->flags = 0;
@@ -322,8 +322,8 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
   \return None
 */
 void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
-  bm_header_t *header = (bm_header_t *)pbuf->payload;
-  uint16_t data_len = pbuf->len - sizeof(bm_header_t) - header->topic_len;
+  bm_pubsub_header_t *header = (bm_pubsub_header_t *)pbuf->payload;
+  uint16_t data_len = pbuf->len - sizeof(bm_pubsub_header_t) - header->topic_len;
 
   // TODO check header type and flags and do something about it
 
