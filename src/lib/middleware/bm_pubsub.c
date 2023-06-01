@@ -13,10 +13,16 @@ typedef struct {
   const char topic[0];
 } __attribute__((packed)) bm_header_t;
 
+// Used for callback linked-list
+typedef struct bm_cb_node_s {
+  struct bm_cb_node_s *next;
+  bm_cb_t callback_fn;
+} bm_cb_node_t;
+
 typedef struct {
     char *topic;
     uint16_t topic_len;
-    bm_cb_t cb;
+    bm_cb_node_t *callbacks;
 } bm_sub_t;
 
 typedef struct bm_sub_node_s {
@@ -25,9 +31,10 @@ typedef struct bm_sub_node_s {
 } bm_sub_node_t;
 
 typedef struct {
-  bm_sub_node_t* subscription_list;
+  bm_sub_node_t subscription_list;
 } pubsubContext_t;
 
+static bm_sub_node_t* delete_sub(const char* topic, uint16_t topic_len);
 static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len);
 static bm_sub_node_t* get_last_sub(void);
 static pubsubContext_t _ctx;
@@ -41,7 +48,7 @@ extern const char* publication_topics;
   \param[in] callback callback function to call when data is received on this topic
   \return True if we've successfully subscribed
 */
-bool bm_sub(const char *topic, bm_cb_t callback) {
+bool bm_sub(const char *topic, const bm_cb_t callback) {
   bool retv = false;
 
   uint16_t topic_len = strnlen(topic, BM_TOPIC_MAX_LEN);
@@ -61,11 +68,16 @@ bool bm_sub(const char *topic, bm_cb_t callback) {
   \param[in] callback callback function to call when data is received on this topic
   \return True if we've successfully subscribed
 */
-bool bm_sub_wl(const char *topic, uint16_t topic_len, bm_cb_t callback) {
+bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
   bool retv = true;
 
   do {
     // TODO - validate topic name if needed
+
+    if(!topic || !topic_len || !callback) {
+      retv = false;
+      break;
+    }
 
     if(topic_len >= BM_TOPIC_MAX_LEN) {
       retv = false;
@@ -73,61 +85,68 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, bm_cb_t callback) {
       break;
     }
 
-    bm_sub_t sub = {
-      .topic=pvPortMalloc(topic_len + 1),
-      .topic_len=topic_len,
-      .cb=callback
-    };
+    bm_sub_node_t* ptr = get_sub(topic, topic_len);
 
-    configASSERT(sub.topic);
+    // Subscription already exists, add a new callback
+    if (ptr) {
 
-    memcpy(sub.topic, topic, topic_len + 1);
-    sub.topic[topic_len] = 0;
+      bm_cb_node_t *last_cb_node = ptr->sub.callbacks;
 
-    if (_ctx.subscription_list) {
-      bm_sub_node_t* ptr = get_sub(sub.topic, sub.topic_len);
-
-      // Subscription already exists, add a new callback
-      if (ptr) {
-        ptr->sub.cb = sub.cb;
-      /* Need to add new node to subscription list */
-      } else {
-        ptr = get_last_sub();
-        ptr->next = (bm_sub_node_t *) pvPortMalloc(sizeof(bm_sub_node_t));
-        if(!ptr->next){
-          retv = false;
-          break;
-        }
-
-        memset(ptr->next, 0x00, sizeof(bm_sub_node_t));
-        ptr->next->sub.topic = (char *) pvPortMalloc(sub.topic_len);
-        if(!ptr->next->sub.topic){
-          vPortFree(ptr->next);
-          retv = false;
-          break;
-        }
-        memcpy(ptr->next->sub.topic, sub.topic, sub.topic_len);
-        ptr->next->sub.topic_len = sub.topic_len;
-        ptr->next->sub.cb = sub.cb;
+      // Go to last node (but stop if one already matches the requested callback)
+      while((ptr->sub.callbacks->callback_fn != callback) && last_cb_node->next) {
+        last_cb_node = last_cb_node->next;
       }
-    /* Empty subscription list */
+
+      if(ptr->sub.callbacks->callback_fn == callback) {
+        // Callback already subscribed to this topic!
+        break;
+      }
+
+      // Add new callback item to linked-list
+      bm_cb_node_t *cb_node = (bm_cb_node_t *)pvPortMalloc(sizeof(bm_cb_node_t));
+      configASSERT(cb_node);
+
+      cb_node->next = NULL;
+      cb_node->callback_fn = callback;
+      last_cb_node->next = cb_node;
+
+      retv = true;
     } else {
-      _ctx.subscription_list = (bm_sub_node_t *) pvPortMalloc(sizeof(bm_sub_node_t));
-      if(!_ctx.subscription_list){
-        retv = false;
+      // Creating new subscription from scratch
+
+      ptr = get_last_sub();
+
+      // If there's no subscriptions, point to the start of the list
+      if(!ptr) {
+        ptr = &_ctx.subscription_list;
+      }
+
+      ptr->next = (bm_sub_node_t *) pvPortMalloc(sizeof(bm_sub_node_t));
+      if(!ptr->next){
         break;
       }
-      _ctx.subscription_list->sub.topic = (char *) pvPortMalloc(sub.topic_len);
-      if(!_ctx.subscription_list->sub.topic){
-        vPortFree(_ctx.subscription_list);
-        retv = false;
+
+      memset(ptr->next, 0x00, sizeof(bm_sub_node_t));
+      ptr->next->sub.topic = (char *)pvPortMalloc(topic_len + 1);
+      if(!ptr->next->sub.topic){
+        vPortFree(ptr->next);
         break;
       }
-      memcpy(_ctx.subscription_list->sub.topic, sub.topic, sub.topic_len);
-      _ctx.subscription_list->sub.topic_len = sub.topic_len;
-      _ctx.subscription_list->sub.cb = sub.cb;
-      _ctx.subscription_list->next = NULL;
+      memcpy(ptr->next->sub.topic, topic, topic_len);
+      ptr->next->sub.topic[topic_len] = 0;
+      ptr->next->sub.topic_len = topic_len;
+
+      // Add first callback item to linked-list
+      bm_cb_node_t *cb_node = (bm_cb_node_t *)pvPortMalloc(sizeof(bm_cb_node_t));
+      configASSERT(cb_node);
+
+      cb_node->next = NULL;
+      cb_node->callback_fn = callback;
+      ptr->next->sub.callbacks = cb_node;
+
+      retv = true;
     }
+
   } while(0);
 
   if (retv) {
@@ -146,7 +165,7 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, bm_cb_t callback) {
   \param[in] callback callback function to unsubscribe from topic
   \return True if we've successfully subscribed
 */
-bool bm_unsub(const char *topic, bm_cb_t callback) {
+bool bm_unsub(const char *topic, const bm_cb_t callback) {
   bool retv = false;
 
   uint16_t topic_len = strnlen(topic, BM_TOPIC_MAX_LEN);
@@ -166,7 +185,7 @@ bool bm_unsub(const char *topic, bm_cb_t callback) {
   \param[in] callback callback function to unsubscribe from topic
   \return True if we've successfully subscribed
 */
-bool bm_unsub_wl(const char *topic, uint16_t topic_len, bm_cb_t callback) {
+bool bm_unsub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
 
   bool retv = false;
 
@@ -176,20 +195,42 @@ bool bm_unsub_wl(const char *topic, uint16_t topic_len, bm_cb_t callback) {
       break;
     }
 
-    bm_sub_t sub = {
-      .topic=(char *)topic,
-      .topic_len=topic_len,
-      .cb=callback
-    };
+    bm_sub_node_t* ptr = get_sub(topic, topic_len);
+    /* Subscription already exists, update */
+    if (ptr) {
 
-    if (_ctx.subscription_list) {
-      bm_sub_node_t* ptr = get_sub(sub.topic, topic_len);
-      /* Subscription already exists, update */
-      if (ptr) {
-        ptr->sub.cb = NULL;
-        retv = true;
+      bm_cb_node_t *cb_node = ptr->sub.callbacks;
+      bm_cb_node_t *prev_node = NULL;
+
+      // Check nodes for matching callback
+      while((cb_node->callback_fn != callback) && cb_node->next) {
+        prev_node = cb_node;
+        cb_node = cb_node->next;
       }
+
+      // Didn't find a matching callback to unsubscribe :'(
+      if(cb_node->callback_fn != callback) {
+        break;
+      }
+
+      // Link to the next node in list
+      if(prev_node) {
+        prev_node->next = cb_node->next;
+      } else {
+        ptr->sub.callbacks = cb_node->next;
+      }
+
+      // Free deleted node
+      vPortFree(cb_node);
+
+      // If there are no more callbacks, delete the sub entirely
+      if(ptr->sub.callbacks == NULL) {
+        delete_sub(topic, topic_len);
+      }
+
+      retv = true;
     }
+
   } while (0);
 
   if (retv) {
@@ -255,6 +296,9 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
     if (get_sub(topic, topic_len)) {
       // Submit to local queue as well. Function will pbuf_ref(pbuf) since it
       // will be used elsewhere
+
+      // The reason why we push back to the middleware queue instead of running the callbacks here
+      // is so they don't run in the current task context, which will depend on the caller.
       bm_middleware_local_pub(pbuf);
     }
 
@@ -285,8 +329,17 @@ void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
 
   bm_sub_node_t* ptr = get_sub(header->topic, header->topic_len);
 
-  if (ptr && ptr->sub.cb) {
-    ptr->sub.cb(node_id, header->topic, header->topic_len, (const uint8_t *)&header->topic[header->topic_len], data_len);
+  if (ptr && ptr->sub.callbacks) {
+    bm_cb_node_t *cb_node = ptr->sub.callbacks;
+
+    while(cb_node) {
+      cb_node->callback_fn( node_id,
+                            header->topic,
+                            header->topic_len,
+                            (const uint8_t *)&header->topic[header->topic_len],
+                            data_len);
+      cb_node = cb_node->next;
+    }
   }
 }
 
@@ -296,9 +349,10 @@ void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
   \return *bm_sub_node_t, last element in linked list
 */
 void bm_print_subs(void) {
-  bm_sub_node_t* node = _ctx.subscription_list;
+  bm_sub_node_t* node = _ctx.subscription_list.next;
 
   while(node != NULL) {
+    // TODO, print number of callbacks subscribed
     printf("Node: %.*s\n", node->sub.topic_len, node->sub.topic);
     node = node->next;
   }
@@ -319,7 +373,7 @@ char* bm_get_pubs(void) {
   \return *char, string of subs
 */
 char* bm_get_subs(void) {
-  bm_sub_node_t* node = _ctx.subscription_list;
+  bm_sub_node_t* node = _ctx.subscription_list.next;
   char* subs_string = (char *) pvPortMalloc(MAX_SUB_STR_LEN);
   memset(subs_string, 0, MAX_SUB_STR_LEN);
   configASSERT(subs_string);
@@ -345,13 +399,50 @@ char* bm_get_subs(void) {
 }
 
 /*!
+  Deletes a subscription in linked list based on topic
+  \param[in] *topic - topic string
+  \param[in] *topic_len - byte length of topic
+  \return pointer to bm_sub_node_t, NULL if not found
+*/
+static bm_sub_node_t* delete_sub(const char* topic, uint16_t topic_len) {
+  bm_sub_node_t* node = _ctx.subscription_list.next;
+  bm_sub_node_t* prev = &_ctx.subscription_list;
+
+  while(node != NULL) {
+    if ((node->sub.topic_len == topic_len) &&
+      (memcmp(node->sub.topic, topic, topic_len) == 0)) {
+
+      // Delete node from list
+      prev->next = node->next;
+
+      // Free any callbacks that might have been linked
+      bm_cb_node_t *cb_node = node->sub.callbacks;
+      while(cb_node) {
+        bm_cb_node_t *to_del = cb_node;
+        cb_node = cb_node->next;
+
+        // Free callback node
+        vPortFree(to_del);
+      }
+
+      vPortFree(node->sub.topic);
+      vPortFree(node);
+      break;
+    }
+    prev = node;
+    node = node->next;
+  }
+  return node;
+}
+
+/*!
   Finds a subscription in linked list based on topic
   \param[in] *topic - topic string
   \param[in] *topic_len - byte length of topic
   \return pointer to bm_sub_node_t, NULL if not found
 */
 static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len) {
-  bm_sub_node_t* node = _ctx.subscription_list;
+  bm_sub_node_t* node = _ctx.subscription_list.next;
 
   while(node != NULL) {
     if ((node->sub.topic_len == topic_len) &&
@@ -369,7 +460,7 @@ static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len) {
   \return *bm_sub_node_t, last element in linked list
 */
 static bm_sub_node_t* get_last_sub(void) {
-  bm_sub_node_t* node = _ctx.subscription_list;
+  bm_sub_node_t* node = _ctx.subscription_list.next;
   bm_sub_node_t* last = node;
 
   while(node != NULL) {
