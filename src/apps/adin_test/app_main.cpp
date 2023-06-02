@@ -36,6 +36,7 @@
 #include "stress.h"
 #include "usb.h"
 #include "watchdog.h"
+#include "timer_callback_handler.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
@@ -303,7 +304,7 @@ static void defaultTask( void *parameters ) {
 #endif
     debugBMInit();
     debugRTCInit();
-
+    timer_callback_handler_init();
     // Disabling now for hard mode testing
     // Re-enable low power mode
     // lpmPeripheralInactive(LPM_BOOT);

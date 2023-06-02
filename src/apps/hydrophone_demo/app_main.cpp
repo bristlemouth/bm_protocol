@@ -39,7 +39,6 @@
 #include "util.h"
 #include "watchdog.h"
 
-
 #include <stdio.h>
 
 #ifdef BSP_DEV_MOTE_V1_0

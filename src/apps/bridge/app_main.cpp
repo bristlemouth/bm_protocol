@@ -49,6 +49,7 @@
 #include "ram_partitions.h"
 #include "bridgePowerController.h"
 #include "debug_bridge_power_controller.h"
+#include "timer_callback_handler.h"
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -262,6 +263,7 @@ static void defaultTask( void *parameters ) {
     debugBMInit();
     debugRTCInit();
 
+    timer_callback_handler_init();
     // // Re-enable low power mode
     // lpmPeripheralInactive(LPM_BOOT);
 

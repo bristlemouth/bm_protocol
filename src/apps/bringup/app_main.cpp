@@ -52,6 +52,7 @@
 #include "watchdog.h"
 #include "debug_htu.h"
 #include "debug_nvm_cli.h"
+#include "timer_callback_handler.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
@@ -292,6 +293,7 @@ static void defaultTask( void *parameters ) {
 
   usbInit(&VUSB_DETECT, usb_is_connected);
 
+  timer_callback_handler_init();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
   debugAdinRawInit();

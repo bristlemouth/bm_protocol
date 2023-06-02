@@ -48,6 +48,7 @@
 #include "w25.h"
 #include "watchdog.h"
 #include "debug_htu.h"
+#include "timer_callback_handler.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
@@ -227,6 +228,7 @@ static void defaultTask( void *parameters ) {
   usart3.txPin = &BM_MOSI_TX3;
   usart3.rxPin = &BM_SCK_RX3;
   startDebugUart();
+  timer_callback_handler_init();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
   debugAdinRawInit();

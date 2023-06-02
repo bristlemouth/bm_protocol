@@ -41,6 +41,7 @@
 #include "tca9546a.h"
 #include "usb.h"
 #include "watchdog.h"
+#include "timer_callback_handler.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
@@ -294,7 +295,7 @@ static void defaultTask( void *parameters ) {
     // Disabling now for hard mode testing
     // Re-enable low power mode
     // lpmPeripheralInactive(LPM_BOOT);
-
+    timer_callback_handler_init();
     spiflash::W25 debugW25(&spi2, &FLASH_CS);
     debugW25Init(&debugW25);
     NvmPartition debug_user_partition(debugW25, user_configuration);

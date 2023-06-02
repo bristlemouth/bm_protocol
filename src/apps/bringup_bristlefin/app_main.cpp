@@ -52,6 +52,7 @@
 #include "w25.h"
 #include "watchdog.h"
 #include "debug_htu.h"
+#include "timer_callback_handler.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
@@ -324,7 +325,7 @@ static void defaultTask( void *parameters ) {
 
   // Turn on IMU to get address in I2C scan
   IOWrite(&BF_IMU_RST, 1);
-
+  timer_callback_handler_init();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugSysInit();
   debugAdinRawInit();
