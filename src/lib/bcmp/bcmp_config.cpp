@@ -1,6 +1,7 @@
 #include "bcmp_config.h"
 #include "FreeRTOS.h"
 #include "device_info.h"
+#include "bcmp.h"
 
 static Configuration* _usr_cfg;
 static Configuration* _sys_cfg;
@@ -90,17 +91,33 @@ bool bcmp_config_status_request(uint64_t target_node_id, bcmp_config_partition_e
     return rval;
 }
 
-bool bcmp_config_status_response(uint64_t target_node_id, bcmp_config_partition_e partition, bool commited, err_t &err) {
+bool bcmp_config_status_response(uint64_t target_node_id, bcmp_config_partition_e partition, bool commited, uint8_t num_keys, const ConfigKey_t* keys, err_t &err) {
     bool rval = false;
     err = ERR_VAL;
-    bcmp_config_status_response_t *status_resp_msg = (bcmp_config_status_response_t *)pvPortMalloc(sizeof(bcmp_config_status_response_t));
+    size_t msg_size = sizeof(bcmp_config_status_response_t);
+    for(int i = 0; i < num_keys; i++){
+        msg_size += sizeof(bcmp_config_status_key_data_t);
+        msg_size += keys[i].keyLen;
+    }
+    if(msg_size > BCMP_MAX_PAYLOAD_SIZE_BYTES) {
+        return false;
+    }
+    bcmp_config_status_response_t *status_resp_msg = (bcmp_config_status_response_t *)pvPortMalloc(msg_size);
     configASSERT(status_resp_msg);
     do {
         status_resp_msg->header.target_node_id = target_node_id;
         status_resp_msg->header.source_node_id = getNodeId();
         status_resp_msg->committed = commited;
         status_resp_msg->partition = partition;
-        err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_RESPONSE, (uint8_t *)status_resp_msg, sizeof(bcmp_config_status_response_t));
+        status_resp_msg->num_keys = num_keys;
+        bcmp_config_status_key_data_t* key_data = reinterpret_cast<bcmp_config_status_key_data_t* >(status_resp_msg->keyData);
+        for(int i = 0; i < num_keys; i++){
+            key_data->key_length = keys[i].keyLen;
+            memcpy(key_data->key, keys[i].keyBuffer, keys[i].keyLen);
+            key_data += sizeof(bcmp_config_status_key_data_t);
+            key_data += keys[i].keyLen;
+        }
+        err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_RESPONSE, reinterpret_cast<uint8_t *>(status_resp_msg), msg_size);
         if(err == ERR_OK) {
             rval = true;
         }
@@ -129,25 +146,23 @@ static void bcmp_config_process_commit_msg(bcmp_config_commit_t * msg) {
 static void bcmp_config_process_status_request_msg(bcmp_config_status_request_t * msg) {
     configASSERT(msg);
     err_t err;
-    switch(msg->partition) {
-        case BCMP_CFG_PARTITION_USER: {
-            bcmp_config_status_response(msg->header.source_node_id,BCMP_CFG_PARTITION_USER, _usr_cfg->needsCommit(), err);
-            if(err != ERR_OK){
-                printf("Error processing config status request.\n");
-            }
-            break;
-        } 
-        case BCMP_CFG_PARTITION_SYSTEM: {
-            bcmp_config_status_response(msg->header.source_node_id,BCMP_CFG_PARTITION_SYSTEM, _sys_cfg->needsCommit(), err);
-            if(err != ERR_OK){
-                printf("Error processing config status request.\n");
-            }
+    do {
+        Configuration *cfg;
+        if(msg->partition == BCMP_CFG_PARTITION_USER){
+            cfg = _usr_cfg;
+        } else if (msg->partition == BCMP_CFG_PARTITION_SYSTEM){
+            cfg = _sys_cfg;
+        } else {
+            printf("Invalid configuration\n");
             break;
         }
-        default:
-            printf("Invalid partition\n");
-            break;
-    }
+        uint8_t num_keys;
+        const ConfigKey_t * keys = cfg->getStoredKeys(num_keys);
+        bcmp_config_status_response(msg->header.source_node_id,BCMP_CFG_PARTITION_USER, cfg->needsCommit(),num_keys,keys,err);
+        if(err != ERR_OK){
+            printf("Error processing config status request.\n");
+        }
+    } while(0);
 }
 
 static bool bcmp_config_send_value(uint64_t target_node_id, bcmp_config_partition_e partition,uint32_t data_length, void* data, err_t &err) {
@@ -386,6 +401,17 @@ void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* pay
                 bcmp_config_status_response_t *msg = reinterpret_cast<bcmp_config_status_response_t *>(payload);
                 printf("Response msg -- Node Id:%" PRIu64 ",Partition:%d, Commit Status:%d\n",
                     msg->header.source_node_id, msg->partition, msg->committed);
+                printf("Num Keys: %d\n",msg->num_keys);
+                bcmp_config_status_key_data_t * key = reinterpret_cast<bcmp_config_status_key_data_t*>(msg->keyData);
+                for(int i = 0; i < msg->num_keys; i++){
+                    char * keybuf = (char *) pvPortMalloc(key->key_length + 1);
+                    configASSERT(keybuf);
+                    memcpy(keybuf, key->key, key->key_length);
+                    keybuf[key->key_length] = '\0';
+                    printf("%s\n", keybuf);
+                    key += key->key_length + sizeof(bcmp_config_status_key_data_t);
+                    vPortFree(keybuf);
+                }
                 break;
             }
             case BCMP_CONFIG_VALUE: {

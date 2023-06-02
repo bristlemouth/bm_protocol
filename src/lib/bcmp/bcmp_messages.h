@@ -354,11 +354,22 @@ typedef struct {
 } __attribute__((packed)) bcmp_config_status_request_t;
 
 typedef struct {
+  // String length of the key (without terminator)
+  uint8_t key_length;
+  // Key string
+  char key[0];
+} __attribute__((packed)) bcmp_config_status_key_data_t;
+
+typedef struct {
   bcmp_config_header_t header;
   // Partition id
   bcmp_config_partition_e partition;
   // True if there are changes to be committed, false otherwise.
   bool committed;
+  // Number of keys
+  uint8_t num_keys;
+  // Key Data
+  uint8_t keyData[0];
 } __attribute__((packed)) bcmp_config_status_response_t;
 
 typedef struct {

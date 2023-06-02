@@ -18,6 +18,7 @@ using namespace cfg;
 #define CLEAR_PORTS(x) (x[1] &= (~(0xFFFFU)))
 
 #define IP_PROTO_BCMP (0xBC)
+#define BCMP_MAX_PAYLOAD_SIZE_BYTES (1500) // FIXME: Remove when we can split payloads.
 
 void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration* user_cfg, Configuration* sys_cfg);
 err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len);
