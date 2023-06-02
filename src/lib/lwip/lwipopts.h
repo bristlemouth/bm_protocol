@@ -119,7 +119,7 @@ a lot of data that needs to be copied, this should be set high. */
    for sequential API communication and incoming packets. Used in
    src/api/tcpip.c. */
 #define MEMP_NUM_TCPIP_MSG_API   0
-#define MEMP_NUM_TCPIP_MSG_INPKT 0
+#define MEMP_NUM_TCPIP_MSG_INPKT 16
 
 
 /* ---------- Pbuf options ---------- */
