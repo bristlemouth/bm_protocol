@@ -15,6 +15,7 @@ set(BCMP_FILES
     ${BCMP_DIR}/dfu/bm_dfu_client.cpp
     ${BCMP_DIR}/dfu/bm_dfu_core.cpp
     ${BCMP_DIR}/dfu/bm_dfu_host.cpp
+    ${BCMP_DIR}/bcmp_topology.cpp
 
     # Core bristlemouth
     ${BCMP_DIR}/bm/bm_config.c

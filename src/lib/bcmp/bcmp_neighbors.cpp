@@ -1,13 +1,28 @@
 #include <string.h>
 #include "FreeRTOS.h"
 
+#include "bm_l2.h"
 #include "bcmp.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
+#include "device_info.h"
 #include "util.h"
 
 // Pointer to neighbor linked-list
 static bm_neighbor_t *_neighbors;
+static uint8_t _num_neighbors = 0;
+
+/*
+  Accessor to latest the neighbor linked-list and nieghbor count
+
+  \param[out] &num_neighbors - number of neighbors
+  \return - pointer to neighbors linked-list
+*/
+bm_neighbor_t* bcmp_get_neighbors(uint8_t &num_neighbors) {
+  bcmp_check_neighbors();
+  num_neighbors = _num_neighbors;
+  return _neighbors;
+}
 
 /*!
   Find neighbor entry in neighbor table
@@ -39,9 +54,11 @@ bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id) {
 */
 void bcmp_neighbor_foreach(void (*callback)(bm_neighbor_t *neighbor)) {
   bm_neighbor_t *neighbor = _neighbors;
+  _num_neighbors = 0;
 
   while(neighbor != NULL) {
     callback(neighbor);
+    _num_neighbors++;
 
     // Go to the next one
     neighbor = neighbor->next;
@@ -75,7 +92,7 @@ void bcmp_check_neighbors() {
   \return pointer to neighbor if successful, NULL otherwise (if neighbor is already present, for example)
 */
 static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
-  bm_neighbor_t *new_neighbor = (bm_neighbor_t*) pvPortMalloc(sizeof(bm_neighbor_t));
+  bm_neighbor_t *new_neighbor = static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
   configASSERT(new_neighbor);
 
   memset(new_neighbor, 0, sizeof(bm_neighbor_t));

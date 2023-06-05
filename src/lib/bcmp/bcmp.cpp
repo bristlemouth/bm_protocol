@@ -19,6 +19,7 @@
 #include "bcmp_ping.h"
 #include "bcmp_config.h"
 #include "bcmp_time.h"
+#include "bcmp_topology.h"
 
 #include "bm_dfu.h"
 
@@ -188,8 +189,19 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
         dfu_copy_and_process_message(pbuf);
         break;
       }
+
+      case BCMP_NEIGHBOR_TABLE_REQUEST: {
+        bcmp_process_neighbor_table_request(reinterpret_cast<bcmp_neighbor_table_request_t *>(header->payload), src, dst);
+        break;
+      }
+
+      case BCMP_NEIGHBOR_TABLE_REPLY: {
+        bcmp_process_neighbor_table_reply(reinterpret_cast<bcmp_neighbor_table_reply_t *>(header->payload));
+        break;
+      }
+
       default: {
-        printf("Unsupported BMCP message %04X\n", header->type);
+        printf("Unsupported BCMP message %04X\n", header->type);
         rval = -1;
         break;
       }

@@ -15,6 +15,7 @@
 #include "bcmp_config.h"
 #include "util.h"
 #include "bcmp_time.h"
+#include "bcmp_topology.h"
 
 #include "debug.h"
 
@@ -34,7 +35,8 @@ static const CLI_Command_Definition_t cmd_bcmp = {
   "bcmp cfg status <node_id> <partition(u/s)>\n"
   "bcmp cfg del <node_id> <partition(u/s)> <key>\n"
   "bcmp time set <node_id> <utc_us>\n"
-  "bcmp time get <node_id>\n",
+  "bcmp time get <node_id>\n"
+  "bcmp topo\n",
   // Command function
   cmd_bcmp_fn,
   // Number of parameters
@@ -219,7 +221,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         }
         err_t err;
         size_t buffer_size = cfg::MAX_STR_LEN_BYTES;
-        uint8_t* cbor_buf = (uint8_t*) pvPortMalloc(buffer_size);
+        uint8_t* cbor_buf = static_cast<uint8_t *>(pvPortMalloc(buffer_size));
         configASSERT(cbor_buf);
         memset(cbor_buf, 0, cfg::MAX_STR_LEN_BYTES);
         CborEncoder encoder;
@@ -399,7 +401,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         printf("Invalid arguments\n");
         break;
       }
-    } 
+    }
     else if(strncmp("time", command, command_str_len) == 0) {
       const char *cmdstr;
       BaseType_t cmdstr_len = 0;
@@ -418,7 +420,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         break;
       }
       uint64_t node_id = strtoull(node_id_str, NULL, 0);
-      if (strncmp("set", cmdstr, cmdstr_len) == 0) { 
+      if (strncmp("set", cmdstr, cmdstr_len) == 0) {
         const char *utc_us_str;
         BaseType_t utc_us_str_len = 0;
         utc_us_str = FreeRTOS_CLIGetParameter(
@@ -436,7 +438,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         } else {
           printf("succesfully sent time set cmd\n");
         }
-      } else if (strncmp("get", cmdstr, cmdstr_len) == 0) { 
+      } else if (strncmp("get", cmdstr, cmdstr_len) == 0) {
         if(!bcmp_time_get_time(node_id)){
           printf("bcmp get time failed to be sent\n");
           break;
@@ -447,6 +449,8 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         printf("Invalid arguments\n");
         break;
       }
+    } else if (strncmp("topo", command, command_str_len) == 0) {
+      bcmp_topology_start();
     } else {
       printf("Invalid arguments\n");
     }
