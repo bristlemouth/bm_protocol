@@ -34,7 +34,7 @@ void timer_callback_handler_init() {
     configASSERT(_ctx.cb_queue);
     configASSERT(xTaskCreate(timer_callback_handler_task,
                                 "timer_cb_handler",
-                                  128 * 4,
+                                  1024,
                                   NULL,
                                   // Start with very high priority during boot then downgrade
                                   // once done initializing everything

@@ -646,17 +646,6 @@ TEST_F(BcmpDfuTest, HostUpdateFail){
     memcpy(evt.buf, &dfu_ack_msg, sizeof(bcmp_dfu_ack_t));
     bm_dfu_test_set_dfu_event_and_run_sm(evt);
     EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_HOST_UPDATE);
-
-    // HEARTBEAT TIMEOUT
-    evt.type = DFU_EVENT_HEARTBEAT_TIMEOUT;
-    evt.buf = NULL;
-    evt.len = 0;
-    bm_dfu_test_set_dfu_event_and_run_sm(evt);
-    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); 
-    evt.type = DFU_EVENT_NONE;
-    bm_dfu_test_set_dfu_event_and_run_sm(evt);
-    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
-
 }
 
 TEST_F(BcmpDfuTest, ClientRecvFail){
@@ -822,6 +811,42 @@ TEST_F(BcmpDfuTest, ClientValidateFail){
     EXPECT_EQ(bm_dfu_get_error(),BM_DFU_ERR_MISMATCH_LEN); 
     bm_dfu_test_set_dfu_event_and_run_sm(evt);
     EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE); 
+}
+
+
+TEST_F(BcmpDfuTest, ChunksTooBig){
+    bm_dfu_test_set_client_fa(&fa);
+
+    // INIT SUCCESS
+    bm_dfu_init(fake_bcmp_tx_func, testPartition);
+    libSmContext_t* ctx = bm_dfu_test_get_sm_ctx();
+    bm_dfu_event_t evt = {
+        .type = DFU_EVENT_INIT_SUCCESS,
+        .buf = NULL,
+        .len = 0,
+    };
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
+
+    // DFU REQUEST
+    evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
+    evt.buf = (uint8_t*)malloc(sizeof(bcmp_dfu_start_t));
+    evt.len = sizeof(bcmp_dfu_start_t);
+    bcmp_dfu_start_t dfu_start_msg;
+    dfu_start_msg.header.frame_type = BCMP_DFU_START;
+    dfu_start_msg.info.addresses.src_node_id = 0xbeefbeefdaadbaad;
+    dfu_start_msg.info.addresses.dst_node_id = 0xdeadbeefbeeffeed;
+    dfu_start_msg.info.img_info.image_size = IMAGE_SIZE;
+    dfu_start_msg.info.img_info.chunk_size = CHUNK_SIZE * 100; // Chunk way too big
+    dfu_start_msg.info.img_info.crc16 = 0xDEAD; // bad CRC
+    dfu_start_msg.info.img_info.major_ver = 1;
+    dfu_start_msg.info.img_info.minor_ver = 7;
+    dfu_start_msg.info.img_info.gitSHA = 0xdeadd00d;
+    memcpy(evt.buf, &dfu_start_msg, sizeof(bcmp_dfu_start_t));
+
+    bm_dfu_test_set_dfu_event_and_run_sm(evt);
+    EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_ERROR); // FAILED to validate CRC
+    EXPECT_EQ(bm_dfu_get_error(),BM_DFU_ERR_CHUNK_SIZE); 
 }
 
 TEST_F(BcmpDfuTest, ClientRebootReqFail){

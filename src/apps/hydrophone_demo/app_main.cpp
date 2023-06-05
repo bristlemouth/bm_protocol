@@ -38,6 +38,7 @@
 #include "usb.h"
 #include "util.h"
 #include "watchdog.h"
+#include "timer_callback_handler.h"
 
 #include <stdio.h>
 
@@ -270,7 +271,7 @@ static void defaultTask( void *parameters ) {
   lpmPeripheralInactive(LPM_BOOT);
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
-
+  timer_callback_handler_init();
   bcl_init(NULL, NULL, NULL);
 
   // Drop priority now that we're done booting

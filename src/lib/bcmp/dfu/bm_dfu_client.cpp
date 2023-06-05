@@ -229,6 +229,11 @@ void bm_dfu_client_process_update_request(void) {
     client_ctx.host_node_id = img_info_evt->addresses.src_node_id;
 
     if (img_info_evt->img_info.gitSHA != getGitSHA()) {
+        if(chunk_size > BM_DFU_MAX_CHUNK_SIZE) {
+            bm_dfu_client_abort();
+            bm_dfu_client_transition_to_error(BM_DFU_ERR_CHUNK_SIZE);
+            return;
+        }
         client_ctx.image_size = image_size;
 
         /* We calculating the number of chunks that the client will be requesting based on the
@@ -479,6 +484,7 @@ void s_client_reboot_req_run(void) {
  * @return none
  */
 void s_client_update_done_entry(void) {
+    client_ctx.host_node_id = client_update_reboot_info.host_node_id;
     client_ctx.chunk_retry_num = 0;
     if(getGitSHA() == client_update_reboot_info.gitSHA) {
         bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
@@ -557,6 +563,10 @@ static void bm_dfu_client_fail_update_and_reboot(void) {
     memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
     vTaskDelay(100); // Wait a bit for any previous messages sent.
     resetSystem(RESET_REASON_UPDATE_FAILED); // Revert to the previous image.
+}
+
+bool bm_dfu_client_host_node_valid(uint64_t host_node_id) {
+    return client_ctx.host_node_id == host_node_id;
 }
 
 /*!

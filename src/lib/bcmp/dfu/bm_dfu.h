@@ -17,7 +17,7 @@ extern "C"
 {
 #endif
 
-#define BM_DFU_MAX_CHUNK_SIZE       (1024)
+#define BM_DFU_MAX_CHUNK_SIZE       (1024) // TODO: put this in an app config header
 #define BM_DFU_MAX_CHUNK_RETRIES    5
 
 #define BM_IMG_PAGE_LENGTH          2048
@@ -34,6 +34,7 @@ typedef enum {
     BM_DFU_ERR_ABORTED,
     BM_DFU_ERR_WRONG_VER,
     BM_DFU_ERR_IN_PROGRESS,
+    BM_DFU_ERR_CHUNK_SIZE,
     // All errors below this are "fatal"
     BM_DFU_ERR_FLASH_ACCESS,
 } bm_dfu_err_t;
@@ -62,7 +63,6 @@ enum BM_DFU_EVT_TYPE {
     DFU_EVENT_ACK_RECEIVED,
     DFU_EVENT_ACK_TIMEOUT,
     DFU_EVENT_CHUNK_TIMEOUT,
-    DFU_EVENT_HEARTBEAT_TIMEOUT,
     DFU_EVENT_HEARTBEAT,
     DFU_EVENT_ABORT,
     DFU_EVENT_BEGIN_HOST,

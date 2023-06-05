@@ -154,8 +154,7 @@ static void s_idle_run(void) {
         dfu_host_start_event_t *start_event = reinterpret_cast<dfu_host_start_event_t*>(dfu_ctx.current_event.buf);
         dfu_ctx.update_finish_callback = start_event->finish_cb;
         dfu_ctx.client_node_id = start_event->start.info.addresses.dst_node_id;
-        bm_dfu_host_set_callback(dfu_ctx.update_finish_callback);
-        bm_dfu_host_start_update_timer(start_event->timeoutMs);
+        bm_dfu_host_set_params(dfu_ctx.update_finish_callback, start_event->timeoutMs);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_HOST_REQ_UPDATE);
     }
 }
@@ -227,6 +226,39 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
 
     /* If this node is not the intended destination, then discard and continue to wait on queue */
     if (dfu_ctx.self_node_id != (reinterpret_cast<bm_dfu_event_address_t *>(frame->payload))->dst_node_id) {
+        vPortFree(buf);
+        return;
+    }
+
+    bool valid_packet = true;
+    switch(getCurrentStateEnum(dfu_ctx.sm_ctx)){
+        case BM_DFU_STATE_INIT:
+        case BM_DFU_STATE_IDLE:
+        case BM_DFU_STATE_ERROR: {
+            break;
+        }
+        case BM_DFU_STATE_CLIENT_RECEIVING:
+        case BM_DFU_STATE_CLIENT_VALIDATING:
+        case BM_DFU_STATE_CLIENT_REBOOT_REQ:
+        case BM_DFU_STATE_CLIENT_REBOOT_DONE:
+        case BM_DFU_STATE_CLIENT_ACTIVATING: {
+            if(!bm_dfu_client_host_node_valid((reinterpret_cast<bm_dfu_event_address_t *>(frame->payload))->src_node_id)) {
+                valid_packet = false;; // DFU packet from the wrong host! Drop packet.
+            }
+            break;
+        }
+        case BM_DFU_STATE_HOST_REQ_UPDATE:
+        case BM_DFU_STATE_HOST_UPDATE: {
+            if(!bm_dfu_host_client_node_valid((reinterpret_cast<bm_dfu_event_address_t *>(frame->payload))->src_node_id)){
+                valid_packet = false; // DFU packet from the wrong client! Drop packet.
+            }
+            break;
+        }
+        default:
+            configASSERT(false);
+    }
+
+    if(!valid_packet) {
         vPortFree(buf);
         return;
     }

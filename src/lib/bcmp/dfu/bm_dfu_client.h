@@ -24,6 +24,7 @@ void s_client_update_done_entry(void);
 void s_client_update_done_run(void);
 
 void bm_dfu_client_init(bcmp_dfu_tx_func_t bcmp_dfu_tx);
+bool bm_dfu_client_host_node_valid(uint64_t host_node_id);
 
 #ifdef __cplusplus
 }
