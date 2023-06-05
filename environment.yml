@@ -12,7 +12,7 @@ dependencies:
   # Don't forget to update compiler version check when updating compiler here!
   # Change src/CMakeLists.txt
   - arm-none-eabi-gcc=10.3_2021.10
-  - multi-arch-gdb=11.2
+  - multi-arch-gdb=12.1
   - openocd-xpack=0.12.0_1
   - cmake-xpack=3.20.6_2
   - make=4.2.1
@@ -22,7 +22,7 @@ dependencies:
   - pre_commit
   - pip
   - pip:
-      - memfault-cli==0.15.2
+      - memfault-cli==0.17.0
       - python-dotenv==0.15.0
       - gitpython==3.1.12
       - pytest==7.1.1

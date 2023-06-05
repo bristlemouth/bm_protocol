@@ -22,7 +22,7 @@ dependencies:
   - pre_commit
   - pip
   - pip:
-      - memfault-cli==0.15.2
+      - memfault-cli==0.17.0
       - python-dotenv==0.15.0
       - gitpython==3.1.12
       - pytest==7.1.1
