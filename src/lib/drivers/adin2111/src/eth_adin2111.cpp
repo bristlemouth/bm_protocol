@@ -450,19 +450,21 @@ static void add_egress_port(uint8_t *buff, uint8_t port) {
     //
     // Correct checksum to account for change in ip address
     //
-    if(header->eth_hdr.type == IP_PROTO_UDP) {
-        struct udp_hdr *udp_hdr = reinterpret_cast<struct udp_hdr *>(header->payload);
-        // Undo 1's complement
-        udp_hdr->chksum ^= 0xFFFF;
+    if( header->eth_hdr.type == ETHTYPE_IPV6 ) {
+        if(header->ip6_hdr._nexth == IP_PROTO_UDP) {
+            struct udp_hdr *udp_hdr = reinterpret_cast<struct udp_hdr *>(header->payload);
+            // Undo 1's complement
+            udp_hdr->chksum ^= 0xFFFF;
 
-        // Add port to checksum (we can only do this because the value was previously 0)
-        // Since udp checksum is sum of uint16_t bytes
-        udp_hdr->chksum += port;
+            // Add port to checksum (we can only do this because the value was previously 0)
+            // Since udp checksum is sum of uint16_t bytes
+            udp_hdr->chksum += port;
 
-        // Do 1's complement again
-        udp_hdr->chksum ^= 0xFFFF;
-    } else if(header->eth_hdr.type == IP_PROTO_BCMP) {
-        // fix checksum for BCMP
+            // Do 1's complement again
+            udp_hdr->chksum ^= 0xFFFF;
+        } else if(header->ip6_hdr._nexth == IP_PROTO_BCMP) {
+            // fix checksum for BCMP
+        }
     }
 }
 
