@@ -86,12 +86,12 @@ A couple things to note about submodules
 
 ### Configure CMake
 
-This follows a pretty standard cmake process. First you create a directory for this particular build/configuration. You can either create a top level directory for each build (/cmake-build-debug, /cmake-build-bridge) or one top level directory with individual build subdirectories (/cmake-build/bristlemouth, /cmake-build/bridge). The `cmake-build` prefix is in the .gitignore, so however you structure the different folders they should still begin with that.
+This follows a pretty standard cmake process. First you create a directory for this particular build/configuration. You can either create a top level directory for each build (/cmake-build-debug, /cmake-build-mote_bristlefin) or one top level directory with individual build subdirectories (/cmake-build/bristlemouth, /cmake-build/mote_bristlefin). The `cmake-build` prefix is in the .gitignore, so however you structure the different folders they should still begin with that.
 
 ```
 # Sub-directory example
-$ mkdir -p cmake-build/bridge
-$ cd cmake-build/bridge
+$ mkdir -p cmake-build/mote_bristlefin
+$ cd cmake-build/mote_bristlefin
 ```
 
 Then you run cmake and tell it where the toolchain file is located, which BSP(board support package) to use, as well as which application. Pay attention to the `../` relative paths in the args - depending on how your cmake build directories are set up, you might have to replace them with `../..`.
@@ -99,10 +99,10 @@ Then you run cmake and tell it where the toolchain file is located, which BSP(bo
 
 ```
 # If you have individual top-level build directores for each app
-$  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Debug
+$  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bm_mote_v1.0 -DAPP=mote_bristlefin -DCMAKE_BUILD_TYPE=Debug
 
 # If you have one top-level build dir with different sub-dirs for each app
-$  cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Debug
+$  cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bm_mote_v1.0 -DAPP=mote_bristlefin -DCMAKE_BUILD_TYPE=Debug
 ```
 
 You can optionally set the build type to release (it defaults to Debug) by appending `-DCMAKE_BUILD_TYPE=Release` to the command.
