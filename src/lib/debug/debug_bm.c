@@ -259,7 +259,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
             bm_printf_err_t res;
             res = bm_printf(0, "%.*s", dataLen, dataStr);
             if (res != BM_PRINTF_OK) {
-                printf("bm_printf err: %d", res);
+                printf("bm_printf err: %d\n", res);
             }
         } else if (strncmp("fprintf", parameter, parameterStringLength) == 0) {
             const char *filename = FreeRTOS_CLIGetParameter(
@@ -290,7 +290,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
             bm_printf_err_t res;
             res = bm_fprintf(0, just_filename, "%.*s\n", dataLen + 1, dataStr); // add one for the \n
             if (res != BM_PRINTF_OK) {
-                printf("bm_fprintf err: %d", res);
+                printf("bm_fprintf err: %d\n", res);
             }
             vPortFree(just_filename);
             just_filename = NULL;
