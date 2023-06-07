@@ -5,6 +5,7 @@
 #include "bm_pubsub.h"
 #include "middleware.h"
 #include "bm_util.h"
+#include "bcmp_resource_discovery.h"
 
 typedef struct {
   uint8_t type;
@@ -38,8 +39,6 @@ static bm_sub_node_t* delete_sub(const char* topic, uint16_t topic_len);
 static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len);
 static bm_sub_node_t* get_last_sub(void);
 static pubsubContext_t _ctx;
-
-extern const char* publication_topics;
 
 /*!
   Subscribe to a specific string topic with callback
@@ -310,6 +309,10 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
 
   if (!retv) {
     printf("Unable to publish to topic\n");
+  } else {
+    if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len)){
+      printf("Added topic %.*s to BCMP resource table.\n",topic_len,topic);
+    }
   }
 
   return retv;
@@ -356,14 +359,6 @@ void bm_print_subs(void) {
     printf("Node: %.*s\n", node->sub.topic_len, node->sub.topic);
     node = node->next;
   }
-}
-
-/*!
-  Get all reported publications
-  \return *char, string of pubs
-*/
-char* bm_get_pubs(void) {
-  return (char *) publication_topics;
 }
 
 #define MAX_SUB_STR_LEN 256

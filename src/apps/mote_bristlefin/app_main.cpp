@@ -114,7 +114,6 @@ SerialHandle_t usbPcap   = {
   .flags = 0,
 };
 
-const char* publication_topics = "button";
 
 extern "C" void USART3_IRQHandler(void) {
     serialGenericUartIRQHandler(&usart3);

@@ -20,6 +20,7 @@
 #include "bcmp_config.h"
 #include "bcmp_time.h"
 #include "bcmp_topology.h"
+#include "bcmp_resource_discovery.h"
 
 #include "bm_dfu.h"
 
@@ -153,6 +154,16 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
 
       case BCMP_ECHO_REPLY: {
         bcmp_process_ping_reply(reinterpret_cast<bcmp_echo_reply_t *>(header->payload));
+        break;
+      }
+
+      case BCMP_RESOURCE_TABLE_REQUEST: {
+        bcmp_resource_discovery::bcmp_process_resource_discovery_request(reinterpret_cast<bcmp_resource_table_request_t*>(header->payload), dst);
+        break;
+      }
+
+      case BCMP_RESOURCE_TABLE_REPLY: {
+        bcmp_resource_discovery::bcmp_process_resource_discovery_reply(reinterpret_cast<bcmp_resource_table_reply_t*>(header->payload), ip_to_nodeid(src));
         break;
       }
 
@@ -421,6 +432,7 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration*
 
   bm_dfu_init(bcmp_dfu_tx, dfu_partition);
   bcmp_config_init(user_cfg, sys_cfg);
+  bcmp_resource_discovery::bcmp_resource_discovery_init();
 
   BaseType_t rval = xTaskCreate(bcmp_thread,
                      "BCMP",

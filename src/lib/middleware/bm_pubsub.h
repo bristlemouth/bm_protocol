@@ -23,7 +23,6 @@ bool bm_unsub(const char *topic, const bm_cb_t callback);
 bool bm_unsub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback);
 void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf);
 void bm_print_subs(void);
-char* bm_get_pubs(void);
 char* bm_get_subs(void);
 
 #ifdef __cplusplus

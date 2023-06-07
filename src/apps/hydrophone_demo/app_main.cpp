@@ -117,8 +117,6 @@ SerialHandle_t usbPcap   = {
   .flags = 0,
 };
 
-const char* publication_topics = "";
-
 #ifndef NO_UART
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
@@ -471,7 +469,6 @@ static void hydrophoneTask( void *parameters ) {
   streamData.header.sampleSize = 2;
 
   if(micInit(&hsai_BlockA1, NULL)) {
-    publication_topics = "hydrophone/db | hydrophone/stream";
 
     // Hydrophone audio stream enable/disable
 

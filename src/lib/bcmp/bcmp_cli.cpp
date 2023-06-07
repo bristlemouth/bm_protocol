@@ -16,6 +16,7 @@
 #include "util.h"
 #include "bcmp_time.h"
 #include "bcmp_topology.h"
+#include "bcmp_resource_discovery.h"
 
 #include "debug.h"
 
@@ -36,7 +37,9 @@ static const CLI_Command_Definition_t cmd_bcmp = {
   "bcmp cfg del <node_id> <partition(u/s)> <key>\n"
   "bcmp time set <node_id> <utc_us>\n"
   "bcmp time get <node_id>\n"
-  "bcmp topo\n",
+  "bcmp topo\n"
+  "bcmp resources\n"
+  "bcmp resources <node_id>\n",
   // Command function
   cmd_bcmp_fn,
   // Number of parameters
@@ -451,6 +454,23 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
       }
     } else if (strncmp("topo", command, command_str_len) == 0) {
       bcmp_topology_start();
+    } else if (strncmp("resources", command, command_str_len) == 0) {
+      const char *node_id_str;
+      BaseType_t node_id_str_len = 0;
+      node_id_str = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      2,
+                      &node_id_str_len);
+      if (!node_id_str) {
+        bcmp_resource_discovery::bcmp_resource_discovery_print_resources();
+        break;
+      }
+      uint64_t node_id = strtoull(node_id_str, NULL, 0);
+      if(!bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id)){
+        printf("Failed to send discovery request.\n");
+      } else {
+        printf("Sent discovery request to %" PRIx64 "\n", node_id);
+      }
     } else {
       printf("Invalid arguments\n");
     }

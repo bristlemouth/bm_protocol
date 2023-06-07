@@ -138,8 +138,6 @@ SerialHandle_t usbPcap   = {
   .flags = 0,
 };
 
-const char* publication_topics = "button";
-
 #ifndef BSP_MOTE_V1_0
 extern "C" void USART1_IRQHandler(void) {
     serialGenericUartIRQHandler(&usart1);

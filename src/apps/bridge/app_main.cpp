@@ -125,8 +125,6 @@ SerialHandle_t usbPcap   = {
   .flags = 0,
 };
 
-const char* publication_topics = "button";
-
 extern "C" int main(void) {
 
     // Before doing anything, check if we should enter ROM bootloader

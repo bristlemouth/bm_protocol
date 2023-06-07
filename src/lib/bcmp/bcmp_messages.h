@@ -186,6 +186,13 @@ typedef struct {
 } __attribute__((packed)) bcmp_resource_table_request_t;
 
 typedef struct {
+  // Length of resource name
+  uint16_t resource_len;
+  // Name of resource
+  char resource[0];
+} __attribute__((packed)) bcmp_resource_t;
+
+typedef struct {
   // Node ID of the responding node
   uint64_t node_id;
 
