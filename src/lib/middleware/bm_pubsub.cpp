@@ -150,6 +150,9 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
 
   if (retv) {
     printf("Subscribing to Topic: %s\n", topic);
+    if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len, bcmp_resource_discovery::SUB)){
+      printf("Added topic %.*s to BCMP resource table.\n",topic_len,topic);
+    }
   } else {
     printf("Unable to Subscribe to topic\n");
   }
@@ -310,7 +313,7 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
   if (!retv) {
     printf("Unable to publish to topic\n");
   } else {
-    if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len)){
+    if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len, bcmp_resource_discovery::PUB)){
       printf("Added topic %.*s to BCMP resource table.\n",topic_len,topic);
     }
   }

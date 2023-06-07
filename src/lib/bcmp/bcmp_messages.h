@@ -196,11 +196,14 @@ typedef struct {
   // Node ID of the responding node
   uint64_t node_id;
 
-  // Length of resource list
-  uint16_t resource_len;
+  // Number of published topics
+  uint16_t num_pubs;
 
-  // List of structures containing information for all resource interests known about in this node. Points to bcmp_resource_info*
-  // TODO - Switch to bcmp_resource_info resource_list[0]; when defined
+  // Number of subscribed topics
+  uint16_t num_subs;
+
+  // List of structures containing information for all resource interests known about in this node. 
+  // List of bcmp_resource_t structured as num_pub published resources, then num_sub, subscribed resources.
   uint8_t resource_list[0];
 } __attribute__((packed)) bcmp_resource_table_reply_t;
 
