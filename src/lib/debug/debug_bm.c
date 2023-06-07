@@ -54,6 +54,7 @@ static const CLI_Command_Definition_t cmdGpio = {
   " * bm unsub <topic>\n"
   " * bm pub <topic> <data>\n"
   " * bm printf <string>\n"
+  " * bm fprintf <file_name> <string>\n"
   " * bm print\n",
   // Command function
   neighborsCommand,
@@ -251,13 +252,48 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                             &parameterStringLength);
 
             if(parameterStringLength == 0) {
-                printf("ERR topic required\n");
+                printf("ERR data required\n");
                 break;
             }
             size_t dataLen = strnlen(dataStr, 128);
-            bm_printf(0, "%.*s", dataLen, dataStr);
-        } else if (strncmp("fprintf", parameter,parameterStringLength) == 0) {
-            // bm_fprintf(0, "test_file.log", "hello there in a file\n");
+            bm_printf_err_t res;
+            res = bm_printf(0, "%.*s", dataLen, dataStr);
+            if (res != BM_PRINTF_OK) {
+                printf("bm_printf err: %d", res);
+            }
+        } else if (strncmp("fprintf", parameter, parameterStringLength) == 0) {
+            const char *filename = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR file name required\n");
+                break;
+            }
+            char* just_filename = (char *)pvPortMalloc(parameterStringLength + 1);
+            configASSERT(just_filename);
+            memset(just_filename, 0, parameterStringLength + 1);
+            strncpy(just_filename, filename, parameterStringLength);
+            const char *dataStr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            3,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR data required\n");
+                vPortFree(just_filename);
+                just_filename = NULL;
+                break;
+            }
+            size_t dataLen = strnlen(dataStr, 128);
+            bm_printf_err_t res;
+            res = bm_fprintf(0, just_filename, "%.*s\n", dataLen + 1, dataStr); // add one for the \n
+            if (res != BM_PRINTF_OK) {
+                printf("bm_fprintf err: %d", res);
+            }
+            vPortFree(just_filename);
+            just_filename = NULL;
         } else if (strncmp("fappend", parameter,parameterStringLength) == 0) {
             // bm_file_append(0, "test_file_append.log", "hello there appended");
         } else {
