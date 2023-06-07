@@ -235,15 +235,24 @@ To see fancy colored output with test details, run:
 $ export GTEST_COLOR=1; ctest -V
 ```
 
-### Running Tests in CLion
+## micropython
 
-To add the build target, to the CMake preferences (**Build,Execution,Deployment->CMake**) and add click **+** to add a new profile. Call the profile **Test**. You can also type **Test** into the build profile. Leave the toolchain as **Default** and the CMake options blank.
+In order to build with micropython support, you must pass the `-DUSE_MICROPYTHON=1` cmake flag.
 
-Select the Test configuration from the configuration dropdown. You should see an **All CTest | Test** target. If you do, you can just run that. If you don't, you can go to the **Edit Configurations** menu and add a new configuration. Add a new **CTest Application**. It should default name to **"All Tests"** and targets to **All targets**. You can now select it and run it to run all the unit tests!
+### Building mpy-cross on macOS arm64
+There's currently a bug with building the micropython cross-compiler `mpy-cross` on arm64 MacOS (it works fine while using Rosetta). There are missing include files while trying to build `mpy-cross`. Thankfully, there's a workaround.
 
-If you run into a `CMake 3.18 or high is required` error, go back to CMake preferences (**Build,Execution,Deployment->Toolchains**), create a new toolchain named **bristlemouth_tests**, and only change the CMake path to the one in your conda env. Then change the **Test** CMake profile's toolchain to use **bristlemouth_tests**.
+We can compile mpy-cross separately by providing the correct CPATH for the c/c++ include libraries. (We can't do this for the entire project, since it will break the microcontroller firmware cross-compilation)
+```
+cd src/third_party/micropython/mpy-cross
+export CPATH="`xcrun --show-sdk-path`/usr/include"
+make
+mkdir -p `git rev-parse --show-toplevel`/tools/bin
+cp build/mpy-cross `git rev-parse --show-toplevel`/tools/bin
+```
 
-## Updating CDDL/CBOR message files
-
-If you want to change any of the message types encoded/decoded in the Bristlemouth client library, you will need to modify the .msg files
-found in ```$PROJ_BASE/tools/scripts/cddl/msgs```. You will then need to run ```cddl_code_gen.sh``` found in ```$PROJ_BASE/tools/scripts/cddl```
+Once mpy-cross is compiled and saved in tools/bin, we can point the build process to it so it doesn't try to re-build it.
+```
+export MICROPY_MPYCROSS=`git rev-parse --show-toplevel`//tools/bin/mpy-cross
+make -j
+```
