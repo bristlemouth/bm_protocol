@@ -109,9 +109,9 @@ if (USE_BOOTLOADER STREQUAL 1 OR APP STREQUAL "bootloader")
 # 32kB Bootloader
 set(BOOTLOADER_SIZE 0x8000)
 
-# 616kB Application size, since we have two slots
+# 1002kB Application size, since we have two slots
 # (and want to align to 8kB boundaries for flash erase)
-set(APP_SIZE 0x9A000)
+set(APP_SIZE 0xFA800)
 
 # 64kB scratch size
 set(MCUBOOT_SCRATCH_SIZE 0x10000)
