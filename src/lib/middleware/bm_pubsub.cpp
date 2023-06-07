@@ -102,7 +102,7 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
       }
 
       // Add new callback item to linked-list
-      bm_cb_node_t *cb_node = (bm_cb_node_t *)pvPortMalloc(sizeof(bm_cb_node_t));
+      bm_cb_node_t *cb_node = static_cast<bm_cb_node_t *>(pvPortMalloc(sizeof(bm_cb_node_t)));
       configASSERT(cb_node);
 
       cb_node->next = NULL;
@@ -120,13 +120,13 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
         ptr = &_ctx.subscription_list;
       }
 
-      ptr->next = (bm_sub_node_t *) pvPortMalloc(sizeof(bm_sub_node_t));
+      ptr->next = static_cast<bm_sub_node_t *>(pvPortMalloc(sizeof(bm_sub_node_t)));
       if(!ptr->next){
         break;
       }
 
       memset(ptr->next, 0x00, sizeof(bm_sub_node_t));
-      ptr->next->sub.topic = (char *)pvPortMalloc(topic_len + 1);
+      ptr->next->sub.topic = static_cast<char *>(pvPortMalloc(topic_len + 1));
       if(!ptr->next->sub.topic){
         vPortFree(ptr->next);
         break;
@@ -136,7 +136,7 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
       ptr->next->sub.topic_len = topic_len;
 
       // Add first callback item to linked-list
-      bm_cb_node_t *cb_node = (bm_cb_node_t *)pvPortMalloc(sizeof(bm_cb_node_t));
+      bm_cb_node_t *cb_node = static_cast<bm_cb_node_t *>(pvPortMalloc(sizeof(bm_cb_node_t)));
       configASSERT(cb_node);
 
       cb_node->next = NULL;
@@ -149,7 +149,7 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
   } while(0);
 
   if (retv) {
-    printf("Subscribing to Topic: %s\n", topic);
+    printf("Subscribing to Topic: %.*s\n", topic_len, topic);
     if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len, bcmp_resource_discovery::SUB)){
       printf("Added topic %.*s to BCMP resource table.\n",topic_len,topic);
     }
@@ -285,7 +285,7 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
       break;
     }
 
-    bm_pubsub_header_t *header = (bm_pubsub_header_t *)pbuf->payload;
+    bm_pubsub_header_t *header = reinterpret_cast<bm_pubsub_header_t *>(pbuf->payload);
     // TODO actually set the type here
     header->type = 0;
     header->flags = 0;
@@ -328,7 +328,7 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
   \return None
 */
 void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
-  bm_pubsub_header_t *header = (bm_pubsub_header_t *)pbuf->payload;
+  bm_pubsub_header_t *header = reinterpret_cast<bm_pubsub_header_t *>(pbuf->payload);
   uint16_t data_len = pbuf->len - sizeof(bm_pubsub_header_t) - header->topic_len;
 
   // TODO check header type and flags and do something about it
@@ -372,7 +372,7 @@ void bm_print_subs(void) {
 */
 char* bm_get_subs(void) {
   bm_sub_node_t* node = _ctx.subscription_list.next;
-  char* subs_string = (char *) pvPortMalloc(MAX_SUB_STR_LEN);
+  char* subs_string = static_cast<char *>(pvPortMalloc(MAX_SUB_STR_LEN));
   memset(subs_string, 0, MAX_SUB_STR_LEN);
   configASSERT(subs_string);
   char* ptr = subs_string;
