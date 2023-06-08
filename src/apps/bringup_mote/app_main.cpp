@@ -166,7 +166,7 @@ static const DebugGpio_t debugGpioPins[] = {
   {"bf_io1", &BF_IO1, GPIO_OUT},
   {"bf_io2", &BF_IO2, GPIO_OUT},
   {"bf_hfio", &BF_HFIO, GPIO_OUT},
-  {"bf_3v3_en", &BF_3V3_EN, GPIO_IN},
+  {"bf_3v3_en", &BF_3V3_EN, GPIO_OUT},
   {"bf_5v_en", &BF_5V_EN, GPIO_OUT},
   {"bf_imu_int", &BF_IMU_INT, GPIO_IN},
   {"bf_imu_rst", &BF_IMU_RST, GPIO_OUT},
