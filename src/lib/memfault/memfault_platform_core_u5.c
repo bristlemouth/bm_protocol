@@ -24,6 +24,7 @@
 #include "semphr.h"
 #include "printf.h"
 #include "watchdog.h"
+#include "bootutil/bootutil_public.h"
 
 // static sMfltCoredumpRegion s_coredump_regions[16];
 static uint8_t s_event_storage[1024];
@@ -341,6 +342,9 @@ bool memfault_threadsafe_packetizer_is_data_available_from_source(uint32_t src_m
 }
 
 bool memfault_platform_coredump_save_begin(void) {
+  if(boot_swap_type() != BOOT_SWAP_TYPE_NONE){
+    return false;
+  }
   // Set watchdog prescaler to max to let us finish doing the whole coredump
   LL_IWDG_EnableWriteAccess(IWDG);
   LL_IWDG_SetPrescaler(IWDG, LL_IWDG_PRESCALER_1024);
