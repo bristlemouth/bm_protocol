@@ -97,3 +97,22 @@ void gc_collect(void) {
   gc_helper_collect_regs_and_stack();
   gc_collect_end();
 }
+
+mp_uint_t mp_hal_ticks_us(void) {
+    // Not implemented yet
+    return 0;
+}
+
+mp_uint_t mp_hal_ticks_cpu(void) {
+    // Not implemented yet
+    return 0;
+}
+
+void mp_hal_delay_us(mp_uint_t delay) {
+    // Not implemented yet
+}
+
+uint64_t mp_hal_time_ns(void) {
+    // Not implemented yet
+    return 0;
+}

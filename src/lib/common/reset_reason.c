@@ -62,6 +62,7 @@ static const enumStrLUT_t resetReasonLUT[] = {
     {RESET_REASON_MCUBOOT, "MCUBoot reset"},
     {RESET_REASON_CONFIG, "Config reset"},
     {RESET_REASON_UPDATE_FAILED, "Update failed"},
+    {RESET_REASON_MICROPYTHON, "micropython"},
     {RESET_REASON_INVALID, "Invalid reset or first power on since flashing"},
     // MUST be NULL terminated list otherwise things WILL break
     {0, NULL}

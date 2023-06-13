@@ -81,6 +81,7 @@ static BaseType_t repl_command( char *writeBuffer,
 
   // Setup fun
   mp_stack_ctrl_init();
+  mp_stack_set_limit(1024*32);
   gc_init(upy_heap, upy_heap + sizeof(upy_heap));
   mp_init();
 

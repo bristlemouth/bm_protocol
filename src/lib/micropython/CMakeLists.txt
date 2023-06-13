@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.20.0)
 
 set(MICROPY_PORT_DIR    ${SRC_DIR}/lib/micropython)
 set(MICROPY_DIR         ${SRC_DIR}/third_party/micropython)
+set(MICROPY_LIB_DIR     ${SRC_DIR}/third_party/micropython-lib)
 set(MICROPY_TARGET      micropython)
 
 set(USER_C_MODULES ${MICROPY_PORT_DIR}/modules/micropython.cmake)
@@ -16,14 +17,14 @@ include(${MICROPY_DIR}/extmod/extmod.cmake)
 set(MICROPY_SOURCE_PORT
     # main.c
     # help.c
-    # machine_i2c.c
+    modules/machine_i2c.c
     # machine_spi.c
     # machine_pin.c
     # machine_uart.c
     # modbluetooth_zephyr.c
-    # modmachine.c
+    modules/modmachine.c
     # modusocket.c
-    # modutime.c
+    modules/modutime.c
     # modzephyr.c
     # modzsensor.c
     # mphalport.c
@@ -40,7 +41,7 @@ set(MICROPY_SOURCE_SHARED
     # runtime/mpirq.c
     runtime/pyexec.c
     runtime/stdout_helpers.c
-    # timeutils/timeutils.c
+    timeutils/timeutils.c
 )
 list(TRANSFORM MICROPY_SOURCE_SHARED PREPEND ${MICROPY_DIR}/shared/)
 
@@ -83,13 +84,16 @@ set(MICROPY_DEFINITIONS
     ${APP_DEFINES}
     )
 
+set(MICROPY_CROSS_FLAGS -march=armv7m)
+set(MICROPY_FROZEN_MANIFEST ${MICROPY_PORT_DIR}/manifest.py)
+
 add_library(micropython EXCLUDE_FROM_ALL ${MICROPY_SOURCE_QSTR})
 target_compile_options(micropython PRIVATE ${MICROPY_COMPILER_FLAGS})
 target_compile_definitions(micropython PRIVATE ${MICROPY_DEFINITIONS})
 target_include_directories(micropython PRIVATE ${MICROPY_INCLUDE_DIRS})
 
 # Make sure `make clean` removes genhdr directory. Otherwise re-building might fail
-set_target_properties(micropython PROPERTIES ADDITIONAL_CLEAN_FILES "${CMAKE_BINARY_DIR}/genhdr")
+set_target_properties(micropython PROPERTIES ADDITIONAL_CLEAN_FILES "${CMAKE_BINARY_DIR}/genhdr;${CMAKE_BINARY_DIR}/frozen_mpy")
 
 include(${MICROPY_DIR}/py/mkrules.cmake)
 

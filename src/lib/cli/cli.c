@@ -41,7 +41,7 @@ void startCLI() {
               cliTask,
               "CLI",
               // TODO - verify stack size
-              configMINIMAL_STACK_SIZE * 4,
+              configMINIMAL_STACK_SIZE * 16,
               NULL,
               CLI_TASK_PRIORITY,
               NULL);

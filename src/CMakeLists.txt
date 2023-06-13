@@ -161,6 +161,8 @@ set(COMPILE_FLAGS
 	-Wno-format
 	-Wno-narrowing
 
+	-Werror
+
 # In case we want faster sqrtf, etc
 	# -fno-math-errno
 	# -fsingle-precision-constant
@@ -193,6 +195,9 @@ set(MICROPY_COMPILER_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
 	-Wno-unused-parameter
+
+	# GRRRR
+	# -Werror
 
 # In case we want faster sqrtf, etc
 	# -fno-math-errno
