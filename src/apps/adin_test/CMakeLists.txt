@@ -16,6 +16,7 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${SRC_DIR}/lib/middleware/bm_network.cpp
 
     ${BCMP_FILES}
     )
@@ -52,7 +53,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
-    ${SRC_DIR}/lib/debug/debug_bm.c
+    ${SRC_DIR}/lib/debug/debug_bm.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c

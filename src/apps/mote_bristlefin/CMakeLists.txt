@@ -15,6 +15,7 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
+    ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
 
     ${BCMP_FILES}
@@ -51,7 +52,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
-    ${SRC_DIR}/lib/debug/debug_bm.c
+    ${SRC_DIR}/lib/debug/debug_bm.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c
@@ -82,6 +83,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/tca9546a.cpp
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/drivers/w25.cpp
+    ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
@@ -113,6 +115,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/drivers/protected
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/lwip
+    ${SRC_DIR}/lib/bm_serial
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/

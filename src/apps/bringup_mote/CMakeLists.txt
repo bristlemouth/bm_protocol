@@ -14,6 +14,7 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
+    ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
 
     ${BCMP_FILES}
@@ -51,7 +52,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_adin_raw.c
     ${SRC_DIR}/lib/debug/debug_htu.cpp
-    ${SRC_DIR}/lib/debug/debug_bm.c
+    ${SRC_DIR}/lib/debug/debug_bm.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
@@ -90,6 +91,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
+    ${SRC_DIR}/lib/middleware/bm_network.cpp
+    ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc32.c
@@ -122,6 +125,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/mcuboot
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/lib/bm_serial
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${SRC_DIR}/third_party/crc

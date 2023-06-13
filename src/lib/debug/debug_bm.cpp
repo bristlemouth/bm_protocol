@@ -12,6 +12,7 @@
 #include "bm_pubsub.h"
 #include "bm_printf.h"
 #include "lwip/inet.h"
+#include "bm_network.h"
 
 #ifdef BSP_DEV_MOTE_V1_0
     #define LED_BLUE EXP_LED_G1
@@ -55,7 +56,8 @@ static const CLI_Command_Definition_t cmdGpio = {
   " * bm pub <topic> <data>\n"
   " * bm printf <string>\n"
   " * bm fprintf <file_name> <string>\n"
-  " * bm print\n",
+  " * bm print\n"
+  " * bm netpub <data> <i/c>\n",
   // Command function
   neighborsCommand,
   // Number of parameters (variable)
@@ -182,7 +184,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            char *topic = pvPortMalloc(parameterStringLength+1);
+            char *topic = static_cast<char*>(pvPortMalloc(parameterStringLength+1));
             configASSERT(topic);
             memcpy(topic, topicStr, parameterStringLength);
             topic[parameterStringLength] = 0;
@@ -201,7 +203,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            char *topic = pvPortMalloc(parameterStringLength+1);
+            char *topic =  static_cast<char*>(pvPortMalloc(parameterStringLength+1));
             configASSERT(topic);
             memcpy(topic, topicStr, parameterStringLength);
             topic[parameterStringLength] = 0;
@@ -220,7 +222,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            char *topic = pvPortMalloc(parameterStringLength+1);
+            char *topic =  static_cast<char*>(pvPortMalloc(parameterStringLength+1));
             configASSERT(topic);
             memcpy(topic, topicStr, parameterStringLength);
             topic[parameterStringLength] = 0;
@@ -235,7 +237,7 @@ static BaseType_t neighborsCommand( char *writeBuffer,
                 break;
             }
 
-            uint8_t *data = pvPortMalloc(parameterStringLength+1);
+            uint8_t *data =  static_cast<uint8_t*>(pvPortMalloc(parameterStringLength+1));
             configASSERT(data);
             memcpy(data, dataStr, parameterStringLength);
             data[parameterStringLength] = 0;
@@ -296,7 +298,48 @@ static BaseType_t neighborsCommand( char *writeBuffer,
             just_filename = NULL;
         } else if (strncmp("fappend", parameter,parameterStringLength) == 0) {
             // bm_file_append(0, "test_file_append.log", "hello there appended");
-        } else {
+        } else if (strncmp("netpub", parameter,parameterStringLength) == 0) {
+            const char *dataStr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            2,
+                            &parameterStringLength);
+
+            if(parameterStringLength == 0) {
+                printf("ERR data required\n");
+                break;
+            }
+            BaseType_t typeStrLen;
+            const char *typestr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            3,
+                            &typeStrLen);
+
+            if(typeStrLen == 0) {
+                printf("Network type required\n");
+                break;
+            }
+
+            bm_serial_network_type_e type;
+            if(strncmp(typestr, "i", typeStrLen) == 0){
+                type = BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK;
+            } else if (strncmp(typestr, "c", typeStrLen) == 0) {
+                type = BM_NETWORK_TYPE_CELLULAR_ONLY;
+            } else {
+                printf("Invalid network type\n");
+                break;
+            }
+
+            uint8_t *data =  static_cast<uint8_t*>(pvPortMalloc(parameterStringLength+1));
+            configASSERT(data);
+            memcpy(data, dataStr, parameterStringLength);
+            data[parameterStringLength] = 0;
+            if(bm_network_publish(data, parameterStringLength,type)){
+                printf("Sucessfully sent data to network\n");
+            } else {
+                printf("Failed to send data to network\n");
+            }
+            vPortFree(data);
+        }else {
             printf("ERR Invalid parameters\n");
             break;
         }

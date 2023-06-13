@@ -22,7 +22,7 @@ set(BCMP_FILES
     ${BCMP_DIR}/bm/bm_config.c
     ${BCMP_DIR}/bm/bm_l2.cpp
     ${BCMP_DIR}/bm/bm_util.c
-    ${BCMP_DIR}/bm/bm_printf.c
+    ${BCMP_DIR}/bm/bm_printf.cpp
     ${BCMP_DIR}/bm/bristlemouth.cpp
 
     PARENT_SCOPE)
