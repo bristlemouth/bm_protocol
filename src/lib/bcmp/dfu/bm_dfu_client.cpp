@@ -254,11 +254,7 @@ void bm_dfu_client_process_update_request(void) {
             if(client_ctx.fa->fa_size > image_size) {
                 /* Erase memory in secondary image slot */
                 printf("Erasing flash\n");
-                uint32_t image_flash_size  = image_size;
-                image_flash_size += (0x2000 - 1);
-                image_flash_size &= ~(0x2000 - 1);
-
-                if(flash_area_erase(client_ctx.fa, 0, image_flash_size) != 0) {
+                if(flash_area_erase(client_ctx.fa, 0, flash_area_get_size(client_ctx.fa)) != 0) {
                     printf("Error erasing flash!\n");
                     bm_dfu_send_ack(client_ctx.host_node_id, 0, BM_DFU_ERR_FLASH_ACCESS);
                     bm_dfu_client_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);

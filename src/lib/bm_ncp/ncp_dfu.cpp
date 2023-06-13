@@ -57,10 +57,7 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
             printf("Failed to open internal flash\n");
             break;
         }
-        uint32_t image_flash_size = dfu_start->image_size;
-        image_flash_size += (INTERNAL_FLASH_PAGE_SIZE - 1);
-        image_flash_size &= ~(INTERNAL_FLASH_PAGE_SIZE - 1);
-        if(flash_area_erase(_ctx.fa, 0, image_flash_size) != 0) {
+        if(flash_area_erase(_ctx.fa, 0, flash_area_get_size(_ctx.fa)) != 0) {
             printf("Failed to erase flash.\n");
             break;
         }
