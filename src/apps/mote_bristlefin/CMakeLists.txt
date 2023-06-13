@@ -225,7 +225,7 @@ set(APP_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MEMFAULT_SOURCES}
     ${TINYUSB_FILES}
-    PARENT_SCOPE)
+    )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -237,11 +237,11 @@ set(APP_INCLUDES
     ${MCUBOOT_INCLUDES}
     ${MEMFAULT_INCLUDES}
     ${TINYUSB_INCLUDES}
-    PARENT_SCOPE)
+    )
 
 set(APP_LIBS
     lwipcore
-    PARENT_SCOPE)
+    )
 
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
@@ -259,6 +259,40 @@ list(APPEND APP_DEFINES "BM_DFU_HOST=0")
 message(STATUS "DFU CLIENT ONLY")
 endif()
 
+
+if (USE_MICROPYTHON STREQUAL 1)
+include(${SRC_DIR}/lib/micropython/CMakeLists.txt)
+
+list(APPEND APP_DEFINES "USE_MICROPYTHON")
+list(APPEND APP_DEFINES "MICROPY_HEAP_SIZE=1024*64;${MICROPY_DEFINITIONS}")
+list(APPEND APP_LIBS micropython)
+# list(APPEND APP_LIBS usermod)
+list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
+list(APPEND APP_FILES
+        ${SRC_DIR}/lib/micropython/micropython_freertos.c
+        ${SRC_DIR}/lib/micropython/mphalport.c)
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/micropython/mphalport.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/micropython/micropython_freertos.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+endif()
+
+
 if (NOT ${USE_BOOTLOADER})
      message(SEND_ERROR "USE_BOOTLOADER is not set.")
 endif()
@@ -266,3 +300,6 @@ endif()
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)
 set(APP_DEFINES "${APP_DEFINES}" PARENT_SCOPE)
+set(APP_LIBS "${APP_LIBS}" PARENT_SCOPE)
+set(APP_FILES "${APP_FILES}" PARENT_SCOPE)
+set(APP_INCLUDES "${APP_INCLUDES}" PARENT_SCOPE)

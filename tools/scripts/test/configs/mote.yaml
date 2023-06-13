@@ -5,3 +5,12 @@
     bsp: bm_mote_v1.0
     build_type: Release
     use_bootloader: True
+
+- name: mote_bristlefin on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: mote_bristlefin
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DUSE_MICROPYTHON=1

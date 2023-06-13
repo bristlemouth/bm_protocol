@@ -12,6 +12,7 @@ const uint32_t *UID = (const uint32_t *)(UID_BASE); // 96-bit unique hardware id
 
 static char fwVersionStr[128];
 static char uidStr[25];
+static char nodeidStr[17];
 
 /*!
   Get version info for current firmware
@@ -190,4 +191,19 @@ uint64_t getNodeId() {
   }
 
   return *node_id;
+}
+
+/*!
+  Get device node id id as string
+
+  \return pointer to node id string
+*/
+const char * getNodeIdStr() {
+  static bool nodeidStrGenerated = false;
+  if (!nodeidStrGenerated) {
+    snprintf(nodeidStr, sizeof(nodeidStr), "%" PRIx64 "", getNodeId());
+    nodeidStrGenerated = true;
+  }
+
+  return nodeidStr;
 }

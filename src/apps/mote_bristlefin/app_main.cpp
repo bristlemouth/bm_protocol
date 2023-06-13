@@ -53,6 +53,10 @@
 #include "ram_partitions.h"
 #endif
 
+#ifdef USE_MICROPYTHON
+#include "micropython_freertos.h"
+#endif
+
 #define LED_ON (0)
 #define LED_OFF (1)
 
@@ -322,6 +326,10 @@ static void defaultTask( void *parameters ) {
     IOWrite(&BF_LED_R1, LED_OFF);
     IOWrite(&BF_LED_G2, LED_OFF);
     IOWrite(&BF_LED_R2, LED_OFF);
+
+#ifdef USE_MICROPYTHON
+    micropython_freertos_init(&usbCLI);
+#endif
 
     while(1) {
         /* Do nothing */

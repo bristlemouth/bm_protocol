@@ -21,6 +21,7 @@ void getFWVersion(uint8_t *major, uint8_t *minor, uint8_t *revision);
 size_t getBuildId(const uint8_t **buildId);
 void getMacAddr(uint8_t *buff, size_t len);
 uint64_t getNodeId();
+const char * getNodeIdStr();
 #ifdef __cplusplus
 }
 #endif

@@ -81,7 +81,7 @@ STATIC mp_obj_t machine_info(size_t n_args, const mp_obj_t *args) {
     // get and print unique id; 96 bits
     {
         // mp_printf(print, "Reset Reason: %s\n", getResetReasonString());
-        mp_printf(print, "Node ID: %" PRIx64 "\n", getNodeId());
+        mp_printf(print, "Node ID: %s\n", getNodeIdStr());
 
         // TODO - add more info
     }
