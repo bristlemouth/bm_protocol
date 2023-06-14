@@ -8,6 +8,7 @@
 bool flashErase(uint32_t addr, size_t len) {
   FLASH_EraseInitTypeDef eraseCfg = {0};
   bool rval = false;
+  bool next_bank = false;
   uint32_t startAddr = addr;
 
   eraseCfg.TypeErase = FLASH_TYPEERASE_PAGES;
@@ -19,7 +20,7 @@ bool flashErase(uint32_t addr, size_t len) {
     }
 
     // Trying to erase past flash boundary
-    if (addr + len > (FLASH_BASE + FLASH_SIZE + 1)) {
+    if (addr + len > (FLASH_BASE + FLASH_SIZE)) {
       break;
     }
 
@@ -33,10 +34,10 @@ bool flashErase(uint32_t addr, size_t len) {
       break;
     }
 
-    if(startAddr < (FLASH_BASE + FLASH_BANK_SIZE + 1)) {
-      const uint32_t endAddr = MIN(startAddr + len, (FLASH_BASE + FLASH_BANK_SIZE + 1));
+    if(startAddr < (FLASH_BASE + FLASH_BANK_SIZE)) {
+      const uint32_t endAddr = MIN(startAddr + len, (FLASH_BASE + FLASH_BANK_SIZE));
       const uint32_t page = (startAddr - FLASH_BASE)/FLASH_PAGE_SIZE;
-      const uint32_t numPages = (endAddr - startAddr)/FLASH_PAGE_SIZE;
+      const uint32_t numPages = ((endAddr - startAddr) % FLASH_PAGE_SIZE) ? (((endAddr - startAddr)/FLASH_PAGE_SIZE) + 1) : ((endAddr - startAddr)/FLASH_PAGE_SIZE);
 
       eraseCfg.Banks = FLASH_BANK_1;
       eraseCfg.Page = page;
@@ -59,11 +60,12 @@ bool flashErase(uint32_t addr, size_t len) {
       }
 
       startAddr = endAddr;
+      next_bank = true;
     }
 
     const uint32_t endAddr = addr + len;
-    const uint32_t page = (startAddr - FLASH_BASE)/FLASH_PAGE_SIZE;
-    const uint32_t numPages = (endAddr - startAddr)/FLASH_PAGE_SIZE;
+    const uint32_t page = (next_bank) ? 0 : ((startAddr - FLASH_BASE)/FLASH_PAGE_SIZE);
+    const uint32_t numPages = ((endAddr - startAddr) % FLASH_PAGE_SIZE) ? (((endAddr - startAddr)/FLASH_PAGE_SIZE) + 1) : ((endAddr - startAddr)/FLASH_PAGE_SIZE);
 
     eraseCfg.Banks = FLASH_BANK_2;
     eraseCfg.Page = page;
