@@ -282,13 +282,6 @@ static void defaultTask( void *parameters ) {
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition,&debug_configuration_user, &debug_configuration_system);
 
-    if(!isRTCSet()){ // FIXME. Hack to enable the bridge power controller functionality.
-        RTCTimeAndDate_t datetime;
-        datetime.year = 2023;
-        datetime.month = 05;
-        datetime.day = 04;
-        rtcSet(&datetime);
-    }
     uint32_t sampleIntervalMs = (20 * 60 * 1000); // FIXME test default 20 min interval
     debug_configuration_system.getConfig("sampleIntervalMs", strlen("sampleIntervalMs"),sampleIntervalMs);
     uint32_t sampleDurationMs = (5 * 60 * 1000); // FIXME test default 5 min duration

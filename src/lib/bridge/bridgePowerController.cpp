@@ -149,12 +149,14 @@ void BridgePowerController::_update(void) {
             }
         } else { // Sampling Not Enabled 
             uint8_t enabled;
-            if(_rtcSet && !_powerControlEnabled && IORead(&_BusPowerPin,&enabled)){ 
-                if(!enabled) { // Turn the bus on if we've disabled the power manager and our RTC is set.
+            if(!_powerControlEnabled && IORead(&_BusPowerPin,&enabled)){ 
+                if(!enabled) { // Turn the bus on if we've disabled the power manager.
+                    printf("Bridge power controller disabled, turning bus on.\n");
                     powerBusAndSetSignal(true);
                 }
-            } else if (!_rtcSet && IORead(&_BusPowerPin,&enabled)) {
-                if(enabled) { // If our RTC is not set we should disable the VBUS
+            } else if (!_rtcSet && _powerControlEnabled && IORead(&_BusPowerPin,&enabled)) {
+                if(enabled) { // If our RTC is not set and we've enabled the power manager, we should disable the VBUS
+                    printf("Bridge power controller enabled, but RTC is not yet set, turning bus off.\n");
                     powerBusAndSetSignal(false);
                 }
             }
