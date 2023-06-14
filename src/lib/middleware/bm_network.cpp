@@ -9,11 +9,11 @@
 typedef struct {
     // Network type to send over.
     bm_serial_network_type_e type;
-    // Data 
+    // Data
     uint8_t data[0];
 } __attribute__((packed)) bm_serial_network_data_header_t;
 
-static const char networkTopic[] = "network";
+static const char networkTopic[] = "spotter/network";
 
 bool bm_network_publish(const void* data, uint16_t data_len, bm_serial_network_type_e type) {
     bool rval = false;

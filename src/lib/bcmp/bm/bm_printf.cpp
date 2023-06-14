@@ -65,11 +65,11 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name, const
     }
 
     if (file_name) {
-      if (!bm_pub("fprintf", printf_pub, printf_pub_len)) {
+      if (!bm_pub("spotter/fprintf", printf_pub, printf_pub_len)) {
         rval = BM_PRINTF_TX_ERR;
       }
     } else {
-      if (!bm_pub("printf", printf_pub, printf_pub_len)) {
+      if (!bm_pub("spotter/printf", printf_pub, printf_pub_len)) {
         rval = BM_PRINTF_TX_ERR;
       }
     }
