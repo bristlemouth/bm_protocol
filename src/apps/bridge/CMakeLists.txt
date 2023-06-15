@@ -16,6 +16,9 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 # Include BM_NCP files
 add_subdirectory(${SRC_DIR}/lib/bm_ncp bm_ncp)
 
+# Include BM Common Messages
+add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
+
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
@@ -32,6 +35,7 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}
     ${BM_NCP_INCLUDES}
+    ${BM_COMMON_MESSAGES_INCLUDES}
     )
 
 set(LIB_FILES

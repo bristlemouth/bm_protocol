@@ -6,12 +6,12 @@
 static Configuration* _usr_cfg;
 static Configuration* _sys_cfg;
 
-bool bcmp_config_get(uint64_t target_node_id, bcmp_config_partition_e partition, size_t key_len, const char* key, err_t &err) {
+bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char* key, err_t &err) {
     configASSERT(key);
     bool rval = false;
     err = ERR_VAL;
-    size_t msg_size = sizeof(bcmp_config_get_t) + key_len;
-    bcmp_config_get_t * get_msg = (bcmp_config_get_t * )pvPortMalloc(msg_size);
+    size_t msg_size = sizeof(bm_common_config_get_t) + key_len;
+    bm_common_config_get_t * get_msg = (bm_common_config_get_t * )pvPortMalloc(msg_size);
     configASSERT(get_msg);
     do {
         get_msg->header.target_node_id = target_node_id;
@@ -31,13 +31,13 @@ bool bcmp_config_get(uint64_t target_node_id, bcmp_config_partition_e partition,
     return rval;
 }
 
-bool bcmp_config_set(uint64_t target_node_id, bcmp_config_partition_e partition,
+bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e partition,
     size_t key_len, const char* key, size_t value_size, void * val, err_t &err) {
     configASSERT(key);
     bool rval = false;
     err = ERR_VAL;
-    size_t msg_len = sizeof(bcmp_config_set_t) + key_len + value_size;
-    bcmp_config_set_t * set_msg = (bcmp_config_set_t *)pvPortMalloc(msg_len);
+    size_t msg_len = sizeof(bm_common_config_set_t) + key_len + value_size;
+    bm_common_config_set_t * set_msg = (bm_common_config_set_t *)pvPortMalloc(msg_len);
     configASSERT(set_msg);
     do {
         set_msg->header.target_node_id = target_node_id;
@@ -59,15 +59,15 @@ bool bcmp_config_set(uint64_t target_node_id, bcmp_config_partition_e partition,
     return rval;
 }
 
-bool bcmp_config_commit(uint64_t target_node_id, bcmp_config_partition_e partition, err_t &err) {
+bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e partition, err_t &err) {
     bool rval = false;
     err = ERR_VAL;
-    bcmp_config_commit_t *commit_msg = (bcmp_config_commit_t *)pvPortMalloc(sizeof(bcmp_config_commit_t));
+    bm_common_config_commit_t *commit_msg = (bm_common_config_commit_t *)pvPortMalloc(sizeof(bm_common_config_commit_t));
     configASSERT(commit_msg);
     commit_msg->header.target_node_id = target_node_id;
     commit_msg->header.source_node_id = getNodeId();
     commit_msg->partition = partition;
-    err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_COMMIT, (uint8_t *)commit_msg, sizeof(bcmp_config_commit_t));
+    err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_COMMIT, (uint8_t *)commit_msg, sizeof(bm_common_config_commit_t));
     if(err == ERR_OK) {
         rval = true;
     }
@@ -75,15 +75,15 @@ bool bcmp_config_commit(uint64_t target_node_id, bcmp_config_partition_e partiti
     return rval;
 }
 
-bool bcmp_config_status_request(uint64_t target_node_id, bcmp_config_partition_e partition, err_t &err) {
+bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partition_e partition, err_t &err) {
     bool rval = false;
     err = ERR_VAL;
-    bcmp_config_status_request_t *status_req_msg = (bcmp_config_status_request_t *)pvPortMalloc(sizeof(bcmp_config_status_request_t));
+    bm_common_config_status_request_t *status_req_msg = (bm_common_config_status_request_t *)pvPortMalloc(sizeof(bm_common_config_status_request_t));
     configASSERT(status_req_msg);
     status_req_msg->header.target_node_id = target_node_id;
     status_req_msg->header.source_node_id = getNodeId();
     status_req_msg->partition = partition;
-    err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_REQUEST, (uint8_t *)status_req_msg, sizeof(bcmp_config_status_request_t));
+    err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_REQUEST, (uint8_t *)status_req_msg, sizeof(bm_common_config_status_request_t));
     if(err == ERR_OK) {
         rval = true;
     }
@@ -91,18 +91,18 @@ bool bcmp_config_status_request(uint64_t target_node_id, bcmp_config_partition_e
     return rval;
 }
 
-bool bcmp_config_status_response(uint64_t target_node_id, bcmp_config_partition_e partition, bool commited, uint8_t num_keys, const ConfigKey_t* keys, err_t &err) {
+bool bcmp_config_status_response(uint64_t target_node_id, bm_common_config_partition_e partition, bool commited, uint8_t num_keys, const ConfigKey_t* keys, err_t &err) {
     bool rval = false;
     err = ERR_VAL;
-    size_t msg_size = sizeof(bcmp_config_status_response_t);
+    size_t msg_size = sizeof(bm_common_config_status_response_t);
     for(int i = 0; i < num_keys; i++){
-        msg_size += sizeof(bcmp_config_status_key_data_t);
+        msg_size += sizeof(bm_common_config_status_key_data_t);
         msg_size += keys[i].keyLen;
     }
     if(msg_size > BCMP_MAX_PAYLOAD_SIZE_BYTES) {
         return false;
     }
-    bcmp_config_status_response_t *status_resp_msg = (bcmp_config_status_response_t *)pvPortMalloc(msg_size);
+    bm_common_config_status_response_t *status_resp_msg = (bm_common_config_status_response_t *)pvPortMalloc(msg_size);
     configASSERT(status_resp_msg);
     do {
         status_resp_msg->header.target_node_id = target_node_id;
@@ -110,11 +110,11 @@ bool bcmp_config_status_response(uint64_t target_node_id, bcmp_config_partition_
         status_resp_msg->committed = commited;
         status_resp_msg->partition = partition;
         status_resp_msg->num_keys = num_keys;
-        bcmp_config_status_key_data_t* key_data = reinterpret_cast<bcmp_config_status_key_data_t* >(status_resp_msg->keyData);
+        bm_common_config_status_key_data_t* key_data = reinterpret_cast<bm_common_config_status_key_data_t* >(status_resp_msg->keyData);
         for(int i = 0; i < num_keys; i++){
             key_data->key_length = keys[i].keyLen;
             memcpy(key_data->key, keys[i].keyBuffer, keys[i].keyLen);
-            key_data += sizeof(bcmp_config_status_key_data_t);
+            key_data += sizeof(bm_common_config_status_key_data_t);
             key_data += keys[i].keyLen;
         }
         err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_RESPONSE, reinterpret_cast<uint8_t *>(status_resp_msg), msg_size);
@@ -126,14 +126,14 @@ bool bcmp_config_status_response(uint64_t target_node_id, bcmp_config_partition_
     return rval;
 }
 
-static void bcmp_config_process_commit_msg(bcmp_config_commit_t * msg) {
+static void bcmp_config_process_commit_msg(bm_common_config_commit_t * msg) {
     configASSERT(msg);
     switch(msg->partition) {
-        case BCMP_CFG_PARTITION_USER: {
+        case BM_COMMON_CFG_PARTITION_USER: {
             _usr_cfg->saveConfig(); // Reboot!
             break;
         } 
-        case BCMP_CFG_PARTITION_SYSTEM: {
+        case BM_COMMON_CFG_PARTITION_SYSTEM: {
             _sys_cfg->saveConfig(); // Reboot!
             break;
         }
@@ -143,14 +143,14 @@ static void bcmp_config_process_commit_msg(bcmp_config_commit_t * msg) {
     }
 }
 
-static void bcmp_config_process_status_request_msg(bcmp_config_status_request_t * msg) {
+static void bcmp_config_process_status_request_msg(bm_common_config_status_request_t * msg) {
     configASSERT(msg);
     err_t err;
     do {
         Configuration *cfg;
-        if(msg->partition == BCMP_CFG_PARTITION_USER){
+        if(msg->partition == BM_COMMON_CFG_PARTITION_USER){
             cfg = _usr_cfg;
-        } else if (msg->partition == BCMP_CFG_PARTITION_SYSTEM){
+        } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM){
             cfg = _sys_cfg;
         } else {
             printf("Invalid configuration\n");
@@ -158,18 +158,18 @@ static void bcmp_config_process_status_request_msg(bcmp_config_status_request_t 
         }
         uint8_t num_keys;
         const ConfigKey_t * keys = cfg->getStoredKeys(num_keys);
-        bcmp_config_status_response(msg->header.source_node_id,BCMP_CFG_PARTITION_USER, cfg->needsCommit(),num_keys,keys,err);
+        bcmp_config_status_response(msg->header.source_node_id, msg->partition, cfg->needsCommit(),num_keys,keys,err);
         if(err != ERR_OK){
             printf("Error processing config status request.\n");
         }
     } while(0);
 }
 
-static bool bcmp_config_send_value(uint64_t target_node_id, bcmp_config_partition_e partition,uint32_t data_length, void* data, err_t &err) {
+static bool bcmp_config_send_value(uint64_t target_node_id, bm_common_config_partition_e partition,uint32_t data_length, void* data, err_t &err) {
     bool rval = false;
     err = ERR_VAL;
-    size_t msg_len = data_length + sizeof(bcmp_config_value_t);
-    bcmp_config_value_t * value_msg = (bcmp_config_value_t * )pvPortMalloc(msg_len);
+    size_t msg_len = data_length + sizeof(bm_common_config_value_t);
+    bm_common_config_value_t * value_msg = (bm_common_config_value_t * )pvPortMalloc(msg_len);
     configASSERT(value_msg);
     do {
         value_msg->header.target_node_id = target_node_id;
@@ -186,13 +186,13 @@ static bool bcmp_config_send_value(uint64_t target_node_id, bcmp_config_partitio
     return rval;
 }
 
-static void bcmp_config_process_config_get_msg(bcmp_config_get_t *msg){
+static void bcmp_config_process_config_get_msg(bm_common_config_get_t *msg){
     configASSERT(msg);
     do {
         Configuration *cfg;
-        if(msg->partition == BCMP_CFG_PARTITION_USER){
+        if(msg->partition == BM_COMMON_CFG_PARTITION_USER){
             cfg = _usr_cfg;
-        } else if (msg->partition == BCMP_CFG_PARTITION_SYSTEM){
+        } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM){
             cfg = _sys_cfg;
         } else {
             break;
@@ -208,13 +208,13 @@ static void bcmp_config_process_config_get_msg(bcmp_config_get_t *msg){
     } while(0);
 }
 
-static void bcmp_config_process_config_set_msg(bcmp_config_set_t *msg){
+static void bcmp_config_process_config_set_msg(bm_common_config_set_t *msg){
     configASSERT(msg);
     do {
         Configuration *cfg;
-        if(msg->partition == BCMP_CFG_PARTITION_USER){
+        if(msg->partition == BM_COMMON_CFG_PARTITION_USER){
             cfg = _usr_cfg;
-        } else if (msg->partition == BCMP_CFG_PARTITION_SYSTEM){
+        } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM){
             cfg = _sys_cfg;
         } else {
             break;
@@ -229,7 +229,7 @@ static void bcmp_config_process_config_set_msg(bcmp_config_set_t *msg){
     } while(0);
 }
 
-static void bcmp_process_value_message(bcmp_config_value_t * msg) {
+static void bcmp_process_value_message(bm_common_config_value_t * msg) {
     CborValue it;
     CborParser parser;
     do {
@@ -309,11 +309,11 @@ static void bcmp_process_value_message(bcmp_config_value_t * msg) {
     } while(0);
 }
 
-bool bcmp_config_del_key(uint64_t target_node_id, bcmp_config_partition_e partition, size_t key_len, const char * key) {
+bool bcmp_config_del_key(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char * key) {
     configASSERT(key);
     bool rval = false;
-    size_t msg_size = sizeof(bcmp_config_delete_key_request_t) + key_len;
-    bcmp_config_delete_key_request_t * del_msg = (bcmp_config_delete_key_request_t * )pvPortMalloc(msg_size);
+    size_t msg_size = sizeof(bm_common_config_delete_key_request_t) + key_len;
+    bm_common_config_delete_key_request_t * del_msg = (bm_common_config_delete_key_request_t * )pvPortMalloc(msg_size);
     configASSERT(del_msg);
     del_msg->header.target_node_id = target_node_id;
     del_msg->header.source_node_id = getNodeId();
@@ -327,11 +327,11 @@ bool bcmp_config_del_key(uint64_t target_node_id, bcmp_config_partition_e partit
     return rval;
 }
 
-static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bcmp_config_partition_e partition, size_t key_len, const char * key, bool success) {
+static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char * key, bool success) {
     configASSERT(key);
     bool rval = false;
-    size_t msg_size = sizeof(bcmp_config_delete_key_response_t) + key_len;
-    bcmp_config_delete_key_response_t * del_resp = (bcmp_config_delete_key_response_t * )pvPortMalloc(msg_size);
+    size_t msg_size = sizeof(bm_common_config_delete_key_response_t) + key_len;
+    bm_common_config_delete_key_response_t * del_resp = (bm_common_config_delete_key_response_t * )pvPortMalloc(msg_size);
     configASSERT(del_resp);
     del_resp->header.target_node_id = target_node_id;
     del_resp->header.source_node_id = getNodeId();
@@ -346,13 +346,13 @@ static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bcmp_conf
     return rval;
 }
 
-static void bcmp_process_del_request_message(bcmp_config_delete_key_request_t * msg) { 
+static void bcmp_process_del_request_message(bm_common_config_delete_key_request_t * msg) { 
     configASSERT(msg);
     do {
         Configuration *cfg;
-        if(msg->partition == BCMP_CFG_PARTITION_USER){
+        if(msg->partition == BM_COMMON_CFG_PARTITION_USER){
             cfg = _usr_cfg;
-        } else if (msg->partition == BCMP_CFG_PARTITION_SYSTEM){
+        } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM){
             cfg = _sys_cfg;
         } else {
             break;
@@ -364,7 +364,7 @@ static void bcmp_process_del_request_message(bcmp_config_delete_key_request_t * 
     } while(0);
 }
 
-static void bcmp_process_del_response_message(bcmp_config_delete_key_response_t * msg) {
+static void bcmp_process_del_response_message(bm_common_config_delete_key_response_t * msg) {
     configASSERT(msg);
     char * keyprintbuf = (char * )pvPortMalloc(msg->key_length + 1); 
     memcpy(keyprintbuf, msg->key, msg->key_length);
@@ -376,56 +376,56 @@ static void bcmp_process_del_response_message(bcmp_config_delete_key_response_t 
 
 void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* payload) {
     do {
-        bcmp_config_header_t * msg_header = reinterpret_cast<bcmp_config_header_t *>(payload);
+        bm_common_config_header_t * msg_header = reinterpret_cast<bm_common_config_header_t *>(payload);
         if(msg_header->target_node_id != getNodeId()){
             break;
         }
         switch(bcmp_msg_type){
             case BCMP_CONFIG_GET: {
-                bcmp_config_process_config_get_msg(reinterpret_cast<bcmp_config_get_t *>(payload));
+                bcmp_config_process_config_get_msg(reinterpret_cast<bm_common_config_get_t *>(payload));
                 break;
             }
             case BCMP_CONFIG_SET: {
-                bcmp_config_process_config_set_msg(reinterpret_cast<bcmp_config_set_t *>(payload));
+                bcmp_config_process_config_set_msg(reinterpret_cast<bm_common_config_set_t *>(payload));
                 break;
             }
             case BCMP_CONFIG_COMMIT: {
-                bcmp_config_process_commit_msg(reinterpret_cast<bcmp_config_commit_t *>(payload));
+                bcmp_config_process_commit_msg(reinterpret_cast<bm_common_config_commit_t *>(payload));
                 break;
             }
             case BCMP_CONFIG_STATUS_REQUEST: {
-                bcmp_config_process_status_request_msg(reinterpret_cast<bcmp_config_status_request_t *>(payload));
+                bcmp_config_process_status_request_msg(reinterpret_cast<bm_common_config_status_request_t *>(payload));
                 break;
             }
             case BCMP_CONFIG_STATUS_RESPONSE: {
-                bcmp_config_status_response_t *msg = reinterpret_cast<bcmp_config_status_response_t *>(payload);
+                bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
                 printf("Response msg -- Node Id:%" PRIu64 ",Partition:%d, Commit Status:%d\n",
                     msg->header.source_node_id, msg->partition, msg->committed);
                 printf("Num Keys: %d\n",msg->num_keys);
-                bcmp_config_status_key_data_t * key = reinterpret_cast<bcmp_config_status_key_data_t*>(msg->keyData);
+                bm_common_config_status_key_data_t * key = reinterpret_cast<bm_common_config_status_key_data_t*>(msg->keyData);
                 for(int i = 0; i < msg->num_keys; i++){
                     char * keybuf = (char *) pvPortMalloc(key->key_length + 1);
                     configASSERT(keybuf);
                     memcpy(keybuf, key->key, key->key_length);
                     keybuf[key->key_length] = '\0';
                     printf("%s\n", keybuf);
-                    key += key->key_length + sizeof(bcmp_config_status_key_data_t);
+                    key += key->key_length + sizeof(bm_common_config_status_key_data_t);
                     vPortFree(keybuf);
                 }
                 break;
             }
             case BCMP_CONFIG_VALUE: {
-                bcmp_config_value_t *msg = reinterpret_cast<bcmp_config_value_t *>(payload);
+                bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
                 bcmp_process_value_message(msg);
                 break;
             }
             case BCMP_CONFIG_DELETE_REQUEST: {
-                bcmp_config_delete_key_request_t *msg = reinterpret_cast<bcmp_config_delete_key_request_t *>(payload);
+                bm_common_config_delete_key_request_t *msg = reinterpret_cast<bm_common_config_delete_key_request_t *>(payload);
                 bcmp_process_del_request_message(msg);
                 break;
             }
             case BCMP_CONFIG_DELETE_RESPONSE: {
-                bcmp_config_delete_key_response_t *msg = reinterpret_cast<bcmp_config_delete_key_response_t *>(payload);
+                bm_common_config_delete_key_response_t *msg = reinterpret_cast<bm_common_config_delete_key_response_t *>(payload);
                 bcmp_process_del_response_message(msg);
                 break;
             }

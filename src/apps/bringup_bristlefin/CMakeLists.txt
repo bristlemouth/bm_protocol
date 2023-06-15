@@ -12,6 +12,9 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 # Include BCMP
 add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
+# Include BM Common Messages
+add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
+
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
@@ -26,6 +29,7 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}
+    ${BM_COMMON_MESSAGES_INCLUDES}
     )
 
 set(LIB_FILES

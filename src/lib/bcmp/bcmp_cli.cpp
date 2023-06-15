@@ -147,11 +147,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 0);
-        bcmp_config_partition_e partition;
+        bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_USER;
+          partition = BM_COMMON_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_SYSTEM;
+          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -198,11 +198,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 0);
-        bcmp_config_partition_e partition;
+        bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_USER;
+          partition = BM_COMMON_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_SYSTEM;
+          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -314,11 +314,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 0);
-        bcmp_config_partition_e partition;
+        bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_USER;
+          partition = BM_COMMON_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_SYSTEM;
+          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -347,11 +347,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 0);
-        bcmp_config_partition_e partition;
+        bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_USER;
+          partition = BM_COMMON_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_SYSTEM;
+          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -386,11 +386,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 0);
-        bcmp_config_partition_e partition;
+        bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_USER;
+          partition = BM_COMMON_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BCMP_CFG_PARTITION_SYSTEM;
+          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
