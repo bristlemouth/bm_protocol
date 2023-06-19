@@ -185,7 +185,7 @@ uint64_t getNodeId() {
 
   // Only compute the hash the first time this function gets called
   if(node_id == NULL) {
-    node_id = (uint64_t *)pvPortMalloc(sizeof(uint16_t));
+    node_id = (uint64_t *)pvPortMalloc(sizeof(uint64_t));
     configASSERT(node_id);
     *node_id = fnv_64a_buf((void *)UID, sizeof(uint32_t) * 3, 0);
   }
