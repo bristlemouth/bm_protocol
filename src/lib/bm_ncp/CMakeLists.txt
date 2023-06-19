@@ -7,6 +7,7 @@ set(BM_NCP_FILES
     ${BM_NCP_DIR}/debug_ncp.cpp
     ${BM_NCP_DIR}/ncp_uart.cpp
     ${BM_NCP_DIR}/ncp_dfu.cpp
+    ${BM_NCP_DIR}/ncp_config.cpp
 
     PARENT_SCOPE)
 

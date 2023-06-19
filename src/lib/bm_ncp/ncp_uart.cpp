@@ -15,6 +15,7 @@
 #include "stm32u5xx_ll_usart.h"
 #include "task_priorities.h"
 #include "ncp_dfu.h"
+#include "ncp_config.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -130,7 +131,8 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
-void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller){
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller,
+  cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg){
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
 
@@ -150,6 +152,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   configASSERT(dfu_partition);
   configASSERT(power_controller);
   ncp_dfu_init(dfu_partition, power_controller);
+  ncp_cfg_init(usr_cfg, sys_cfg);
 
   // Create the task
   BaseType_t rval = xTaskCreate(
@@ -172,6 +175,14 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.dfu_start_fn = ncp_dfu_start_cb;
   bm_serial_callbacks.dfu_chunk_fn = ncp_dfu_chunk_cb;
   bm_serial_callbacks.dfu_end_fn = NULL;
+  bm_serial_callbacks.cfg_get_fn = ncp_cfg_get_cb;
+  bm_serial_callbacks.cfg_set_fn = ncp_cfg_set_cb;
+  bm_serial_callbacks.cfg_value_fn = NULL;
+  bm_serial_callbacks.cfg_commit_fn = ncp_cfg_commit_cb;
+  bm_serial_callbacks.cfg_status_request_fn = ncp_cfg_status_request_cb;
+  bm_serial_callbacks.cfg_status_response_fn = NULL;
+  bm_serial_callbacks.cfg_key_del_request_fn = ncp_cfg_key_del_request_cb;
+  bm_serial_callbacks.cfg_key_del_response_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
 
   serialEnable(ncpSerialHandle);

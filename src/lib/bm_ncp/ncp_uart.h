@@ -9,6 +9,7 @@
 #include "serial.h"
 #include "nvmPartition.h"
 #include "bridgePowerController.h"
+#include "configuration.h"
 
 #define NCP_BUFF_LEN 2048
 
@@ -19,5 +20,6 @@ typedef struct {
   // TODO - Define other bridge configs?
 } NCPConfig_t;
 
-void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller);
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller,
+  cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg);
 // bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?

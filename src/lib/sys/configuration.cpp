@@ -436,7 +436,7 @@ bool Configuration::setConfigCbor(const char * key, size_t key_len, uint8_t *val
         if(key_len > MAX_KEY_LEN_BYTES) {
             break;
         }
-        if(value_len > MAX_STR_LEN_BYTES || value_len == 0) {
+        if(value_len > MAX_CONFIG_BUFFER_SIZE_BYTES || value_len == 0) {
             break;
         }
         if(cbor_parser_init(value, value_len, 0, &parser, &it) != CborNoError){

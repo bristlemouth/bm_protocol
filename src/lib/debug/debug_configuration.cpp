@@ -199,7 +199,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
                     printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("str",typestr, typeStrLen) == 0){
-                char strbuf[MAX_STR_LEN_BYTES];
+                char strbuf[MAX_CONFIG_BUFFER_SIZE_BYTES];
                 size_t strlen = sizeof(strbuf);
                 if(config->getConfig(keystr,keyStrLen, strbuf, strlen)){
                     strbuf[strlen] = '\0';
@@ -208,7 +208,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
                     printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("bytestr",typestr, typeStrLen) == 0){
-                uint8_t bytes[MAX_STR_LEN_BYTES];
+                uint8_t bytes[MAX_CONFIG_BUFFER_SIZE_BYTES];
                 size_t bytelen = sizeof(bytes);
                 if(config->getConfig(keystr,keyStrLen, bytes, bytelen)){
                     printf("get bytes:");

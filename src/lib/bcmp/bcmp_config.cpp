@@ -197,7 +197,7 @@ static void bcmp_config_process_config_get_msg(bm_common_config_get_t *msg){
         } else {
             break;
         }
-        size_t buffer_len = cfg::MAX_STR_LEN_BYTES;
+        size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
         uint8_t * buffer = (uint8_t *) pvPortMalloc(buffer_len);
         configASSERT(buffer);
         if(cfg->getConfigCbor(msg->key,msg->key_length, buffer, buffer_len)){
@@ -219,7 +219,7 @@ static void bcmp_config_process_config_set_msg(bm_common_config_set_t *msg){
         } else {
             break;
         }
-        if (msg->data_length > cfg::MAX_STR_LEN_BYTES || msg->data_length == 0) {
+        if (msg->data_length > cfg::MAX_CONFIG_BUFFER_SIZE_BYTES || msg->data_length == 0) {
             break;
         }
         if(cfg->setConfigCbor(reinterpret_cast<const char *>(msg->keyAndData), msg->key_length, &msg->keyAndData[msg->key_length], msg->data_length)){
@@ -269,14 +269,14 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 break;
             }
             case cfg::ConfigDataTypes_e::STR : {
-                size_t buffer_len = cfg::MAX_STR_LEN_BYTES;
+                size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
                 char * buffer = (char *) pvPortMalloc(buffer_len);
                 configASSERT(buffer);
                 do {
                     if(cbor_value_copy_text_string(&it,buffer, &buffer_len, NULL) != CborNoError){
                         break;
                     }
-                    if(buffer_len >= cfg::MAX_STR_LEN_BYTES){
+                    if(buffer_len >= cfg::MAX_CONFIG_BUFFER_SIZE_BYTES){
                         break;
                     }
                     buffer[buffer_len] = '\0';
@@ -286,7 +286,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 break;
             }
             case cfg::ConfigDataTypes_e::BYTES: {
-                size_t buffer_len = cfg::MAX_STR_LEN_BYTES;
+                size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
                 uint8_t * buffer = (uint8_t *) pvPortMalloc(buffer_len);
                 configASSERT(buffer);
                 do {

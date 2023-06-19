@@ -4,9 +4,10 @@
 
 namespace cfg {
 
-static constexpr uint8_t MAX_NUM_KV             = 50;
-static constexpr uint8_t MAX_KEY_LEN_BYTES      = 32;
-static constexpr uint8_t MAX_STR_LEN_BYTES      = 50;
+static constexpr uint8_t MAX_NUM_KV                         = 50;
+static constexpr uint8_t MAX_KEY_LEN_BYTES                  = 32;
+static constexpr uint8_t MAX_STR_LEN_BYTES                  = 50;
+static constexpr uint8_t MAX_CONFIG_BUFFER_SIZE_BYTES       = 50;
 static constexpr uint32_t CONFIG_VERSION        = 0; // FIXME: Put this in the default config file.
 
 typedef enum ConfigDataTypes{
@@ -30,7 +31,7 @@ typedef struct ConfigKey {
 } __attribute__((packed, aligned(1))) ConfigKey_t;
 
 typedef struct ConfigValue {
-    uint8_t valueBuffer[MAX_STR_LEN_BYTES];
+    uint8_t valueBuffer[MAX_CONFIG_BUFFER_SIZE_BYTES];
 }__attribute__((packed, aligned(1))) ConfigValue_t;
 
 typedef struct ConfigPartition {
