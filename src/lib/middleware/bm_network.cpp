@@ -13,7 +13,7 @@ typedef struct {
     uint8_t data[0];
 } __attribute__((packed)) bm_serial_network_data_header_t;
 
-static const char networkTopic[] = "spotter/network";
+static const char networkTopic[] = "spotter/transmit-data";
 
 bool bm_network_publish(const void* data, uint16_t data_len, bm_serial_network_type_e type) {
     bool rval = false;
