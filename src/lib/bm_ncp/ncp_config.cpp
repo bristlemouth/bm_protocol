@@ -90,8 +90,7 @@ bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e pa
         uint8_t num_keys;
         const ConfigKey_t * keys = p->getStoredKeys(num_keys);
         size_t buffer_size;
-        uint8_t * keyBuf = alloc_ncp_key_buffer(num_keys, keys, buffer_size);
-        configASSERT(keyBuf);
+        uint8_t * keyBuf = (num_keys) ? alloc_ncp_key_buffer(num_keys, keys, buffer_size): NULL;
         do {
             if(bm_serial_cfg_status_response(node_id, partition, p->needsCommit(), num_keys, keyBuf) != BM_SERIAL_OK){
                 printf("Failed to send status resp\n");
