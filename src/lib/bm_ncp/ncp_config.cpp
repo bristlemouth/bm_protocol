@@ -8,6 +8,7 @@ using namespace cfg;
 
 static Configuration *_usr_cfg;
 static Configuration *_sys_cfg;
+static Configuration *_hw_cfg;
 
 // TODO: BCMP downstream passthrough to be done later. 
 
@@ -124,11 +125,13 @@ bool ncp_cfg_key_del_request_cb(uint64_t node_id, bm_common_config_partition_e p
     return rval;
 }
 
-void ncp_cfg_init(Configuration *usr_cfg, Configuration *sys_cfg) {
+void ncp_cfg_init(Configuration *usr_cfg, Configuration *sys_cfg, Configuration *hw_cfg) {
     configASSERT(usr_cfg);
     configASSERT(sys_cfg);
+    configASSERT(hw_cfg);
     _usr_cfg = usr_cfg;
     _sys_cfg = sys_cfg;
+    _hw_cfg = hw_cfg;
 }
 
 static Configuration* get_partition(bm_common_config_partition_e partition) {
@@ -137,7 +140,9 @@ static Configuration* get_partition(bm_common_config_partition_e partition) {
         part = _usr_cfg;
     } else if (partition == BM_COMMON_CFG_PARTITION_SYSTEM){
         part = _sys_cfg;
-    } 
+    } else if (partition == BM_COMMON_CFG_PARTITION_HARDWARE) {
+        part = _hw_cfg;
+    }
     return part;
 }
 

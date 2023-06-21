@@ -21,5 +21,5 @@ typedef struct {
 } NCPConfig_t;
 
 void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller,
-  cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg);
+  cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg, cfg::Configuration* hw_cfg);
 // bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?

@@ -298,7 +298,7 @@ static void defaultTask( void *parameters ) {
     IOWrite(&BOOST_EN, 1);
     BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,
         sampleDurationMs, subSampleIntervalMs, subsampleDurationMs, static_cast<bool>(subsampleEnabled), static_cast<bool>(bridgePowerControllerEnabled));
-    ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user, &debug_configuration_system);
+    ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user, &debug_configuration_system, &debug_configuration_hardware);
     debug_ncp_init();
 
     IOWrite(&ALARM_OUT, 1);
