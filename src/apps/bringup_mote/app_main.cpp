@@ -63,6 +63,9 @@
 
 #include <stdio.h>
 
+#define LED_ON (0)
+#define LED_OFF (1)
+
 static void defaultTask(void *parameters);
 #ifndef DEBUG_USE_LPUART1
 SerialHandle_t lpuart1 = {
@@ -311,22 +314,14 @@ static void defaultTask( void *parameters ) {
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
 
+  // Turn of the bristlefin leds
+  IOWrite(&BF_LED_G1, LED_OFF);
+  IOWrite(&BF_LED_R1, LED_OFF);
+  IOWrite(&BF_LED_G2, LED_OFF);
+  IOWrite(&BF_LED_R2, LED_OFF);
+
   while(1) {
-    IOWrite(&BF_LED_G1, 0);
-    IOWrite(&BF_LED_R1, 0);
-    IOWrite(&BF_LED_G2, 0);
-    IOWrite(&BF_LED_R2, 0);
-    vTaskDelay(250);
-    IOWrite(&BF_LED_G1, 1);
-    IOWrite(&BF_LED_R1, 0);
-    IOWrite(&BF_LED_G2, 1);
-    IOWrite(&BF_LED_R2, 0);
-    vTaskDelay(250);
-    IOWrite(&BF_LED_G1, 0);
-    IOWrite(&BF_LED_R1, 1);
-    IOWrite(&BF_LED_G2, 0);
-    IOWrite(&BF_LED_R2, 1);
-    vTaskDelay(250);
+    vTaskDelay(1000);
   }
 
 }
