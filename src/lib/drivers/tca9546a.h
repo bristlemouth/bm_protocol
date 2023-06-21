@@ -11,6 +11,7 @@ typedef enum {
   CH_2 = 0x02,
   CH_3 = 0x04,
   CH_4 = 0x08,
+  CH_UNKNOWN = 0x10,
 } Channel_t;
 
 class TCA9546A : public AbstractI2C {
@@ -19,11 +20,10 @@ public:
   bool init();
 
   bool setChannel(Channel_t channel);
-  bool getChannel(Channel_t *channel);
+  bool getChannel(Channel_t &channel);
   void hwReset();
 
 private:
-  Channel_t _channel;
   IOPinHandle_t *_resetPin;
 };
 

@@ -64,8 +64,8 @@ static BaseType_t tca9546aCommand( char *writeBuffer,
         break;
       }
     } else if (strncmp("get", parameter, parameterStringLength) == 0) {
-      Channel_t _channel;
-      if(_tca9546a_device->getChannel(&_channel)){
+      Channel_t _channel = CH_UNKNOWN;
+      if(_tca9546a_device->getChannel(_channel)){
         if(_channel == CH_NONE){
           printf("TCA channel 0\n");
           break;

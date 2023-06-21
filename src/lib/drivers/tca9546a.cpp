@@ -9,14 +9,11 @@ TCA9546A::TCA9546A(I2CInterface_t* interface, uint8_t address, IOPinHandle_t *re
   _interface = interface;
   _addr = static_cast<uint8_t>(address);
   _resetPin = resetPin;
-
-  // A Power on Reset will reset the channel to CH_NONE
-  _channel = CH_NONE;
 }
 
 /*!
- Initialize TCA9546A device. Check that it is present and read the default
- control register, which should be 0x00
+ Initialize TCA9546A device. Try to set to CH_NONE.
+ If this fails, try again (3 times), otherwise success
 
  /return true is successfull, false otherwise
 */
@@ -26,10 +23,9 @@ bool TCA9546A::init() {
 
   uint8_t retriesRemaining = 3;
   while(!rval && retriesRemaining--){
-    Channel_t chnl;
-    getChannel(&chnl);
-    if(chnl != _channel){
-      printf("Invalid channel");
+    bool res = setChannel(CH_NONE);
+    if(!res){
+      printf("Init failed retry - %u\n", retriesRemaining);
       continue;
     } else {
       printf("TCA9546A initialized!\n");
@@ -47,11 +43,25 @@ bool TCA9546A::init() {
  \return true if successfull, false otherwise
 */
 bool TCA9546A::setChannel(Channel_t channel) {
-  if(channel != _channel){
-    return (writeBytes((uint8_t*)&channel, sizeof(uint8_t)) == I2C_OK);
-  } else {
-    return true;
-  }
+  bool rval = false;
+  do {
+    if (channel == CH_UNKNOWN) {
+      break;
+    }
+    if (writeBytes((uint8_t*)&channel, sizeof(uint8_t)) != I2C_OK) {
+      break;
+    }
+    Channel_t temp_channel = CH_UNKNOWN;
+    if (!getChannel(temp_channel)) {
+      break;
+    }
+    if(temp_channel != channel) {
+      break;
+    }
+    rval = true;
+  } while (0);
+
+  return rval;
 }
 
 /*!
@@ -59,10 +69,9 @@ bool TCA9546A::setChannel(Channel_t channel) {
 
   \return true if successfull, false otherwise
 */
-bool TCA9546A::getChannel(Channel_t *channel){
+bool TCA9546A::getChannel(Channel_t &channel){
   bool rval = false;
-  if (readBytes((uint8_t*)channel, sizeof(uint8_t), 100) == I2C_OK){
-    _channel = *channel;
+  if (readBytes((uint8_t*)&channel, sizeof(uint8_t), 100) == I2C_OK){
     rval = true;
   }
 
