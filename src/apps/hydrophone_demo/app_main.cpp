@@ -175,8 +175,10 @@ extern "C" int main(void) {
   while (1){};
 }
 
-void buttonTopicSubscription(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void buttonTopicSubscription(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
+  (void)version;
+  (void) type;
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
 #if BSP_DEV_MOTE_HYDROPHONE
@@ -290,12 +292,19 @@ static void defaultTask( void *parameters ) {
 }
 
 const char buttonTopic[] = "button";
+static constexpr uint8_t buttonTopicType = 1;
 const char hydroDbTopic[] = "hydrophone/db";
+static constexpr uint8_t hydroPhoneDbType = 1;
 const char hydroStreamTopic[] = "hydrophone/stream";
+static constexpr uint8_t hydroPhoneStreamType = 1;
 const char hydroStreamEnableTopic[] = "hydrophone/stream/enable";
+static constexpr uint8_t hydroPhoneEnableType = 1;
 const char alarmDurationTopic[] = "alarm/duration";
+static constexpr uint8_t alarmDurationType = 1;
 const char alarmThresholdTopic[] = "alarm/threshold";
+static constexpr uint8_t alarmThresholdType = 1;
 const char alarmTriggerTopic[] = "alarm/trigger";
+static constexpr uint8_t alarmTriggerType = 1;
 
 volatile static uint32_t alarmDBThreshold;
 volatile static uint32_t alarmDurationS;
@@ -328,7 +337,7 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
   (void)numSamples;
   float dbLevel = micGetDB(samples, numSamples);
 
-  bm_pub(hydroDbTopic, &dbLevel, sizeof(float));
+  bm_pub(hydroDbTopic, &dbLevel, sizeof(float), hydroPhoneDbType);
 
   if(streamEnabled) {
     for(uint32_t idx = 0; idx < MIN(numSamples, MIC_SAMPLES_PER_PACKET); idx++) {
@@ -338,7 +347,7 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
 
     bm_pub(hydroStreamTopic,
               &streamData.header,
-              (sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples));
+              (sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples), hydroPhoneStreamType);
 
     if(numSamples > MIC_SAMPLES_PER_PACKET) {
       for(uint32_t idx = MIC_SAMPLES_PER_PACKET; idx < numSamples; idx++) {
@@ -347,17 +356,19 @@ static bool processMicSamples(const uint32_t *samples, uint32_t numSamples, void
       streamData.header.numSamples = (numSamples - MIC_SAMPLES_PER_PACKET);
       bm_pub(hydroStreamTopic,
               &streamData.header,
-              (sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples));
+              (sizeof(hydrophoneStreamDataHeader_t) + sizeof(int16_t) * streamData.header.numSamples), hydroPhoneStreamType);
     }
   }
 
   return true;
 }
 
-void printDbData(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void printDbData(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   (void)topic;
   (void)topic_len;
+  (void) version;
+  (void) type;
   if(data_len == sizeof(float)) {
     float dbLevel = 0;
     memcpy(&dbLevel, data, sizeof(dbLevel));
@@ -367,22 +378,24 @@ void printDbData(uint64_t node_id, const char* topic, uint16_t topic_len, const 
   }
 }
 
-void streamAudioData(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void streamAudioData(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   (void)topic;
   (void)topic_len;
-
+  (void)version;
+  (void) type;
   if(usbPcap.enabled) {
     serialWrite(&usbPcap, const_cast<uint8_t *>(data), data_len);
   }
 }
 
-void streamEnable(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void streamEnable(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   (void)topic;
   (void)topic_len;
   (void)data_len;
-
+  (void)version;
+  (void) type;
   if((data[0] == '1') || (memcmp("on", data, 2) == 0)) {
     streamEnabled = true;
   } else {
@@ -391,21 +404,24 @@ void streamEnable(uint64_t node_id, const char* topic, uint16_t topic_len, const
 }
 
 // Manually trigger alarm
-void alarmTriggerCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void alarmTriggerCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   (void)topic;
   (void)topic_len;
   (void)data;
   (void)data_len;
+  (void)version;
+  (void) type;
   alarmTimer = alarmDurationS * 100; // we use a 10ms loop, so *100 for the timer proper
 }
 
 // Update alarm threshold from data
-void updateThresholdCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void updateThresholdCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   (void)topic;
   (void)topic_len;
-
+  (void)version;
+  (void) type;
   if(data && data_len > 0) {
     uint32_t newThreshold = strtoul(reinterpret_cast<const char *>(data), 0, 10);
     if(newThreshold > 0 && newThreshold <= 200) {
@@ -416,11 +432,12 @@ void updateThresholdCb(uint64_t node_id, const char* topic, uint16_t topic_len, 
 }
 
 // Update alarm duration from data
-void updateDurationCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void updateDurationCb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   (void)topic;
   (void)topic_len;
-
+  (void)version;
+  (void) type;
   if(data && data_len > 0) {
     uint32_t newDuration = strtoul(reinterpret_cast<const char *>(data), 0, 10);
 
@@ -546,14 +563,14 @@ void usb_line_state_change(uint8_t itf, uint8_t dtr, bool rts) {
         xStreamBufferReset(usbPcap.txStreamBuffer);
         xStreamBufferReset(usbPcap.rxStreamBuffer);
 
-        bm_pub(hydroStreamEnableTopic, "1", 1);
+        bm_pub(hydroStreamEnableTopic, "1", 1, hydroPhoneStreamType);
         printf("bm pub %s 1\n", hydroStreamEnableTopic);
       } else {
         // Disable audio streaming
         bm_unsub(hydroStreamTopic, streamAudioData);
         serialDisable(&usbPcap);
 
-        bm_pub(hydroStreamEnableTopic, "0", 1);
+        bm_pub(hydroStreamEnableTopic, "0", 1, hydroPhoneStreamType);
         printf("bm pub %s 0\n", hydroStreamEnableTopic);
       }
       break;

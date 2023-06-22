@@ -9,8 +9,9 @@
 
 typedef struct {
   uint8_t type;
-  uint8_t flags;
+  uint8_t flags;  
   uint8_t topic_len;
+  bm_common_pub_sub_header_t ext_header;
   const char topic[0];
 } __attribute__((packed)) bm_pubsub_header_t;
 
@@ -250,15 +251,17 @@ bool bm_unsub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) 
   \param[in] *topic topic string to unsubscribe from
   \param[in] *data pointer to data to publish
   \param[in] length of data to publish
+  \param[in] type of data to publish
+  \param[in] version of data to publish
   \return True if data has been queued to be publish (does not guarantee that it will be published though!)
 */
-bool bm_pub(const char *topic, const void *data, uint16_t len) {
+bool bm_pub(const char *topic, const void *data, uint16_t len, uint8_t type, uint8_t version) {
   bool retv = false;
 
   uint16_t topic_len = strnlen(topic, BM_TOPIC_MAX_LEN);
 
   if(topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
-    retv = bm_pub_wl(topic, topic_len, data, len);
+    retv = bm_pub_wl(topic, topic_len, data, len, type, version);
   }
 
   return retv;
@@ -271,9 +274,11 @@ bool bm_pub(const char *topic, const void *data, uint16_t len) {
   \param[in] topic_len length of topic string
   \param[in] *data pointer to data to publish
   \param[in] length of data to publish
+  \param[in] type of data to publish
+  \param[in] version of data to publish
   \return True if data has been queued to be publish (does not guarantee that it will be published though!)
 */
-bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t len) {
+bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t len, uint8_t type, uint8_t version) {
   bool retv = true;
 
   do {
@@ -290,6 +295,8 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
     header->type = 0;
     header->flags = 0;
     header->topic_len = topic_len;
+    header->ext_header.type = type;
+    header->ext_header.version = version;
 
     memcpy((void *)header->topic, topic, topic_len);
     memcpy((void *)&header->topic[header->topic_len], data, len);
@@ -343,7 +350,9 @@ void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
                             header->topic,
                             header->topic_len,
                             (const uint8_t *)&header->topic[header->topic_len],
-                            data_len);
+                            data_len,
+                            header->ext_header.type,
+                            header->ext_header.version);
       cb_node = cb_node->next;
     }
   }

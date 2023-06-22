@@ -14,6 +14,7 @@ typedef struct {
 } __attribute__((packed)) bm_serial_network_data_header_t;
 
 static const char networkTopic[] = "spotter/transmit-data";
+static constexpr uint8_t networkTopicType = 1;
 
 bool bm_network_publish(const void* data, uint16_t data_len, bm_serial_network_type_e type) {
     bool rval = false;
@@ -23,7 +24,7 @@ bool bm_network_publish(const void* data, uint16_t data_len, bm_serial_network_t
     bm_serial_network_data_header_t * header = reinterpret_cast<bm_serial_network_data_header_t *>(data_buf);
     header->type = type;
     memcpy(header->data, data, data_len);
-    rval = bm_pub(networkTopic, data_buf, msg_len);
+    rval = bm_pub(networkTopic, data_buf, msg_len, networkTopicType);
     vPortFree(data_buf);
     return rval;
 }

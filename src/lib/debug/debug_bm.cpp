@@ -53,7 +53,7 @@ static const CLI_Command_Definition_t cmdGpio = {
   " * bm list-topics - get pub/sub capabilities of other nodes on network\n"
   " * bm sub <topic>\n"
   " * bm unsub <topic>\n"
-  " * bm pub <topic> <data>\n"
+  " * bm pub <topic> <data> <type> <version>\n"
   " * bm printf <string>\n"
   " * bm fprintf <file_name> <string>\n"
   " * bm print\n"
@@ -64,9 +64,11 @@ static const CLI_Command_Definition_t cmdGpio = {
   -1
 };
 
-static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
-
+  
+  printf("Topic version: %u\n",version);
+  printf("Topic type: %u\n",type);
   for(int i = 0; i < NUM_FLOAT_TOPICS; i++) {
     if(strncmp(topic, float_topics[i], topic_len) == 0){
       float float_data;
@@ -226,23 +228,42 @@ static BaseType_t neighborsCommand( char *writeBuffer,
             configASSERT(topic);
             memcpy(topic, topicStr, parameterStringLength);
             topic[parameterStringLength] = 0;
+            BaseType_t dataStrLen;
 
             const char *dataStr = FreeRTOS_CLIGetParameter(
                             commandString,
                             3,
+                            &dataStrLen);
+
+            if(dataStrLen == 0) {
+                printf("ERR data required\n");
+                break;
+            }
+            const char *typeStr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            4,
                             &parameterStringLength);
 
             if(parameterStringLength == 0) {
                 printf("ERR data required\n");
                 break;
             }
-
-            uint8_t *data =  static_cast<uint8_t*>(pvPortMalloc(parameterStringLength+1));
+            const char *versionStr = FreeRTOS_CLIGetParameter(
+                            commandString,
+                            5,
+                            &parameterStringLength);
+            if(parameterStringLength == 0) {
+                printf("ERR data required\n");
+                break;
+            }
+            uint8_t type =  strtoul(typeStr,NULL,0);
+            uint8_t version =  strtoul(versionStr,NULL,0);
+            uint8_t *data =  static_cast<uint8_t*>(pvPortMalloc(dataStrLen+1));
             configASSERT(data);
-            memcpy(data, dataStr, parameterStringLength);
-            data[parameterStringLength] = 0;
+            memcpy(data, dataStr, dataStrLen);
+            data[dataStrLen] = 0;
 
-            bm_pub(topic, data, parameterStringLength);
+            bm_pub(topic, data, dataStrLen, type, version);
             vPortFree(topic);
             vPortFree(data);
         } else if (strncmp("print", parameter,parameterStringLength) == 0) {

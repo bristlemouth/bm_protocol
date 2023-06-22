@@ -7,6 +7,7 @@
 #include "mock_storage_driver.h"
 #include "flash_map_backend.h"
 #include "mock_reset_reason.h"
+#include "mock_timer_callback_handler.h"
 extern "C" {
 #include "mock_FreeRTOS.h"
 }

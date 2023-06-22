@@ -174,7 +174,9 @@ extern "C" int main(void) {
     while (1){};
 }
 const char printfTopic[] = "printf";
+static constexpr uint8_t printfButtonType = 1;
 const char buttonTopic[] = "button";
+static constexpr uint8_t buttonTopicType = 1;
 const char on_str[] = "on";
 const char off_str[] = "off";
 
@@ -183,16 +185,18 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)args;
 
     if(value) {
-        bm_pub(buttonTopic, on_str, sizeof(on_str) - 1);
+        bm_pub(buttonTopic, on_str, sizeof(on_str) - 1, printfButtonType);
     } else {
-        bm_pub(buttonTopic, off_str, sizeof(off_str) - 1);
+        bm_pub(buttonTopic, off_str, sizeof(off_str) - 1, printfButtonType);
     }
 
     return false;
 }
 
-void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len) {
+void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
     (void)node_id;
+    (void)version;
+    (void)type;
     if (strncmp("button", topic, topic_len) == 0) {
         if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
             IOWrite(&LED_BLUE, LED_ON);

@@ -23,13 +23,15 @@ static bool baroSample() {
   bool success = false;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
   const char baroTopic[] = "pressure";
+  static constexpr uint8_t baroTopicType = 1;
+  static constexpr uint8_t baroTopicVersion = 1;
 
   do {
     success = _pressureSensor->readPTRaw(pressure, temperature);
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    bm_pub(baroTopic, &pressure, sizeof(float));
+    bm_pub(baroTopic, &pressure, sizeof(float),baroTopicType,baroTopicVersion);
   }
 
   return success;

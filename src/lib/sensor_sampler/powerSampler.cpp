@@ -28,6 +28,9 @@ static bool powerSample() {
   bool rval = true;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
   const char powerTopic[] = "power";
+  static constexpr uint8_t powerTopicType = 1;
+  static constexpr uint8_t powerTopicVersion = 1;
+
   for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
     do {
       success = _inaSensors[dev_num]->measurePower();
@@ -48,7 +51,7 @@ static bool powerSample() {
       _powerData.voltage = voltage;
       _powerData.current = current;
 
-      bm_pub(powerTopic, &_powerData, sizeof(_powerData));
+      bm_pub(powerTopic, &_powerData, sizeof(_powerData), powerTopicType, powerTopicVersion);
     }
     rval &= success;
   }

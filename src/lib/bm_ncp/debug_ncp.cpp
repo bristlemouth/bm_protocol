@@ -88,7 +88,7 @@ static BaseType_t cmd_debug_ncp_fn(char *writeBuffer,
       }
 
       // TODO - get and use node id
-      if(bm_serial_pub(0, arg1, arg1_str_len, reinterpret_cast<const uint8_t *>(arg2), arg2_str_len) == 0) {
+      if(bm_serial_pub(0, arg1, arg1_str_len, reinterpret_cast<const uint8_t *>(arg2), arg2_str_len,1,1) == 0) {
         printf("OK\n");
       } else {
         printf("ERR\n");

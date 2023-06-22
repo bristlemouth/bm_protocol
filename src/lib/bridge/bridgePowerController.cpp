@@ -89,7 +89,7 @@ void BridgePowerController::powerBusAndSetSignal(bool on) {
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     static char buffer[25];
     int len = snprintf(buffer, 25, "Bridge bus power: %d", static_cast<int>(on));
-    bm_serial_pub(getNodeId(), bm_printf_topic, sizeof(bm_printf_topic)-1, reinterpret_cast<const uint8_t *>(buffer) ,len);
+    bm_serial_pub(getNodeId(), bm_printf_topic, sizeof(bm_printf_topic)-1, reinterpret_cast<const uint8_t *>(buffer) ,len, bm_printf_type, bm_printf_version);
 }
 
 bool BridgePowerController::isBridgePowerOn(void) {

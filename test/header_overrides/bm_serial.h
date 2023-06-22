@@ -15,4 +15,4 @@ typedef enum {
   BM_SERIAL_MISC_ERR,
 } bm_serial_error_e;
 
-bm_serial_error_e bm_serial_pub(uint64_t node_id, const char *topic, uint16_t topic_len, const uint8_t *data, uint16_t data_len);
+bm_serial_error_e bm_serial_pub(uint64_t node_id, const char *topic, uint16_t topic_len, const uint8_t *data, uint16_t data_len, uint8_t type, uint8_t version);
