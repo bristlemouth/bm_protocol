@@ -47,7 +47,6 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name, const
       break;
     }
 
-    data_len += 1; // add one for the null terminator before we malloc a buffer
     size_t printf_pub_len = sizeof(bm_print_publication_t) + data_len + fname_len;
     printf_pub = (bm_print_publication_t* )pvPortMalloc(printf_pub_len);
     configASSERT(printf_pub);
@@ -61,6 +60,8 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name, const
       memcpy(printf_pub->fnameAndData, file_name, fname_len);
     }
 
+    data_len += 1; // add one so vsnprintf doesn't overwrite the last character with null
+    // do this after we malloc a buffer, so the extra null after the last character doesn't print to the file/ascii terminal
     int32_t res = vsnprintf((char *)&printf_pub->fnameAndData[fname_len], data_len, format, va);
     if (res < 0 || (res != data_len - 1)) {
       rval = BM_PRINTF_MISC_ERR;
