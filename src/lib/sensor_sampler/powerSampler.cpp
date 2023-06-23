@@ -3,6 +3,7 @@
 */
 
 #include "bm_pubsub.h"
+#include "bm_printf.h"
 #include "bsp.h"
 #include "debug.h"
 #include "ina232.h"
@@ -27,9 +28,6 @@ static bool powerSample() {
   bool success = false;
   bool rval = true;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-  const char powerTopic[] = "power";
-  static constexpr uint8_t powerTopicType = 1;
-  static constexpr uint8_t powerTopicVersion = 1;
 
   for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
     do {
@@ -51,7 +49,11 @@ static bool powerSample() {
       _powerData.voltage = voltage;
       _powerData.current = current;
 
-      bm_pub(powerTopic, &_powerData, sizeof(_powerData), powerTopicType, powerTopicVersion);
+      bm_fprintf(0, "power.log",
+                 "addr: %lu, voltage: %f, current: %f\n", _powerData.address, _powerData.voltage, _powerData.current);
+      bm_printf(0,
+                 "power | addr: %u, voltage: %f, current: %f\n", _powerData.address, _powerData.voltage, _powerData.current);
+      printf("power | addr: %u, voltage: %f, current: %f\n", _powerData.address, _powerData.voltage, _powerData.current);
     }
     rval &= success;
   }

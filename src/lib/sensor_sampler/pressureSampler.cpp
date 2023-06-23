@@ -3,6 +3,7 @@
 */
 
 #include "bm_pubsub.h"
+#include "bm_printf.h"
 #include "bsp.h"
 #include "debug.h"
 #include "ms5803.h"
@@ -22,16 +23,15 @@ static bool baroSample() {
   float temperature, pressure;
   bool success = false;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-  const char baroTopic[] = "pressure";
-  static constexpr uint8_t baroTopicType = 1;
-  static constexpr uint8_t baroTopicVersion = 1;
 
   do {
     success = _pressureSensor->readPTRaw(pressure, temperature);
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    bm_pub(baroTopic, &pressure, sizeof(float),baroTopicType,baroTopicVersion);
+    bm_fprintf(0, "pressure.log", "temp: %f, pressure: %f\n", temperature, pressure);
+    bm_printf(0, "pressure | temp: %f, pressure: %f\n", temperature, pressure);
+    printf("pressure | temp: %f, pressure: %f\n", temperature, pressure);
   }
 
   return success;
