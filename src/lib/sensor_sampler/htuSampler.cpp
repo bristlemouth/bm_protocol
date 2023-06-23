@@ -14,10 +14,6 @@
 
 static HTU21D* _htu21d;
 
-//static void publish_float(const char *topic, float &value, uint8_t type, uint8_t version) {
-//  bm_pub(topic, &value, sizeof(float), type, version);
-//}
-
 /*
   sensorSampler function to initialize HTU
 
