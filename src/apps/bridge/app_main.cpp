@@ -50,6 +50,8 @@
 #include "bridgePowerController.h"
 #include "debug_bridge_power_controller.h"
 #include "timer_callback_handler.h"
+#include "util.h"
+#include "app_pub_sub.h"
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -173,43 +175,74 @@ extern "C" int main(void) {
 
     while (1){};
 }
-const char printfTopic[] = "printf";
-static constexpr uint8_t printfButtonType = 1;
-const char buttonTopic[] = "button";
-static constexpr uint8_t buttonTopicType = 1;
-const char on_str[] = "on";
-const char off_str[] = "off";
 
 bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
 
     if(value) {
-        bm_pub(buttonTopic, on_str, sizeof(on_str) - 1, printfButtonType);
+        bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_ON, sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE);
     } else {
-        bm_pub(buttonTopic, off_str, sizeof(off_str) - 1, printfButtonType);
+        bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_OFF, sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE);
     }
 
     return false;
 }
 
-void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+static void handle_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
     (void)node_id;
-    (void)version;
-    (void)type;
-    if (strncmp("button", topic, topic_len) == 0) {
-        if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
-            IOWrite(&LED_BLUE, LED_ON);
-        } else if (strncmp("off", reinterpret_cast<const char*>(data), data_len) == 0) {
-            IOWrite(&LED_BLUE, LED_OFF);
+    if (strncmp(APP_PUB_SUB_BUTTON_TOPIC, topic, topic_len) == 0) {
+        if(type == APP_PUB_SUB_BUTTON_TYPE && version == APP_PUB_SUB_BUTTON_VERSION){
+            if (strncmp(APP_PUB_SUB_BUTTON_CMD_ON, reinterpret_cast<const char*>(data), data_len) == 0) {
+                IOWrite(&LED_BLUE, LED_ON);
+            } else if (strncmp(APP_PUB_SUB_BUTTON_CMD_OFF, reinterpret_cast<const char*>(data), data_len) == 0) {
+                IOWrite(&LED_BLUE, LED_OFF);
+            } else {
+                // Not handled
+            }
         } else {
-            // Not handled
+            printf("Unrecognized version: %u and type: %u\n", version, type);
         }
-    } else if(strncmp("printf", topic, topic_len) == 0){
-        printf("Topic: %.*s\n", topic_len, topic);
-        printf("Data: %.*s\n", data_len, data);
-        if(bm_serial_tx(BM_SERIAL_LOG, const_cast<uint8_t*>(data), data_len) != 0){
-            printf("Failed to forward to NCP.\n");
+    } else if(strncmp(APP_PUB_SUB_PRINTF_TOPIC, topic, topic_len) == 0){
+        if(type == APP_PUB_SUB_PRINTF_TYPE && version == APP_PUB_SUB_PRINTF_VERSION){
+            printf("Topic: %.*s\n", topic_len, topic);
+            printf("Data: %.*s\n", data_len, data);
+            if(bm_serial_tx(BM_SERIAL_LOG, const_cast<uint8_t*>(data), data_len) != 0){
+                printf("Failed to forward to NCP.\n");
+            }
+        } else {
+            printf("Unrecognized version: %u and type: %u\n", version, type);
+        }
+    } else if(strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
+        if(type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION){
+            utcDateTime_t time;
+            const bm_common_pub_sub_utc_t *utc = reinterpret_cast<const bm_common_pub_sub_utc_t *>(data);
+            dateTimeFromUtc(utc->utc_us, &time);
+
+            RTCTimeAndDate_t rtc_time = {
+                .year = time.year,
+                .month = time.month,
+                .day = time.day,
+                .hour = time.hour,
+                .minute = time.min,
+                .second = time.sec,
+                .ms = (time.usec / 1000),
+            };
+
+            if (rtcSet(&rtc_time) == pdPASS) {
+                printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n",
+                    rtc_time.year,
+                    rtc_time.month,
+                    rtc_time.day,
+                    rtc_time.hour,
+                    rtc_time.minute,
+                    rtc_time.second,
+                    rtc_time.ms);
+            } else {
+                printf("\n Failed to set RTC.\n");
+            }
+        } else {
+            printf("Unrecognized version: %u and type: %u\n", version, type);
         }
     } else {
         printf("Topic: %.*s\n", topic_len, topic);
@@ -308,8 +341,9 @@ static void defaultTask( void *parameters ) {
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
 
-    bm_sub(buttonTopic, handle_sensor_subscriptions);
-    bm_sub(printfTopic, handle_sensor_subscriptions);
+    bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
+    bm_sub(APP_PUB_SUB_PRINTF_TOPIC, handle_subscriptions);
+    bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
 
 #ifdef USE_MICROPYTHON
     micropython_freertos_init(&usbCLI);

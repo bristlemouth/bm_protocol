@@ -67,13 +67,7 @@ static void ncp_uart_pub_cb(uint64_t node_id, const char* topic, uint16_t topic_
 
 static bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len, uint8_t type, uint8_t version) {
   printf("Pub data on topic \"%.*s\" from %" PRIx64 " Type: %u, Version: %u\n", topic_len, topic, node_id, type, version);
-  (void)payload;
-  (void)len;
-
-  //
-  // Ignoring published data from spotter right now
-  //
-  return false;
+  return bm_pub_wl(topic,topic_len,payload,len,type,version);
 }
 
 static bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {

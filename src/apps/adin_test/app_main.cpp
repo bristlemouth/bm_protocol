@@ -37,6 +37,8 @@
 #include "usb.h"
 #include "watchdog.h"
 #include "timer_callback_handler.h"
+#include "app_pub_sub.h"
+#include "util.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
@@ -208,35 +210,63 @@ bool start_stress(const void *pinHandle, uint8_t value, void *args) {
     return false;
 }
 
-const char buttonTopic[] = "button";
-static constexpr uint8_t buttonTopicType = 1;
-const char on_str[] = "on";
-const char off_str[] = "off";
-
 bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
 
     if(value) {
-        bm_pub(buttonTopic, on_str, sizeof(on_str) - 1, buttonTopicType);
+        bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_ON, sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE, APP_PUB_SUB_BUTTON_VERSION);
     } else {
-        bm_pub(buttonTopic, off_str, sizeof(off_str) - 1, buttonTopicType);
+        bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_OFF, sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE, APP_PUB_SUB_BUTTON_VERSION);
     }
 
     return false;
 }
 
-void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
     (void)node_id;
-    (void)version;
-    (void)type;
-    if (strncmp("button", topic, topic_len) == 0) {
-        if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
-            IOWrite(&LED_BLUE, LED_ON);
-        } else if (strncmp("off", reinterpret_cast<const char*>(data), data_len) == 0) {
-            IOWrite(&LED_BLUE, LED_OFF);
+    if (strncmp(APP_PUB_SUB_BUTTON_TOPIC, topic, topic_len) == 0) {
+        if(type == APP_PUB_SUB_BUTTON_TYPE && version == APP_PUB_SUB_BUTTON_VERSION){
+            if (strncmp(APP_PUB_SUB_BUTTON_CMD_ON, reinterpret_cast<const char*>(data), data_len) == 0) {
+                IOWrite(&LED_BLUE, LED_ON);
+            } else if (strncmp(APP_PUB_SUB_BUTTON_CMD_OFF, reinterpret_cast<const char*>(data), data_len) == 0) {
+                IOWrite(&LED_BLUE, LED_OFF);
+            } else {
+                // Not handled
+            }
         } else {
-            // Not handled
+            printf("Unrecognized version: %u and type: %u\n", version, type);
+        }
+    } else if(strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
+        if(type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION){
+            utcDateTime_t time;
+            const bm_common_pub_sub_utc_t *utc = reinterpret_cast<const bm_common_pub_sub_utc_t *>(data);
+            dateTimeFromUtc(utc->utc_us, &time);
+
+            RTCTimeAndDate_t rtc_time = {
+                .year = time.year,
+                .month = time.month,
+                .day = time.day,
+                .hour = time.hour,
+                .minute = time.min,
+                .second = time.sec,
+                .ms = (time.usec / 1000),
+            };
+
+            if (rtcSet(&rtc_time) == pdPASS) {
+                printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n",
+                    rtc_time.year,
+                    rtc_time.month,
+                    rtc_time.day,
+                    rtc_time.hour,
+                    rtc_time.minute,
+                    rtc_time.second,
+                    rtc_time.ms);
+            } else {
+                printf("\n Failed to set RTC.\n");
+            }
+        } else {
+            printf("Unrecognized version: %u and type: %u\n", version, type);
         }
     } else {
         printf("Topic: %.*s\n", topic_len, topic);
@@ -365,7 +395,8 @@ static void defaultTask( void *parameters ) {
     IOWrite(&EXP_LED_R1, LED_OFF);
 #endif // BSP_DEV_MOTE_V1_0
 
-    bm_sub(buttonTopic, handle_sensor_subscriptions);
+    bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
+    bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
 
     while(1) {
         /* Do nothing */

@@ -50,9 +50,9 @@ TEST_F(TCA9546ATest, BasicConfigTest)
   Channel_t _channel;
   TCA9546A tca(&i2c, 0x70, NULL);
   tca.init();
-  EXPECT_EQ(i2cTxRx_fake.call_count, 1);
-  tca.getChannel(&_channel);
-  EXPECT_EQ(i2cTxRx_fake.call_count, 2);
+  EXPECT_EQ(i2cTxRx_fake.call_count, 6);
+  tca.getChannel(_channel);
+  EXPECT_EQ(i2cTxRx_fake.call_count, 7);
   tca.setChannel(CH_3);
-  EXPECT_EQ(i2cTxRx_fake.call_count, 3);
+  EXPECT_EQ(i2cTxRx_fake.call_count, 9);
 }

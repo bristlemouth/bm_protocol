@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "bm_serial.h"
 #include "device_info.h"
+#include "app_pub_sub.h"
 
 BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs, uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subSamplingEnabled, bool powerControllerEnabled) :
 _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
@@ -89,7 +90,7 @@ void BridgePowerController::powerBusAndSetSignal(bool on) {
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     static char buffer[25];
     int len = snprintf(buffer, 25, "Bridge bus power: %d", static_cast<int>(on));
-    bm_serial_pub(getNodeId(), bm_printf_topic, sizeof(bm_printf_topic)-1, reinterpret_cast<const uint8_t *>(buffer) ,len, bm_printf_type, bm_printf_version);
+    bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_PRINTF_TOPIC, sizeof(APP_PUB_SUB_BM_PRINTF_TOPIC)-1, reinterpret_cast<const uint8_t *>(buffer) ,len, APP_PUB_SUB_BM_PRINTF_TYPE, APP_PUB_SUB_BM_PRINTF_VERSION);
 }
 
 bool BridgePowerController::isBridgePowerOn(void) {

@@ -303,12 +303,30 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
 
     // If we have a local subscription, submit it to the local queue as well
     if (get_sub(topic, topic_len)) {
-      // Submit to local queue as well. Function will pbuf_ref(pbuf) since it
-      // will be used elsewhere
+      // Submit to local queue as well.
+      // Caller must create a seperate pbuf than the IP stack send b/c
+      // sending a pbuf to the IP stack must have a 1 reference count.
+      // See: LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX
+      do {
+        struct pbuf *pbuf_local = pbuf_alloc(PBUF_TRANSPORT, message_size, PBUF_RAM);
+        if(!pbuf_local) {
+          retv = false;
+          break;
+        }
+        bm_pubsub_header_t *local_header = reinterpret_cast<bm_pubsub_header_t *>(pbuf_local->payload);
+        // TODO actually set the type here
+        local_header->type = 0;
+        local_header->flags = 0;
+        local_header->topic_len = topic_len;
+        local_header->ext_header.type = type;
+        local_header->ext_header.version = version;
 
-      // The reason why we push back to the middleware queue instead of running the callbacks here
-      // is so they don't run in the current task context, which will depend on the caller.
-      bm_middleware_local_pub(pbuf);
+        memcpy((void *)local_header->topic, topic, topic_len);
+        memcpy((void *)&local_header->topic[local_header->topic_len], data, len);
+        // The reason why we push back to the middleware queue instead of running the callbacks here
+        // is so they don't run in the current task context, which will depend on the caller.
+        bm_middleware_local_pub(pbuf_local);
+      } while(0);
     }
 
     if (middleware_net_tx(pbuf)) {
