@@ -91,7 +91,7 @@ void sensorSamplerInit(sensorConfig_t *config) {
 	BaseType_t rval = xTaskCreate(
     sensorSampleTask,
     "sensorSample",
-    configMINIMAL_STACK_SIZE * 2,
+    2048,
     NULL,
     SENSOR_SAMPLER_TASK_PRIORITY,
     &sensorSampleTaskHandle);
