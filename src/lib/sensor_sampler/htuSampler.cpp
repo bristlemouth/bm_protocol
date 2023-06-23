@@ -36,12 +36,7 @@ static bool htuSample() {
   float temperature, humidity;
   bool success = false;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-//  const char humidityTopic[] = "humidity";
-//  static constexpr uint8_t humidityTopicType = 1;
-//  static constexpr uint8_t humidityTopicVersion = 1;
-//  const char temperatureTopic[] = "temperature";
-//  static constexpr uint8_t temperatureTopicType = 1;
-//  static constexpr uint8_t temperatureTopicVersion = 1;
+
   do {
     success = _htu21d->read(temperature, humidity);
   } while(!success && (--retriesRemaining > 0));
