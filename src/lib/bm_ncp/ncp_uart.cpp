@@ -16,6 +16,8 @@
 #include "task_priorities.h"
 #include "ncp_dfu.h"
 #include "ncp_config.h"
+#include "reset_reason.h"
+#include "memfault/core/reboot_tracking.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -177,10 +179,12 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.cfg_status_response_fn = NULL;
   bm_serial_callbacks.cfg_key_del_request_fn = ncp_cfg_key_del_request_cb;
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
+  bm_serial_callbacks.reboot_info_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
 
   serialEnable(ncpSerialHandle);
   ncp_dfu_check_for_update();
+  bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(), memfault_reboot_tracking_get_crash_count());
 }
 
 void ncpRXTask( void *parameters) {
