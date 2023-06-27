@@ -326,6 +326,7 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
         // The reason why we push back to the middleware queue instead of running the callbacks here
         // is so they don't run in the current task context, which will depend on the caller.
         bm_middleware_local_pub(pbuf_local);
+        pbuf_free(pbuf_local);
       } while(0);
     }
 
