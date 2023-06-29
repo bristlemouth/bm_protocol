@@ -59,10 +59,11 @@ public:
     bool removeKey(const char * key, size_t key_len);
     bool configFull(void);
     static const char* dataTypeEnumToStr(ConfigDataTypes_e type);
-    bool saveConfig(void);
+    bool saveConfig(bool restart=true);
     bool getValueSize(const char * key, size_t key_len, size_t &size);
     bool needsCommit(void);
     static bool cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType);
+    uint32_t getCRC32(void);
 private:
     bool findKeyIndex(const char * key, size_t len, uint8_t &idx);
     bool prepareCborParser(const char * key, size_t key_len, CborValue &it, CborParser &parser);

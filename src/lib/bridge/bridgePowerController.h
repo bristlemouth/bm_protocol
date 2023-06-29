@@ -28,23 +28,23 @@ private:
     bool nowTimestampMs(uint32_t &timestamp);
 
 public:
-    static constexpr uint32_t OFF = (1 << 0); 
-    static constexpr uint32_t ON = (1 << 1); 
-    static constexpr uint32_t DEFAULT_SAMPLE_INTERVAL_MS = (5 * 60 * 1000); 
-    static constexpr uint32_t DEFAULT_SAMPLE_DURATION_MS = (5 * 60 * 1000); 
-    static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_MS = (60 * 1000); 
-    static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_MS = (30 * 1000); 
+    static constexpr uint32_t OFF = (1 << 0);
+    static constexpr uint32_t ON = (1 << 1);
+    static constexpr uint32_t DEFAULT_SAMPLE_INTERVAL_MS = (5 * 60 * 1000);
+    static constexpr uint32_t DEFAULT_SAMPLE_DURATION_MS = (5 * 60 * 1000);
+    static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_MS = (60 * 1000);
+    static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_MS = (30 * 1000);
     static constexpr uint32_t MIN_SAMPLE_INTERVAL_MS = (60 * 1000);
     static constexpr uint32_t MIN_SAMPLE_DURATION_MS = (60 * 1000);
     static constexpr uint32_t MAX_SAMPLE_INTERVAL_MS = (24 * 60 * 60 * 1000);
     static constexpr uint32_t MAX_SAMPLE_DURATION_MS = (24 * 60 * 60 * 1000);
-    static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_MS = (1000);
-    static constexpr uint32_t MIN_SUBSAMPLE_DURATION_MS = (1000);
+    static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_MS = (12 * 1000);
+    static constexpr uint32_t MIN_SUBSAMPLE_DURATION_MS = (6 * 1000);
     static constexpr uint32_t MAX_SUBSAMPLE_INTERVAL_MS = (60 * 60 * 1000);
     static constexpr uint32_t MAX_SUBSAMPLE_DURATION_MS = (60 * 60 * 1000);
 
 private:
-    static constexpr uint32_t MIN_TASK_SLEEP_MS = (1 * 1000);
+    static constexpr uint32_t MIN_TASK_SLEEP_MS = (6 * 1000);
     static constexpr uint32_t INIT_POWER_ON_TIMEOUT_MS = (2 * 60 * 1000);
 
 private:
@@ -62,4 +62,3 @@ private:
     EventGroupHandle_t _busPowerEventGroup;
     TaskHandle_t _task_handle;
 };
-

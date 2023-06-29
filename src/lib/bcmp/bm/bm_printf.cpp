@@ -48,7 +48,7 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name, const
     }
 
     size_t printf_pub_len = sizeof(bm_print_publication_t) + data_len + fname_len;
-    printf_pub = (bm_print_publication_t* )pvPortMalloc(printf_pub_len);
+    printf_pub = reinterpret_cast<bm_print_publication_t*>(pvPortMalloc(printf_pub_len));
     configASSERT(printf_pub);
 
     memset(printf_pub, 0, printf_pub_len);
@@ -105,7 +105,7 @@ bm_printf_err_t bm_file_append(uint64_t target_node_id, const char* file_name, c
   int32_t fname_len = strnlen(file_name, MAX_FILE_NAME_LEN);
 
   size_t file_append_pub_len = sizeof(bm_print_publication_t) + len + fname_len;
-  bm_print_publication_t* file_append_pub = (bm_print_publication_t *)pvPortMalloc(file_append_pub_len);
+  bm_print_publication_t* file_append_pub = reinterpret_cast<bm_print_publication_t *>(pvPortMalloc(file_append_pub_len));
   configASSERT(file_append_pub);
 
   file_append_pub->target_node_id = target_node_id;

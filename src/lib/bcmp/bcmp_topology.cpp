@@ -20,30 +20,6 @@
 #define BCMP_TOPO_TIMEOUT_S 1
 #define BCMP_TABLE_MAX_LEN 1024
 
-typedef struct neighborTableEntry_t{
-  struct neighborTableEntry_t* prevNode;
-  struct neighborTableEntry_t* nextNode;
-
-  // increment this each time a port's path has been explored
-  // when this is equal to the number of ports we can say
-  // we have explored each ports path and can return to
-  // the previous table entry to check its ports
-  uint8_t ports_explored;
-
-  bool is_root;
-
-  bcmp_neighbor_table_reply_t *neighbor_table_reply;
-
-} neighborTableEntry_t;
-
-typedef struct {
-  neighborTableEntry_t* front;
-  neighborTableEntry_t* back;
-  neighborTableEntry_t* cursor;
-  uint8_t length;
-  int16_t index;
-} networkTopology_t;
-
 typedef enum {
   BCMP_TOPO_EVT_START,
   BCMP_TOPO_EVT_CHECK_NODE,
@@ -56,12 +32,15 @@ typedef enum {
 typedef struct {
   bcmp_topo_queue_type_e type;
   neighborTableEntry_t* neighborEntry;
+  bcmp_topo_cb_t callback;
 } bcmp_topo_queue_item_t;
 
 typedef struct {
   QueueHandle_t evt_queue;
   TimerHandle_t topo_timer;
   networkTopology_t* networkTopology;
+  bool in_progress;
+  bcmp_topo_cb_t callback;
 } bcmpTopoContext_t;
 
 static bcmpTopoContext_t _ctx;
@@ -71,7 +50,7 @@ static uint64_t _target_node_id = 0;
 static bool _sent_request = false;
 static bool _insert_before = false;
 
-static void bcmp_topology_thread(void *paramters);
+static void bcmp_topology_thread(void *parameters);
 
 static void freeNeighborTableEntry(neighborTableEntry_t** entry);
 static networkTopology_t* newNetworkTopology(void);
@@ -85,7 +64,6 @@ static void networkTopologyAppend(networkTopology_t* networkTopology, neighborTa
 static void networkTopologyInsertAfter(networkTopology_t* networkTopology, neighborTableEntry_t *entry);
 static void networkTopologyInsertBefore(networkTopology_t* networkTopology, neighborTableEntry_t *entry);
 static void networkTopologyDeleteBack(networkTopology_t* networkTopology);
-static void networkTopologyPrint(networkTopology_t* networkTopology);
 static void networkTopologyIncrementPortCount(networkTopology_t* networkTopology);
 static uint8_t networkTopologyGetPortCount(networkTopology_t* networkTopology);
 static bool networkTopologyIsRoot(networkTopology_t* networkTopology);
@@ -147,7 +125,7 @@ static void process_start_topology_event(void) {
   networkTopologyAppend(_ctx.networkTopology, neighbor_entry);
   networkTopologyMoveFront(_ctx.networkTopology);
 
-  bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL};
+  bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
   configASSERT(xQueueSend(_ctx.evt_queue, &check_item, 0) == pdTRUE);
 }
 
@@ -155,7 +133,7 @@ static void process_start_topology_event(void) {
 static void process_check_node_event(void) {
   if (networkTopologyCheckAllPortsExplored(_ctx.networkTopology)) {
     if (networkTopologyIsRoot(_ctx.networkTopology)) {
-      bcmp_topo_queue_item_t end_item = {BCMP_TOPO_EVT_END, NULL};
+      bcmp_topo_queue_item_t end_item = {BCMP_TOPO_EVT_END, NULL, NULL};
       configASSERT(xQueueSend(_ctx.evt_queue, &end_item, 0) == pdTRUE);
     } else {
       if(_insert_before) {
@@ -163,7 +141,7 @@ static void process_check_node_event(void) {
       } else {
         networkTopologyMovePrev(_ctx.networkTopology);
       }
-      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL};
+      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
       configASSERT(xQueueSend(_ctx.evt_queue, &check_item, 0) == pdTRUE);
     }
   } else {
@@ -180,12 +158,11 @@ static void process_check_node_event(void) {
       } else {
         networkTopologyMovePrev(_ctx.networkTopology);
       }
-      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL};
+      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
       configASSERT(xQueueSend(_ctx.evt_queue, &check_item, 0) == pdTRUE);
     }
   }
 }
-
 
 /*!
   Send neighbor table request to node(s)
@@ -301,7 +278,8 @@ err_t bcmp_process_neighbor_table_reply(bcmp_neighbor_table_reply_t *neighbor_ta
 
     bcmp_topo_queue_item_t item = {
       .type = BCMP_TOPO_EVT_ADD_NODE,
-      .neighborEntry = neighbor_entry
+      .neighborEntry = neighbor_entry,
+      .callback = NULL
     };
 
     configASSERT(xQueueSend(_ctx.evt_queue, &item, 0) == pdTRUE);
@@ -321,7 +299,7 @@ err_t bcmp_process_neighbor_table_reply(bcmp_neighbor_table_reply_t *neighbor_ta
 static void topology_timer_handler(TimerHandle_t tmr){
   (void) tmr;
 
-  bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_TIMEOUT, NULL};
+  bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_TIMEOUT, NULL, NULL};
 
   configASSERT(xQueueSend(_ctx.evt_queue, &item, 0) == pdTRUE);
 }
@@ -331,7 +309,7 @@ static void topology_timer_handler(TimerHandle_t tmr){
   tables. Callback can be assigned/called to do something with the assembled network
   topology.
 
-  \param paramters unused
+  \param parameters unused
   \return none
 */
 static void bcmp_topology_thread(void *parameters) {
@@ -349,7 +327,14 @@ static void bcmp_topology_thread(void *parameters) {
 
     switch(item.type) {
       case BCMP_TOPO_EVT_START: {
-        process_start_topology_event();
+        if (!_ctx.in_progress){
+          _ctx.in_progress = true;
+          _sent_request = true;
+          _ctx.callback = item.callback;
+          process_start_topology_event();
+        } else {
+          item.callback(NULL);
+        }
         break;
       }
 
@@ -366,7 +351,7 @@ static void bcmp_topology_thread(void *parameters) {
             networkTopologyIncrementPortCount(_ctx.networkTopology); // we have come from one of the ports so it must have been checked
           }
         }
-        bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL};
+        bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
         configASSERT(xQueueSend(_ctx.evt_queue, &check_item, 0) == pdTRUE);
         break;
       }
@@ -377,12 +362,14 @@ static void bcmp_topology_thread(void *parameters) {
       }
 
       case BCMP_TOPO_EVT_END: {
-        // print out the table!
-        networkTopologyPrint(_ctx.networkTopology);
-        // then free it!
+        if (_ctx.callback) {
+          _ctx.callback(_ctx.networkTopology);
+        }
+        // Free the network topology now that we are done
         freeNetworkTopology(&_ctx.networkTopology);
         _insert_before = false;
         _sent_request = false;
+        _ctx.in_progress = false;
         break;
       }
 
@@ -392,16 +379,8 @@ static void bcmp_topology_thread(void *parameters) {
         } else {
           networkTopologyMovePrev(_ctx.networkTopology);
         }
-        bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL};
+        bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
         configASSERT(xQueueSend(_ctx.evt_queue, &check_item, 0) == pdTRUE);
-        break;
-      }
-
-      case BCMP_TOPO_EVT_RESTART: {
-        // Free the network topology if it already exists
-        freeNetworkTopology(&_ctx.networkTopology);
-        bcmp_topo_queue_item_t start_item = {BCMP_TOPO_EVT_START, NULL};
-        configASSERT(xQueueSend(_ctx.evt_queue, &start_item, 0) == pdTRUE);
         break;
       }
 
@@ -412,7 +391,7 @@ static void bcmp_topology_thread(void *parameters) {
   }
 }
 
-void bcmp_topology_start(void) {
+void bcmp_topology_start(bcmp_topo_cb_t callback) {
 
   // create the task if it is not already created
   if (!bcmpTopologyTask) {
@@ -426,16 +405,11 @@ void bcmp_topology_start(void) {
                        BCMP_TOPO_TASK_PRIORITY,
                        &bcmpTopologyTask);
     configASSERT(rval == pdPASS);
-
-    // send the first request out
-    bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_START, NULL};
-    configASSERT(xQueueSend(_ctx.evt_queue, &item, 0) == pdTRUE);
-  } else {
-    // send the first request out
-    bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_RESTART, NULL};
-    configASSERT(xQueueSend(_ctx.evt_queue, &item, 0) == pdTRUE);
   }
-  _sent_request = true;
+
+  // send the first request out
+  bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_START, NULL, callback};
+  configASSERT(xQueueSend(_ctx.evt_queue, &item, 0) == pdTRUE);
 }
 
 // free a neighbor table entry that is within the network topology
@@ -662,7 +636,7 @@ static bool networkTopologyCheckAllPortsExplored(networkTopology_t *networkTopol
   return false;
 }
 
-static void networkTopologyPrint(networkTopology_t* networkTopology){
+void networkTopologyPrint(networkTopology_t* networkTopology){
   if (networkTopology) {
     neighborTableEntry_t *temp_entry;
     for(temp_entry = networkTopology->front; temp_entry != NULL; temp_entry = temp_entry->nextNode) {
@@ -694,5 +668,7 @@ static void networkTopologyPrint(networkTopology_t* networkTopology){
       }
     }
     printf("\n");
+  } else {
+    printf("NULL topology, thread may be busy servicing another topology request\n");
   }
 }

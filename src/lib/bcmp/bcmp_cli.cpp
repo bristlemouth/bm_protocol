@@ -453,7 +453,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         break;
       }
     } else if (strncmp("topo", command, command_str_len) == 0) {
-      bcmp_topology_start();
+      bcmp_topology_start(networkTopologyPrint); // use generic print as callback
     } else if (strncmp("resources", command, command_str_len) == 0) {
       const char *node_id_str;
       BaseType_t node_id_str_len = 0;

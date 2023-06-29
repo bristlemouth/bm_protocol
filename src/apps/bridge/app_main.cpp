@@ -41,6 +41,7 @@
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
+#include "topology_sampler.h"
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
@@ -336,6 +337,7 @@ static void defaultTask( void *parameters ) {
     BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,
         sampleDurationMs, subSampleIntervalMs, subsampleDurationMs, static_cast<bool>(subsampleEnabled), static_cast<bool>(bridgePowerControllerEnabled));
     ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user, &debug_configuration_system, &debug_configuration_hardware);
+    topology_sampler_init(&bridge_power_controller, &debug_configuration_hardware, &debug_configuration_system);
     debug_ncp_init();
 
     IOWrite(&ALARM_OUT, 1);

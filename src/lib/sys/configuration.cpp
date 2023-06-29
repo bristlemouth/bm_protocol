@@ -40,6 +40,9 @@ bool Configuration::loadAndVerifyNvmConfig(void) {
     return rval;
 }
 
+uint32_t Configuration::getCRC32(void) {
+    return _ram_partition->header.crc32;
+}
 
 bool Configuration::prepareCborParser(const char * key, size_t key_len, CborValue &it, CborParser &parser) {
     configASSERT(key);
@@ -216,7 +219,7 @@ bool Configuration::getConfig(const char * key, size_t key_len, uint8_t *value, 
 bool Configuration::getConfigCbor(const char * key, size_t key_len, uint8_t *value, size_t &value_len) {
     configASSERT(key);
     configASSERT(value);
-    bool rval = false; 
+    bool rval = false;
 
     CborValue it;
     CborParser parser;
@@ -240,7 +243,7 @@ bool Configuration::getConfigCbor(const char * key, size_t key_len, uint8_t *val
         rval = true;
     } while(0);
     return rval;
-} 
+}
 
 bool Configuration::prepareCborEncoder(const char * key, size_t key_len, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists) {
     configASSERT(key);
@@ -565,14 +568,17 @@ const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
     configASSERT(false); // NOT_REACHED
 }
 
-bool Configuration::saveConfig(void) {
+bool Configuration::saveConfig(bool restart) {
     bool rval = false;
     do {
         _ram_partition->header.crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
         if(!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
             break;
         }
-        resetSystem(RESET_REASON_CONFIG);
+        if (restart) {
+            resetSystem(RESET_REASON_CONFIG);
+        }
+        rval = true;
     } while(0);
     return rval;
 }
@@ -614,7 +620,7 @@ bool Configuration::saveConfig(void) {
     } while(0);
     return rval;
  }
- 
+
 bool Configuration::needsCommit(void) {
     return _needs_commit;
 }

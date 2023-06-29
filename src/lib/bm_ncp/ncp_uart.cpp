@@ -180,6 +180,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.cfg_key_del_request_fn = ncp_cfg_key_del_request_cb;
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
   bm_serial_callbacks.reboot_info_fn = NULL;
+  bm_serial_callbacks.network_info_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
 
   serialEnable(ncpSerialHandle);
