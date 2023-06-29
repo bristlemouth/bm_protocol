@@ -46,8 +46,6 @@
 #include "external_flash_partitions.h"
 #include "debug_nvm_cli.h"
 #include "debug_dfu.h"
-#include "bridgePowerController.h"
-#include "debug_bridge_power_controller.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
 #endif
@@ -364,28 +362,9 @@ static void defaultTask( void *parameters ) {
 #endif
 
 #ifdef BSP_BRIDGE_V1_0
-#ifdef BRIDGE_AUTO_ENABLE
     printf("Enabling 24V!\n");
     IOWrite(&BOOST_EN, 1);
     IOWrite(&VBUS_SW_EN, 1);
-#else
-    uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_MS;
-    debug_configuration_system.getConfig("sampleIntervalMs",strlen("sampleIntervalMs"),sampleIntervalMs);
-    uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_MS;
-    debug_configuration_system.getConfig("sampleDurationMs",strlen("sampleDurationMs"),sampleDurationMs);
-    uint32_t subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_MS;
-    debug_configuration_system.getConfig("subSampleIntervalMs",strlen("subSampleIntervalMs"),subSampleIntervalMs);
-    uint32_t subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_MS;
-    debug_configuration_system.getConfig("subsampleDurationMs",strlen("subsampleDurationMs"),subsampleDurationMs);
-    uint32_t subsampleEnabled = 0;
-    debug_configuration_system.getConfig("subsampleEnabled",strlen("subsampleEnabled"),subsampleEnabled);
-    uint32_t bridgePowerControllerEnabled = 0;
-    debug_configuration_system.getConfig("bridgePowerControllerEnabled", strlen("bridgePowerControllerEnabled"), bridgePowerControllerEnabled);
-    printf("Using bridge power controller.\n");
-    IOWrite(&BOOST_EN, 1);
-    BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,
-        sampleDurationMs, subSampleIntervalMs, subsampleDurationMs, static_cast<bool>(subsampleEnabled), static_cast<bool>(bridgePowerControllerEnabled));
-#endif
 #endif
 
     IOWrite(&ALARM_OUT, 1);

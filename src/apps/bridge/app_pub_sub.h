@@ -21,9 +21,9 @@ extern "C" {
 #define APP_PUB_SUB_BUTTON_CMD_ON       "on"
 #define APP_PUB_SUB_BUTTON_CMD_OFF      "off"
 
-#define APP_PUB_SUB_BM_PRINTF_TOPIC     "bm_printf"
-#define APP_PUB_SUB_BM_PRINTF_TYPE      1
-#define APP_PUB_SUB_BM_PRINTF_VERSION   1
+#define APP_PUB_SUB_BM_BRIDGE_PRINTF_TOPIC       "bridge/printf"
+#define APP_PUB_SUB_BM_BRIDGE_PRINTF_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_PRINTF_VERSION     1
 
 #ifdef __cplusplus
 }

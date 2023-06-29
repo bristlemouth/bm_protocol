@@ -11,7 +11,7 @@
 // Pointer to neighbor linked-list
 static bm_neighbor_t *_neighbors;
 static uint8_t _num_neighbors = 0;
-
+neighbor_discovery_callback_t neighbor_discovery_cb = NULL;
 /*
   Accessor to latest the neighbor linked-list and nieghbor count
 
@@ -52,12 +52,12 @@ bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id) {
   \param *callback - callback function to call for each neighbor
   \return none
 */
-void bcmp_neighbor_foreach(void (*callback)(bm_neighbor_t *neighbor)) {
+void bcmp_neighbor_foreach(neighbor_callback_t cb) {
   bm_neighbor_t *neighbor = _neighbors;
   _num_neighbors = 0;
 
   while(neighbor != NULL) {
-    callback(neighbor);
+    cb(neighbor);
     _num_neighbors++;
 
     // Go to the next one
@@ -70,7 +70,9 @@ static void _neighbor_check(bm_neighbor_t *neighbor) {
   if(neighbor->online && !timeRemainingTicks( neighbor->last_heartbeat_ticks,
                                               pdMS_TO_TICKS(2 * neighbor->heartbeat_period_s * 1000))) {
     printf("🏚  Neighbor offline :'( %016" PRIx64 "\n", neighbor->node_id);
-
+    if(neighbor_discovery_cb) {
+      neighbor_discovery_cb(false,neighbor);
+    }
     neighbor->online = false;
   }
 }
@@ -142,7 +144,6 @@ bm_neighbor_t *bcmp_update_neighbor(uint64_t node_id, uint8_t port) {
   if(neighbor == NULL) {
     printf("🏘  Adding new neighbor! %016" PRIx64 "\n", node_id);
     neighbor = bcmp_add_neighbor(node_id, port);
-
     // Let's get this node's information
     bcmp_request_info(node_id, &multicast_ll_addr);
   }
@@ -242,3 +243,14 @@ void bcmp_print_neighbor_info(bm_neighbor_t *neighbor) {
     printf("Device Name: %s\n", neighbor->device_name);
   }
 }
+
+/*!
+  Register a callback to run whenever a neighbor is discovered / drops.
+
+  \param *callback - callback function to run.
+  \return none
+*/
+void bcmp_neighbor_register_discovery_callback(neighbor_discovery_callback_t cb) {
+  neighbor_discovery_cb = cb;
+}
+

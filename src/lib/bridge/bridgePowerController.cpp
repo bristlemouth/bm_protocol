@@ -8,12 +8,13 @@
 #include "bm_serial.h"
 #include "device_info.h"
 #include "app_pub_sub.h"
+#include "bridgeLog.h"
 
 BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs, uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subSamplingEnabled, bool powerControllerEnabled) :
 _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
 _sampleIntervalMs(sampleIntervalMs), _sampleDurationMs(sampleDurationMs),
 _subsampleIntervalMs(subsampleIntervalMs), _subsampleDurationMs(subsampleDurationMs),
-_nextSampleIntervalTimeTimestamp(0), _nextSubSampleIntervalTimeTimestamp(0), _rtcSet(false), _initDone(false), _subSamplingEnabled(subSamplingEnabled) {
+_sampleIntervalStartTicks(0), _subSampleIntervalStartTicks(0), _rtcSet(false), _initDone(false), _subSamplingEnabled(subSamplingEnabled) {
     if(_sampleIntervalMs > MAX_SAMPLE_INTERVAL_MS || _sampleIntervalMs < MIN_SAMPLE_INTERVAL_MS) {
         printf("INVALID SAMPLE INTERVAL, using default.\n");
         _sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
@@ -51,11 +52,8 @@ _nextSampleIntervalTimeTimestamp(0), _nextSubSampleIntervalTimeTimestamp(0), _rt
 void BridgePowerController::powerControlEnable(bool enable) {
     _powerControlEnabled = enable;
     if(enable){
-        uint32_t now;
-        if(nowTimestampMs(now)){
-            _nextSampleIntervalTimeTimestamp = now;
-            _nextSubSampleIntervalTimeTimestamp = now;
-        }
+        _sampleIntervalStartTicks = xTaskGetTickCount();
+        _subSampleIntervalStartTicks = xTaskGetTickCount();
         printf("Bridge power controller enabled\n");
     } else {
         printf("Bridge power controller disabled\n");
@@ -88,9 +86,10 @@ void BridgePowerController::powerBusAndSetSignal(bool on) {
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     IOWrite(&_BusPowerPin, on);
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
-    static char buffer[25];
-    int len = snprintf(buffer, 25, "Bridge bus power: %d", static_cast<int>(on));
-    bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_PRINTF_TOPIC, sizeof(APP_PUB_SUB_BM_PRINTF_TOPIC)-1, reinterpret_cast<const uint8_t *>(buffer) ,len, APP_PUB_SUB_BM_PRINTF_TYPE, APP_PUB_SUB_BM_PRINTF_VERSION);
+    constexpr size_t bufsize = 25;
+    static char buffer[bufsize];
+    int len = snprintf(buffer, bufsize, "Bridge bus power: %d\n", static_cast<int>(on));
+    BRIDGE_LOG_PRINTN(buffer, len);
 }
 
 bool BridgePowerController::isBridgePowerOn(void) {
@@ -107,43 +106,64 @@ bool BridgePowerController::isSubsampleEnabled() {
     return _subSamplingEnabled;
 }
 
-void BridgePowerController::_update(void) {
+void BridgePowerController::_update(void) { // FIXME: Refactor this function to libStateMachine: https://github.com/wavespotter/bristlemouth/issues/379
     uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
     do {
         if (!_initDone) { // Initializing
+            BRIDGE_LOG_PRINT("Bridge State Init\n");
             powerBusAndSetSignal(true);
             vTaskDelay(INIT_POWER_ON_TIMEOUT_MS); // Set bus on for two minutes for init.
             powerBusAndSetSignal(false);
+            static constexpr size_t printBufSize = 200;
+            char* printbuf = static_cast<char*>(pvPortMalloc(printBufSize));
+            configASSERT(printbuf);
+            size_t len = snprintf(printbuf, printBufSize,
+                "Sample enabled %d\n"
+                "Sample Duration: %" PRIu32 " ms\n"
+                "Sample Interval: %" PRIu32 " ms\n"
+                "Subsample enabled: %d \n"
+                "Subsample Duration: %" PRIu32 " ms\n"
+                "Subsample Interval: %"  PRIu32 " ms\n",
+                _powerControlEnabled,
+                _sampleDurationMs,
+                _sampleIntervalMs,
+                _subSamplingEnabled,
+                _subsampleDurationMs,
+                _subsampleIntervalMs);
+            BRIDGE_LOG_PRINTN(printbuf, len);
+            vPortFree(printbuf);
+            BRIDGE_LOG_PRINT("Bridge State Init Complete, powering off\n");
             _initDone = true;
         } else if(_powerControlEnabled && _rtcSet) { // Sampling Enabled
-            uint32_t now;
-            if(!nowTimestampMs(now)){
-                break;
-            }
-            if(now >= _nextSampleIntervalTimeTimestamp && now < _nextSampleIntervalTimeTimestamp + _sampleDurationMs) {
+            uint32_t currentCycleTicks = xTaskGetTickCount();
+            if(timeRemainingTicks(_sampleIntervalStartTicks, pdMS_TO_TICKS(_sampleDurationMs))) {
                 if(_subSamplingEnabled){ // Subsampling Enabled
-                    if(now >=_nextSubSampleIntervalTimeTimestamp && now < _nextSubSampleIntervalTimeTimestamp + _subsampleDurationMs){
+                    if(timeRemainingTicks(_subSampleIntervalStartTicks, pdMS_TO_TICKS(_subsampleDurationMs))){
+                        BRIDGE_LOG_PRINT("Bridge State Subsample\n");
                         powerBusAndSetSignal(true);
                         time_to_sleep_ms = MAX(_subsampleDurationMs,MIN_TASK_SLEEP_MS);
                         break;
-                    } else if(now >= _nextSubSampleIntervalTimeTimestamp && now >=  _nextSubSampleIntervalTimeTimestamp + _subsampleDurationMs){
-                        _nextSubSampleIntervalTimeTimestamp = now + (_subsampleIntervalMs - _subsampleDurationMs);
+                    } else {
+                        BRIDGE_LOG_PRINT("Bridge State Off\n");
+                        _subSampleIntervalStartTicks = currentCycleTicks + (_subsampleIntervalMs - _subsampleDurationMs);
                         time_to_sleep_ms = MAX((_subsampleIntervalMs - _subsampleDurationMs), MIN_TASK_SLEEP_MS);
-                        if(_nextSubSampleIntervalTimeTimestamp != now) { // Prevent bus thrash
+                        if(_subSampleIntervalStartTicks != currentCycleTicks) { // Prevent bus thrash
                             powerBusAndSetSignal(false);
                         }
                         break;
                     }
                 } else { // Subsampling disabled 
+                    BRIDGE_LOG_PRINT("Bridge State Sample\n");
                     powerBusAndSetSignal(true);
                     time_to_sleep_ms = MAX(_sampleDurationMs, MIN_TASK_SLEEP_MS);
                     break;
                 }
-            } else if (now >= _nextSampleIntervalTimeTimestamp && now >= _nextSampleIntervalTimeTimestamp + _sampleDurationMs) {
-                _nextSampleIntervalTimeTimestamp = now + (_sampleIntervalMs - _sampleDurationMs);
-                _nextSubSampleIntervalTimeTimestamp = now + (_sampleIntervalMs - _sampleDurationMs);
+            } else {
+                BRIDGE_LOG_PRINT("Bridge State Off\n");
+                _sampleIntervalStartTicks = currentCycleTicks + (_sampleIntervalMs - _sampleDurationMs);
+                _subSampleIntervalStartTicks = currentCycleTicks + (_sampleIntervalMs - _sampleDurationMs);
                 time_to_sleep_ms = MAX((_sampleIntervalMs - _sampleDurationMs), MIN_TASK_SLEEP_MS);
-                if(_nextSampleIntervalTimeTimestamp != now) { // Prevent bus thrash
+                if(_sampleIntervalStartTicks != currentCycleTicks) { // Prevent bus thrash
                     powerBusAndSetSignal(false);
                 }
                 break;
@@ -152,23 +172,19 @@ void BridgePowerController::_update(void) {
             uint8_t enabled;
             if(!_powerControlEnabled && IORead(&_BusPowerPin,&enabled)){ 
                 if(!enabled) { // Turn the bus on if we've disabled the power manager.
-                    printf("Bridge power controller disabled, turning bus on.\n");
+                    BRIDGE_LOG_PRINT("Bridge State Disabled - bus on\n");
                     powerBusAndSetSignal(true);
                 }
             } else if (!_rtcSet && _powerControlEnabled && IORead(&_BusPowerPin,&enabled)) {
                 if(enabled) { // If our RTC is not set and we've enabled the power manager, we should disable the VBUS
-                    printf("Bridge power controller enabled, but RTC is not yet set, turning bus off.\n");
+                    BRIDGE_LOG_PRINT("Bridge State Disabled - controller enabled, but RTC is not yet set - bus off\n");
                     powerBusAndSetSignal(false);
                 }
             }
             if(isRTCSet() && !_rtcSet){
                 printf("Bridge Power Controller RTC is set.\n");
-                uint32_t now;
-                if(!nowTimestampMs(now)){
-                    break;
-                }
-                _nextSampleIntervalTimeTimestamp = now;
-                _nextSubSampleIntervalTimeTimestamp = now;
+                _sampleIntervalStartTicks = xTaskGetTickCount();
+                _subSampleIntervalStartTicks = xTaskGetTickCount();
                 _rtcSet = true;
             }
         }
@@ -183,22 +199,8 @@ void BridgePowerController::_update(void) {
 
 }
 
-bool BridgePowerController::nowTimestampMs(uint32_t &timestamp) {
-    bool rval = false;
-    do {
-        RTCTimeAndDate_t datetime;
-        if(!rtcGet(&datetime)) {
-            break;
-        }
-        timestamp = utcFromDateTime(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute, datetime.second) * 1000;
-        rval = true;
-    } while(0);
-    return rval;
-}
-
 void BridgePowerController::powerControllerRun(void *arg) {
     while(true) {
         reinterpret_cast<BridgePowerController*>(arg)->_update();
     }
 }
-

@@ -25,7 +25,6 @@ public:
 private:
     void powerBusAndSetSignal(bool on);
     static void powerControllerRun(void* arg);
-    bool nowTimestampMs(uint32_t &timestamp);
 
 public:
     static constexpr uint32_t OFF = (1 << 0);
@@ -54,8 +53,9 @@ private:
     uint32_t _sampleDurationMs;
     uint32_t _subsampleIntervalMs;
     uint32_t _subsampleDurationMs;
-    uint32_t _nextSampleIntervalTimeTimestamp;
-    uint32_t _nextSubSampleIntervalTimeTimestamp;
+    uint32_t _sampleIntervalStartTicks;
+    uint32_t _subSampleIntervalStartTicks;
+
     bool _rtcSet;
     bool _initDone;
     bool _subSamplingEnabled;

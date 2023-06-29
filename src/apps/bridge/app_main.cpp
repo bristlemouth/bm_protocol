@@ -53,13 +53,15 @@
 #include "timer_callback_handler.h"
 #include "util.h"
 #include "app_pub_sub.h"
-
+#include "bcmp_neighbors.h"
+#include "bridgeLog.h"
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
 #endif
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #ifndef BSP_BRIDGE_V1_0
 #error "BRIDGE BSP REQUIRED"
@@ -269,6 +271,15 @@ static const DebugGpio_t debugGpioPins[] = {
   {"tp10", &TP10, GPIO_OUT},
 };
 
+static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
+    configASSERT(neighbor);
+    static constexpr size_t bufsize = 50;
+    const char * action = (discovered) ? "added" : "lost";
+    char buffer[bufsize];
+    size_t len = snprintf(buffer, bufsize, "Neighbor %" PRIx64 " %s\n", neighbor->node_id, action);
+    BRIDGE_LOG_PRINTN(buffer, len);
+}
+
 static void defaultTask( void *parameters ) {
     (void)parameters;
 
@@ -346,6 +357,7 @@ static void defaultTask( void *parameters ) {
     bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
     bm_sub(APP_PUB_SUB_PRINTF_TOPIC, handle_subscriptions);
     bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
+    bcmp_neighbor_register_discovery_callback(neighborDiscoveredCb);
 
 #ifdef USE_MICROPYTHON
     micropython_freertos_init(&usbCLI);

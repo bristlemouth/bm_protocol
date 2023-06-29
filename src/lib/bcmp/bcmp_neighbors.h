@@ -41,6 +41,9 @@ typedef struct bm_neighbor_s {
   // TODO - resource list
 } bm_neighbor_t;
 
+typedef void (*neighbor_callback_t)(bm_neighbor_t *neighbor);
+typedef void (*neighbor_discovery_callback_t)(bool discovered, bm_neighbor_t *neighbor);
+
 bm_neighbor_t* bcmp_get_neighbors(uint8_t &num_neighbors);
 void bcmp_check_neighbors();
 void bcmp_print_neighbor_info(bm_neighbor_t *neighbor);
@@ -48,4 +51,5 @@ bool bcmp_remove_neighbor_from_table(bm_neighbor_t *neighbor);
 bool bcmp_free_neighbor(bm_neighbor_t *neighbor);
 bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id);
 bm_neighbor_t *bcmp_update_neighbor(uint64_t node_id, uint8_t port);
-void bcmp_neighbor_foreach(void (*callback)(bm_neighbor_t *neighbor));
+void bcmp_neighbor_foreach(neighbor_callback_t cb);
+void bcmp_neighbor_register_discovery_callback(neighbor_discovery_callback_t cb);

@@ -238,6 +238,7 @@ target_sources(bridge_power_controller_tests
     ${TEST_DIR}/stubs/mock_stm32_rtc.cpp
     ${TEST_DIR}/stubs/mock_bm_serial.cpp
     ${TEST_DIR}/stubs/mock_device_info.cpp
+    ${TEST_DIR}/stubs/mock_bridgeLog.cpp
 
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c

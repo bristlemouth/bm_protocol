@@ -65,7 +65,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/debug/debug_dfu.cpp
-    ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
@@ -85,7 +84,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c
@@ -120,7 +118,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
-    ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/lib/bm_serial
