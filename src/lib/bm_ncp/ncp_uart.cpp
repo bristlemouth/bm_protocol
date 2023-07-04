@@ -21,7 +21,7 @@
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
-
+#define NCP_PROCESSOR_QUEUE_DEPTH (16)
 
 static uint32_t ncpRXBuffIdx = 0;
 static uint8_t ncpRXCurrBuff = 0;
@@ -30,6 +30,7 @@ static uint32_t ncpRXBuffLen[2];
 static uint8_t ncpRXBuffDecoded[NCP_BUFF_LEN];
 
 static uint8_t ncp_tx_buff[NCP_BUFF_LEN];
+static QueueHandle_t ncp_processor_queue_handle;
 
 // static const NCPConfig_t *_config;
 
@@ -38,7 +39,13 @@ static TaskHandle_t ncpRXTaskHandle;
 static SerialHandle_t *ncpSerialHandle = NULL;
 
 static void ncpRXTask(void *parameters);
+static void ncpRXProcessor(void *parameters);
 static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
+
+typedef struct ProcessorQueueItem {
+  uint8_t * buffer;
+  size_t len;
+} ProcessorQueueItem_t;
 
 // Send out cobs encoded message over serial port
 static bool cobs_tx(const uint8_t *buff, size_t len) {
@@ -149,6 +156,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   configASSERT(power_controller);
   ncp_dfu_init(dfu_partition, power_controller);
   ncp_cfg_init(usr_cfg, sys_cfg, hw_cfg);
+  ncp_processor_queue_handle = xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH,sizeof(ProcessorQueueItem_t));
+  configASSERT(ncp_processor_queue_handle);
 
   // Create the task
   BaseType_t rval = xTaskCreate(
@@ -158,6 +167,15 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
               NULL,
               NCP_TASK_PRIORITY,
               &ncpRXTaskHandle);
+  configASSERT(rval == pdTRUE);
+
+  rval = xTaskCreate(
+              ncpRXProcessor,
+              "NCP_Processor",
+              configMINIMAL_STACK_SIZE * 3,
+              NULL,
+              NCP_PROCESSOR_TASK_PRIORITY,
+              NULL);
   configASSERT(rval == pdTRUE);
 
   bm_serial_callbacks.tx_fn = cobs_tx;
@@ -206,9 +224,27 @@ void ncpRXTask( void *parameters) {
 
     // Decode the COBS
     cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN, ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
-    bm_serial_packet_t *packet = reinterpret_cast<bm_serial_packet_t *>(ncpRXBuffDecoded);
+    // Allocate a buffer for the ncpRXProcessor to process the data.
+    // Note that ncpRXProcessor will be in charge of freeing that data.
+    uint8_t * processor_buffer = static_cast<uint8_t*>(pvPortMalloc(cobs_result.out_len));
+    configASSERT(processor_buffer);
+    memcpy(processor_buffer, ncpRXBuffDecoded, cobs_result.out_len);
+    ProcessorQueueItem_t q_msg = {
+      .buffer = processor_buffer,
+      .len = cobs_result.out_len,
+    };
+    configASSERT(xQueueSend(ncp_processor_queue_handle, &q_msg, pdMS_TO_TICKS(10)) == pdTRUE);
+  }
+}
 
-    bm_serial_process_packet(packet, cobs_result.out_len);
+static void ncpRXProcessor(void *parameters) {
+  ( void ) parameters;
+  ProcessorQueueItem_t q_item;
+  for (;;) {
+    configASSERT(xQueueReceive(ncp_processor_queue_handle,&q_item,portMAX_DELAY) == pdPASS);
+    bm_serial_packet_t *packet = reinterpret_cast<bm_serial_packet_t *>(q_item.buffer);
+    bm_serial_process_packet(packet, q_item.len);
+    vPortFree(packet);
   }
 }
 
