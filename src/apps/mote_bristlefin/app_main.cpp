@@ -239,7 +239,7 @@ void handle_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_le
             };
 
             if (rtcSet(&rtc_time) == pdPASS) {
-                printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n",
+              printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n",
                     rtc_time.year,
                     rtc_time.month,
                     rtc_time.day,

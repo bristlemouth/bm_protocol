@@ -33,6 +33,8 @@
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "sensors.h"
+#include "sensorSampler.h"
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
@@ -41,6 +43,8 @@
 #include "usb.h"
 #include "watchdog.h"
 #include "timer_callback_handler.h"
+#include "app_pub_sub.h"
+#include "util.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
@@ -70,60 +74,60 @@ static void defaultTask(void *parameters);
 
 // Serial console (when no usb present)
 SerialHandle_t usart3 = {
-  .device = USART3,
-  .name = "usart3",
-  .txPin = &BM_MOSI_TX3,
-  .rxPin = &BM_SCK_RX3,
-  .txStreamBuffer = NULL,
-  .rxStreamBuffer = NULL,
-  .txBufferSize = 1024,
-  .rxBufferSize = 512,
-  .rxBytesFromISR = serialGenericRxBytesFromISR,
-  .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-  .processByte = NULL,
-  .data = NULL,
-  .enabled = false,
-  .flags = 0,
+    .device = USART3,
+    .name = "usart3",
+    .txPin = &BM_MOSI_TX3,
+    .rxPin = &BM_SCK_RX3,
+    .txStreamBuffer = NULL,
+    .rxStreamBuffer = NULL,
+    .txBufferSize = 1024,
+    .rxBufferSize = 512,
+    .rxBytesFromISR = serialGenericRxBytesFromISR,
+    .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
+    .processByte = NULL,
+    .data = NULL,
+    .enabled = false,
+    .flags = 0,
 };
 
 // Serial console USB device
 SerialHandle_t usbCLI   = {
-  .device = (void *)0, // Using CDC 0
-  .name = "vcp-cli",
-  .txPin = NULL,
-  .rxPin = NULL,
-  .txStreamBuffer = NULL,
-  .rxStreamBuffer = NULL,
-  .txBufferSize = 1024,
-  .rxBufferSize = 512,
-  .rxBytesFromISR = NULL,
-  .getTxBytesFromISR = NULL,
-  .processByte = NULL,
-  .data = NULL,
-  .enabled = false,
-  .flags = 0,
+    .device = (void *)0, // Using CDC 0
+    .name = "vcp-cli",
+    .txPin = NULL,
+    .rxPin = NULL,
+    .txStreamBuffer = NULL,
+    .rxStreamBuffer = NULL,
+    .txBufferSize = 1024,
+    .rxBufferSize = 512,
+    .rxBytesFromISR = NULL,
+    .getTxBytesFromISR = NULL,
+    .processByte = NULL,
+    .data = NULL,
+    .enabled = false,
+    .flags = 0,
 };
 
 SerialHandle_t usbPcap   = {
-  .device = (void *)1, // Using CDC 1
-  .name = "vcp-bm",
-  .txPin = NULL,
-  .rxPin = NULL,
-  .txStreamBuffer = NULL,
-  .rxStreamBuffer = NULL,
-  .txBufferSize = 2048,
-  .rxBufferSize = 64,
-  .rxBytesFromISR = NULL,
-  .getTxBytesFromISR = NULL,
-  .processByte = NULL,
-  .data = NULL,
-  .enabled = false,
-  .flags = 0,
+    .device = (void *)1, // Using CDC 1
+    .name = "vcp-bm",
+    .txPin = NULL,
+    .rxPin = NULL,
+    .txStreamBuffer = NULL,
+    .rxStreamBuffer = NULL,
+    .txBufferSize = 2048,
+    .rxBufferSize = 64,
+    .rxBytesFromISR = NULL,
+    .getTxBytesFromISR = NULL,
+    .processByte = NULL,
+    .data = NULL,
+    .enabled = false,
+    .flags = 0,
 };
 
 
 extern "C" void USART3_IRQHandler(void) {
-    serialGenericUartIRQHandler(&usart3);
+  serialGenericUartIRQHandler(&usart3);
 }
 
 static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
@@ -135,133 +139,154 @@ static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
 
 extern "C" int main(void) {
 
-    // Before doing anything, check if we should enter ROM bootloader
-    // enterBootloaderIfNeeded();
+  // Before doing anything, check if we should enter ROM bootloader
+  // enterBootloaderIfNeeded();
 
-    HAL_Init();
+  HAL_Init();
 
-    SystemClock_Config();
+  SystemClock_Config();
 
-    SystemPower_Config_ext();
-    MX_GPIO_Init();
-    MX_USART3_UART_Init();
-    MX_USB_OTG_FS_PCD_Init();
-    MX_GPDMA1_Init();
-    MX_ICACHE_Init();
-    MX_IWDG_Init();
+  SystemPower_Config_ext();
+  MX_GPIO_Init();
+  MX_USART3_UART_Init();
+  MX_USB_OTG_FS_PCD_Init();
+  MX_GPDMA1_Init();
+  MX_ICACHE_Init();
+  MX_IWDG_Init();
 
-    usbMspInit();
+  usbMspInit();
 
-    rtcInit();
+  rtcInit();
 
-    // Enable hardfault on divide-by-zero
-    SCB->CCR |= 0x10;
+  // Enable hardfault on divide-by-zero
+  SCB->CCR |= 0x10;
 
-    // Initialize low power manager
-    lpmInit();
+  // Initialize low power manager
+  lpmInit();
 
-    // Inhibit low power mode during boot process
-    lpmPeripheralActive(LPM_BOOT);
+  // Inhibit low power mode during boot process
+  lpmPeripheralActive(LPM_BOOT);
 
-    BaseType_t rval = xTaskCreate(defaultTask,
-                                  "Default",
-                                  // TODO - verify stack size
-                                  128 * 4,
-                                  NULL,
-                                  // Start with very high priority during boot then downgrade
-                                  // once done initializing everything
-                                  2,
-                                  NULL);
-    configASSERT(rval == pdTRUE);
+  BaseType_t rval = xTaskCreate(defaultTask,
+                                "Default",
+      // TODO - verify stack size
+                                128 * 4,
+                                NULL,
+      // Start with very high priority during boot then downgrade
+      // once done initializing everything
+                                2,
+                                NULL);
+  configASSERT(rval == pdTRUE);
 
-    // Start FreeRTOS scheduler
-    vTaskStartScheduler();
+  // Start FreeRTOS scheduler
+  vTaskStartScheduler();
 
-    /* We should never get here as control is now taken by the scheduler */
+  /* We should never get here as control is now taken by the scheduler */
 
-    while (1){};
+  while (1){};
 }
 
 bool start_stress(const void *pinHandle, uint8_t value, void *args) {
-    (void)pinHandle;
-    (void)args;
-    static bool started;
+  (void)pinHandle;
+  (void)args;
+  static bool started;
 
-    if(!started && value) {
-        started = true;
-        stress_start_tx((2 * 1024)/8);
-    }
+  if(!started && value) {
+    started = true;
+    stress_start_tx((2 * 1024)/8);
+  }
 
-    return false;
-}
-
-const char buttonTopic[] = "button";
-static constexpr uint8_t buttonTopicType = 1;
-const char on_str[] = "on";
-const char off_str[] = "off";
-
-bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
-    (void)pinHandle;
-    (void)args;
-
-    if(value) {
-        bm_pub(buttonTopic, on_str, sizeof(on_str) - 1, buttonTopicType);
-    } else {
-        bm_pub(buttonTopic, off_str, sizeof(off_str) - 1, buttonTopicType);
-    }
-
-    return false;
+  return false;
 }
 
 void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
-    (void)node_id;
-    (void)version;
-    (void)type;
-    if (strncmp("button", topic, topic_len) == 0) {
-        if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
-            IOWrite(&BF_LED_G1, LED_ON);
-        } else if (strncmp("off", reinterpret_cast<const char*>(data), data_len) == 0) {
-            IOWrite(&BF_LED_G1, LED_OFF);
-        } else {
-            // Not handled
-        }
+  (void)node_id;
+  (void)version;
+  (void)type;
+  if (strncmp("button", topic, topic_len) == 0) {
+    if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
+      IOWrite(&BF_LED_G1, LED_ON);
+    } else if (strncmp("off", reinterpret_cast<const char*>(data), data_len) == 0) {
+      IOWrite(&BF_LED_G1, LED_OFF);
     } else {
-        printf("Topic: %.*s\n", topic_len, topic);
-        printf("Data: %.*s\n", data_len, data);
+      // Not handled
     }
+  } else {
+    printf("Topic: %.*s\n", topic_len, topic);
+    printf("Data: %.*s\n", data_len, data);
+  }
+}
+
+void handle_bm_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+  (void)node_id;
+  if(strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
+    if(type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION){
+      utcDateTime_t time;
+      const bm_common_pub_sub_utc_t *utc = reinterpret_cast<const bm_common_pub_sub_utc_t *>(data);
+      dateTimeFromUtc(utc->utc_us, &time);
+
+      RTCTimeAndDate_t rtc_time = {
+          .year = time.year,
+          .month = time.month,
+          .day = time.day,
+          .hour = time.hour,
+          .minute = time.min,
+          .second = time.sec,
+          .ms = (time.usec / 1000),
+      };
+
+      if (rtcSet(&rtc_time) == pdPASS) {
+        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n",
+               rtc_time.year,
+               rtc_time.month,
+               rtc_time.day,
+               rtc_time.hour,
+               rtc_time.minute,
+               rtc_time.second,
+               rtc_time.ms);
+      } else {
+        printf("\n Failed to set RTC.\n");
+      }
+    } else {
+      printf("Unrecognized version: %u and type: %u\n", version, type);
+    }
+  } else {
+    printf("Topic: %.*s\n", topic_len, topic);
+    printf("Data: %.*s\n", data_len, data);
+  }
 }
 
 // TODO - move this to some debug file?
 static const DebugGpio_t debugGpioPins[] = {
-  {"adin_cs", &ADIN_CS, GPIO_OUT},
-  {"adin_int", &ADIN_INT, GPIO_IN},
-  {"adin_pwr", &ADIN_PWR, GPIO_OUT},
-  {"adin_rst", &ADIN_RST, GPIO_OUT},
-  {"i2c_mux_rst", &I2C_MUX_RESET, GPIO_OUT},
-  {"gpio1", &GPIO1, GPIO_OUT},
-  {"gpio2", &GPIO2, GPIO_OUT},
-  {"bm_int", &BM_INT, GPIO_IN},
-  {"bm_cs", &BM_CS, GPIO_OUT},
-  {"vbus_bf_en", &VBUS_BF_EN, GPIO_OUT},
-  {"flash_cs", &FLASH_CS, GPIO_OUT},
-  {"boot_led", &BOOT_LED, GPIO_IN},
-  {"vusb_detect", &VUSB_DETECT, GPIO_IN},
-  {"bf_io1", &BF_IO1, GPIO_OUT},
-  {"bf_io2", &BF_IO2, GPIO_OUT},
-  {"bf_hfio", &BF_HFIO, GPIO_OUT},
-  {"bf_3v3_en", &BF_3V3_EN, GPIO_OUT},
-  {"bf_5v_en", &BF_5V_EN, GPIO_OUT},
-  {"bf_imu_int", &BF_IMU_INT, GPIO_IN},
-  {"bf_imu_rst", &BF_IMU_RST, GPIO_OUT},
-  {"bf_sdi12_oe", &BF_SDI12_OE, GPIO_OUT},
-  {"bf_tp16", &BF_TP16, GPIO_OUT},
-  {"bf_led_g1", &BF_LED_G1, GPIO_OUT},
-  {"bf_led_r1", &BF_LED_R1, GPIO_OUT},
-  {"bf_led_g2", &BF_LED_G2, GPIO_OUT},
-  {"bf_led_r2", &BF_LED_R2, GPIO_OUT},
-  {"bf_pl_buck_en", &BF_PL_BUCK_EN, GPIO_OUT},
-  {"bf_tp7", &BF_TP7, GPIO_OUT},
-  {"bf_tp8", &BF_TP8, GPIO_OUT},
+    {"adin_cs", &ADIN_CS, GPIO_OUT},
+    {"adin_int", &ADIN_INT, GPIO_IN},
+    {"adin_pwr", &ADIN_PWR, GPIO_OUT},
+    {"adin_rst", &ADIN_RST, GPIO_OUT},
+    {"i2c_mux_rst", &I2C_MUX_RESET, GPIO_OUT},
+    {"gpio1", &GPIO1, GPIO_OUT},
+    {"gpio2", &GPIO2, GPIO_OUT},
+    {"bm_int", &BM_INT, GPIO_IN},
+    {"bm_cs", &BM_CS, GPIO_OUT},
+    {"vbus_bf_en", &VBUS_BF_EN, GPIO_OUT},
+    {"flash_cs", &FLASH_CS, GPIO_OUT},
+    {"boot_led", &BOOT_LED, GPIO_IN},
+    {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+    {"bf_io1", &BF_IO1, GPIO_OUT},
+    {"bf_io2", &BF_IO2, GPIO_OUT},
+    {"bf_hfio", &BF_HFIO, GPIO_OUT},
+    {"bf_3v3_en", &BF_3V3_EN, GPIO_OUT},
+    {"bf_5v_en", &BF_5V_EN, GPIO_OUT},
+    {"bf_imu_int", &BF_IMU_INT, GPIO_IN},
+    {"bf_imu_rst", &BF_IMU_RST, GPIO_OUT},
+    {"bf_sdi12_oe", &BF_SDI12_OE, GPIO_OUT},
+    {"bf_tp16", &BF_TP16, GPIO_OUT},
+    {"bf_led_g1", &BF_LED_G1, GPIO_OUT},
+    {"bf_led_r1", &BF_LED_R1, GPIO_OUT},
+    {"bf_led_g2", &BF_LED_G2, GPIO_OUT},
+    {"bf_led_r2", &BF_LED_R2, GPIO_OUT},
+    {"bf_pl_buck_en", &BF_PL_BUCK_EN, GPIO_OUT},
+    {"bf_tp7", &BF_TP7, GPIO_OUT},
+    {"bf_tp8", &BF_TP8, GPIO_OUT},
 };
 
 /* USER CODE EXECUTED HERE */
@@ -289,77 +314,82 @@ static void user_task(void *parameters) {
 /* USER CODE EXECUTED HERE END */
 
 static void defaultTask( void *parameters ) {
-    (void)parameters;
+  (void)parameters;
 
 
-    startIWDGTask();
-    startSerial();
+  startIWDGTask();
+  startSerial();
 
-    startSerialConsole(&usbCLI);
-    // Serial device will be enabled automatically when console connects
-    // so no explicit serialEnable is required
-    pcapInit(&usbPcap);
+  startSerialConsole(&usbCLI);
+  // Serial device will be enabled automatically when console connects
+  // so no explicit serialEnable is required
+  pcapInit(&usbPcap);
 
-    startCLI();
-    // pcapInit(&usbPcap);
+  startCLI();
+  // pcapInit(&usbPcap);
 
-    gpioISRStartTask();
+  gpioISRStartTask();
 
-    memfault_platform_boot();
-    memfault_platform_start();
+  memfault_platform_boot();
+  memfault_platform_start();
 
-    pca9535StartIRQTask();
+  pca9535StartIRQTask();
 
-    bspInit();
-    usbInit(&VUSB_DETECT, usb_is_connected);
+  bspInit();
+  usbInit(&VUSB_DETECT, usb_is_connected);
 
-    if(bristlefinTCA.init()){
-        bristlefinTCA.setChannel(TCA::CH_1);
-    }
+  if(bristlefinTCA.init()){
+    bristlefinTCA.setChannel(TCA::CH_1);
+  }
 
-    debugSysInit();
-    debugMemfaultInit(&usbCLI);
+  debugSysInit();
+  debugMemfaultInit(&usbCLI);
 
-    debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
-    debugBMInit();
-    debugRTCInit();
-    debugTCA9546AInit(&bristlefinTCA);
+  debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
+  debugBMInit();
+  debugRTCInit();
+  debugTCA9546AInit(&bristlefinTCA);
 
-    // Disabling now for hard mode testing
-    // Re-enable low power mode
-    // lpmPeripheralInactive(LPM_BOOT);
-    timer_callback_handler_init();
-    spiflash::W25 debugW25(&spi2, &FLASH_CS);
-    debugW25Init(&debugW25);
-    NvmPartition debug_user_partition(debugW25, user_configuration);
-    NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
-    NvmPartition debug_system_partition(debugW25, system_configuration);
-    cfg::Configuration debug_configuration_user(debug_user_partition,ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
-    cfg::Configuration debug_configuration_hardware(debug_hardware_partition,ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-    cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
-    NvmPartition debug_cli_partition(debugW25, cli_configuration);
-    NvmPartition dfu_partition(debugW25, dfu_configuration);
-    debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
-    debugNvmCliInit(&debug_cli_partition, &dfu_partition);
-    debugDfuInit(&dfu_partition);
-    bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  // Disabling now for hard mode testing
+  // Re-enable low power mode
+  // lpmPeripheralInactive(LPM_BOOT);
+  timer_callback_handler_init();
+  spiflash::W25 debugW25(&spi2, &FLASH_CS);
+  debugW25Init(&debugW25);
+  NvmPartition debug_user_partition(debugW25, user_configuration);
+  NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
+  NvmPartition debug_system_partition(debugW25, system_configuration);
+  cfg::Configuration debug_configuration_user(debug_user_partition,ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_hardware(debug_hardware_partition,ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  NvmPartition debug_cli_partition(debugW25, cli_configuration);
+  NvmPartition dfu_partition(debugW25, dfu_configuration);
+  debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
+  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
+  debugDfuInit(&dfu_partition);
+  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
-    bm_sub(buttonTopic, handle_sensor_subscriptions);
+  sensorsInit();
+  // TODO - get this from the nvm cfg's!
+  sensorConfig_t sensorConfig = { .sensorCheckIntervalS=10 };
+  sensorSamplerInit(&sensorConfig);
 
-    // Turn of the bristlefin leds
-    IOWrite(&BF_LED_G1, LED_OFF);
-    IOWrite(&BF_LED_R1, LED_OFF);
-    IOWrite(&BF_LED_G2, LED_OFF);
-    IOWrite(&BF_LED_R2, LED_OFF);
+  bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
+
+  // Turn of the bristlefin leds
+  IOWrite(&BF_LED_G1, LED_OFF);
+  IOWrite(&BF_LED_R1, LED_OFF);
+  IOWrite(&BF_LED_G2, LED_OFF);
+  IOWrite(&BF_LED_R2, LED_OFF);
 
 #ifdef USE_MICROPYTHON
-    micropython_freertos_init(&usbCLI);
+  micropython_freertos_init(&usbCLI);
 #endif
-    user_code_start();
+  user_code_start();
 
 
-    while(1) {
-        /* Do nothing */
-        vTaskDelay(1000);
-    }
+  while(1) {
+    /* Do nothing */
+    vTaskDelay(1000);
+  }
 }

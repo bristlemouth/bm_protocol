@@ -130,15 +130,16 @@ To configure:
 
 ```
 $ mkdir -p cmake-build/bootloader
-$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bootloader -DAPP=bootloader -DCMAKE_BUILD_TYPE=Release
+$ cd cmake-build/bootloader
+$ cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bootloader -DAPP=bootloader -DCMAKE_BUILD_TYPE=Release
 ```
 
-To build and flash (`dfu_flash` can also be used here):
+To build and flash the bootloader:
 
+If you have an STLink SWD or SWD over USB-C debugger (flashing the bootloader on the first Flash over DFU USB not currently supported):
 ```
 make -j flash
 ```
-
 
 ### Flashing/Debugging
 To flash using openOCD/STLink (more debugger support to be added later), you can just run:
@@ -155,11 +156,23 @@ To run the GDB debugger, you can use:
 $ make debug
 ```
 
-After flashing, you should see the red and blue lights blinking on the STM32U575 Nucleo development board. You can also open up a usb/serial terminal to see the printf output. For example on MacOS: `pyserial-miniterm /dev/cu.usbmodem0000083039671`
-
 #### USB dfu-util
 
 You can also take advantage of the built-in usb bootloader in the STM32U575 to flash the device. You'll need to have [dfu-util](http://dfu-util.sourceforge.net/) installed. On MacOS just `brew install dfu-util`, on Ubuntu just `apt-get install dfu-util` (I do hope to add it to the conda environment, but it's not a high priority right now.)
+
+If over USB (Note - this is currently broken on DevMote + Bristlefin cc @Victor):
+First need to put system into bootloader mode, by sending the bootloader command over serial.
+- connect to the serial device ending in `1`, not `3`:
+  ![img_1.png](img_1.png)
+- send `bootloader` command, and you'll get booted out.
+- Then can DFU flash from build dir with:
+```
+make -j dfu_flash
+```
+- Note: this is what a fail looks like:
+  ![img.png](img.png)
+- This is what success looks like:
+  ![img_2.png](img_2.png)
 
 Once the device is in DFU mode, you can run `dfu-util -l` to see if the device is detected. To flash it with the latest firmware, just run `make dfu_flash`!
 

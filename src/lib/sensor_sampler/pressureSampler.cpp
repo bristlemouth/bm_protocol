@@ -7,6 +7,8 @@
 #include "bsp.h"
 #include "debug.h"
 #include "ms5803.h"
+#include "stm32_rtc.h"
+#include "uptime.h"
 #include "sensors.h"
 #include "sensorSampler.h"
 #include <stdbool.h>
@@ -29,9 +31,24 @@ static bool baroSample() {
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    bm_fprintf(0, "pressure.log", "temp: %f, pressure: %f\n", temperature, pressure);
-    bm_printf(0, "pressure | temp: %f, pressure: %f\n", temperature, pressure);
-    printf("pressure | temp: %f, pressure: %f\n", temperature, pressure);
+    RTCTimeAndDate_t timeAndDate;
+    char rtcTimeBuffer[32];
+    if (rtcGet(&timeAndDate) == pdPASS) {
+        sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
+                timeAndDate.year,
+                timeAndDate.month,
+                timeAndDate.day,
+                timeAndDate.hour,
+                timeAndDate.minute,
+                timeAndDate.second,
+                timeAndDate.ms);
+    } else {
+      strcpy(rtcTimeBuffer, "0");
+    }
+
+    bm_fprintf(0, "pressure.log", "tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, temperature, pressure);
+    bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, temperature, pressure);
+    printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, temperature, pressure);
   }
 
   return success;

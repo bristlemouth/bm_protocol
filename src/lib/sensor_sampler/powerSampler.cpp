@@ -5,6 +5,8 @@
 #include "bm_pubsub.h"
 #include "bm_printf.h"
 #include "bsp.h"
+#include "stm32_rtc.h"
+#include "uptime.h"
 #include "debug.h"
 #include "ina232.h"
 #include "sensors.h"
@@ -49,11 +51,24 @@ static bool powerSample() {
       _powerData.voltage = voltage;
       _powerData.current = current;
 
-      bm_fprintf(0, "power.log",
-                 "addr: %lu, voltage: %f, current: %f\n", _powerData.address, _powerData.voltage, _powerData.current);
-      bm_printf(0,
-                 "power | addr: %u, voltage: %f, current: %f\n", _powerData.address, _powerData.voltage, _powerData.current);
-      printf("power | addr: %u, voltage: %f, current: %f\n", _powerData.address, _powerData.voltage, _powerData.current);
+      RTCTimeAndDate_t timeAndDate;
+      char rtcTimeBuffer[32];
+      if (rtcGet(&timeAndDate) == pdPASS) {
+        sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
+                timeAndDate.year,
+                timeAndDate.month,
+                timeAndDate.day,
+                timeAndDate.hour,
+                timeAndDate.minute,
+                timeAndDate.second,
+                timeAndDate.ms);
+      } else {
+        strcpy(rtcTimeBuffer, "0");
+      }
+
+      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
+      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
     }
     rval &= success;
   }

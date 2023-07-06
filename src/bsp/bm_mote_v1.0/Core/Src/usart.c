@@ -70,7 +70,7 @@ void MX_LPUART1_UART_Init(void)
   /* USER CODE BEGIN LPUART1_Init 1 */
 
   /* USER CODE END LPUART1_Init 1 */
-  LPUART_InitStruct.PrescalerValue = LL_LPUART_PRESCALER_DIV1;
+  LPUART_InitStruct.PrescalerValue = LL_LPUART_PRESCALER_DIV64;
   LPUART_InitStruct.BaudRate = 209700;
   LPUART_InitStruct.DataWidth = LL_LPUART_DATAWIDTH_8B;
   LPUART_InitStruct.StopBits = LL_LPUART_STOPBITS_1;

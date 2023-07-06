@@ -5,6 +5,8 @@
 #include "bm_pubsub.h"
 #include "bm_printf.h"
 #include "bsp.h"
+#include "stm32_rtc.h"
+#include "uptime.h"
 #include "debug.h"
 #include "htu21d.h"
 #include "sensors.h"
@@ -38,9 +40,24 @@ static bool htuSample() {
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    bm_fprintf(0, "hum_temp.log", "hum: %f, temp: %f\n", humidity, temperature);
-    bm_printf(0, "htu | hum: %f, temp: %f\n", humidity, temperature);
-    printf("htu | hum: %f, temp: %f\n", humidity, temperature);
+    RTCTimeAndDate_t timeAndDate;
+    char rtcTimeBuffer[32];
+    if (rtcGet(&timeAndDate) == pdPASS) {
+      sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
+              timeAndDate.year,
+              timeAndDate.month,
+              timeAndDate.day,
+              timeAndDate.hour,
+              timeAndDate.minute,
+              timeAndDate.second,
+              timeAndDate.ms);
+    } else {
+      strcpy(rtcTimeBuffer, "0");
+    }
+
+    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, humidity, temperature);
+    bm_printf(0, "htu | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, humidity, temperature);
+    printf("htu | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, humidity, temperature);
   }
 
   return success;

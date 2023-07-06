@@ -89,6 +89,10 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
+    ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
+    ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
+    ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c
@@ -218,6 +222,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
@@ -230,6 +235,7 @@ set(APP_FILES
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors
     ${FREERTOS_INCLUDES}
     ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
