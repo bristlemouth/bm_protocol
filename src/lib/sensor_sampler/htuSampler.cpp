@@ -55,9 +55,9 @@ static bool htuSample() {
       strcpy(rtcTimeBuffer, "0");
     }
 
-    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, humidity, temperature);
-    bm_printf(0, "htu | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, humidity, temperature);
-    printf("htu | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, humidity, temperature);
+    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, humidity, temperature);
+    bm_printf(0, "htu | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(), rtcTimeBuffer, humidity, temperature);
+    printf("htu | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, humidity, temperature);
   }
 
   return success;

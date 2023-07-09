@@ -66,9 +66,9 @@ static bool powerSample() {
         strcpy(rtcTimeBuffer, "0");
       }
 
-      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
-      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",uptimeGetMs(), rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
+      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
     }
     rval &= success;
   }

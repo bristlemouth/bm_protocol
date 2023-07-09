@@ -12,8 +12,8 @@
 
 #define LED_ON (0)
 #define LED_OFF (1)
-#define LED_ON_TIME 75
-#define LED_PERIOD 1000
+#define LED_ON_TIME_MS 75
+#define LED_PERIOD_MS 1000
 
 static int32_t ledLinePulse = -1;
 
@@ -94,7 +94,7 @@ static void printLine(void *serialHandle, uint8_t *line, size_t len) {
   configASSERT(line != NULL);
 
 // Set timer variable to now() to trigger LED pulse turn on
-  ledLinePulse = uptimeGetMicroSeconds()/1000;
+  ledLinePulse = uptimeGetMs();
 
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
@@ -111,9 +111,9 @@ static void printLine(void *serialHandle, uint8_t *line, size_t len) {
     strcpy(rtcTimeBuffer, "0");
   }
 
-  bm_fprintf(0, "rbr_data.log", "tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, len, line);
-  bm_printf(0, "[%s] rbr data | tick: %llu, rtc: %s, line: %.*s", handle->name, uptimeGetMicroSeconds()/1000, rtcTimeBuffer, len, line);
-  printf("[%s] rbr data | tick: %llu, rtc: %s, line: %.*s\n", handle->name, uptimeGetMicroSeconds()/1000, rtcTimeBuffer, len, line);
+  bm_fprintf(0, "rbr_data.log", "tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, len, line);
+  bm_printf(0, "[%s] rbr data | tick: %llu, rtc: %s, line: %.*s", handle->name, uptimeGetMs(), rtcTimeBuffer, len, line);
+  printf("[%s] rbr data | tick: %llu, rtc: %s, line: %.*s\n", handle->name, uptimeGetMs(), rtcTimeBuffer, len, line);
 }
 
 void setup(void) {
@@ -147,18 +147,18 @@ void setup(void) {
 
 void loop(void) {
   /* USER CODE GOES HERE */
-  static u_int32_t ledPulseTimer = uptimeGetMicroSeconds()/1000;
+  static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool statusLedState = false;
   static bool rxLedState = false;
   /// TODO - taskify led control
-  if (!statusLedState && (uptimeGetMicroSeconds()/1000 - ledPulseTimer >= LED_PERIOD)) {
+  if (!statusLedState && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     IOWrite(&BF_LED_G1, LED_ON);
-    ledOnTimer = uptimeGetMicroSeconds()/1000;
-    ledPulseTimer += LED_PERIOD;
+    ledOnTimer = uptimeGetMs();
+    ledPulseTimer += LED_PERIOD_MS;
     statusLedState = true;
   }
-  else if (statusLedState && (uptimeGetMicroSeconds()/1000 - ledOnTimer >= LED_ON_TIME)) {
+  else if (statusLedState && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     IOWrite(&BF_LED_G1, LED_OFF);
     statusLedState = false;
   }
@@ -167,7 +167,7 @@ void loop(void) {
     IOWrite(&BF_LED_G2, LED_ON);
     rxLedState = true;
   }
-  else if (rxLedState && (uptimeGetMicroSeconds()/1000 - ledLinePulse >= LED_ON_TIME)) {
+  else if (rxLedState && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     IOWrite(&BF_LED_G2, LED_OFF);
     ledLinePulse = -1;
     rxLedState = false;
