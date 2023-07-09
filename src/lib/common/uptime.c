@@ -29,7 +29,7 @@ uint64_t uptimeGetMicroSeconds() {
     uptimeMicroSeconds = epoch - _startTime;
   } else {
     // microseconds since powerup derived from uint32 ms ticks
-    uptimeMicroSeconds = (uint64_t)(pdTICKS_TO_MS((uint64_t)xTaskGetTickCount()))*(uint64_t)1000;
+    uptimeMicroSeconds = (uint64_t)(pdTICKS_TO_MS(xTaskGetTickCount()))*(uint64_t)1000;
   }
 
   return uptimeMicroSeconds;
