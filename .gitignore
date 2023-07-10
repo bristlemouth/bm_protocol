@@ -13,6 +13,8 @@ compile_commands.json
 
 tools/scripts/test/hil/*.json
 
+tools/bin/mpy-cross
+
 .vscode
 cli-cmake-debug-build/
 *build/
