@@ -158,7 +158,7 @@ void loop(void) {
     ledPulseTimer += LED_PERIOD_MS;
     statusLedState = true;
   }
-  else if (statusLedState && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (statusLedState && ((uint32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     IOWrite(&BF_LED_G1, LED_OFF);
     statusLedState = false;
   }
