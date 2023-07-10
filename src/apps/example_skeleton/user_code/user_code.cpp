@@ -147,8 +147,8 @@ void setup(void) {
 
 void loop(void) {
   /* USER CODE GOES HERE */
-  static u_int32_t ledPulseTimer = uptimeGetMs();
-  static u_int32_t ledOnTimer = 0;
+  static uint32_t ledPulseTimer = uptimeGetMs();
+  static uint32_t ledOnTimer = 0;
   static bool statusLedState = false;
   static bool rxLedState = false;
   /// TODO - taskify led control
