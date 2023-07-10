@@ -152,7 +152,7 @@ void loop(void) {
   static bool statusLedState = false;
   static bool rxLedState = false;
   /// TODO - taskify led control
-  if (!statusLedState && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!statusLedState && ((uint32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     IOWrite(&BF_LED_G1, LED_ON);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
