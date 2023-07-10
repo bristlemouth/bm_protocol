@@ -6,13 +6,6 @@
 #include "bm_util.h"
 #include "bm_pubsub.h"
 
-typedef struct {
-  uint64_t target_node_id;
-  uint16_t fname_len;
-  uint16_t data_len;
-  uint8_t fnameAndData[0];
-} __attribute__((packed)) bm_print_publication_t;
-
 typedef enum {
   BM_PRINTF_OK,
   BM_PRINTF_STR_ZERO_LEN,
