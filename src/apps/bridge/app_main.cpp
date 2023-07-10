@@ -19,7 +19,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
-#include "debug_bm.h"
+#include "debug_spotter.h"
 #include "debug_dfu.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
@@ -307,7 +307,7 @@ static void defaultTask( void *parameters ) {
     debugMemfaultInit(&usbCLI);
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
-    debugBMInit();
+    debugSpotterInit();
     debugRTCInit();
 
     timer_callback_handler_init();

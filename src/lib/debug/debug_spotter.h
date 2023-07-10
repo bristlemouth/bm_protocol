@@ -2,5 +2,4 @@
 
 #include <stdint.h>
 
-void debugBMInit(void);
-
+void debugSpotterInit(void);

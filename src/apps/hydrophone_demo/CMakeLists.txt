@@ -53,7 +53,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
     ${SRC_DIR}/lib/debug/debug.c
-    ${SRC_DIR}/lib/debug/debug_bm.cpp
+    ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp

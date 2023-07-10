@@ -132,7 +132,7 @@ static void bcmp_config_process_commit_msg(bm_common_config_commit_t * msg) {
         case BM_COMMON_CFG_PARTITION_USER: {
             _usr_cfg->saveConfig(); // Reboot!
             break;
-        } 
+        }
         case BM_COMMON_CFG_PARTITION_SYSTEM: {
             _sys_cfg->saveConfig(); // Reboot!
             break;
@@ -243,12 +243,12 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
         if(!Configuration::cborTypeToConfigType(&it,type)){
             break;
         }
-        switch(type) { 
+        switch(type) {
             case cfg::ConfigDataTypes_e::UINT32:{
                 uint64_t temp;
                 if(cbor_value_get_uint64(&it,&temp) != CborNoError){
                     break;
-                }   
+                }
                 printf("Node Id: %" PRIx64 " Value:%" PRIu32 "\n", msg->header.source_node_id, temp);
                 break;
             }
@@ -256,7 +256,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 int64_t temp;
                 if(cbor_value_get_int64(&it,&temp) != CborNoError){
                     break;
-                }   
+                }
                 printf("Node Id: %" PRIx64 " Value:%" PRId64 "\n", msg->header.source_node_id, temp);
                 break;
             }
@@ -264,7 +264,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 float temp;
                 if(cbor_value_get_float(&it,&temp) != CborNoError){
                     break;
-                }   
+                }
                 printf("Node Id: %" PRIx64 " Value:%f\n", msg->header.source_node_id, temp);
                 break;
             }
@@ -346,7 +346,7 @@ static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bm_common
     return rval;
 }
 
-static void bcmp_process_del_request_message(bm_common_config_delete_key_request_t * msg) { 
+static void bcmp_process_del_request_message(bm_common_config_delete_key_request_t * msg) {
     configASSERT(msg);
     do {
         Configuration *cfg;
@@ -366,7 +366,7 @@ static void bcmp_process_del_request_message(bm_common_config_delete_key_request
 
 static void bcmp_process_del_response_message(bm_common_config_delete_key_response_t * msg) {
     configASSERT(msg);
-    char * keyprintbuf = (char * )pvPortMalloc(msg->key_length + 1); 
+    char * keyprintbuf = (char * )pvPortMalloc(msg->key_length + 1);
     memcpy(keyprintbuf, msg->key, msg->key_length);
     keyprintbuf[msg->key_length] = '\0';
     printf("Node Id:%" PRIx64 " Key Delete Response - Key: %s, Partition: %d, Success %d\n", msg->header.source_node_id,
@@ -399,7 +399,7 @@ void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* pay
             }
             case BCMP_CONFIG_STATUS_RESPONSE: {
                 bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
-                printf("Response msg -- Node Id:%" PRIu64 ",Partition:%d, Commit Status:%d\n",
+                printf("Response msg -- Node Id:%" PRIx64 ",Partition:%d, Commit Status:%d\n",
                     msg->header.source_node_id, msg->partition, msg->committed);
                 printf("Num Keys: %d\n",msg->num_keys);
                 bm_common_config_status_key_data_t * key = reinterpret_cast<bm_common_config_status_key_data_t*>(msg->keyData);

@@ -21,7 +21,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
-#include "debug_bm.h"
+#include "debug_spotter.h"
 #include "debug_memfault.h"
 #include "debug_rtc.h"
 #include "debug_sys.h"
@@ -257,7 +257,7 @@ static void defaultTask( void *parameters ) {
 
   debugSysInit();
   debugMemfaultInit(&usbCLI);
-  debugBMInit();
+  debugSpotterInit();
   debugRTCInit();
 
 #ifndef BSP_NUCLEO_U575

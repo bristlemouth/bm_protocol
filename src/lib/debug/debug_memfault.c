@@ -33,10 +33,10 @@ static const CLI_Command_Definition_t cmdMemfault = {
   "memfault",
   // Help string
   "memfault:\n"
-  " * dump - dump chunks\n"
-  " * trig - trigger serialization\n"
-  " * print - print metrics\n"
-  " * coredump - print coredump over serial\n",
+  " * memfault dump - dump chunks\n"
+  " * memfault trig - trigger serialization\n"
+  " * memfault print - print metrics\n"
+  " * memfault coredump - print coredump over serial\n",
   // Command function
   prvMemfaultCommand,
   // Number of parameters
@@ -64,7 +64,7 @@ void test_coredump_storage(void) {
     printf("ERR\n");
   }
   uint32_t endTime = xTaskGetTickCount();
-  printf("Duration: %lums\n", endTime-startTime);
+  printf("Duration: %" PRIu32 "ms\n", endTime-startTime);
 }
 
 #define COREDUMP_CHUNK_SIZE 4096

@@ -14,7 +14,7 @@ static const CLI_Command_Definition_t cmdDfu = {
   "dfu",
   // Help string
   "dfu:\n"
-  " start <node id> <TimeoutMs>\n",
+  " * dfu start <node id> <TimeoutMs>\n",
   // Command function
   dfuCommand,
   // Number of parameters (variable)

@@ -69,8 +69,9 @@ static const CLI_Command_Definition_t cmd_stress = {
   // Command string
   "stress",
   // Help string
-  "stress start <speed in Mbps (1-8)>\n"
-  "stress stop\n",
+  "stress:\n"
+  " * stress start <speed in Mbps (1-8)>\n"
+  " * stress stop\n",
   // Command function
   cmd_stress_fn,
   // Number of parameters

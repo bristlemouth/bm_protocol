@@ -19,7 +19,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
-#include "debug_bm.h"
+#include "debug_spotter.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_rtc.h"
@@ -331,7 +331,7 @@ static void defaultTask( void *parameters ) {
 #ifdef BSP_BRIDGE_V1_0
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
 #endif
-    debugBMInit();
+    debugSpotterInit();
     debugRTCInit();
     timer_callback_handler_init();
     // Disabling now for hard mode testing

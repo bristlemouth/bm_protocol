@@ -11,6 +11,7 @@
 #include "bcmp_heartbeat.h"
 #include "bcmp_neighbors.h"
 #include "bcmp_info.h"
+#include "bm_pubsub.h"
 #include "bcmp_ping.h"
 #include "bcmp_config.h"
 #include "util.h"
@@ -21,42 +22,59 @@
 #include "debug.h"
 
 static BaseType_t cmd_bcmp_fn( char *writeBuffer,
-                                  size_t writeBufferLen,
-                                  const char *commandString);
+                               size_t writeBufferLen,
+                               const char *commandString);
 static const CLI_Command_Definition_t cmd_bcmp = {
-  // Command string
-  "bcmp",
-  // Help string
-  "bcmp neighbors\n"
-  "bcmp info <node_id>\n"
-  "bcmp ping <node_id>\n"
-  "bcmp cfg get <node_id> <partition(u/s)> <key>\n"
-  "bcmp cfg set <node_id> <partition(u/s)> <type(u/i/f/s/b)> <key> <value>\n"
-  "bcmp cfg commit <node_id> <partition(u/s)>\n"
-  "bcmp cfg status <node_id> <partition(u/s)>\n"
-  "bcmp cfg del <node_id> <partition(u/s)> <key>\n"
-  "bcmp time set <node_id> <utc_us>\n"
-  "bcmp time get <node_id>\n"
-  "bcmp topo\n"
-  "bcmp resources\n"
-  "bcmp resources <node_id>\n",
-  // Command function
-  cmd_bcmp_fn,
-  // Number of parameters
-  -1
+    // Command string
+    "bm",
+    // Help string
+    "bm:\n"
+    " * bm neighbors\n"
+    " * bm info <node_id>\n"
+    " * bm ping <node_id>\n"
+    " * bm cfg get <node_id> <partition(u/s)> <key>\n"
+    " * bm cfg set <node_id> <partition(u/s)> <type(u/i/f/s/b)> <key> <value>\n"
+    " * bm cfg commit <node_id> <partition(u/s)>\n"
+    " * bm cfg status <node_id> <partition(u/s)>\n"
+    " * bm cfg del <node_id> <partition(u/s)> <key>\n"
+    " * bm time set <node_id> <utc_us>\n"
+    " * bm time get <node_id>\n"
+    " * bm topo\n"
+    " * bm resources\n"
+    " * bm resources <node_id>\n"
+    " * bm sub <topic>\n"
+    " * bm unsub <topic>\n"
+    " * bm pub <topic> <data> <type> <version>\n",
+    // Command function
+    cmd_bcmp_fn,
+    // Number of parameters
+    -1
 };
+
+static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+  (void)node_id;
+
+  printf("BM pubsub version: %u\n",version);
+  printf("BM pubsub type: %u\n",type);
+  printf("Received %u bytes of data on topic: %.*s\n", data_len, topic_len, topic);
+  printf("Data: ");
+  for(size_t i = 0; i < data_len; ++i)
+    printf("%02X ", (unsigned char)data[i]);
+  printf("\n");
+}
 
 void print_neighbor_basic(bm_neighbor_t *neighbor) {
   printf("%" PRIx64 " |   %u  | %7s | %0.3f\n",
-          neighbor->node_id,
-          neighbor->port,
-          neighbor->online ? "online": "offline",
-          (float)((xTaskGetTickCount() - neighbor->last_heartbeat_ticks))/1000.0);
+         neighbor->node_id,
+         neighbor->port,
+         neighbor->online ? "online": "offline",
+         (float)((xTaskGetTickCount() - neighbor->last_heartbeat_ticks))/1000.0);
 }
 
 static BaseType_t cmd_bcmp_fn(char *writeBuffer,
-                            size_t writeBufferLen,
-                            const char *commandString) {
+                              size_t writeBufferLen,
+                              const char *commandString) {
+  // Remove unused argument warnings
   (void) writeBuffer;
   (void) writeBufferLen;
   (void) commandString;
@@ -65,20 +83,25 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
     const char *command;
     BaseType_t command_str_len;
     command = FreeRTOS_CLIGetParameter(
-                    commandString,
-                    1,
-                    &command_str_len);
+        commandString,
+        1,
+        &command_str_len);
 
-    if(strncmp("neighbors", command, command_str_len) == 0) {
+    if(command == NULL) {
+      printf("ERR Invalid command\n");
+      break;
+    }
+    else if(strncmp("neighbors", command, command_str_len) == 0) {
       printf("    Node ID      | Port |  State  | Time since last heartbeat (s)\n");
       bcmp_neighbor_foreach(print_neighbor_basic);
-    } else if(strncmp("info", command, command_str_len) == 0) {
+    }
+    else if(strncmp("info", command, command_str_len) == 0) {
       const char *node_id_str;
       BaseType_t node_id_str_len = 0;
       node_id_str = FreeRTOS_CLIGetParameter(
-                      commandString,
-                      2,
-                      &node_id_str_len);
+          commandString,
+          2,
+          &node_id_str_len);
 
       if(node_id_str_len > 0) {
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
@@ -96,13 +119,14 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
       } else {
         printf("Invalid arguments\n");
       }
-    } else if (strncmp("ping", command, command_str_len) == 0){
+    }
+    else if (strncmp("ping", command, command_str_len) == 0){
       const char *node_id_str;
       BaseType_t node_id_str_len = 0;
       node_id_str = FreeRTOS_CLIGetParameter(
-                      commandString,
-                      2,
-                      &node_id_str_len);
+          commandString,
+          2,
+          &node_id_str_len);
       if(node_id_str_len > 0) {
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
         uint8_t payload[32] = { 0 };
@@ -112,13 +136,14 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
       } else {
         printf("Invalid node_id\n");
       }
-    } else if(strncmp("cfg", command, command_str_len) == 0) {
+    }
+    else if(strncmp("cfg", command, command_str_len) == 0) {
       const char *cmd_id_str;
       BaseType_t cmd_id_str_len = 0;
       cmd_id_str = FreeRTOS_CLIGetParameter(
-                      commandString,
-                      2,
-                      &cmd_id_str_len);
+          commandString,
+          2,
+          &cmd_id_str_len);
       if(!cmd_id_str) {
         printf("Invalid arguments\n");
         break;
@@ -127,26 +152,26 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         const char *node_id_str;
         BaseType_t node_id_str_len = 0;
         node_id_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        3,
-                        &node_id_str_len);
+            commandString,
+            3,
+            &node_id_str_len);
         const char *part_str;
         BaseType_t part_str_len = 0;
         part_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        4,
-                        &part_str_len);
+            commandString,
+            4,
+            &part_str_len);
         const char *key_str;
         BaseType_t key_str_str_len = 0;
         key_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        5,
-                        &key_str_str_len);
+            commandString,
+            5,
+            &key_str_str_len);
         if(!key_str || !part_str || !node_id_str){
           printf("Invalid arguments\n");
           break;
         }
-        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        uint64_t node_id = strtoull(node_id_str, NULL, 16);
         bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
           partition = BM_COMMON_CFG_PARTITION_USER;
@@ -166,38 +191,38 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         const char *node_id_str;
         BaseType_t node_id_str_len = 0;
         node_id_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        3,
-                        &node_id_str_len);
+            commandString,
+            3,
+            &node_id_str_len);
         const char *part_str;
         BaseType_t part_str_len = 0;
         part_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        4,
-                        &part_str_len);
+            commandString,
+            4,
+            &part_str_len);
         const char *type_str;
         BaseType_t type_str_str_len = 0;
         type_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        5,
-                        &type_str_str_len);
+            commandString,
+            5,
+            &type_str_str_len);
         const char *key_str;
         BaseType_t key_str_str_len = 0;
         key_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        6,
-                        &key_str_str_len);
+            commandString,
+            6,
+            &key_str_str_len);
         const char *value_str;
         BaseType_t value_str_str_len = 0;
         value_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        7,
-                        &value_str_str_len);
+            commandString,
+            7,
+            &value_str_str_len);
         if(!key_str || !part_str || !type_str || !node_id_str || !value_str){
           printf("Invalid arguments\n");
           break;
         }
-        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        uint64_t node_id = strtoull(node_id_str, NULL, 16);
         bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
           partition = BM_COMMON_CFG_PARTITION_USER;
@@ -233,7 +258,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           case cfg::ConfigDataTypes_e::UINT32: {
             uint32_t val = strtoul(value_str,NULL,0);
             if(cbor_encode_uint(&encoder, val)!= CborNoError) {
-                break;
+              break;
             }
             if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
               printf("Failed to send message config set\n");
@@ -245,7 +270,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           case cfg::ConfigDataTypes_e::INT32: {
             int32_t val = strtol(value_str,NULL,0);
             if(cbor_encode_int(&encoder, val)!= CborNoError) {
-                break;
+              break;
             }
             if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
               printf("Failed to send message config get\n");
@@ -261,7 +286,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
               break;
             }
             if(cbor_encode_float(&encoder, val)!= CborNoError) {
-                break;
+              break;
             }
             if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
               printf("Failed to send message config get\n");
@@ -272,7 +297,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           }
           case cfg::ConfigDataTypes_e::STR: {
             if(cbor_encode_text_stringz(&encoder, value_str)!= CborNoError) {
-                break;
+              break;
             }
             if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
               printf("Failed to send message config get\n");
@@ -283,7 +308,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
           }
           case cfg::ConfigDataTypes_e::BYTES: {
             if(cbor_encode_byte_string(&encoder, reinterpret_cast<const uint8_t*>(value_str), strlen(value_str))!= CborNoError) {
-                break;
+              break;
             }
             if(!bcmp_config_set(node_id,partition,key_str_str_len,key_str,buffer_size,cbor_buf,err)){
               printf("Failed to send message config get\n");
@@ -300,20 +325,20 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         const char *node_id_str;
         BaseType_t node_id_str_len = 0;
         node_id_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        3,
-                        &node_id_str_len);
+            commandString,
+            3,
+            &node_id_str_len);
         const char *part_str;
         BaseType_t part_str_len = 0;
         part_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        4,
-                        &part_str_len);
+            commandString,
+            4,
+            &part_str_len);
         if(!part_str || !node_id_str){
           printf("Invalid arguments\n");
           break;
         }
-        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        uint64_t node_id = strtoull(node_id_str, NULL, 16);
         bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
           partition = BM_COMMON_CFG_PARTITION_USER;
@@ -333,20 +358,20 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         const char *node_id_str;
         BaseType_t node_id_str_len = 0;
         node_id_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        3,
-                        &node_id_str_len);
+            commandString,
+            3,
+            &node_id_str_len);
         const char *part_str;
         BaseType_t part_str_len = 0;
         part_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        4,
-                        &part_str_len);
+            commandString,
+            4,
+            &part_str_len);
         if(!part_str || !node_id_str){
           printf("Invalid arguments\n");
           break;
         }
-        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        uint64_t node_id = strtoull(node_id_str, NULL, 16);
         bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
           partition = BM_COMMON_CFG_PARTITION_USER;
@@ -366,26 +391,26 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         const char *node_id_str;
         BaseType_t node_id_str_len = 0;
         node_id_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        3,
-                        &node_id_str_len);
+            commandString,
+            3,
+            &node_id_str_len);
         const char *part_str;
         BaseType_t part_str_len = 0;
         part_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        4,
-                        &part_str_len);
+            commandString,
+            4,
+            &part_str_len);
         const char *key_str;
         BaseType_t key_str_str_len = 0;
         key_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        5,
-                        &key_str_str_len);
+            commandString,
+            5,
+            &key_str_str_len);
         if(!key_str || !part_str || !node_id_str){
           printf("Invalid arguments\n");
           break;
         }
-        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        uint64_t node_id = strtoull(node_id_str, NULL, 16);
         bm_common_config_partition_e partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
           partition = BM_COMMON_CFG_PARTITION_USER;
@@ -409,27 +434,27 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
       const char *cmdstr;
       BaseType_t cmdstr_len = 0;
       cmdstr = FreeRTOS_CLIGetParameter(
-                      commandString,
-                      2,
-                      &cmdstr_len);
+          commandString,
+          2,
+          &cmdstr_len);
       const char *node_id_str;
       BaseType_t node_id_str_len = 0;
       node_id_str = FreeRTOS_CLIGetParameter(
-                      commandString,
-                      3,
-                      &node_id_str_len);
+          commandString,
+          3,
+          &node_id_str_len);
       if (!cmdstr || !node_id_str) {
         printf("Invalid arguments\n");
         break;
       }
-      uint64_t node_id = strtoull(node_id_str, NULL, 0);
+      uint64_t node_id = strtoull(node_id_str, NULL, 16);
       if (strncmp("set", cmdstr, cmdstr_len) == 0) {
         const char *utc_us_str;
         BaseType_t utc_us_str_len = 0;
         utc_us_str = FreeRTOS_CLIGetParameter(
-                        commandString,
-                        4,
-                        &utc_us_str_len);
+            commandString,
+            4,
+            &utc_us_str_len);
         if(!utc_us_str) {
           printf("Invaid params\n");
           break;
@@ -452,27 +477,124 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         printf("Invalid arguments\n");
         break;
       }
-    } else if (strncmp("topo", command, command_str_len) == 0) {
+    }
+    else if (strncmp("topo", command, command_str_len) == 0) {
       bcmp_topology_start(networkTopologyPrint); // use generic print as callback
-    } else if (strncmp("resources", command, command_str_len) == 0) {
+    }
+    else if (strncmp("resources", command, command_str_len) == 0) {
       const char *node_id_str;
       BaseType_t node_id_str_len = 0;
       node_id_str = FreeRTOS_CLIGetParameter(
-                      commandString,
-                      2,
-                      &node_id_str_len);
+          commandString,
+          2,
+          &node_id_str_len);
       if (!node_id_str) {
         bcmp_resource_discovery::bcmp_resource_discovery_print_resources();
         break;
       }
-      uint64_t node_id = strtoull(node_id_str, NULL, 0);
+      uint64_t node_id = strtoull(node_id_str, NULL, 16);
       if(!bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id)){
         printf("Failed to send discovery request.\n");
       } else {
         printf("Sent discovery request to %" PRIx64 "\n", node_id);
       }
-    } else {
-      printf("Invalid arguments\n");
+    }
+    else if (strncmp("sub", command, command_str_len) == 0) {
+      const char *topicStr = FreeRTOS_CLIGetParameter(
+          commandString,
+          2,
+          &command_str_len);
+
+      if(command_str_len == 0) {
+        printf("ERR topic required\n");
+        break;
+      }
+
+      char *topic = static_cast<char*>(pvPortMalloc(command_str_len+1));
+      configASSERT(topic);
+      memcpy(topic, topicStr, command_str_len);
+      topic[command_str_len] = 0;
+
+      bm_sub(topic, print_subscriptions);
+      vPortFree(topic);
+
+    }
+    else if (strncmp("unsub", command, command_str_len) == 0) {
+      const char *topicStr = FreeRTOS_CLIGetParameter(
+          commandString,
+          2,
+          &command_str_len);
+
+      if(command_str_len == 0) {
+        printf("ERR topic required\n");
+        break;
+      }
+
+      char *topic =  static_cast<char*>(pvPortMalloc(command_str_len+1));
+      configASSERT(topic);
+      memcpy(topic, topicStr, command_str_len);
+      topic[command_str_len] = 0;
+
+      bm_unsub(topic, print_subscriptions);
+      vPortFree(topic);
+
+    }
+    else if (strncmp("pub", command, command_str_len) == 0) {
+      const char *topicStr = FreeRTOS_CLIGetParameter(
+          commandString,
+          2,
+          &command_str_len);
+
+      if(command_str_len == 0) {
+        printf("ERR topic required\n");
+        break;
+      }
+
+      char *topic =  static_cast<char*>(pvPortMalloc(command_str_len+1));
+      configASSERT(topic);
+      memcpy(topic, topicStr, command_str_len);
+      topic[command_str_len] = 0;
+      BaseType_t dataStrLen;
+
+      const char *dataStr = FreeRTOS_CLIGetParameter(
+          commandString,
+          3,
+          &dataStrLen);
+
+      if(dataStrLen == 0) {
+        printf("ERR data required\n");
+        break;
+      }
+      const char *typeStr = FreeRTOS_CLIGetParameter(
+          commandString,
+          4,
+          &command_str_len);
+
+      if(command_str_len == 0) {
+        printf("ERR data required\n");
+        break;
+      }
+      const char *versionStr = FreeRTOS_CLIGetParameter(
+          commandString,
+          5,
+          &command_str_len);
+      if(command_str_len == 0) {
+        printf("ERR data required\n");
+        break;
+      }
+      uint8_t type =  strtoul(typeStr,NULL,0);
+      uint8_t version =  strtoul(versionStr,NULL,0);
+      uint8_t *data =  static_cast<uint8_t*>(pvPortMalloc(dataStrLen+1));
+      configASSERT(data);
+      memcpy(data, dataStr, dataStrLen);
+      data[dataStrLen] = 0;
+
+      bm_pub(topic, data, dataStrLen, type, version);
+      vPortFree(topic);
+      vPortFree(data);
+    }
+    else {
+      printf("ERR Invalid arguments\n");
     }
   } while(0);
 

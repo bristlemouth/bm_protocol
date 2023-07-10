@@ -17,7 +17,8 @@ static const CLI_Command_Definition_t cmd_debug_ncp = {
   // Command string
   "ncp",
   // Help string
-  "ncp <log/debug/pub/sub/unsub> <message>\n",
+  "ncp:\n"
+  " * ncp <log/debug/pub/sub/unsub> <message>\n",
   // Command function
   cmd_debug_ncp_fn,
   // Number of parameters

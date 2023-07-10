@@ -55,14 +55,14 @@ static const CLI_Command_Definition_t cmdDebug = {
   "debug",
   // Help string
   "debug:\n"
-  " * reset - Reset device\n"
-  " * mem - Get some memory statistics\n"
-  " * tasks - Print task statistics\n"
+  " * debug reset - Reset device\n"
+  " * debug mem - Get some memory statistics\n"
+  " * debug tasks - Print task statistics\n"
 #if BUILD_DEBUG
-  " * crash - Generate crash\n"
-  " * hardfault - Generate hardfault\n"
-  " * null - Dereference null pointer\n"
-  " * hang - Hang the process\n"
+  " * debug crash - Generate crash\n"
+  " * debug hardfault - Generate hardfault\n"
+  " * debug null - Dereference null pointer\n"
+  " * debug hang - Hang the process\n"
 #endif
   " * bootloader - Restart and enter bootloader\n",
   // Command function
@@ -265,7 +265,7 @@ static void getSysStats() {
 
    /* Allocate a TaskStatus_t structure for each task.  An array could be
    allocated statically at compile time. */
-   taskStatusArray = (TaskStatus_t*)pvPortMalloc( numberOfTasks * sizeof( TaskStatus_t ) );
+   taskStatusArray = reinterpret_cast<TaskStatus_t*>(pvPortMalloc( numberOfTasks * sizeof( TaskStatus_t ) ));
    configASSERT(taskStatusArray != NULL);
 
    printf("%-15s | %-9s | pr | bPr | StackHighWaterMark\n","Task Name", "State");
