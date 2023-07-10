@@ -167,7 +167,7 @@ void loop(void) {
     IOWrite(&BF_LED_G2, LED_ON);
     rxLedState = true;
   }
-  else if (rxLedState && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
+  else if (rxLedState && ((uint32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     IOWrite(&BF_LED_G2, LED_OFF);
     ledLinePulse = -1;
     rxLedState = false;
