@@ -29,8 +29,10 @@ private:
 public:
     static constexpr uint32_t OFF = (1 << 0);
     static constexpr uint32_t ON = (1 << 1);
-    static constexpr uint32_t DEFAULT_SAMPLE_INTERVAL_MS = (5 * 60 * 1000);
+    static constexpr uint32_t DEFAULT_POWER_CONTROLLER_ENABLED = 0;
+    static constexpr uint32_t DEFAULT_SAMPLE_INTERVAL_MS = (20 * 60 * 1000);
     static constexpr uint32_t DEFAULT_SAMPLE_DURATION_MS = (5 * 60 * 1000);
+    static constexpr uint32_t DEFAULT_SUBSAMPLE_ENABLED = 0;
     static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_MS = (60 * 1000);
     static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_MS = (30 * 1000);
     static constexpr uint32_t MIN_SAMPLE_INTERVAL_MS = (60 * 1000);

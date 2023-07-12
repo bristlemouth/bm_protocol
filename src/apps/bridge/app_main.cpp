@@ -331,17 +331,17 @@ static void defaultTask( void *parameters ) {
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition,&debug_configuration_user, &debug_configuration_system);
 
-    uint32_t sampleIntervalMs = (20 * 60 * 1000); // FIXME test default 20 min interval
+    uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_MS;
     debug_configuration_system.getConfig("sampleIntervalMs", strlen("sampleIntervalMs"),sampleIntervalMs);
-    uint32_t sampleDurationMs = (5 * 60 * 1000); // FIXME test default 5 min duration
+    uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_MS;
     debug_configuration_system.getConfig("sampleDurationMs",strlen("sampleDurationMs"),sampleDurationMs);
     uint32_t subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_MS;
     debug_configuration_system.getConfig("subSampleIntervalMs",strlen("subSampleIntervalMs"),subSampleIntervalMs);
     uint32_t subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_MS;
     debug_configuration_system.getConfig("subsampleDurationMs",strlen("subsampleDurationMs"),subsampleDurationMs);
-    uint32_t subsampleEnabled = 0;
+    uint32_t subsampleEnabled = BridgePowerController::DEFAULT_SUBSAMPLE_ENABLED;
     debug_configuration_system.getConfig("subsampleEnabled", strlen("subsampleEnabled"), subsampleEnabled);
-    uint32_t bridgePowerControllerEnabled = 1; // FIXME Default set to enabled for testing.
+    uint32_t bridgePowerControllerEnabled = BridgePowerController::DEFAULT_POWER_CONTROLLER_ENABLED;
     debug_configuration_system.getConfig("bridgePowerControllerEnabled", strlen("bridgePowerControllerEnabled"), bridgePowerControllerEnabled);
     printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
