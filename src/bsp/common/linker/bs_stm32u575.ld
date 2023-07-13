@@ -57,7 +57,7 @@ _ram_size = 768K;
 _noinit_size = 512;
 
 /* Highest address of the user mode stack */
-_estack = 0x20050000 - _noinit_size;    /* end of RAM minus a bit */
+_estack = (_ram_start + _ram_size) - _noinit_size;    /* end of RAM minus a bit */
 
 /* TODO - change this for 1MB parts*/
 _flash_size = 2048K;
@@ -228,3 +228,7 @@ SECTIONS
     KEEP(*(*.noinit*))
   } > NOINIT
 }
+
+ASSERT(
+    (_ebss <= _estack),
+    "Stack overlaps with bss")
