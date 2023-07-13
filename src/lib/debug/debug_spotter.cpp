@@ -42,7 +42,7 @@ static const CLI_Command_Definition_t cmdSpotter = {
     "spotter:\n"
     " * spotter printf <string>\n"
     " * spotter fprintf <file_name> <string>\n"
-    " * spotter txdata <i> <data>\n", // TODO - add back in c (cellular only) as an option
+    " * spotter txdata <i/c> <data>\n",
     // Command function
     cmd_spotter_fn,
     // Number of parameters (variable)
@@ -152,9 +152,8 @@ static BaseType_t cmd_spotter_fn( char *writeBuffer,
       bm_serial_network_type_e type;
       if(strncmp(typestr, "i", typeStrLen) == 0){
         type = BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK;
-      // TODO - add back in when supported
-      // } else if (strncmp(typestr, "c", typeStrLen) == 0) {
-      //   type = BM_NETWORK_TYPE_CELLULAR_ONLY;
+      } else if (strncmp(typestr, "c", typeStrLen) == 0) {
+        type = BM_NETWORK_TYPE_CELLULAR_ONLY;
       } else {
         printf("Invalid network type\n");
         break;
