@@ -2,6 +2,8 @@
 
 This document (hopefully) details the where/why/how of bristlemouth firmware. For instructions of development environment setup as well as flashing/debugging, see the main [README.md](README.md) file.
 
+If you're developing on the Bristlemouth Development Kit, see the [BMDK_README.md](./src/apps/bm_devkit/BMDK_README.md).
+
 # Directory Structure
 Where is everything?!
 

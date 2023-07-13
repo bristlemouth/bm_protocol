@@ -3,6 +3,8 @@
 ## Developer Guide (in progress)
 If you already have your development environment set up, check out the [DEVELOPER.md](DEVELOPER.md) file for some quick start guides, etc...
 
+If you're developing on the Bristlemouth Development Kit, see the [BMDK_README.md](./src/apps/bm_devkit/BMDK_README.md)
+
 ## Initial setup
 ### Install conda
 
@@ -59,7 +61,7 @@ Whenever you pull new project changes (specifically those that update environmen
 
 ### Set up Pre-commit
 
-This will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
+This is an optional step that will install helpful Pre-commit checks to make your code safer and more "beautiful". Make sure to have your conda env updated and active before running this command.
 
 ```
 pre-commit install
@@ -73,12 +75,15 @@ Note that if pre-commit modifies your code, you will need to `git add` the files
 If you'd like to force a commit through, use the `git commit --no-verify` flag.~
 
 ### Set up environment variables
-The environment variables needed for the project are listed in `.env.example`. You'll need to gather this information and put them in a `.env` file.
+The environment variables needed for the project are listed in `.env.example`.
+If you want to make use of [Memfault](#memfault) analysis you'll need to gather your credentials and put them in a `.env` file
+that is copied from the `.env.example`.
 
 ### Pull submodules
-Bristlemouth uses several submodules to include third party libraries, etc. These files might not have been downloaded when cloning/pulling. If that's the case, run `git submodule update --init` to download them.
+Bristlemouth uses several submodules to include third party libraries, etc.
+These files might not have been downloaded when cloning/pulling. If that's the case, run `git submodule update --init` to download them.
 
-A couple things to note about submodules
+A couple things to note about submodules:
 - The submodule folders do not update SHAs automatically. If we need updated scripts, run `git submodule update --remote path/to/submodule`
 
 
@@ -179,24 +184,6 @@ Once the device is in DFU mode, you can run `dfu-util -l` to see if the device i
 `make dfu_flash` can be used with both the bootloader and main applications.
 
 
-### Uploading .elf to Memfault
-
-After building the project, run `make memfault_upload`. Make sure your .env file is set up ahead of time!
-
-### Uploading memfault coredump over GDB
-If you're in GDB and a crash occurs, this is how you capture a coredump to upload to memfault (make sure you already ran `make memfault_upload`!) :
-
-In GDB:
-`source ../../../src/third_party/memfault-firmware-sdk/scripts/memfault_gdb.py`
-
-then
-
-`memfault login your@email <your memfault API key goes here> -o sofar-ocean -p bristlemouth`
-
-finally
-
-`memfault coredump`
-
 #### Flashing with a specific STLink device
 If you have more than one STLink debugger connected to your computer, you must tell the flashing script which one to use. The way to do this is as follows:
 
@@ -269,3 +256,28 @@ Once mpy-cross is compiled and saved in tools/bin, we can point the build proces
 export MICROPY_MPYCROSS=`git rev-parse --show-toplevel`//tools/bin/mpy-cross
 make -j
 ```
+
+
+## Memfault
+If you're using [Memfault](https://memfault.com/) for crash analysis, this section covers some useful workflows.
+
+### Uploading .elf to Memfault
+
+After building the project, run `make memfault_upload`. Make sure your .env file is set up ahead of time!
+
+### Uploading memfault coredump over GDB
+If you're in GDB and a crash occurs, this is how you capture a coredump to upload to memfault (make sure you already ran `make memfault_upload`!) :
+
+In GDB:
+`source ../../../src/third_party/memfault-firmware-sdk/scripts/memfault_gdb.py`
+
+then
+
+`memfault login your@email <your memfault API key goes here> -o <your organization> -p <your project>`
+
+if you're developing in the Sofar organization:
+`memfault login your@email <your memfault API key goes here> -o sofar-ocean -p bristlemouth`
+
+finally
+
+`memfault coredump`

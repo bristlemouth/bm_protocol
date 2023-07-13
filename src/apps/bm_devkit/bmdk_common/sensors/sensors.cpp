@@ -9,9 +9,9 @@
 #include "ina232.h"
 
 // Sampler initialization functions (so we don't need individual headers)
-void powerSamplerInit(INA::INA232 **sensors);
-void pressureSamplerInit(MS5803 *sensor);
-void htuSamplerInit(HTU21D *sensor);
+void powerSamplerInit(INA::INA232 **sensors); // implemented in src/lib/sensor_sampler/powerSampler.cpp
+void pressureSamplerInit(MS5803 *sensor); // src/lib/sensor_sampler/pressureSampler.cpp
+void htuSamplerInit(HTU21D *sensor); // src/lib/sensor_sampler/htuSampler.cpp
 
 MS5803 debugPressure(&i2c1, MS5803_ADDR);
 HTU21D debugHTU(&i2c1);

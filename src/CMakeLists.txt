@@ -213,7 +213,11 @@ set(APP_NAME ${APP})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(APP_NAME ${APP_NAME}-dbg)
 endif()
-add_subdirectory(apps/${APP})
+if(CMAKE_APP_TYPE STREQUAL "BMDK")
+    add_subdirectory(apps/bm_devkit/${APP})
+else()
+    add_subdirectory(apps/${APP})
+endif()
 
 set(EXECUTABLE ${BSP}-${APP_NAME}.elf)
 

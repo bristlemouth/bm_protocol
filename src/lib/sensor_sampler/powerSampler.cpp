@@ -98,7 +98,7 @@ static bool powerInit() {
 }
 
 static sensor_t powerSensors = {
-  .intervalMs = 1000,
+  .intervalMs = 10000,
   .initFn = powerInit,
   .sampleFn = powerSample,
   .checkFn = NULL

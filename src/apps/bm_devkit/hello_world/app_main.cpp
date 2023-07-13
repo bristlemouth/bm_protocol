@@ -20,6 +20,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
+#include "bristlefin.h"
 #include "debug_spotter.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
@@ -256,7 +257,8 @@ void handle_bm_subscriptions(uint64_t node_id, const char* topic, uint16_t topic
   }
 }
 
-// TODO - move this to some debug file?
+// TODO - move this to some debug file
+// Defines lost if GPIOs for Debug CLI
 static const DebugGpio_t debugGpioPins[] = {
     {"adin_cs", &ADIN_CS, GPIO_OUT},
     {"adin_int", &ADIN_INT, GPIO_IN},
@@ -381,7 +383,10 @@ static void defaultTask( void *parameters ) {
   IOWrite(&BF_LED_R1, LED_OFF);
   IOWrite(&BF_LED_G2, LED_OFF);
   IOWrite(&BF_LED_R2, LED_OFF);
-
+  IOWrite(&BF_5V_EN, 1); // 0 enables, 1 disables. Needed for SDI12 and RS485.
+  IOWrite(&BF_3V3_EN, 1); // 1 enables, 0 disables. Needed for I2C and I/O control.
+  IOWrite(&VBUS_BF_EN, 1); // 0 enables, 1 disables. Needed for VOUT and 5V.
+  IOWrite(&BF_PL_BUCK_EN, 1); // 0 enables, 1 disables. Vout
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif

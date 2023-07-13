@@ -73,7 +73,7 @@ static bool baroCheck() {
 }
 
 static sensor_t pressureSensor = {
-  .intervalMs = 1000,
+  .intervalMs = 10000,
   .initFn = baroInit,
   .sampleFn = baroSample,
   .checkFn = baroCheck

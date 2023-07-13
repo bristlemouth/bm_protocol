@@ -64,7 +64,7 @@ static bool htuSample() {
 }
 
 static sensor_t htuSensor = {
-  .intervalMs = 1000,
+  .intervalMs = 10000,
   .initFn = htuInit,
   .sampleFn = htuSample,
   .checkFn = NULL

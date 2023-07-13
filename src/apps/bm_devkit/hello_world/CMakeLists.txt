@@ -93,6 +93,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
+    ${SRC_DIR}/lib/bristlefin/payload_uart.cpp
+    ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
+    ${SRC_DIR}/lib/common/LineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c
@@ -129,6 +132,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/lib/bridge
+    ${SRC_DIR}/lib/bristlefin
     ${SRC_DIR}/lib/sensor_sampler
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
@@ -220,9 +224,9 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/external_flash_partitions.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
@@ -233,9 +237,10 @@ set(APP_FILES
     )
 
 set(APP_INCLUDES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
-    ${CMAKE_CURRENT_SOURCE_DIR}/sensors
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors
     ${FREERTOS_INCLUDES}
     ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}

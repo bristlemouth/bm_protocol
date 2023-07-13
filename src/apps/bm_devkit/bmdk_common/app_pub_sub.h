@@ -11,12 +11,6 @@ extern "C" {
 #define APP_PUB_SUB_UTC_TYPE            1
 #define APP_PUB_SUB_UTC_VERSION         1
 
-#define APP_PUB_SUB_BUTTON_TOPIC        "button"
-#define APP_PUB_SUB_BUTTON_TYPE         1
-#define APP_PUB_SUB_BUTTON_VERSION      1
-#define APP_PUB_SUB_BUTTON_CMD_ON       "on"
-#define APP_PUB_SUB_BUTTON_CMD_OFF      "off"
-
 #ifdef __cplusplus
 }
 #endif
