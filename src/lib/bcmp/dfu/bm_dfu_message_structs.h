@@ -11,6 +11,8 @@ typedef struct __attribute__((__packed__)) bm_dfu_img_info_s {
     uint32_t gitSHA;
 } bm_dfu_img_info_t;
 
+#define BM_DFU_IMG_INFO_FORCE_UPDATE (0x4CEDc0fe)
+
 typedef struct __attribute__((__packed__)) bm_dfu_frame_header_s {
     uint8_t frame_type;
 } bm_dfu_frame_header_t;

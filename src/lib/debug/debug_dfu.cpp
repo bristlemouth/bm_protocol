@@ -14,7 +14,7 @@ static const CLI_Command_Definition_t cmdDfu = {
   "dfu",
   // Help string
   "dfu:\n"
-  " * dfu start <node id> <TimeoutMs>\n",
+  " * dfu start <node id> <filter_key> <TimeoutMs>\n",
   // Command function
   dfuCommand,
   // Number of parameters (variable)
@@ -48,7 +48,7 @@ static BaseType_t dfuCommand( char *writeBuffer,
     do {
         const char *parameter = FreeRTOS_CLIGetParameter(
                 commandString,
-                1, // Get the first parameter (command)
+                1,
                 &parameterStringLength);
 
         if(parameter == NULL) {
@@ -59,16 +59,25 @@ static BaseType_t dfuCommand( char *writeBuffer,
         if (strncmp("start", parameter, parameterStringLength) == 0) {
             const char *nodeIdStr = FreeRTOS_CLIGetParameter(
                     commandString,
-                    2, // Get the first parameter (command)
+                    2,
                     &parameterStringLength);
 
             if(nodeIdStr == NULL) {
                 printf("ERR Invalid paramters\n");
                 break;
             }
+            const char *filterKeyStr = FreeRTOS_CLIGetParameter(
+                    commandString,
+                    3,
+                    &parameterStringLength);
+
+            if(filterKeyStr == NULL) {
+                printf("ERR Invalid paramters\n");
+                break;
+            }
             const char *timeoutMsStr = FreeRTOS_CLIGetParameter(
                     commandString,
-                    3, // Get the first parameter (command)
+                    4,
                     &parameterStringLength);
 
             if(timeoutMsStr == NULL) {
@@ -76,6 +85,7 @@ static BaseType_t dfuCommand( char *writeBuffer,
                 break;
             }
             uint64_t node_id = strtoull(nodeIdStr, NULL, 0);
+            uint32_t filter_key = strtoul(filterKeyStr, NULL, 0);
             uint32_t timeoutMS = strtoul(timeoutMsStr, NULL, 0);
             bm_dfu_img_info_t image_info;
             if(!_dfu_cli_partition->read(DFU_HEADER_OFFSET_BYTES, reinterpret_cast<uint8_t*>(&image_info), sizeof(bm_dfu_img_info_t), 1000)){
@@ -91,6 +101,7 @@ static BaseType_t dfuCommand( char *writeBuffer,
                 printf("CRCs don't match %x, %x, invalid image!\n", crc, image_info.crc16);
                 break;
             }
+            image_info.filter_key = filter_key;
             printf("Image valid, attempting to update\n");
             if(!bm_dfu_initiate_update(image_info, node_id, updateSuccessCallback, timeoutMS)){
                 printf("Failed to start update\n");

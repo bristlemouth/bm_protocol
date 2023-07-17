@@ -227,7 +227,7 @@ void bm_dfu_client_process_update_request(void) {
     major_version = img_info_evt->img_info.major_ver;
     client_ctx.host_node_id = img_info_evt->addresses.src_node_id;
 
-    if (img_info_evt->img_info.gitSHA != getGitSHA()) {
+    if (img_info_evt->img_info.gitSHA != getGitSHA() || img_info_evt->img_info.filter_key == BM_DFU_IMG_INFO_FORCE_UPDATE) {
         if(chunk_size > BM_DFU_MAX_CHUNK_SIZE) {
             bm_dfu_client_abort();
             bm_dfu_client_transition_to_error(BM_DFU_ERR_CHUNK_SIZE);
