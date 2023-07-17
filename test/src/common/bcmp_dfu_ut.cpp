@@ -496,7 +496,7 @@ TEST_F(BcmpDfuTest, hostGolden) {
     dfu_end_msg.result.addresses.src_node_id = 0xbeefbeefdaadbaad;
     dfu_end_msg.result.err_code = BM_DFU_ERR_NONE;
     dfu_end_msg.result.success = 1;
-    memcpy(evt.buf, &dfu_reboot_done_msg, sizeof(dfu_reboot_done_msg));
+    memcpy(evt.buf, &dfu_end_msg, sizeof(dfu_end_msg));
     bm_dfu_test_set_dfu_event_and_run_sm(evt);
     EXPECT_EQ(getCurrentStateEnum(*ctx), BM_DFU_STATE_IDLE);
     

@@ -11,7 +11,6 @@
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bootutil/bootutil_public.h"
-#include "bootutil/image.h"
 #include "flash_map_backend/flash_map_backend.h"
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"

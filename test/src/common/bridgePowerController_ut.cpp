@@ -74,8 +74,8 @@ class BridgePowerControllerTest : public ::testing::Test {
 
     static constexpr uint32_t SAMPLE_DURATION_MS = (3 * 60 * 1000);
   // Objects declared here can be used by all tests in the test suite for Foo.
-    IODriver_t fake_io_driver = {.read = fake_io_read_func, .write = fake_io_write_func};
-    IOPinHandle_t FAKE_VBUS_EN = {.pin = NULL, .driver = &fake_io_driver};
+    IODriver_t fake_io_driver = { .write = fake_io_write_func, .read = fake_io_read_func, .config = NULL, .registerCallback=NULL};
+    IOPinHandle_t FAKE_VBUS_EN = { .driver = &fake_io_driver, .pin = NULL};
 };
 
 TEST_F(BridgePowerControllerTest, goldenPath) {
@@ -88,7 +88,7 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
     EXPECT_EQ(fake_io_write_func_fake.call_count, 2); // Init sequence powers the bus on for two minutes, then off.
     EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
     EXPECT_EQ(fake_io_write_func_fake.arg1_history[1], 0);
-    EXPECT_EQ(xTaskGetTickCount(), (2 * 60 * 1000 + 1000));
+    EXPECT_EQ(xTaskGetTickCount(), (2 * 60 * 1000 + 6000)); // 2 min + MIN_TASK_SLEEP_MS
 
     // Bridge Controller is now intitialized, not enabled and RTC is not set
     // Bus should still be off

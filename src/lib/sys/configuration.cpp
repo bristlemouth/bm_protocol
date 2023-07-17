@@ -12,7 +12,7 @@
 namespace cfg {
 
 Configuration::Configuration(NvmPartition& flash_partition, uint8_t *ram_partition, size_t ram_partition_size):_flash_partition(flash_partition), _ram_partition_size(ram_partition_size), _needs_commit(false) {
-    configASSERT(_ram_partition);
+    configASSERT(ram_partition);
     configASSERT(_ram_partition_size >= sizeof(ConfigPartition_t));
     _ram_partition = reinterpret_cast<ConfigPartition_t*>(ram_partition);
     if(!loadAndVerifyNvmConfig()) {

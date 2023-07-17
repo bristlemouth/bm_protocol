@@ -1,3 +1,4 @@
+#include <cinttypes>
 #include "bridgePowerController.h"
 #include "FreeRTOS.h"
 #include "task.h"

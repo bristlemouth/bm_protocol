@@ -50,10 +50,7 @@ def unit_test_commands(test, verbose=False, jobs=4):
     project_root = get_project_root()
 
     cmake_cmd = f"cmake {project_root}"
-    if verbose:
-        ctest_cmd = "ctest -V"
-    else:
-        ctest_cmd = "ctest"
+    ctest_cmd = "ctest -V"
 
     commands = [cmake_cmd.split(" "), f"make -j {jobs}".split(" "), ctest_cmd.split(" ")]
 

@@ -2,7 +2,6 @@
 #include "fff.h"
 #include <stdint.h>
 #include "bootutil/bootutil_public.h"
-#include "bootutil/image.h"
 #include "flash_map_backend/flash_map_backend.h"
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
