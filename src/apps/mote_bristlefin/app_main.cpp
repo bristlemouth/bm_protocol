@@ -350,7 +350,10 @@ static void defaultTask( void *parameters ) {
 
     sensorsInit();
     // TODO - get this from the nvm cfg's!
-    sensorConfig_t sensorConfig = { .sensorCheckIntervalS=10 };
+    sensorConfig_t sensorConfig = {
+        .sensorCheckIntervalS=10,
+        .sensorsPollIntervalMs=1000
+    };
     sensorSamplerInit(&sensorConfig);
 
     bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);

@@ -46,8 +46,6 @@ pressureData_t pressure_data = {};
  *    - an unsigned integer representing the tick time of the Coda sensor
  *    - a floating point number representing the pressure in deci-bar
  *    - a 256 character buffer should be more than enough */
-size_t maxLineLen = 256;
-const char* separator = ",";
 // For unsigned ints, let's use 64 bits, and for floating point let's use 64 bit doubles.
 //   We've got luxurious amounts of RAM on this chip, and it's much easier to avoid roll-overs and precision issues
 //   by using it vs. troubleshooting them because we prematurely optimized things.
@@ -175,7 +173,7 @@ void loop(void) {
         .values = NULL
     };
     memcpy(tx_data, (uint8_t*)(&tx_pressure), 34);
-    if(bm_network_publish(tx_data, 34, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)){
+    if(spotter_tx_data(tx_data, 34, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)){
       printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
     }
     else {

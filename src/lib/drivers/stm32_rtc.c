@@ -1,6 +1,8 @@
 #include "stm32_rtc.h"
 #include "stm32u5xx_ll_rcc.h"
 #include "util.h"
+#include <stdio.h>
+#include <string.h>
 
 // Magic number to write into backup register 0 to indicate that the rtc is set
 #define RTC_SET_MAGIC 0x836A20DD
@@ -102,6 +104,28 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   }
 
   return rval;
+}
+
+BaseType_t rtcPrint(char* buffer, RTCTimeAndDate_t* timeAndDate) {
+  RTCTimeAndDate_t rtc = {};
+  if (timeAndDate == NULL) {
+    rtcGet(&rtc);
+  } else {
+    memcpy(&rtc, timeAndDate, sizeof(RTCTimeAndDate_t));
+  }
+  if (rtc.year != 0) {
+    return sprintf(buffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
+            rtc.year,
+            rtc.month,
+            rtc.day,
+            rtc.hour,
+            rtc.minute,
+            rtc.second,
+            rtc.ms);
+  } else {
+    strcpy(buffer, "0");
+    return 0;
+  }
 }
 
 BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {

@@ -7,4 +7,4 @@ typedef enum {
     BM_NETWORK_TYPE_CELLULAR_ONLY = (1 << 1),
 } bm_serial_network_type_e;
 
-bool bm_network_publish(const void* data, uint16_t data_len, bm_serial_network_type_e type);
+bool spotter_tx_data(const void* data, uint16_t data_len, bm_serial_network_type_e type);

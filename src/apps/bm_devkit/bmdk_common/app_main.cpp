@@ -126,6 +126,12 @@ SerialHandle_t usbPcap   = {
     .flags = 0,
 };
 
+// Simple Mutex for users to use, declared in app_main
+SemaphoreHandle_t xUserDataMutex = NULL;
+cfg::Configuration *userConfigurationPartition = NULL;
+
+uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
+uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
 extern "C" void USART3_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart3);
@@ -167,6 +173,10 @@ extern "C" int main(void) {
 
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
+
+  // Init user data Mutex
+  xUserDataMutex = xSemaphoreCreateMutex();
+  configASSERT(xUserDataMutex);
 
   BaseType_t rval = xTaskCreate(defaultTask,
                                 "Default",
@@ -364,6 +374,9 @@ static void defaultTask( void *parameters ) {
   cfg::Configuration debug_configuration_user(debug_user_partition,ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
   cfg::Configuration debug_configuration_hardware(debug_hardware_partition,ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
   cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"), sys_cfg_sensorsPollIntervalMs);
+  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"), sys_cfg_sensorsCheckIntervalS);
+  userConfigurationPartition = &debug_configuration_user;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
@@ -371,10 +384,13 @@ static void defaultTask( void *parameters ) {
   debugDfuInit(&dfu_partition);
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
-  sensorsInit();
-  // TODO - get this from the nvm cfg's!
-  sensorConfig_t sensorConfig = { .sensorCheckIntervalS=10 };
+  sensorConfig_t sensorConfig = {
+      .sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+      .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs
+  };
   sensorSamplerInit(&sensorConfig);
+  // must call sensorsInit after sensorSamplerInit
+  sensorsInit();
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 

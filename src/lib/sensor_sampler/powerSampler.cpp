@@ -5,7 +5,6 @@
 #include "bm_pubsub.h"
 #include "bm_printf.h"
 #include "bsp.h"
-#include "stm32_rtc.h"
 #include "uptime.h"
 #include "debug.h"
 #include "ina232.h"
@@ -18,11 +17,11 @@ using namespace INA;
 
 static INA232** _inaSensors;
 
-#define INA_STR_LEN 80
+// Optional user-defined sample processing function
+void userPowerSample(powerSample_t power_sample) __attribute__((weak));
 
 /*
   sensorSampler function to take power sample(s)
-
   \return true if successful false otherwise
 */
 static bool powerSample() {
@@ -40,35 +39,25 @@ static bool powerSample() {
     } while( !success && (--retriesRemaining > 0));
 
     if(success) {
+      RTCTimeAndDate_t time_and_date = {};
+      rtcGet(&time_and_date);
+      powerSample_t _powerData {
+          .uptime = uptimeGetMs(),
+          .rtcTime = time_and_date,
+          .address = _inaSensors[dev_num]->getAddr(),
+          .voltage = voltage,
+          .current = current
+      };
 
-      struct {
-        uint16_t address;
-        float voltage;
-        float current;
-      } __attribute__((packed)) _powerData;
-
-      _powerData.address = _inaSensors[dev_num]->getAddr();
-      _powerData.voltage = voltage;
-      _powerData.current = current;
-
-      RTCTimeAndDate_t timeAndDate;
       char rtcTimeBuffer[32];
-      if (rtcGet(&timeAndDate) == pdPASS) {
-        sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-                timeAndDate.year,
-                timeAndDate.month,
-                timeAndDate.day,
-                timeAndDate.hour,
-                timeAndDate.minute,
-                timeAndDate.second,
-                timeAndDate.ms);
-      } else {
-        strcpy(rtcTimeBuffer, "0");
-      }
-
-      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",uptimeGetMs(), rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
-      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      rtcPrint(rtcTimeBuffer, &time_and_date);
       printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
+      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      if (userPowerSample) userPowerSample(_powerData);
+    }
+    else {
+      printf("ERR Failed to sample power monitr %u!", dev_num);
     }
     rval &= success;
   }
@@ -98,7 +87,6 @@ static bool powerInit() {
 }
 
 static sensor_t powerSensors = {
-  .intervalMs = 10000,
   .initFn = powerInit,
   .sampleFn = powerSample,
   .checkFn = NULL

@@ -16,9 +16,11 @@
 
 static MS5803* _pressureSensor;
 
+// Optional user-defined sample processing function
+void userPressureSample(pressureSample_t pressure_sample) __attribute__((weak));
+
 /*
   sensorSampler function to take barometer sample
-
   \return true if successful false otherwise
 */
 static bool baroSample() {
@@ -31,26 +33,25 @@ static bool baroSample() {
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    RTCTimeAndDate_t timeAndDate;
-    char rtcTimeBuffer[32];
-    if (rtcGet(&timeAndDate) == pdPASS) {
-        sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-                timeAndDate.year,
-                timeAndDate.month,
-                timeAndDate.day,
-                timeAndDate.hour,
-                timeAndDate.minute,
-                timeAndDate.second,
-                timeAndDate.ms);
-    } else {
-      strcpy(rtcTimeBuffer, "0");
-    }
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    pressureSample_t _pressureData {
+        .uptime = uptimeGetMs(),
+        .rtcTime = time_and_date,
+        .temperature = temperature,
+        .pressure = pressure
+    };
 
-    bm_fprintf(0, "pressure.log", "tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, temperature, pressure);
-    bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(), rtcTimeBuffer, temperature, pressure);
-    printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, temperature, pressure);
+    char rtcTimeBuffer[32] = {};
+    rtcPrint(rtcTimeBuffer, &time_and_date);
+    printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
+    bm_fprintf(0, "pressure.log", "tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
+    bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
+    if (userPressureSample) userPressureSample(_pressureData);
   }
-
+  else {
+    printf("ERR Failed to sample pressure sensor!");
+  }
   return success;
 }
 
@@ -73,7 +74,6 @@ static bool baroCheck() {
 }
 
 static sensor_t pressureSensor = {
-  .intervalMs = 10000,
   .initFn = baroInit,
   .sampleFn = baroSample,
   .checkFn = baroCheck

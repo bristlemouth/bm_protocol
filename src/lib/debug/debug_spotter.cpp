@@ -162,7 +162,7 @@ static BaseType_t cmd_spotter_fn( char *writeBuffer,
       configASSERT(data);
       memcpy(data, dataStr, dataLen);
       data[dataLen] = 0;
-      if(bm_network_publish(data, dataLen, type)){
+      if(spotter_tx_data(data, dataLen, type)){
         printf("Sucessfully sent data transmit request\n");
       } else {
         printf("Failed to send data transmit request\n");

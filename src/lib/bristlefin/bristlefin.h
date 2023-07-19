@@ -7,6 +7,10 @@
 #define BF_LED_ON (0)
 #define BF_LED_OFF (1)
 
+// I2C Addresses
+#define I2C_ADDR_MOTE_THROUGH_POWER_MON 0x41
+#define I2C_ADDR_BMDK_LOAD_POWER_MON 0x43
+
 namespace BF {
 
   typedef enum {

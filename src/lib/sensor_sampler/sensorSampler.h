@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stm32_rtc.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -12,9 +13,28 @@ typedef bool (*sensorInitFn)();
 typedef bool (*sensorCheckFn)();
 
 typedef struct {
-  /// Sample interval in milliseconds
-  uint16_t intervalMs;
+  uint64_t uptime;
+  RTCTimeAndDate_t rtcTime;
+  uint16_t address;
+  float voltage;
+  float current;
+} __attribute__((packed)) powerSample_t;
 
+typedef struct {
+  uint64_t uptime;
+  RTCTimeAndDate_t rtcTime;
+  float temperature;
+  float humidity;
+} __attribute__((packed)) humTempSample_t;
+
+typedef struct {
+  uint64_t uptime;
+  RTCTimeAndDate_t rtcTime;
+  float temperature;
+  float pressure;
+} __attribute__((packed)) pressureSample_t;
+
+typedef struct {
   /// Initialization function
   sensorInitFn initFn;
 
@@ -27,6 +47,7 @@ typedef struct {
 
 typedef struct {
   uint16_t sensorCheckIntervalS;
+  uint32_t sensorsPollIntervalMs;
 } sensorConfig_t;
 
 // Default configuration used in case sysConfig isn't loaded

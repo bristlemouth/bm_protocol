@@ -112,6 +112,7 @@ static void sensorTimerCallback(TimerHandle_t timer) {
 */
 bool sensorSamplerAdd(sensor_t *sensor, const char *name) {
   configASSERT(sensor != NULL);
+  configASSERT(_config != NULL);
   configASSERT(numSensors < MAX_SENSORS);
   configASSERT(name != NULL);
 
@@ -132,11 +133,11 @@ bool sensorSamplerAdd(sensor_t *sensor, const char *name) {
   numSensors++;
 
   // Initialize sensor if needed
-  if (sensorItem->sensor->intervalMs > 0){
+  if (_config->sensorsPollIntervalMs > 0){
     if(sensorItem->sensor->initFn()) {
       sensorItem->timer = xTimerCreate(
         name,
-        pdMS_TO_TICKS(sensorItem->sensor->intervalMs),
+        pdMS_TO_TICKS(_config->sensorsPollIntervalMs),
         pdTRUE, // Enable auto-reload
         reinterpret_cast<void *>(sensorItem->flag),
         sensorTimerCallback

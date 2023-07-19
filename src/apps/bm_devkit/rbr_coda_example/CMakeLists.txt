@@ -223,7 +223,7 @@ set(LWIP_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/external_flash_partitions.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp

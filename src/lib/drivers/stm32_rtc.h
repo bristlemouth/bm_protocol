@@ -29,6 +29,7 @@ typedef struct {
 BaseType_t rtcInit();
 BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate);
 BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate);
+BaseType_t rtcPrint(char* buffer, RTCTimeAndDate_t* timeAndDate);
 uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate);
 bool isRTCSet();
 bool isRTCValid(RTCTimeAndDate_t *receivedTimeAndDate, uint32_t driftThesholdS, uint32_t *deltaS);

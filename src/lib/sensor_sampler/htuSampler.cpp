@@ -16,9 +16,11 @@
 
 static HTU21D* _htu21d;
 
+// Optional user-defined sample processing function
+void userHumTempSample(humTempSample_t hum_temp_sample) __attribute__((weak));
+
 /*
   sensorSampler function to initialize HTU
-
   \return true if successful false otherwise
 */
 static bool htuInit() {
@@ -40,31 +42,29 @@ static bool htuSample() {
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
-    RTCTimeAndDate_t timeAndDate;
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    humTempSample_t _humTempData {
+      .uptime = uptimeGetMs(),
+      .rtcTime = time_and_date,
+      .temperature = temperature,
+      .humidity = humidity
+    };
+
     char rtcTimeBuffer[32];
-    if (rtcGet(&timeAndDate) == pdPASS) {
-      sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-              timeAndDate.year,
-              timeAndDate.month,
-              timeAndDate.day,
-              timeAndDate.hour,
-              timeAndDate.minute,
-              timeAndDate.second,
-              timeAndDate.ms);
-    } else {
-      strcpy(rtcTimeBuffer, "0");
-    }
-
-    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, humidity, temperature);
-    bm_printf(0, "htu | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(), rtcTimeBuffer, humidity, temperature);
-    printf("htu | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, humidity, temperature);
+    rtcPrint(rtcTimeBuffer, &time_and_date);
+    printf("hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
+    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
+    bm_printf(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
+    if (userHumTempSample) userHumTempSample(_humTempData);
   }
-
+  else {
+    printf("ERR Failed to sample pressure sensor!");
+  }
   return success;
 }
 
 static sensor_t htuSensor = {
-  .intervalMs = 10000,
   .initFn = htuInit,
   .sampleFn = htuSample,
   .checkFn = NULL
