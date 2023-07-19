@@ -305,7 +305,7 @@ static void defaultTask( void *parameters ) {
 #ifndef DEBUG_USE_USART1
   debugMemfaultInit(&usart1);
 #endif // DEBUG_USE_USART1
-  debugHtu21dInit(&debugHTU);
+  debugHtuInit(&debugHTU);
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);

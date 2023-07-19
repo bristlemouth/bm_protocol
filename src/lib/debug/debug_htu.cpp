@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "cli.h"
 
-static HTU21D* _htu = NULL;
+static AbstractHtu* _htu = NULL;
 
 static BaseType_t htuCommand( char *writeBuffer,
                                   size_t writeBufferLen,
@@ -25,7 +25,7 @@ static const CLI_Command_Definition_t cmdHtu = {
 };
 
 
-void debugHtu21dInit(HTU21D* htu) {
+void debugHtuInit(AbstractHtu* htu) {
     _htu = htu;
     FreeRTOS_CLIRegisterCommand( &cmdHtu );
 }

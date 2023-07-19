@@ -1,4 +1,4 @@
 #pragma once
-#include "htu21d.h"
+#include "abstract_htu_sensor.h"
 
-void debugHtu21dInit(HTU21D* htu);
+void debugHtuInit(AbstractHtu* htu);

@@ -1,4 +1,4 @@
-#include "debug_ms5803.h"
+#include "debug_pressure_sensor.h"
 #include "FreeRTOS.h"
 #include "FreeRTOS_CLI.h"
 #include <string.h>
@@ -6,13 +6,13 @@
 #include "debug.h"
 #include "cli.h"
 
-static MS5803* _ms5803 = NULL;
+static AbstractPressureSensor* _pressure_sensor = NULL;
 
-static BaseType_t ms5803Command( char *writeBuffer,
+static BaseType_t pressureSensorCommand( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString);
 
-static const CLI_Command_Definition_t cmdMs5803 = {
+static const CLI_Command_Definition_t cmdPressureSensor = {
   // Command string
   "pressure",
   // Help string
@@ -23,18 +23,18 @@ static const CLI_Command_Definition_t cmdMs5803 = {
   " * check - check the devices prom\n"
   " * sig - get the device signature\n",
   // Command function
-  ms5803Command,
+  pressureSensorCommand,
   // Number of parameters (variable)
   -1
 };
 
 
-void debugMs5803Init(MS5803* ms5803) {
-    _ms5803 = ms5803;
-    FreeRTOS_CLIRegisterCommand( &cmdMs5803 );
+void debugPressureSensorInit(AbstractPressureSensor* pressure_sensor) {
+    _pressure_sensor = pressure_sensor;
+    FreeRTOS_CLIRegisterCommand( &cmdPressureSensor );
 }
 
-static BaseType_t ms5803Command( char *writeBuffer,
+static BaseType_t pressureSensorCommand( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString) {
     BaseType_t parameterStringLength;
@@ -43,8 +43,8 @@ static BaseType_t ms5803Command( char *writeBuffer,
     ( void ) writeBufferLen;
 
     do {
-        if(!_ms5803){
-            printf("ms5803 debug not initialized!\n");
+        if(!_pressure_sensor){
+            printf("pressure sensor debug not initialized!\n");
             break;
         }
         const char *parameter = FreeRTOS_CLIGetParameter(
@@ -58,31 +58,31 @@ static BaseType_t ms5803Command( char *writeBuffer,
         }
         if (strncmp("read", parameter, parameterStringLength) == 0) {
             float temp, pressure;
-            if(!_ms5803->readPTRaw(pressure, temp)){
-                printf("failed to read ms5803\n");
+            if(!_pressure_sensor->readPTRaw(pressure, temp)){
+                printf("failed to read pressure sensor\n");
                 break;
             }
             printf("Temp:%f, Pressure:%f\n",temp, pressure);
         } else if (strncmp("reset", parameter, parameterStringLength) == 0) {
-            if(!_ms5803->reset()){
+            if(!_pressure_sensor->reset()){
                 printf("Failed to reset device!\n");
                 break;
             }
             printf("Device reset\n");
         } else if (strncmp("init", parameter, parameterStringLength) == 0) {
-            if(!_ms5803->init()){
+            if(!_pressure_sensor->init()){
                 printf("Failed to initialize\n");
                 break;
             }
             printf("Initialized!\n");
         } else if (strncmp("check", parameter, parameterStringLength) == 0) {
-            if(!_ms5803->checkPROM()){
+            if(!_pressure_sensor->checkPROM()){
                 printf("PROM check failed!\n");
                 break;
             }
             printf("PROM check passed!\n");
         } else if (strncmp("sig", parameter, parameterStringLength) == 0) {
-            printf("Signature: %" PRIu32 "\n",_ms5803->signature());
+            printf("Signature: %" PRIu32 "\n",_pressure_sensor->signature());
         } else {
             printf("ERR Invalid paramters\n");
         }

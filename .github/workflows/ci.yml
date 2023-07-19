@@ -48,6 +48,7 @@ jobs:
           git submodule update --init src/third_party/micropython-lib
           git submodule update --init src/third_party/tinycbor
           git submodule update --init src/third_party/tinyusb
+          git submodule update --init src/third_party/BME280_driver
           git submodule update --init test/third_party/fff
 
       - name: Run Tests

@@ -59,7 +59,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
-    ${SRC_DIR}/lib/debug/debug_ms5803.cpp
+    ${SRC_DIR}/lib/debug/debug_pressure_sensor.cpp
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
@@ -105,6 +105,8 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
     ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
     ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
+    ${SRC_DIR}/lib/drivers/bme280driver.cpp
+    ${SRC_DIR}/third_party/BME280_driver/bme280.c
     )
 
 set(LIB_INCLUDES
@@ -131,6 +133,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/third_party/tinycbor/src
+    ${SRC_DIR}/third_party/BME280_driver
     )
 
 if (USE_BOOTLOADER STREQUAL 1)
@@ -230,8 +233,7 @@ set(APP_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${MCUBOOT_FILES}
     ${TINYUSB_FILES}
-    ${BRISTLEMOUTH_FILES}
-    PARENT_SCOPE)
+    ${BRISTLEMOUTH_FILES})
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -253,7 +255,8 @@ set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
     NO_NETWORK
     )
-
+    
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)
 set(APP_DEFINES "${APP_DEFINES}" PARENT_SCOPE)
+set(APP_FILES "${APP_FILES}" PARENT_SCOPE)

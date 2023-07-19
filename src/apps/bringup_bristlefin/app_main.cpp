@@ -29,20 +29,21 @@
 #include "debug_i2c.h"
 #include "debug_ina232.h"
 #include "debug_memfault.h"
-#include "debug_ms5803.h"
+#include "debug_pressure_sensor.h"
 #include "debug_rtc.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
 #include "debug_tca9546a.h"
 #include "debug_uart.h"
 #include "debug_w25.h"
-#include "gpioISR.h"
+#include "bme280driver.h"
 #include "htu21d.h"
+#include "ms5803.h"
+#include "gpioISR.h"
 #include "ina232.h"
 #include "io.h"
 #include "lpm.h"
 #include "memfault_platform_core.h"
-#include "ms5803.h"
 #include "tca9546a.h"
 #include "pca9535.h"
 #include "serial.h"
@@ -79,6 +80,7 @@ SerialHandle_t lpuart1 = {
 };
 #endif // DEBUG_USE_LPUART1
 
+#ifndef BSP_MOTE_V1_0
 #ifndef DEBUG_USE_USART1
 SerialHandle_t usart1 = {
   .device = USART1,
@@ -97,6 +99,7 @@ SerialHandle_t usart1 = {
   .flags = 0,
 };
 #endif /// DEBUG_USE_USART1
+#endif // BSP_MOTE_V1_0
 
 #ifndef DEBUG_USE_USART3
 SerialHandle_t usart3 = {
@@ -164,6 +167,7 @@ static const DebugSPI_t debugSPIInterfaces[] = {
 };
 
 // TODO - move this to some debug file?
+#ifndef BSP_MOTE_V1_0
 static const DebugGpio_t debugGpioPins[] = {
   {"adin_cs", &ADIN_CS, GPIO_OUT},
   {"adin_int", &ADIN_INT, GPIO_IN},
@@ -207,12 +211,45 @@ static const DebugGpio_t debugGpioPins[] = {
   {"bf_tp7", &BF_TP7, GPIO_OUT},
   {"bf_tp8", &BF_TP8, GPIO_OUT},
 };
+#else
+static const DebugGpio_t debugGpioPins[] = {
+  {"adin_cs", &ADIN_CS, GPIO_OUT},
+  {"adin_int", &ADIN_INT, GPIO_IN},
+  {"adin_pwr", &ADIN_PWR, GPIO_OUT},
+  {"gpio1", &GPIO1, GPIO_OUT},
+  {"gpio2", &GPIO2, GPIO_OUT},
+  {"bm_int", &BM_INT, GPIO_IN},
+  {"bm_cs", &BM_CS, GPIO_OUT},
+  {"flash_cs", &FLASH_CS, GPIO_OUT},
+  {"boot_led", &BOOT_LED, GPIO_IN},
+  {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+  {"adin_rst", &ADIN_RST, GPIO_OUT},
+  {"bf_io1", &BF_IO1, GPIO_OUT},
+  {"bf_io2", &BF_IO2, GPIO_OUT},
+  {"bf_hfio", &BF_HFIO, GPIO_OUT},
+  {"bf_3v3_en", &BF_3V3_EN, GPIO_IN},
+  {"bf_5v_en", &BF_5V_EN, GPIO_OUT},
+  {"bf_imu_int", &BF_IMU_INT, GPIO_IN},
+  {"bf_imu_rst", &BF_IMU_RST, GPIO_OUT},
+  {"bf_sdi12_oe", &BF_SDI12_OE, GPIO_OUT},
+  {"bf_tp16", &BF_TP16, GPIO_OUT},
+  {"bf_led_g1", &BF_LED_G1, GPIO_OUT},
+  {"bf_led_r1", &BF_LED_R1, GPIO_OUT},
+  {"bf_led_g2", &BF_LED_G2, GPIO_OUT},
+  {"bf_led_r2", &BF_LED_R2, GPIO_OUT},
+  {"bf_pl_buck_en", &BF_PL_BUCK_EN, GPIO_OUT},
+  {"bf_tp7", &BF_TP7, GPIO_OUT},
+  {"bf_tp8", &BF_TP8, GPIO_OUT},
+};
+#endif
 
+#ifndef BSP_MOTE_V1_0
 #ifndef DEBUG_USE_USART1
 extern "C" void USART1_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart1);
 }
 #endif // DEBUG_USE_USART1
+#endif // BSP_MOTE_V1_0
 
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
@@ -228,17 +265,25 @@ extern "C" void LPUART1_IRQHandler(void) {
 
 static INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
 static INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
+#ifndef BSP_MOTE_V1_0
 static INA::INA232 debugIna3(&i2c1, I2C_INA_BF_ADDR);
+#endif // BSP_MOTE_V1_0
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
   &debugIna2,
+#ifndef BSP_MOTE_V1_0
   &debugIna3,
+#endif  // BSP_MOTE_V1_0
 };
 
+#ifndef BSP_MOTE_V1_0
 static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &TCA9546A_RST);
+#else // BSP_MOTE_V1_0
+static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
+#endif // BSP_MOTE_V1_0
 
+static Bme280 debugPHTU(&i2c1, Bme280::I2C_ADDR);
 static HTU21D debugHTU(&i2c1);
-
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 
 extern "C" int main(void) {
@@ -252,7 +297,9 @@ extern "C" int main(void) {
   SystemPower_Config_ext();
   MX_GPIO_Init();
   MX_LPUART1_UART_Init();
+#ifndef BSP_MOTE_V1_0
   MX_USART1_UART_Init();
+#endif 
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
@@ -292,6 +339,39 @@ extern "C" int main(void) {
   while (1){};
 }
 
+static void initSensors() {
+  static constexpr uint8_t PHTU_INIT_MAX_RETRIES = 5;
+  uint8_t try_count = 0;
+  I2CResponse_t resp = debugPHTU.probe();
+  while(resp != I2C_OK && try_count++ < PHTU_INIT_MAX_RETRIES){
+    vTaskDelay(10);
+    resp = debugPHTU.probe();
+  }
+  if(resp == I2C_OK){
+    try_count = 0;
+    while(!debugPHTU.init() && try_count++ < PHTU_INIT_MAX_RETRIES){
+      vTaskDelay(10);
+    }
+    if(try_count++ < PHTU_INIT_MAX_RETRIES) {
+      debugHtuInit(&debugPHTU);
+      debugPressureSensorInit(&debugPHTU);
+    } else {
+      printf("Failed to Initialize PHTU\n");
+    }
+  } else {
+    try_count = 0;
+    while(!debugPressure.init() && !debugHTU.init() && try_count++ < PHTU_INIT_MAX_RETRIES){
+      vTaskDelay(10);
+    }
+    if(try_count++ < PHTU_INIT_MAX_RETRIES){
+      debugHtuInit(&debugHTU);
+      debugPressureSensorInit(&debugPressure);
+    } else {
+      printf("Failed to Initialize PHTU\n");
+    }
+  }
+}
+
 static void defaultTask( void *parameters ) {
 
   (void)parameters;
@@ -319,7 +399,6 @@ static void defaultTask( void *parameters ) {
     bristlefinTCA.setChannel(TCA::CH_1);
   }
 
-  debugPressure.init();
 
   debugTCA9546AInit(&bristlefinTCA);
 
@@ -332,13 +411,14 @@ static void defaultTask( void *parameters ) {
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
   debugI2CInit(debugI2CInterfaces, sizeof(debugI2CInterfaces)/sizeof(DebugI2C_t));
   debugSPIInit(debugSPIInterfaces, sizeof(debugSPIInterfaces)/sizeof(DebugSPI_t));
-  debugHtu21dInit(&debugHTU);
-  debugMs5803Init(&debugPressure);
+  initSensors();
   debugW25Init(&debugW25);
   debugINA232Init(debugIna, NUM_INA232_DEV);
+#ifndef BSP_MOTE_V1_0
 #ifndef DEBUG_USE_USART1
   debugMemfaultInit(&usart1);
 #endif // DEBUG_USE_USART1
+#endif // BSP_MOTE_V1_0
   debugRTCInit();
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
@@ -348,28 +428,16 @@ static void defaultTask( void *parameters ) {
   // lpmPeripheralInactive(LPM_BOOT);
 
   while(1) {
-    IOWrite(&EXP_LED_G1, 0);
-    IOWrite(&EXP_LED_R1, 0);
-    IOWrite(&EXP_LED_G2, 0);
-    IOWrite(&EXP_LED_R2, 0);
     IOWrite(&BF_LED_G1, 0);
     IOWrite(&BF_LED_R1, 0);
     IOWrite(&BF_LED_G2, 0);
     IOWrite(&BF_LED_R2, 0);
     vTaskDelay(250);
-    IOWrite(&EXP_LED_G1, 1);
-    IOWrite(&EXP_LED_R1, 0);
-    IOWrite(&EXP_LED_G2, 1);
-    IOWrite(&EXP_LED_R2, 0);
     IOWrite(&BF_LED_G1, 1);
     IOWrite(&BF_LED_R1, 0);
     IOWrite(&BF_LED_G2, 1);
     IOWrite(&BF_LED_R2, 0);
     vTaskDelay(250);
-    IOWrite(&EXP_LED_G1, 0);
-    IOWrite(&EXP_LED_R1, 1);
-    IOWrite(&EXP_LED_G2, 0);
-    IOWrite(&EXP_LED_R2, 1);
     IOWrite(&BF_LED_G1, 0);
     IOWrite(&BF_LED_R1, 1);
     IOWrite(&BF_LED_G2, 0);

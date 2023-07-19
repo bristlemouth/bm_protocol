@@ -62,7 +62,7 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
-    ${SRC_DIR}/lib/debug/debug_ms5803.cpp
+    ${SRC_DIR}/lib/debug/debug_pressure_sensor.cpp
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
@@ -111,6 +111,8 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
     ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
     ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
+    ${SRC_DIR}/lib/drivers/bme280driver.cpp
+    ${SRC_DIR}/third_party/BME280_driver/bme280.c
     )
 
 set(LIB_INCLUDES
@@ -137,6 +139,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/third_party/tinycbor/src
+    ${SRC_DIR}/third_party/BME280_driver
     )
 
 if (USE_BOOTLOADER STREQUAL 1)

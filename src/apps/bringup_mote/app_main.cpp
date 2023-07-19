@@ -29,7 +29,7 @@
 #include "debug_i2c.h"
 #include "debug_ina232.h"
 #include "debug_memfault.h"
-#include "debug_ms5803.h"
+#include "debug_pressure_sensor.h"
 #include "debug_rtc.h"
 #include "debug_spi.h"
 #include "debug_sys.h"
@@ -57,6 +57,7 @@
 #include "debug_htu.h"
 #include "debug_nvm_cli.h"
 #include "timer_callback_handler.h"
+#include "bme280driver.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
@@ -200,7 +201,7 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
 };
 
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
-
+static Bme280 debugPHTU(&i2c1, Bme280::I2C_ADDR);
 static HTU21D debugHTU(&i2c1);
 
 extern "C" int main(void) {
@@ -253,6 +254,39 @@ extern "C" int main(void) {
   while (1){};
 }
 
+static void initSensors() {
+  static constexpr uint8_t PHTU_INIT_MAX_RETRIES = 5;
+  uint8_t try_count = 0;
+  I2CResponse_t resp = debugPHTU.probe();
+  while(resp != I2C_OK && try_count++ < PHTU_INIT_MAX_RETRIES){
+    vTaskDelay(10);
+    resp = debugPHTU.probe();
+  }
+  if(resp == I2C_OK){
+    try_count = 0;
+    while(!debugPHTU.init() && try_count++ < PHTU_INIT_MAX_RETRIES){
+      vTaskDelay(10);
+    }
+    if(try_count++ < PHTU_INIT_MAX_RETRIES) {
+      debugHtuInit(&debugPHTU);
+      debugPressureSensorInit(&debugPHTU);
+    } else {
+      printf("Failed to Initialize PHTU\n");
+    }
+  } else {
+    try_count = 0;
+    while(!debugPressure.init() && !debugHTU.init() && try_count++ < PHTU_INIT_MAX_RETRIES){
+      vTaskDelay(10);
+    }
+    if(try_count++ < PHTU_INIT_MAX_RETRIES){
+      debugHtuInit(&debugHTU);
+      debugPressureSensorInit(&debugPressure);
+    } else {
+      printf("Failed to Initialize PHTU\n");
+    }
+  }
+}
+
 static void defaultTask( void *parameters ) {
 
   (void)parameters;
@@ -280,8 +314,6 @@ static void defaultTask( void *parameters ) {
     bristlefinTCA.setChannel(TCA::CH_1);
   }
 
-  debugPressure.init();
-
   debugTCA9546AInit(&bristlefinTCA);
   timer_callback_handler_init();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
@@ -293,8 +325,7 @@ static void defaultTask( void *parameters ) {
   debugW25Init(&debugW25);
   debugINA232Init(debugIna, NUM_INA232_DEV);
   debugMemfaultInit(&usbCLI);
-  debugHtu21dInit(&debugHTU);
-  debugMs5803Init(&debugPressure);
+  initSensors();
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);

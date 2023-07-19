@@ -9,6 +9,7 @@
 #include "task.h"
 #include "math.h"
 #include "protected_i2c.h"
+#include "abstract_htu_sensor.h"
 
 #define HTU21D_ADDR 0x40
 
@@ -29,7 +30,7 @@
 
 #define HTU21D_CHECKSUM_DIVISOR 0x00988000 // Generator polynomial is X^8 + X^5 + X^4 + 1, shifted left to the 24th bit
 
-class HTU21D : public AbstractI2C {
+class HTU21D : public AbstractI2C, public AbstractHtu {
 public:
   HTU21D(I2CInterface_t* interface);
 

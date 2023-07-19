@@ -3,6 +3,7 @@
 #include "stm32u5xx_hal.h"
 #include "abstract_i2c.h"
 #include "io.h"
+#include "abstract_pressure_sensor.h"
 
 // Using the MS5803_02BA
 
@@ -50,7 +51,7 @@ typedef union {
   };
 } MS5803Prom_t;
 
-class MS5803 : public AbstractI2C {
+class MS5803 : public AbstractI2C, public AbstractPressureSensor {
 public:
   MS5803(I2CInterface_t* i2cInterface, uint8_t address);
 
