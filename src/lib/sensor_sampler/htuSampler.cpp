@@ -8,13 +8,13 @@
 #include "stm32_rtc.h"
 #include "uptime.h"
 #include "debug.h"
-#include "htu21d.h"
 #include "sensors.h"
 #include "sensorSampler.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include "abstract_htu_sensor.h"
 
-static HTU21D* _htu21d;
+static AbstractHtu* _htu;
 
 // Optional user-defined sample processing function
 void userHumTempSample(humTempSample_t hum_temp_sample) __attribute__((weak));
@@ -24,7 +24,7 @@ void userHumTempSample(humTempSample_t hum_temp_sample) __attribute__((weak));
   \return true if successful false otherwise
 */
 static bool htuInit() {
-  return _htu21d->init();
+  return _htu->init();
 }
 
 /*
@@ -38,7 +38,7 @@ static bool htuSample() {
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
 
   do {
-    success = _htu21d->read(temperature, humidity);
+    success = _htu->read(temperature, humidity);
   } while(!success && (--retriesRemaining > 0));
 
   if(success) {
@@ -70,7 +70,7 @@ static sensor_t htuSensor = {
   .checkFn = NULL
 };
 
-void htuSamplerInit(HTU21D *sensor) {
-  _htu21d = sensor;
+void htuSamplerInit(AbstractHtu *sensor) {
+  _htu = sensor;
   sensorSamplerAdd(&htuSensor, "HTU");
 }

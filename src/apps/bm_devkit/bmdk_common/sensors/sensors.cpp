@@ -2,19 +2,24 @@
 #include <stdint.h>
 #include "bsp.h"
 #include "sensors.h"
+#include "abstract_pressure_sensor.h"
+#include "abstract_htu_sensor.h"
+#include "FreeRTOS.h"
 
 // Sensor driver includes
 #include "ms5803.h"
 #include "htu21d.h"
 #include "ina232.h"
+#include "bme280driver.h"
 
 // Sampler initialization functions (so we don't need individual headers)
 void powerSamplerInit(INA::INA232 **sensors); // implemented in src/lib/sensor_sampler/powerSampler.cpp
-void pressureSamplerInit(MS5803 *sensor); // src/lib/sensor_sampler/pressureSampler.cpp
-void htuSamplerInit(HTU21D *sensor); // src/lib/sensor_sampler/htuSampler.cpp
+void pressureSamplerInit(AbstractPressureSensor *sensor); // src/lib/sensor_sampler/pressureSampler.cpp
+void htuSamplerInit(AbstractHtu *sensor); // src/lib/sensor_sampler/htuSampler.cpp
 
 MS5803 debugPressure(&i2c1, MS5803_ADDR);
 HTU21D debugHTU(&i2c1);
+Bme280 debugPHTU(&i2c1, Bme280::I2C_ADDR);
 INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
 INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
 INA::INA232 *debugIna[NUM_INA232_DEV] = {
@@ -23,14 +28,28 @@ INA::INA232 *debugIna[NUM_INA232_DEV] = {
 };
 
 void sensorsInit() {
-
+  static constexpr uint8_t PROBE_MAX_TRIES = 5;
   // Power monitor
   powerSamplerInit(debugIna);
 
-  // Initialize temperature/humidity
-  htuSamplerInit(&debugHTU);
+  uint8_t try_count = 0;
+  I2CResponse_t ret = debugPHTU.probe();
+  while(ret != I2C_OK && try_count++ < PROBE_MAX_TRIES){
+    ret = debugPHTU.probe();
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  if(ret == I2C_OK) {
+    // Initialize temperature/humidity
+    htuSamplerInit(&debugPHTU);
 
-  // Initialize Barometer sampling
-  pressureSamplerInit(&debugPressure);
+    // Initialize Barometer sampling
+    pressureSamplerInit(&debugPHTU);
+  } else {
+    // Initialize temperature/humidity
+    htuSamplerInit(&debugHTU);
+
+    // Initialize Barometer sampling
+    pressureSamplerInit(&debugPressure);
+  }
 
 }

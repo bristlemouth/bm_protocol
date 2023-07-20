@@ -6,15 +6,15 @@
 #include "bm_printf.h"
 #include "bsp.h"
 #include "debug.h"
-#include "ms5803.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
 #include "sensors.h"
 #include "sensorSampler.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include "abstract_pressure_sensor.h"
 
-static MS5803* _pressureSensor;
+static AbstractPressureSensor* _pressureSensor;
 
 // Optional user-defined sample processing function
 void userPressureSample(pressureSample_t pressure_sample) __attribute__((weak));
@@ -80,7 +80,7 @@ static sensor_t pressureSensor = {
 };
 
 
-void pressureSamplerInit(MS5803 *sensor) {
+void pressureSamplerInit(AbstractPressureSensor *sensor) {
   _pressureSensor = sensor;
   sensorSamplerAdd(&pressureSensor, "BARO");
 }

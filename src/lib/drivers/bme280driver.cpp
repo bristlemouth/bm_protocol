@@ -71,6 +71,7 @@ bool Bme280::read(float &temperature, float &humidity) {
     return rval;
 }
 
+// Read temperature in deg C
 float Bme280::readTemperature() {
     float rval = INVALID_TEMPERATURE;
     struct bme280_data comp_data;
@@ -83,6 +84,7 @@ float Bme280::readTemperature() {
     return rval;
 }
 
+// Read humidity in %RH
 float Bme280::readHumidity() {
     float rval = INVALID_HUMIDITY;
     struct bme280_data comp_data;
@@ -95,6 +97,7 @@ float Bme280::readHumidity() {
     return rval;
 }
 
+// Read pressure in hPa/Millibar 
 bool Bme280::readPressure(float &pressure) {
     bool rval = false;
     struct bme280_data comp_data;
@@ -102,7 +105,7 @@ bool Bme280::readPressure(float &pressure) {
         if(bme280_get_sensor_data(BME280_PRESS, &comp_data, &_dev) != BME280_OK){
             break;
         }
-        pressure = comp_data.pressure;
+        pressure = comp_data.pressure / 100.0;
         rval = true;
     } while(0);
     return rval;

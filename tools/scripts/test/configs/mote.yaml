@@ -14,3 +14,30 @@
     build_type: Release
     use_bootloader: True
     defines: -DUSE_MICROPYTHON=1
+
+- name: hello_world on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: hello_world
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
+
+- name: rbr_coda_example on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: rbr_coda_example
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
+
+- name: serial_payload_example on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: serial_payload_example
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
