@@ -75,6 +75,7 @@ target_include_directories(nvm_partition_tests
     ${TEST_DIR}/header_overrides
     ${TEST_DIR}/mocks
     ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${SRC_DIR}/lib/bcmp/dfu
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/apps/bringup
@@ -112,6 +113,7 @@ target_include_directories(configuration_tests
     ${TEST_DIR}/mocks
     ${SRC_DIR}/third_party/FreeRTOS/Source/include
     ${SRC_DIR}/apps/bringup
+    ${SRC_DIR}/lib/bcmp/dfu
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
