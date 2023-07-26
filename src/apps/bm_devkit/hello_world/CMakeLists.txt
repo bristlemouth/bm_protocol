@@ -38,6 +38,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
     ${SRC_DIR}/lib/common/enumToStr.c
+    ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
     ${SRC_DIR}/lib/common/lib_state_machine.cpp
@@ -227,7 +228,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/external_flash_partitions.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
