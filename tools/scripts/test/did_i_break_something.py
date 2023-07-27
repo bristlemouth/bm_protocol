@@ -36,7 +36,7 @@ def build_fw_commands(test, verbose=False, jobs=4):
     if "defines" in test["args"]:
         build_cmd += " " + test["args"]["defines"]
 
-    make_cmd = f"make -j {jobs} CC=gcc"
+    make_cmd = f"make CC=gcc"
     if verbose:
         make_cmd += " VERBOSE=1"
 
@@ -127,7 +127,7 @@ for path in config_paths:
 # Run through each test and see if it fails or not
 for test in tests:
     print(f'Building: {test["name"]}')
-    returncode = run_test(test, args.verbose)
+    returncode = run_test(test, True) # forced true temporarily -- args.verbose)
     if returncode == 0:
         print("PASS")
     else:
