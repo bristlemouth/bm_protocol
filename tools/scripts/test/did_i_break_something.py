@@ -36,7 +36,7 @@ def build_fw_commands(test, verbose=False, jobs=4):
     if "defines" in test["args"]:
         build_cmd += " " + test["args"]["defines"]
 
-    make_cmd = f"make -j {jobs}"
+    make_cmd = f"make -j {jobs} CC=gcc"
     if verbose:
         make_cmd += " VERBOSE=1"
 
