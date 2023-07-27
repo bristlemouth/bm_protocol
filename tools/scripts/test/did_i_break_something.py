@@ -127,7 +127,7 @@ for path in config_paths:
 # Run through each test and see if it fails or not
 for test in tests:
     print(f'Building: {test["name"]}')
-    returncode = run_test(test, True) # forced true temporarily -- args.verbose)
+    returncode = run_test(test, args.verbose)
     if returncode == 0:
         print("PASS")
     else:
