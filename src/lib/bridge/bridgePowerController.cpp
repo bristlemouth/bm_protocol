@@ -10,12 +10,13 @@
 #include "device_info.h"
 #include "app_pub_sub.h"
 #include "bridgeLog.h"
+#include "bm_l2.h"
 
 BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs, uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subSamplingEnabled, bool powerControllerEnabled) :
 _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
 _sampleIntervalMs(sampleIntervalMs), _sampleDurationMs(sampleDurationMs),
 _subsampleIntervalMs(subsampleIntervalMs), _subsampleDurationMs(subsampleDurationMs),
-_sampleIntervalStartTicks(0), _subSampleIntervalStartTicks(0), _rtcSet(false), _initDone(false), _subSamplingEnabled(subSamplingEnabled) {
+_sampleIntervalStartTicks(0), _subSampleIntervalStartTicks(0), _rtcSet(false), _initDone(false), _subSamplingEnabled(subSamplingEnabled), _adin_handle(NULL) {
     if(_sampleIntervalMs > MAX_SAMPLE_INTERVAL_MS || _sampleIntervalMs < MIN_SAMPLE_INTERVAL_MS) {
         printf("INVALID SAMPLE INTERVAL, using default.\n");
         _sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
@@ -87,6 +88,13 @@ void BridgePowerController::powerBusAndSetSignal(bool on) {
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     IOWrite(&_BusPowerPin, on);
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
+    if(_adin_handle){
+        bm_l2_netif_set_power(_adin_handle, on);
+    } else {
+        if(getAdinDevice()){
+            bm_l2_netif_set_power(_adin_handle, on);
+        }
+    }
     constexpr size_t bufsize = 25;
     static char buffer[bufsize];
     int len = snprintf(buffer, bufsize, "Bridge bus power: %d\n", static_cast<int>(on));
@@ -204,4 +212,20 @@ void BridgePowerController::powerControllerRun(void *arg) {
     while(true) {
         reinterpret_cast<BridgePowerController*>(arg)->_update();
     }
+}
+
+bool BridgePowerController::getAdinDevice() {
+    bool rval = false;
+    for(uint32_t port = 0; port < bm_l2_get_num_ports(); port++) {
+        adin2111_DeviceHandle_t adin_handle;
+        bm_netdev_type_t dev_type = BM_NETDEV_TYPE_NONE;
+        uint32_t start_port_idx;
+        if(bm_l2_get_device_handle(port, reinterpret_cast<void **>(&adin_handle), &dev_type, &start_port_idx)
+            && (dev_type == BM_NETDEV_TYPE_ADIN2111)) {
+            _adin_handle = adin_handle;
+            rval = true;
+            break;
+        }
+    }
+    return rval;
 }

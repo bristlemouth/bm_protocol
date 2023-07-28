@@ -20,11 +20,14 @@
 
 #define EVT_QUEUE_LEN (32)
 
+typedef int (*bm_l2_dev_powerdwn_cb_t)(const void * devHandle, bool on);
+
 typedef struct {
     uint8_t num_ports;
     void* device_handle;
     uint8_t start_port_idx;
     bm_netdev_type_t type;
+    bm_l2_dev_powerdwn_cb_t dev_pwr_func;
 } bm_netdev_ctx_t;
 
 typedef enum {
@@ -32,6 +35,8 @@ typedef enum {
     BM_L2_RX,
     BM_L2_LINK_UP,
     BM_L2_LINK_DOWN,
+    BM_L2_SET_NETIF_UP,
+    BM_L2_SET_NETIF_DOWN,
 } bm_l2_queue_type_e;
 
 typedef struct {
@@ -47,7 +52,7 @@ typedef struct {
 
     /* TODO: We are only supporting the ADIN2111 net device. Currently assuming we have up to BM_NETDEV_TYPE_MAX ADIN2111s.
        We want to eventually support new net devices and pre-allocate here before giving to init function */
-    adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX];
+    adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX]; // https://github.com/wavespotter/bristlemouth/issues/423 - These should be owned on a per-app basis.
 
     bm_l2_link_change_cb_t link_change_cb;
 
@@ -59,6 +64,9 @@ typedef struct {
 } bm_l2_ctx_t;
 
 static bm_l2_ctx_t bm_l2_ctx;
+
+static void bm_l2_set_netif(bool up);
+static void bm_l2_process_netif_evt(const void *device_handle, bool on) ;
 
 /* TODO: ADIN2111-specifc, let's move to ADIN driver.
    Rx Callback can only get the MAC Handle, not the Device handle itself */
@@ -216,6 +224,28 @@ static void _handle_link_change(const void *device_handle, uint8_t port, bool st
 }
 
 /*!
+  Handle netif set event
+
+  \param device_handle eth driver handle
+  \param on - true to turn the interface on, false to turn the interface off.
+
+  \return none
+*/
+static void bm_l2_process_netif_evt(const void *device_handle, bool on) {
+    for(uint8_t device = 0; device < BM_NETDEV_COUNT; device++) {
+        if(device_handle == bm_l2_ctx.devices[device].device_handle) {
+            if(bm_l2_ctx.devices[device].dev_pwr_func){
+                if(bm_l2_ctx.devices[device].dev_pwr_func(const_cast<void*>(device_handle), on) == 0){
+                    printf("Powered device %d : %s\n", device, (on) ? "on" : "off");
+                } else {
+                    printf("Failed to power device %d : %s\n", device, (on) ? "on" : "off");
+                }
+            }
+        }
+    }
+}
+
+/*!
   L2 thread which handles both tx and rx events
 
   \param *parameters - unused
@@ -243,6 +273,16 @@ static void bm_l2_thread(void *parameters) {
             }
             case BM_L2_LINK_DOWN: {
                 _handle_link_change(event.device_handle, event.port_mask, false);
+                break;
+            }
+            case BM_L2_SET_NETIF_UP: {
+                bm_l2_process_netif_evt(event.device_handle, true);
+                bm_l2_set_netif(true);
+                break;
+            }
+            case BM_L2_SET_NETIF_DOWN: {
+                bm_l2_set_netif(false);
+                bm_l2_process_netif_evt(event.device_handle, false);
                 break;
             }
             default: {
@@ -360,6 +400,7 @@ err_t bm_l2_init(bm_l2_link_change_cb_t link_change_cb) {
                     bm_l2_ctx.devices[idx].device_handle = &bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter++];
                     bm_l2_ctx.devices[idx].num_ports = ADIN2111_PORT_NUM;
                     bm_l2_ctx.devices[idx].start_port_idx = bm_l2_ctx.available_port_mask_idx;
+                    bm_l2_ctx.devices[idx].dev_pwr_func = adin2111_power_cb;
                     bm_l2_ctx.available_ports_mask |= (ADIN2111_PORT_MASK << bm_l2_ctx.available_port_mask_idx);
                     bm_l2_ctx.available_port_mask_idx += ADIN2111_PORT_NUM;
                 } else {
@@ -428,4 +469,38 @@ bool bm_l2_get_device_handle(uint8_t dev_idx, void **device_handle, bm_netdev_ty
 
 bool bm_l2_get_port_state(uint8_t port) {
     return (bool)(bm_l2_ctx.enabled_port_mask & (1 << port));
+}
+
+/*!
+  Public api to set a particular network device on/off
+
+  \param device_handle eth driver handle
+  \param on - true to turn the interface on, false to turn the interface off.
+
+  \return none
+*/
+void bm_l2_netif_set_power(void * dev, bool on) {
+    configASSERT(dev);
+
+    l2_queue_element_t pwr_evt = {dev, 0, NULL, BM_L2_SET_NETIF_DOWN};
+    if(on) {
+        pwr_evt.type = BM_L2_SET_NETIF_UP;
+    }
+
+    // Schedule netif pwr event
+    configASSERT(xQueueSend(bm_l2_ctx.evt_queue, &pwr_evt, 10) == pdTRUE);
+}
+
+/*!
+    Set the network interface up or down
+    \param[in] up true if setting the network interface up, false if setting it down.
+*/
+static void bm_l2_set_netif(bool up) {
+    if(up) {
+        netif_set_link_up(bm_l2_ctx.net_if);
+        netif_set_up(bm_l2_ctx.net_if);
+    } else {
+        netif_set_link_down(bm_l2_ctx.net_if);
+        netif_set_down(bm_l2_ctx.net_if);
+    }
 }

@@ -30,7 +30,7 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
 int adin2111_hw_start(adin2111_DeviceHandle_t dev);
 int adin2111_hw_stop(adin2111_DeviceHandle_t dev);
 bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port, adin2111_port_stats_callback_t cb, void* args);
-
+int adin2111_power_cb(const void * devHandle, bool on);
 #ifdef __cplusplus
 }
 #endif

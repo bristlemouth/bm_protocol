@@ -30,6 +30,7 @@ err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint
 err_t bm_l2_link_output(struct netif *netif, struct pbuf *p);
 err_t bm_l2_netif_init(struct netif *netif);
 err_t bm_l2_init(bm_l2_link_change_cb_t link_change_cb);
+void bm_l2_netif_set_power(void * dev, bool on);
 
 bool bm_l2_get_device_handle(uint8_t dev_idx, void **device_handle, bm_netdev_type_t *type, uint32_t *start_port_idx);
 uint8_t bm_l2_get_num_ports();

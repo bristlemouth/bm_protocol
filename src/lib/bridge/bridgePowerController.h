@@ -6,6 +6,7 @@
 #include "io.h"
 
 #include <stdint.h>
+#include "eth_adin2111.h"
 
 class BridgePowerController {
 public:
@@ -25,6 +26,7 @@ public:
 private:
     void powerBusAndSetSignal(bool on);
     static void powerControllerRun(void* arg);
+    bool getAdinDevice();
 
 public:
     static constexpr uint32_t OFF = (1 << 0);
@@ -61,6 +63,7 @@ private:
     bool _rtcSet;
     bool _initDone;
     bool _subSamplingEnabled;
+    adin2111_DeviceHandle_t _adin_handle;
     EventGroupHandle_t _busPowerEventGroup;
     TaskHandle_t _task_handle;
 };

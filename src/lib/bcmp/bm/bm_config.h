@@ -9,6 +9,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+// https://github.com/wavespotter/bristlemouth/issues/423 - Move this file into apps
+
 typedef enum {
     BM_NETDEV_TYPE_NONE,
     BM_NETDEV_TYPE_ADIN2111,

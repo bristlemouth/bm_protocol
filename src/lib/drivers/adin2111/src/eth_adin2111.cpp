@@ -663,3 +663,13 @@ bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port, 
 
     return rval;
 }
+
+int adin2111_power_cb(const void * devHandle, bool on) {
+    int rval = 0;
+    if(on) {
+        rval = adin2111_hw_start(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)));
+    } else {
+        rval = adin2111_hw_stop(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)));
+    }
+    return rval;
+}
