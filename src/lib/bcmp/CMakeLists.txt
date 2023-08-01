@@ -19,7 +19,6 @@ set(BCMP_FILES
     ${BCMP_DIR}/bcmp_resource_discovery.cpp
 
     # Core bristlemouth
-    ${BCMP_DIR}/bm/bm_config.c
     ${BCMP_DIR}/bm/bm_l2.cpp
     ${BCMP_DIR}/bm/bm_util.c
     ${BCMP_DIR}/bm/bm_printf.cpp

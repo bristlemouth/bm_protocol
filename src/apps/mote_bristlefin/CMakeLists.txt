@@ -225,6 +225,7 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
