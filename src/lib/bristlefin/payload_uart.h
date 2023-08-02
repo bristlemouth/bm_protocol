@@ -37,6 +37,6 @@ namespace PLUART {
   extern SerialHandle_t uart_handle;
 
 // Buffer length for LPUART1
-#define LPUART1_LINE_BUFF_LEN 20
+#define LPUART1_LINE_BUFF_LEN 2048
 
 }  // namespace PLUART
