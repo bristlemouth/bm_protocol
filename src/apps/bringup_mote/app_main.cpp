@@ -58,14 +58,12 @@
 #include "debug_nvm_cli.h"
 #include "timer_callback_handler.h"
 #include "bme280driver.h"
+#include "bristlefin.h"
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
 
 #include <stdio.h>
-
-#define LED_ON (0)
-#define LED_OFF (1)
 
 static void defaultTask(void *parameters);
 #ifndef DEBUG_USE_LPUART1
@@ -162,6 +160,7 @@ static const DebugGpio_t debugGpioPins[] = {
   {"gpio1", &GPIO1, GPIO_OUT},
   {"gpio2", &GPIO2, GPIO_OUT},
   {"bm_int", &BM_INT, GPIO_IN},
+  {"ioex_int", &IOEXP_INT, GPIO_IN},
   {"bm_cs", &BM_CS, GPIO_OUT},
   {"vbus_bf_en", &VBUS_BF_EN, GPIO_OUT},
   {"flash_cs", &FLASH_CS, GPIO_OUT},
@@ -203,6 +202,7 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 static Bme280 debugPHTU(&i2c1, Bme280::I2C_ADDR);
 static HTU21D debugHTU(&i2c1);
+static Bristlefin bristlefin(debugPressure, debugHTU,debugPHTU, bristlefinTCA, debugIna2);
 
 extern "C" int main(void) {
 
@@ -345,11 +345,8 @@ static void defaultTask( void *parameters ) {
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
 
-  // Turn of the bristlefin leds
-  IOWrite(&BF_LED_G1, LED_OFF);
-  IOWrite(&BF_LED_R1, LED_OFF);
-  IOWrite(&BF_LED_G2, LED_OFF);
-  IOWrite(&BF_LED_R2, LED_OFF);
+  // Turn of the bristlefin leds and correct gpio init state.
+  bristlefin.setGpioDefault();
 
   while(1) {
     vTaskDelay(1000);

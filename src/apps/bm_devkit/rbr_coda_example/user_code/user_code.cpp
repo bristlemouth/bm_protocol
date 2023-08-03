@@ -14,6 +14,7 @@
 #include "payload_uart.h"
 #include "LineParser.h"
 #include "array_utils.h"
+#include "sensors.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -117,11 +118,11 @@ void setup(void) {
   // Turn on the UART.
   serialEnable(&PLUART::uart_handle);
   // Enable the input to the Vout power supply.
-  BF::enableVbus();
+  bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
-  BF::enableVout();
+  bristlefin.enableVout();
 }
 
 void loop(void) {
@@ -186,12 +187,12 @@ void loop(void) {
   static bool led2State = false;
   // If LED2 is off and the ledLinePulse flag is set (done in our payload UART process line function), turn it on Green.
   if (!led2State && ledLinePulse > -1) {
-    BF::setLed(2, BF::LED_GREEN);
+    bristlefin.setLed(2, Bristlefin::LED_GREEN);
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
   else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
-    BF::setLed(2, BF::LED_OFF);
+    bristlefin.setLed(2, Bristlefin::LED_OFF);
     ledLinePulse = -1;
     led2State = false;
   }
@@ -205,14 +206,14 @@ void loop(void) {
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
   if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    BF::setLed(1, BF::LED_GREEN);
+    bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
     // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    BF::setLed(1, BF::LED_OFF);
+    bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
   /*

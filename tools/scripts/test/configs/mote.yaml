@@ -41,3 +41,12 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
+
+- name: devkit_monitor on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: devkit_monitor
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK

@@ -30,19 +30,19 @@ IOPinHandle_t PAYLOAD_TX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_TX_GPIO_Port,
 
 extern PCA9535Device_t bristlefinIOExpander;
 
-IOPinHandle_t BF_IO1 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 0, PCA9535_MODE_OUTPUT}};
-IOPinHandle_t BF_IO2 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 1, PCA9535_MODE_OUTPUT}};
+IOPinHandle_t BF_IO1 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 0, PCA9535_MODE_INPUT}};
+IOPinHandle_t BF_IO2 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 1, PCA9535_MODE_INPUT}};
 IOPinHandle_t BF_HFIO = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 2, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_3V3_EN = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 3, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_5V_EN = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 4, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_IMU_INT = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 5, PCA9535_MODE_INPUT}};
 IOPinHandle_t BF_IMU_RST = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 6, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_SDI12_OE = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 7, PCA9535_MODE_OUTPUT}};
-IOPinHandle_t BF_TP16 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 8, PCA9535_MODE_OUTPUT}};
+IOPinHandle_t BF_TP16 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 8, PCA9535_MODE_INPUT}};
 IOPinHandle_t BF_LED_G1 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 9, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_LED_R1 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 10, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_LED_G2 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 11, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_LED_R2 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 12, PCA9535_MODE_OUTPUT}};
 IOPinHandle_t BF_PL_BUCK_EN = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 13, PCA9535_MODE_OUTPUT}};
-IOPinHandle_t BF_TP7 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 14, PCA9535_MODE_OUTPUT}};
-IOPinHandle_t BF_TP8 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 15, PCA9535_MODE_OUTPUT}};
+IOPinHandle_t BF_TP7 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 14, PCA9535_MODE_INPUT}};
+IOPinHandle_t BF_TP8 = {&PCA9535PinDriver, &(PCA9535Pin_t){&bristlefinIOExpander, 15, PCA9535_MODE_INPUT}};

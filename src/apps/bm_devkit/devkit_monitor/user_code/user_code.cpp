@@ -24,6 +24,7 @@
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "array_utils.h"
+#include "sensors.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -94,7 +95,7 @@ void userPowerSample(powerSample_t power_sample) {
   ///   which are called from the USER task, is not thread safe!
   // We'll start with the monitor that measure power going through our Mote.
   // Note there's another power monitor at address I2C_ADDR_BMDK_LOAD_POWER_MON that monitors power to Vout.
-  if (power_sample.address != I2C_ADDR_MOTE_THROUGH_POWER_MON) return;
+  if (power_sample.address != Bristlefin::I2C_ADDR_MOTE_THROUGH_POWER_MON) return;
   if(xSemaphoreTake(xUserDataMutex, portMAX_DELAY) != pdTRUE) {
     printf("ERR - Failed to take user data Mutex!");
     return;
@@ -281,14 +282,14 @@ void loop(void) {
   static bool ledState = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
   if (!ledState && ((uint32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    BF::setLed(1, BF::LED_GREEN);
+    bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     ledState = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (ledState && ((uint32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    BF::setLed(1, BF::LED_OFF);
+    bristlefin.setLed(1, Bristlefin::LED_OFF);
     ledState = false;
   }
   /*

@@ -54,6 +54,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
+    ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
@@ -136,6 +137,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/third_party/BME280_driver
+    ${SRC_DIR}/lib/bristlefin
     )
 
 #

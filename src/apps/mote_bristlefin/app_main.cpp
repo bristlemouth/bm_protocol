@@ -44,6 +44,7 @@
 #include "timer_callback_handler.h"
 #include "app_pub_sub.h"
 #include "util.h"
+#include "bristlefin.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
@@ -124,13 +125,6 @@ SerialHandle_t usbPcap   = {
 extern "C" void USART3_IRQHandler(void) {
     serialGenericUartIRQHandler(&usart3);
 }
-
-static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
-
-// Only needed if we want the debug commands too
-// extern MS5803 debugPressure;
-// extern HTU21D debugHTU;
-// extern INA::INA232 *debugIna;
 
 extern "C" int main(void) {
 
@@ -317,17 +311,12 @@ static void defaultTask( void *parameters ) {
     bspInit();
     usbInit(&VUSB_DETECT, usb_is_connected);
 
-    if(bristlefinTCA.init()){
-        bristlefinTCA.setChannel(TCA::CH_1);
-    }
-
     debugSysInit();
     debugMemfaultInit(&usbCLI);
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
     debugSpotterInit();
     debugRTCInit();
-    debugTCA9546AInit(&bristlefinTCA);
 
     // Disabling now for hard mode testing
     // Re-enable low power mode
@@ -348,22 +337,17 @@ static void defaultTask( void *parameters ) {
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
-    sensorsInit();
     // TODO - get this from the nvm cfg's!
     sensorConfig_t sensorConfig = {
         .sensorCheckIntervalS=10,
         .sensorsPollIntervalMs=1000
     };
     sensorSamplerInit(&sensorConfig);
+    // must call sensorsInit after sensorSamplerInit
+    sensorsInit();
 
     bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
     bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
-
-    // Turn of the bristlefin leds
-    IOWrite(&BF_LED_G1, LED_OFF);
-    IOWrite(&BF_LED_R1, LED_OFF);
-    IOWrite(&BF_LED_G2, LED_OFF);
-    IOWrite(&BF_LED_R2, LED_OFF);
 
 #ifdef USE_MICROPYTHON
     micropython_freertos_init(&usbCLI);

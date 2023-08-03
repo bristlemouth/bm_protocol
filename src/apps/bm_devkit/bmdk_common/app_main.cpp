@@ -26,7 +26,6 @@
 #include "debug_memfault.h"
 #include "debug_rtc.h"
 #include "debug_sys.h"
-#include "debug_tca9546a.h"
 #include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
@@ -40,12 +39,12 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
-#include "tca9546a.h"
 #include "usb.h"
 #include "watchdog.h"
 #include "timer_callback_handler.h"
 #include "app_pub_sub.h"
 #include "util.h"
+#include "bristlefin.h"
 #ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
@@ -136,8 +135,6 @@ uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 extern "C" void USART3_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart3);
 }
-
-static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
 
 // Only needed if we want the debug commands too
 // extern MS5803 debugPressure;
@@ -350,17 +347,12 @@ static void defaultTask( void *parameters ) {
   bspInit();
   usbInit(&VUSB_DETECT, usb_is_connected);
 
-  if(bristlefinTCA.init()){
-    bristlefinTCA.setChannel(TCA::CH_1);
-  }
-
   debugSysInit();
   debugMemfaultInit(&usbCLI);
 
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
   debugSpotterInit();
   debugRTCInit();
-  debugTCA9546AInit(&bristlefinTCA);
 
   // Disabling now for hard mode testing
   // Re-enable low power mode
@@ -393,16 +385,6 @@ static void defaultTask( void *parameters ) {
   sensorsInit();
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
-
-  // Turn of the bristlefin leds
-  IOWrite(&BF_LED_G1, LED_OFF);
-  IOWrite(&BF_LED_R1, LED_OFF);
-  IOWrite(&BF_LED_G2, LED_OFF);
-  IOWrite(&BF_LED_R2, LED_OFF);
-  IOWrite(&BF_5V_EN, 1); // 0 enables, 1 disables. Needed for SDI12 and RS485.
-  IOWrite(&BF_3V3_EN, 1); // 1 enables, 0 disables. Needed for I2C and I/O control.
-  IOWrite(&VBUS_BF_EN, 1); // 0 enables, 1 disables. Needed for VOUT and 5V.
-  IOWrite(&BF_PL_BUCK_EN, 1); // 0 enables, 1 disables. Vout
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
