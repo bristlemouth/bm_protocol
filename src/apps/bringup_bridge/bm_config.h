@@ -4,12 +4,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include "adin2111.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-// https://github.com/wavespotter/bristlemouth/issues/423 - Move this file into apps
+#define ADIN_PORT_MASK_1     (1 << ADIN2111_PORT_1)
+#define ADIN_PORT_MASK_2     (1 << ADIN2111_PORT_2)
+#define ADIN_PORT_MASK_ALL   (ADIN_PORT_MASK_1 | ADIN_PORT_MASK_2)
+
+typedef struct adin2111_config_s {
+    uint32_t port_mask;
+    adin2111_DeviceHandle_t dev;
+} adin2111_config_t;
 
 typedef enum {
     BM_NETDEV_TYPE_NONE,
@@ -19,7 +27,7 @@ typedef enum {
 
 typedef struct bm_netdev_config_s {
     bm_netdev_type_t type;
-    // Additional config can be added here later
+    void * config;
 } bm_netdev_config_t;
 
 /* Define for actual netdev instance count here, as some of the later code currently iterates devices
@@ -27,7 +35,7 @@ typedef struct bm_netdev_config_s {
    If you added a new enum entry, but didn't change the instance array, the current code would crash. */
 #define BM_NETDEV_COUNT (2)
 
-extern bm_netdev_config_t bm_netdev_config[BM_NETDEV_COUNT];
+extern const bm_netdev_config_t bm_netdev_config[BM_NETDEV_COUNT];
 
 #ifdef __cplusplus
 }

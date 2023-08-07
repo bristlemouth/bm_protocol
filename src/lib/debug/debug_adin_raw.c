@@ -9,6 +9,7 @@
 #include "debug_adin_raw.h"
 #include "eth_adin2111.h"
 #include "debug.h"
+#include "bm_config.h"
 
 static BaseType_t adinCommand( char *writeBuffer,
                   size_t writeBufferLen,
@@ -72,7 +73,7 @@ static BaseType_t adinCommand( char *writeBuffer,
     if (strncmp("init", parameter,parameterStringLength) == 0) {
       if(_adin_started) {
         printf("Adin already initialized\n");
-      } else if(adin2111_hw_init(&_device, debug_l2_rx, NULL) == ADI_ETH_SUCCESS) {
+      } else if(adin2111_hw_init(&_device, debug_l2_rx, NULL, ADIN_PORT_MASK_ALL) == ADI_ETH_SUCCESS) {
         printf("Adin initialized successfully\n");
         _adin_started = true;
       } else {

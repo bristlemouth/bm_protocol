@@ -9,8 +9,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-// https://github.com/wavespotter/bristlemouth/issues/423 - Move this file into apps
-
 typedef enum {
     BM_NETDEV_TYPE_NONE,
     BM_NETDEV_TYPE_ADIN2111,
@@ -27,7 +25,7 @@ typedef struct bm_netdev_config_s {
    If you added a new enum entry, but didn't change the instance array, the current code would crash. */
 #define BM_NETDEV_COUNT (2)
 
-extern bm_netdev_config_t bm_netdev_config[BM_NETDEV_COUNT];
+extern const bm_netdev_config_t bm_netdev_config[BM_NETDEV_COUNT];
 
 #ifdef __cplusplus
 }

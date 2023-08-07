@@ -350,7 +350,7 @@ static void _irq_evt_cb_from_isr(BaseType_t *pxHigherPriorityTaskWoken) {
   \param link_change_callback Callback function to be called when link state changes
   \return 0 if successful, nonzero otherwise
 */
-adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback, adin_link_change_callback_t link_change_callback) {
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback, adin_link_change_callback_t link_change_callback, uint8_t enabled_port_mask) {
     adi_eth_Result_e result = ADI_ETH_SUCCESS;
     BaseType_t rval;
 
@@ -419,7 +419,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
                        &serviceTask);
         configASSERT(rval == pdTRUE);
 
-        adin2111_hw_start(hDevice);
+        adin2111_hw_start(hDevice, enabled_port_mask);
     } while (0);
 
     return result;
@@ -615,8 +615,17 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_le
  \param dev adin device handle
  \return 0 on success
  */
-int adin2111_hw_start(adin2111_DeviceHandle_t dev) {
-    return adin2111_Enable(dev);
+int adin2111_hw_start(adin2111_DeviceHandle_t dev, uint8_t port_mask) {
+    adi_eth_Result_e res = ADI_ETH_SUCCESS;
+    for(uint8_t port=0; port < ADIN2111_PORT_NUM; port++) {
+        if(port_mask & (0x01 << port)){
+            res = adin2111_EnablePort(dev, static_cast<adin2111_Port_e>(port));
+            if(res != ADI_ETH_SUCCESS) {
+                break;
+            }
+        }
+    }
+    return res;
 }
 
 /*!
@@ -624,8 +633,17 @@ int adin2111_hw_start(adin2111_DeviceHandle_t dev) {
   \param dev adin device handle
   \return 0 on success
  */
-int adin2111_hw_stop(adin2111_DeviceHandle_t dev) {
-    return adin2111_Disable(dev);
+int adin2111_hw_stop(adin2111_DeviceHandle_t dev, uint8_t port_mask) {
+    adi_eth_Result_e res = ADI_ETH_SUCCESS;
+    for(uint8_t port=0; port < ADIN2111_PORT_NUM; port++) {
+        if(port_mask & (0x01 << port)){
+            res = adin2111_DisablePort(dev, static_cast<adin2111_Port_e>(port));
+            if(res != ADI_ETH_SUCCESS) {
+                break;
+            }
+        }
+    }
+    return res;
 }
 
 /*!
@@ -664,12 +682,12 @@ bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port, 
     return rval;
 }
 
-int adin2111_power_cb(const void * devHandle, bool on) {
+int adin2111_power_cb(const void * devHandle, bool on, uint8_t port_mask) {
     int rval = 0;
     if(on) {
-        rval = adin2111_hw_start(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)));
+        rval = adin2111_hw_start(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)), port_mask);
     } else {
-        rval = adin2111_hw_stop(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)));
+        rval = adin2111_hw_stop(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)), port_mask);
     }
     return rval;
 }

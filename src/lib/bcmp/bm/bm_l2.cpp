@@ -20,10 +20,11 @@
 
 #define EVT_QUEUE_LEN (32)
 
-typedef int (*bm_l2_dev_powerdwn_cb_t)(const void * devHandle, bool on);
+typedef int (*bm_l2_dev_powerdwn_cb_t)(const void * devHandle, bool on, uint8_t port_mask);
 
 typedef struct {
     uint8_t num_ports;
+    uint8_t enabled_ports_mask;
     void* device_handle;
     uint8_t start_port_idx;
     bm_netdev_type_t type;
@@ -49,14 +50,8 @@ typedef struct {
 typedef struct {
     struct netif* net_if;
     bm_netdev_ctx_t devices[BM_NETDEV_COUNT];
-
-    /* TODO: We are only supporting the ADIN2111 net device. Currently assuming we have up to BM_NETDEV_TYPE_MAX ADIN2111s.
-       We want to eventually support new net devices and pre-allocate here before giving to init function */
-    adin2111_DeviceStruct_t adin_devices[BM_NETDEV_TYPE_MAX]; // https://github.com/wavespotter/bristlemouth/issues/423 - These should be owned on a per-app basis.
-
     bm_l2_link_change_cb_t link_change_cb;
 
-    uint8_t adin_device_counter;
     uint8_t available_ports_mask;
     uint8_t available_port_mask_idx;
     uint8_t enabled_port_mask;
@@ -235,7 +230,7 @@ static void bm_l2_process_netif_evt(const void *device_handle, bool on) {
     for(uint8_t device = 0; device < BM_NETDEV_COUNT; device++) {
         if(device_handle == bm_l2_ctx.devices[device].device_handle) {
             if(bm_l2_ctx.devices[device].dev_pwr_func){
-                if(bm_l2_ctx.devices[device].dev_pwr_func(const_cast<void*>(device_handle), on) == 0){
+                if(bm_l2_ctx.devices[device].dev_pwr_func(const_cast<void*>(device_handle), on, bm_l2_ctx.devices[device].enabled_ports_mask) == 0){
                     printf("Powered device %d : %s\n", device, (on) ? "on" : "off");
                 } else {
                     printf("Failed to power device %d : %s\n", device, (on) ? "on" : "off");
@@ -388,25 +383,29 @@ err_t bm_l2_init(bm_l2_link_change_cb_t link_change_cb) {
     bm_l2_ctx.link_change_cb = link_change_cb;
 
     /* Reset context variables */
-    bm_l2_ctx.adin_device_counter = 0;
     bm_l2_ctx.available_ports_mask = 0;
     bm_l2_ctx.available_port_mask_idx = 0;
 
     for (uint32_t idx=0; idx < BM_NETDEV_COUNT; idx++) {
         bm_l2_ctx.devices[idx].type = bm_netdev_config[idx].type;
         switch (bm_l2_ctx.devices[idx].type) {
-            case BM_NETDEV_TYPE_ADIN2111:
-                if (adin2111_hw_init(&bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter], bm_l2_rx, _link_change_cb) == ADI_ETH_SUCCESS) {
-                    bm_l2_ctx.devices[idx].device_handle = &bm_l2_ctx.adin_devices[bm_l2_ctx.adin_device_counter++];
+            case BM_NETDEV_TYPE_ADIN2111: {
+                configASSERT(bm_netdev_config[idx].config);
+                adin2111_config_t * adin_cfg = static_cast<adin2111_config_t *>(bm_netdev_config[idx].config);
+                configASSERT(adin_cfg->dev);
+                if (adin2111_hw_init(adin_cfg->dev, bm_l2_rx, _link_change_cb, adin_cfg->port_mask) == ADI_ETH_SUCCESS) {
+                    bm_l2_ctx.devices[idx].device_handle = adin_cfg->dev;
                     bm_l2_ctx.devices[idx].num_ports = ADIN2111_PORT_NUM;
                     bm_l2_ctx.devices[idx].start_port_idx = bm_l2_ctx.available_port_mask_idx;
                     bm_l2_ctx.devices[idx].dev_pwr_func = adin2111_power_cb;
+                    bm_l2_ctx.devices[idx].enabled_ports_mask = adin_cfg->port_mask;
                     bm_l2_ctx.available_ports_mask |= (ADIN2111_PORT_MASK << bm_l2_ctx.available_port_mask_idx);
-                    bm_l2_ctx.available_port_mask_idx += ADIN2111_PORT_NUM;
+                    bm_l2_ctx.available_port_mask_idx += bm_l2_ctx.devices[idx].num_ports;
                 } else {
                     printf("Failed to init ADIN2111");
                 }
                 break;
+            }
             case BM_NETDEV_TYPE_NONE:
             default:
                 /* No device or not supported */

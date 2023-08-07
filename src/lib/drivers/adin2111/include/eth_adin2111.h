@@ -25,12 +25,12 @@ typedef int8_t (*adin_rx_callback_t)(void* device_handle, uint8_t* payload, uint
 typedef void (*adin_link_change_callback_t)(void* device_handle, uint8_t port, bool state);
 typedef void (*adin2111_port_stats_callback_t)(adin2111_DeviceHandle_t device_handle, adin2111_Port_e port, adin_port_stats_t *stats, void* args);
 
-adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback, adin_link_change_callback_t link_change_callback);
+adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callback_t rx_callback, adin_link_change_callback_t link_change_callback, uint8_t enabled_port_mask);
 err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t* buf, uint16_t buf_len, uint8_t port_mask, uint8_t port_offset);
-int adin2111_hw_start(adin2111_DeviceHandle_t dev);
-int adin2111_hw_stop(adin2111_DeviceHandle_t dev);
+int adin2111_hw_start(adin2111_DeviceHandle_t dev, uint8_t port_mask);
+int adin2111_hw_stop(adin2111_DeviceHandle_t dev, uint8_t port_mask);
 bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port, adin2111_port_stats_callback_t cb, void* args);
-int adin2111_power_cb(const void * devHandle, bool on);
+int adin2111_power_cb(const void * devHandle, bool on, uint8_t port_mask);
 #ifdef __cplusplus
 }
 #endif
