@@ -334,9 +334,6 @@ static void defaultTask( void *parameters ) {
     debugSpotterInit();
     debugRTCInit();
     timer_callback_handler_init();
-    // Disabling now for hard mode testing
-    // Re-enable low power mode
-    // lpmPeripheralInactive(LPM_BOOT);
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 #ifdef BSP_DEV_MOTE_V1_0
@@ -373,9 +370,25 @@ static void defaultTask( void *parameters ) {
     IOWrite(&EXP_LED_G2, LED_OFF);
     IOWrite(&EXP_LED_R1, LED_OFF);
 #endif // BSP_DEV_MOTE_V1_0
+#ifdef BSP_MOTE_V1_0
+    IOWrite(&BF_LED_G2, LED_OFF);
+    IOWrite(&BF_LED_R2, LED_OFF);
+    IOWrite(&BF_LED_G1, LED_OFF);
+    IOWrite(&BF_LED_R1, LED_OFF);
+#endif // BSP_DEV_MOTE_V1_0
+    vTaskDelay(1000);
+#ifdef BSP_MOTE_V1_0
+    IOWrite(&BF_LED_G2, LED_ON);
+    IOWrite(&BF_LED_R2, LED_OFF);
+    IOWrite(&BF_LED_G1, LED_ON);
+    IOWrite(&BF_LED_R1, LED_OFF);
+#endif // BSP_DEV_MOTE_V1_0
 
     bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
     bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
+
+    // Re-enable low power mode
+    lpmPeripheralInactive(LPM_BOOT);
 
     while(1) {
         /* Do nothing */

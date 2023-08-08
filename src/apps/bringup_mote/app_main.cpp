@@ -342,11 +342,11 @@ static void defaultTask( void *parameters ) {
 #endif
   debugRTCInit();
 
-  // Commenting out while we test usart1
-  // lpmPeripheralInactive(LPM_BOOT);
-
   // Turn of the bristlefin leds and correct gpio init state.
   bristlefin.setGpioDefault();
+
+  // Commenting out while we test usart1
+  // lpmPeripheralInactive(LPM_BOOT);
 
   while(1) {
     vTaskDelay(1000);

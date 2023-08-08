@@ -318,9 +318,6 @@ static void defaultTask( void *parameters ) {
     debugSpotterInit();
     debugRTCInit();
 
-    // Disabling now for hard mode testing
-    // Re-enable low power mode
-    // lpmPeripheralInactive(LPM_BOOT);
     timer_callback_handler_init();
     spiflash::W25 debugW25(&spi2, &FLASH_CS);
     debugW25Init(&debugW25);
@@ -352,6 +349,9 @@ static void defaultTask( void *parameters ) {
 #ifdef USE_MICROPYTHON
     micropython_freertos_init(&usbCLI);
 #endif
+
+    // Re-enable low power mode
+    lpmPeripheralInactive(LPM_BOOT);
 
     while(1) {
         /* Do nothing */

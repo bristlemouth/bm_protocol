@@ -114,9 +114,20 @@ void lpmPreSleepProcessing() {
   int useDeepSleep = pdFALSE;
    if (deepSleepForbiddenFlags == 0)
    {
+
+      // TODO: Commenting out STOP2 for now and only using STOP1. This is because GPDMA does not have
+      //       wakeup capabilities in STOP2. See RM0456 Table 100, pg. 415. We currently use GPDMA for
+      //       SPI3 TX/RX. If we were to switch to LPDMA, we could go back to using STOP2 mode.
+
+      // useDeepSleep = pdTRUE;
+      // #define PWR_CR1_LPMS_STOP2 PWR_CR1_LPMS_1
+      // MODIFY_REG(PWR->CR1, PWR_CR1_LPMS_Msk, PWR_CR1_LPMS_STOP2);
+
+      // TODO: Remove the STOP1 lines from here if we re-enable STOP2
       useDeepSleep = pdTRUE;
-      #define PWR_CR1_LPMS_STOP2 PWR_CR1_LPMS_1
-      MODIFY_REG(PWR->CR1, PWR_CR1_LPMS_Msk, PWR_CR1_LPMS_STOP2);
+      #define PWR_CR1_LPMS_STOP1 PWR_CR1_LPMS_0
+      MODIFY_REG(PWR->CR1, PWR_CR1_LPMS_Msk, PWR_CR1_LPMS_STOP1);
+
    }
    else if ((deepSleepForbiddenFlags & ~LPM_OK_IN_STOP1) == 0)
    {

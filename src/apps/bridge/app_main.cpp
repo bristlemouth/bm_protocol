@@ -311,8 +311,6 @@ static void defaultTask( void *parameters ) {
     debugRTCInit();
 
     timer_callback_handler_init();
-    // // Re-enable low power mode
-    // lpmPeripheralInactive(LPM_BOOT);
 
     gpioISRRegisterCallback(&USER_BUTTON, buttonPress);
 
@@ -362,6 +360,9 @@ static void defaultTask( void *parameters ) {
 #ifdef USE_MICROPYTHON
     micropython_freertos_init(&usbCLI);
 #endif
+
+    // // Re-enable low power mode
+    // lpmPeripheralInactive(LPM_BOOT);
 
     while(1) {
         /* Do nothing */

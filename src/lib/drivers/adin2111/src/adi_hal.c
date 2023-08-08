@@ -89,24 +89,24 @@ uint32_t HAL_FcsCalculate(uint8_t *pBuf, uint32_t nbBytes)
 
 uint32_t HAL_DisableIrq(void)
 {
-    NVIC_DisableIRQ(EXTI15_IRQn);
+    NVIC_DisableIRQ(ADIN_INT_EXTI_IRQn);
     return ADI_HAL_SUCCESS;
 }
 
 uint32_t HAL_EnableIrq(void)
 {
-    NVIC_EnableIRQ(EXTI15_IRQn);
+    NVIC_EnableIRQ(ADIN_INT_EXTI_IRQn);
     return ADI_HAL_SUCCESS;
 }
 
 uint32_t HAL_GetPendingIrq(void)
 {
-    return NVIC_GetPendingIRQ(EXTI15_IRQn);
+    return NVIC_GetPendingIRQ(ADIN_INT_EXTI_IRQn);
 }
 
 uint32_t HAL_GetEnableIrq(void)
 {
-    return NVIC_GetEnableIRQ(EXTI15_IRQn);
+    return NVIC_GetEnableIRQ(ADIN_INT_EXTI_IRQn);
 }
 
 /*
@@ -172,4 +172,3 @@ uint32_t HAL_UnInit_Hook(void)
 }
 
 /** @}*/
-
