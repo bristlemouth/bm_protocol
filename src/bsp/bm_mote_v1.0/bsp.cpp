@@ -48,6 +48,7 @@ PCA9535Device_t bristlefinIOExpander = {&i2c1, 0x21, 0 , 0, 0, {NULL}, false, NU
 
 adin_pins_t adin_pins = {&spi3, &ADIN_CS, &ADIN_INT, &ADIN_RST};
 
+// Startup Pin Definitions: https://www.notion.so/sofarocean/Default-GPIO-states-5729cc41a5e541aa99ca954db8e76e2e
 void bspInit() {
   // Switch HAL_GetTick to use freeRTOS tick
   osStarted = true;
@@ -93,9 +94,14 @@ void bspInit() {
   // Turn off the BUCK by default (it's enabled when low)
   IOWrite(&BF_PL_BUCK_EN, 1);
 
+  // Turn off the 5V by default (it's enabled when low)
+  IOWrite(&BF_5V_EN, 1);
+
   // Turn it on by default
   IOWrite(&BF_3V3_EN, 1);
 
+  // High by default
+  IOWrite(&BF_HFIO, 1);
 }
 
 bool usb_is_connected() {
