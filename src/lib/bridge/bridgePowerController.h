@@ -24,7 +24,7 @@ public:
     // Shim function for FreeRTOS compatibility, should not be called as part of the public API.
     void _update(void); // PRIVATE
 private:
-    void powerBusAndSetSignal(bool on);
+    void powerBusAndSetSignal(bool on, bool notifyL2 = true);
     static void powerControllerRun(void* arg);
     bool getAdinDevice();
 

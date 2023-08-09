@@ -82,17 +82,19 @@ bool BridgePowerController::waitForSignal(bool on, TickType_t ticks_to_wait) {
     return rval;
 }
 
-void BridgePowerController::powerBusAndSetSignal(bool on) {
+void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     EventBits_t signal_to_set = (on) ? BridgePowerController::ON : BridgePowerController::OFF;
     EventBits_t signal_to_clear = (on) ? BridgePowerController::OFF : BridgePowerController::ON;
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     IOWrite(&_BusPowerPin, on);
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
-    if(_adin_handle){
-        bm_l2_netif_set_power(_adin_handle, on);
-    } else {
-        if(getAdinDevice()){
+    if(notifyL2) {
+        if(_adin_handle){
             bm_l2_netif_set_power(_adin_handle, on);
+        } else {
+            if(getAdinDevice()){
+                bm_l2_netif_set_power(_adin_handle, on);
+            }
         }
     }
     constexpr size_t bufsize = 25;
@@ -120,7 +122,7 @@ void BridgePowerController::_update(void) { // FIXME: Refactor this function to 
     do {
         if (!_initDone) { // Initializing
             BRIDGE_LOG_PRINT("Bridge State Init\n");
-            powerBusAndSetSignal(true);
+            powerBusAndSetSignal(true, false); // We start Bus on, no need to signal an eth up / power up event to l2 & adin
             vTaskDelay(INIT_POWER_ON_TIMEOUT_MS); // Set bus on for two minutes for init.
             powerBusAndSetSignal(false);
             static constexpr size_t printBufSize = 200;

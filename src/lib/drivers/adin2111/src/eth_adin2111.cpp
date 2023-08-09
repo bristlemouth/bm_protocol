@@ -26,10 +26,13 @@
 #include "task_priorities.h"
 
 #include "pcap.h"
+#include "gpio.h"
 
 
 /* Extra 4 bytes for FCS and 2 bytes for the frame header */
 #define MAX_FRAME_BUF_SIZE  (MAX_FRAME_SIZE + 4 + 2)
+
+#define PAUSE_RESUME_TASKS_TIMEOUT_MS (1000)
 
 #define DMA_ALIGN_SIZE (4)
 
@@ -43,7 +46,6 @@ static adin2111_DriverConfig_t drvConfig = {
     .tsTimerPin = ADIN2111_TS_TIMER_MUX_NA,
     .tsCaptPin = ADIN2111_TS_CAPT_MUX_NA,
 };
-
 typedef struct {
     // NOTE: bufDesc MUST be first, since it's what the callback returns and we need
     // to know what address to free :D
@@ -92,6 +94,12 @@ typedef enum {
     // Port stats request
     EVT_PORT_STATS,
 
+    // Adin task pause
+    EVT_PAUSE_ADIN_TASK,
+
+    // Adin task resume
+    EVT_RESUME_ADIN_TASK,
+
 } ethEvtType_e;
 
 typedef struct {
@@ -101,10 +109,11 @@ typedef struct {
 
 // Queue used to handle all tx/rx/irq events
 static QueueHandle_t    _eth_evt_queue;
-
+static bool _adin_thread_paused = false;
+static rxMsgEvt_t* adin_rx_buf_mem[RX_QUEUE_NUM_ENTRIES];
 static void free_tx_msg_req(txMsgEvt_t *txMsg);
 static rxMsgEvt_t *createRxMsgReq(adin2111_DeviceHandle_t hDevice, uint16_t buf_len);
-
+static bool resume_pause_adin_task(bool start, TaskHandle_t task_to_notify, uint32_t timeout_ms);
 
 /*!
   ADIN message received callback
@@ -177,6 +186,30 @@ static void adin2111_link_change_cb(void *pCBParam, uint32_t Event, void *pArg) 
         ethEvt_t event = {.type=EVT_LINK_CHANGE, .data=linkChangeEvt};
         configASSERT(xQueueSend(_eth_evt_queue, &event, 10));
     }
+}
+
+/*!
+  Pauses / resumes the adin processing task
+
+  \param start - true if task should be started, false if task should be paused
+  \param task_to_notify - task to notify when task is paused/resumed
+  \param timeout_ms - timeout in ms to wait for task to pause/resume
+  \return none
+*/
+static bool resume_pause_adin_task(bool start, TaskHandle_t task_to_notify, uint32_t timeout_ms) {
+    ethEvtType_e type = start ? EVT_RESUME_ADIN_TASK : EVT_PAUSE_ADIN_TASK;
+    TaskHandle_t *task_to_notify_mem = static_cast<TaskHandle_t *>(pvPortMalloc(sizeof(TaskHandle_t)));
+    configASSERT(task_to_notify_mem);
+    *task_to_notify_mem = task_to_notify;
+    ethEvt_t event = {.type=type, .data=task_to_notify_mem};
+    if(xQueueSend(_eth_evt_queue, &event, timeout_ms)!=pdPASS) {
+        vPortFree(task_to_notify_mem);
+        return false;
+    }
+    if(!ulTaskNotifyTake(pdTRUE, timeout_ms)){
+        configASSERT(false); // We should never get here.
+    }
+    return true;
 }
 
 /*!
@@ -253,6 +286,26 @@ static void adin2111_thread(void *parameters) {
             continue;
         }
 
+        // Adin thread is paused.
+        if(_adin_thread_paused && event.type != EVT_RESUME_ADIN_TASK) {
+            // If thread is paused, only EVT_RESUME_ADIN_TASK events are allowed
+            printf("Adin paused, ignoring event %d\n", event.type);
+            switch(event.type) {
+                case EVT_ETH_TX:{
+                    free_tx_msg_req(static_cast<txMsgEvt_t *>(event.data));
+                    break;
+                }
+                default: {
+                    if(event.data){
+                        vPortFree(event.data);
+                    }
+                    break;
+                }
+            }
+            continue;
+        }
+
+        // Adin thread is running.
         switch(event.type) {
 
             case EVT_ETH_TX: {
@@ -317,6 +370,24 @@ static void adin2111_thread(void *parameters) {
                 portStatsReqEvt_t *portStatsReqEvt = static_cast<portStatsReqEvt_t *>(event.data);
                 _get_port_stats(portStatsReqEvt);
                 vPortFree(portStatsReqEvt);
+                break;
+            }
+
+            case EVT_PAUSE_ADIN_TASK: {
+                configASSERT(event.data);
+                _adin_thread_paused = true;
+                TaskHandle_t* task_to_notify = static_cast<TaskHandle_t*>(event.data);
+                xTaskNotifyGive(*task_to_notify);
+                vPortFree(task_to_notify);
+                break;
+            }
+
+            case EVT_RESUME_ADIN_TASK: {
+                configASSERT(event.data);
+                _adin_thread_paused = false;
+                TaskHandle_t* task_to_notify = static_cast<TaskHandle_t*>(event.data);
+                xTaskNotifyGive(*task_to_notify);
+                vPortFree(task_to_notify);
                 break;
             }
 
@@ -387,13 +458,13 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
 
         // Allocate RX buffers for ADIN (Only need to do this once)
         for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
-            rxMsgEvt_t *rxMsg = createRxMsgReq(hDevice, MAX_FRAME_BUF_SIZE);
-            configASSERT(rxMsg);
+            adin_rx_buf_mem[idx] = createRxMsgReq(hDevice, MAX_FRAME_BUF_SIZE);
+            configASSERT(adin_rx_buf_mem[idx]);
 
             // Submit rx buffer to ADIN's RX queue
             // Once buffer is used, adin2111_rx_cb will be called
             // and it can be re-added to the queue with this same function
-            result = adin2111_SubmitRxBuffer(hDevice, &rxMsg->bufDesc);
+            result = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
             if (result != ADI_ETH_SUCCESS) {
                 printf("Unable to re-submit RX Buffer\n");
                 configASSERT(0);
@@ -684,10 +755,59 @@ bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port, 
 
 int adin2111_power_cb(const void * devHandle, bool on, uint8_t port_mask) {
     int rval = 0;
+    adin2111_DeviceHandle_t hDevice = reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle));
     if(on) {
-        rval = adin2111_hw_start(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)), port_mask);
+        do {
+            IOWrite(&ADIN_PWR, 1);
+            rval = adin2111_Init(hDevice, &drvConfig);
+            if (rval != ADI_ETH_SUCCESS) {
+                break;
+            }
+
+            rval = adin2111_RegisterCallback(hDevice, adin2111_link_change_cb, ADI_MAC_EVT_LINK_CHANGE);
+            if (rval != ADI_ETH_SUCCESS) {
+                break;
+            }
+            for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
+                // Submit rx buffer to ADIN's RX queue
+                rval = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
+                if (rval != ADI_ETH_SUCCESS) {
+                    printf("Unable to re-submit RX Buffer\n");
+                    break;
+                }
+            }
+            // Failed to initialize
+            if(rval != ADI_ETH_SUCCESS) {
+                break;
+            }
+            rval = adin2111_SyncConfig(hDevice);
+            if (rval != ADI_ETH_SUCCESS) {
+                break;
+            }
+            rval = adin2111_hw_start(hDevice, port_mask);
+            if (rval != ADI_ETH_SUCCESS) {
+                break;
+            }
+            if(!resume_pause_adin_task(true, xTaskGetCurrentTaskHandle(), PAUSE_RESUME_TASKS_TIMEOUT_MS)) {
+                rval = ADI_ETH_COMM_ERROR;
+                break;
+            }
+        } while(0);
+        if (rval != ADI_ETH_SUCCESS) {
+            IOWrite(&ADIN_PWR, 0);
+        }
     } else {
-        rval = adin2111_hw_stop(reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void*>(devHandle)), port_mask);
+        do {
+            if(!resume_pause_adin_task(false, xTaskGetCurrentTaskHandle(), PAUSE_RESUME_TASKS_TIMEOUT_MS)) {
+                rval = ADI_ETH_COMM_ERROR;
+                break;
+            }
+            rval = adin2111_hw_stop(hDevice, port_mask);
+            if(rval != ADI_ETH_SUCCESS){
+                break;
+            }
+            IOWrite(&ADIN_PWR, 0);
+        } while(0);
     }
     return rval;
 }
