@@ -56,9 +56,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
-    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
     ${SRC_DIR}/lib/common/topology_sampler.cpp
-    ${SRC_DIR}/lib/bridge/bridgeLog.cpp
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
@@ -233,6 +231,8 @@ set(APP_LIBS
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}

@@ -226,12 +226,14 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/bcmp/bm
+    ${SRC_DIR}/apps/bridge
+    ${SRC_DIR}/lib/bm_common_messages
 )
 
 target_sources(bridge_power_controller_tests
     PRIVATE
     # File we're testing
-    ${SRC_DIR}/lib/bridge/bridgePowerController.cpp
+    ${SRC_DIR}/apps/bridge/bridgePowerController.cpp
 
     # Support files
     ${SRC_DIR}/lib/common/util.c
