@@ -36,7 +36,7 @@ To get started developing custom applications for the Bristlemouth Development K
     ```
 - Once completed you can successfully start building applications. You're ready to develop and flash custom firmware to your Dev Kit's Mote.
   There are a variety of ways to load firmware onto a Mote, a detailed overview can be found in the
-  [Updating Firmware of A Development Kit](https://www.notion.so/sofarocean/Updating-Firmware-of-A-Development-Kit-ef18d826d8834a88b88b98163bba884e)
+  [Updating Firmware of A Development Kit](https://sofarocean.notion.site/Mote-Firmware-Updates-ef18d826d8834a88b88b98163bba884e?pvs=4)
   section of the online docs.
 
 ## Applications Overview
@@ -67,7 +67,7 @@ The Hello World App demonstrates basic Bristlemouth and Dev Kit functionality:
 ### Serial Payload Example
 The Serial Payload Example App builds on top of the Hello World App by adding functionality to interact with a sensor
 on the Low Power Payload UART Interface. This interface drives the RS232, RS485, SDI-12, and UART interfaces of the Dev Kit.
-See [Bristlemouth Dev Kit Guide 3 Integrating a Serial Sensor](https://www.notion.so/sofarocean/Bristlemouth-Dev-Kit-Guide-3-Integrating-a-Serial-Sensor-d828783a7bec4763b204a913568e608b)
+See [Bristlemouth Dev Kit Guide 3 Integrating a Serial Sensor](https://bristlemouth.notion.site/Bristlemouth-Dev-Kit-Guide-3-Exploring-Bristlemouth-Features-f08a56dc01ac47d889a4eacb9f4904f8?pvs=4)
 in the online docs for an example walk-through.
 - Initialize and read data from the Payload UART.
   - Use an ASCII serial line buffer.
@@ -76,7 +76,7 @@ in the online docs for an example walk-through.
 ### RBR Coda3 Integration
 The RBR Coda3 Integration App builds on top of the Serial Payload Example App by implementing a basic parsing and analysis
 for reading data from a popular marine depth sensor - the RBR Coda3.D. Follow along the process of building the app in
-the [Bristlemouth Dev Kit Guide 3 Integrating a Serial Sensor](https://www.notion.so/sofarocean/Bristlemouth-Dev-Kit-Guide-3-Integrating-a-Serial-Sensor-d828783a7bec4763b204a913568e608b).
+the [Bristlemouth Dev Kit Guide 3 Integrating a Serial Sensor](https://bristlemouth.notion.site/Bristlemouth-Dev-Kit-Guide-3-Exploring-Bristlemouth-Features-f08a56dc01ac47d889a4eacb9f4904f8?pvs=4).
 - Parsing text into numeric values.
 - Aggregating basic statistics.
 - Using Bristlemouth from user_code to print to Spotter's USB console, SD card, and transmit data over cellular or satellite.
@@ -110,7 +110,7 @@ These cases will be called out in code comments.
 - `cd` into `cmake-build/exact_name_of_app_directory` _make directoris with `mkdir` as needed along the way_.
 - Run the following cmake command, modifying it by changing the last argument to the exact name of the app directory you're building:
   - `cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bm_mote_v1.0 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_APP_TYPE=BMDK -DAPP=exact_name_of_app_directory`
-- Then `make`, `make flash`, or `make dfu_flash` per however you're deploying firmware to your Motes. _See [Updating Firmware of A Development Kit](https://www.notion.so/sofarocean/Updating-Firmware-of-A-Development-Kit-ef18d826d8834a88b88b98163bba884e) for more details._
+- Then `make`, `make flash`, or `make dfu_flash` per however you're deploying firmware to your Motes. _See [Updating Firmware of A Development Kit](https://sofarocean.notion.site/Mote-Firmware-Updates-ef18d826d8834a88b88b98163bba884e?pvs=4) for more details._
 
 ### Creating Your Own Applications
 When you're experimenting and testing, it's easiest to just modify the example apps for quick prototyping.
