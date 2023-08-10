@@ -10,23 +10,28 @@ If you're developing on the Bristlemouth Development Kit, see the [BMDK_README.m
 
 [Conda](https://docs.conda.io/en/latest/) is used to manage dependencies (compiler, openocd, cmake, python) so that everyone has the same version of all the tools (without affecting the rest of your system).
 
-If you don't have conda installed, follow these steps:
+(If you're running on a Raspberry Pi with Ubuntu 64-bit, you'll need to use [miniforge](https://github.com/conda-forge/miniforge) instad of miniconda.)
+
+(If you're on a Mac, you may need to first install the Xcode command-line tools.  One way to do this is to run `xcode-select --install` in a Terminal window.)
+
+If you don't have conda installed, follow these steps by choosing the proper line for your platform:
 
 ```
 $ cd /tmp
-# Download for Mac:
-$ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-# Download for Linux:
+# Download for Mac (Apple Silicon / M1 / M1 Pro / M2 / etc.):
+$ curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
+# or, download for Mac (Intel):
+$ curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+# or, download for Linux:
 $ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 # install it
-$ bash Miniconda3-latest-*-x86_64.sh
+$ bash Miniconda3-latest-*.sh
 ```
 
-(If you're running on a raspberry pi with ubuntu 64-bit, you'll need to use [miniforge](https://github.com/conda-forge/miniforge) instad of miniconda.)
+- Scroll through the instructions using your space bar and accept the license terms.
+- Tell the installer that, yes, you do want to initialize miniconda, by pressing ENTER and then entering `yes`
 
-Tell the installer that, yes, you do want to initialize miniconda
-
-**NOTE:** you'll have to relaunch your terminal for conda to start working.
+**NOTE:** You'll have to relaunch your terminal for conda to start working.
 
 You'll notice that the new terminal will be inside the conda (base) environment, if you don't want this to happen automatically, just run `conda config --set auto_activation_base false` once and relaunch.
 
