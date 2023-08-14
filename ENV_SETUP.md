@@ -77,7 +77,7 @@ pre-commit run
 ```
 
 Note that if pre-commit modifies your code, you will need to `git add` the files before you commit them.
-If you'd like to force a commit through, use the `git commit --no-verify` flag.~
+If you'd like to force a commit through, use the `git commit --no-verify` flag.
 
 ### Set up environment variables
 The environment variables needed for the project are listed in `.env.example`.
@@ -93,6 +93,8 @@ A couple things to note about submodules:
 
 
 ## Building/Flashing - Command-line
+
+**🛑 NOTE:** If you came here from the *Bristlemouth Dev Kit Guide*, you do not need to  complete the following sections.  You can now return to the document that brought you here.
 
 ### Configure CMake
 
