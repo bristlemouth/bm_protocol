@@ -118,10 +118,6 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
         if(getNodeId() == dfu_start->node_id){
             rval = _do_self_update(dfu_start);
         } else {
-            // Don't allow firmware update until the two minute initilzation period of the bridge has elapsed.
-            if(!_ctx.power_controller->initPeriodElapsed()) {
-                break;
-            }
             // We want to disable power control here (which will leave the bus ON, allowing a node to be updated)
             if(_ctx.power_controller->isPowerControlEnabled()){ // If we were already disabled, we don't need to do this.
                 _ctx.power_controller->powerControlEnable(false);

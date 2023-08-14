@@ -27,6 +27,7 @@ private:
     void powerBusAndSetSignal(bool on, bool notifyL2 = true);
     static void powerControllerRun(void* arg);
     bool getAdinDevice();
+    void checkAndUpdateRTC();
 
 public:
     static constexpr uint32_t OFF = (1 << 0);

@@ -124,7 +124,6 @@ void BridgePowerController::_update(void) { // FIXME: Refactor this function to 
             BRIDGE_LOG_PRINT("Bridge State Init\n");
             powerBusAndSetSignal(true, false); // We start Bus on, no need to signal an eth up / power up event to l2 & adin
             vTaskDelay(INIT_POWER_ON_TIMEOUT_MS); // Set bus on for two minutes for init.
-            powerBusAndSetSignal(false);
             static constexpr size_t printBufSize = 200;
             char* printbuf = static_cast<char*>(pvPortMalloc(printBufSize));
             configASSERT(printbuf);
@@ -143,7 +142,8 @@ void BridgePowerController::_update(void) { // FIXME: Refactor this function to 
                 _subsampleIntervalMs);
             BRIDGE_LOG_PRINTN(printbuf, len);
             vPortFree(printbuf);
-            BRIDGE_LOG_PRINT("Bridge State Init Complete, powering off\n");
+            BRIDGE_LOG_PRINT("Bridge State Init Complete\n");
+            checkAndUpdateRTC();
             _initDone = true;
         } else if(_powerControlEnabled && _rtcSet) { // Sampling Enabled
             uint32_t currentCycleTicks = xTaskGetTickCount();
@@ -192,12 +192,7 @@ void BridgePowerController::_update(void) { // FIXME: Refactor this function to 
                     powerBusAndSetSignal(false);
                 }
             }
-            if(isRTCSet() && !_rtcSet){
-                printf("Bridge Power Controller RTC is set.\n");
-                _sampleIntervalStartTicks = xTaskGetTickCount();
-                _subSampleIntervalStartTicks = xTaskGetTickCount();
-                _rtcSet = true;
-            }
+            checkAndUpdateRTC();
         }
 
     } while(0);
@@ -230,4 +225,13 @@ bool BridgePowerController::getAdinDevice() {
         }
     }
     return rval;
+}
+
+void BridgePowerController::checkAndUpdateRTC() {
+    if(isRTCSet() && !_rtcSet){
+        printf("Bridge Power Controller RTC is set.\n");
+        _sampleIntervalStartTicks = xTaskGetTickCount();
+        _subSampleIntervalStartTicks = xTaskGetTickCount();
+        _rtcSet = true;
+    }
 }
