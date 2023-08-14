@@ -3,7 +3,7 @@
 ## Environment Setup
 
 To get started developing custom applications for the Bristlemouth Development Kit, first you need to setup your developer environment.
-- First, complete the [Initial Setup](../../../ENV_SETUP.md#initial-setup) section in the ENV_SETUP.md doc, then come back here. Stop when you get to the "Building/Flashing - Command-line" 
+- First, complete the [Initial Setup](../../../ENV_SETUP.md#initial-setup) section in the ENV_SETUP.md doc, then come back here. Stop when you get to the section titled "Building/Flashing - Command-line."
 - Create a build directory, and build the Hello World App:
   ```bash
     bristlemouth $ conda activate bristlemouth
@@ -107,7 +107,8 @@ thread safety some times, as some of the code in example app user_code.cpp files
 These cases will be called out in code comments.
 
 ### Building Example Applications
-- `cd` into `cmake-build/exact_name_of_app_directory` _make directoris with `mkdir` as needed along the way_.
+- `cd` into `cmake-build/exact_name_of_app_directory`
+  - _Create directories with `mkdir` or `mkdir -p` as needed along the way_.
 - Run the following cmake command, modifying it by changing the last argument to the exact name of the app directory you're building:
   - `cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bm_mote_v1.0 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_APP_TYPE=BMDK -DAPP=exact_name_of_app_directory`
 - Then `make`, `make flash`, or `make dfu_flash` per however you're deploying firmware to your Motes. _See [Updating Firmware of A Development Kit](https://sofarocean.notion.site/Mote-Firmware-Updates-ef18d826d8834a88b88b98163bba884e?pvs=4) for more details._
@@ -120,4 +121,4 @@ we recommend:
 - Paste this entire directory into the `bm_devkit` folder, giving it a unique name (_no spaces or special characters please_).
 - Then create a build directory for your app per the process above.
 This makes it simple to keep pulling in the latest versions of Bristlemouth and the example applications from GitHub
-- without having to deal with merge conflicts.
+without having to deal with merge conflicts.
