@@ -9,7 +9,7 @@ namespace PLUART {
 // Process a received byte and store it in a line buffer
   void processLineBufferedRxByte(void *serialHandle, uint8_t byte);
 
-// User-defined line processing function
+// User-defined byte processing function
   void userProcessRxByte(const uint8_t byte) __attribute__((weak));
 
 // Print a line of received data to USB console, Spotter Console, Spotter SD
@@ -21,9 +21,9 @@ namespace PLUART {
 // Set the baud rate for the LPUART
   void setBaud(uint32_t new_baud_rate);
 
-  /// TODO - placeholder for RBR command UART Tx
-  //  uint8_t testByte = 0xBE;
-//  serialWrite(&lpuart1, &testByte, 1);
+// TODO - placeholder for RBR command UART Tx
+  // uint8_t testByte = 0xBE;
+  // serialWrite(&lpuart1, &testByte, 1);
 
 // Getter and setter for line termination character
   char getTerminationCharacter();

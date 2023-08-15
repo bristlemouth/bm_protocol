@@ -58,8 +58,8 @@ LineParser parser(",", 256, valueTypes, 2);
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
 /*
- * This function is called from the payload UART library in src/lib/bristlefin/payload_uart.cpp::processLine function.
- * Every time the uart receives the configured termination character (newline character by default),
+ * This function is called from the payload UART library in src/lib/common/payload_uart.cpp::processLine function.
+ * Every time the uart receives the configured termination character ('\0' character by default),
  * It will:
  * -- print the line to Dev Kit USB console.
  * -- print the line to Spotter USB console.

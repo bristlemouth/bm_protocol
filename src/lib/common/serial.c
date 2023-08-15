@@ -153,7 +153,6 @@ void serialGenericRxTask( void *parameters ) {
 
     if(handle->flags & SERIAL_FLAG_RXDROP) {
       handle->flags &= ~SERIAL_FLAG_RXDROP;
-      // logPrint(SerialLog, LOG_LEVEL_ERROR, "RX Overflow [%s]\n", handle->name);
     }
 
     // Do something with received bytes if needed

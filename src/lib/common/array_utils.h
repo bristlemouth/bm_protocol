@@ -78,4 +78,4 @@ T getMax(T * buffer, uint16_t bufLen, int &index) {
   return max;
 }
 
-#endif //SPOTTER_ARRAY_UTILS_H
+#endif //ARRAY_UTILS_H

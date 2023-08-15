@@ -16,39 +16,41 @@ namespace PLUART {
     terminationCharacter = term_char;
   }
 
-/// Called everytime we get a UART byte
+// Called everytime we get a UART byte
   void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
     configASSERT(serialHandle != NULL);
     SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
-//  printf("%c", byte);
-    // // This function requires data to be a pointer to a SerialLineBuffer_t
+    //  printf("%c", byte);
+    // This function requires data to be a pointer to a SerialLineBuffer_t
     configASSERT(handle->data != NULL);
     SerialLineBuffer_t *lineBuffer = reinterpret_cast<SerialLineBuffer_t *>(handle->data);
-    // // We need a buffer to use!
+    // We need a buffer to use!
     configASSERT(lineBuffer->buffer != NULL);
     lineBuffer->buffer[lineBuffer->idx] = byte;
-    if(lineBuffer->buffer[lineBuffer->idx] == '\n'){
-      //   // Zero terminate the line
+    if(lineBuffer->buffer[lineBuffer->idx] == terminationCharacter){
+      // Zero terminate the line
       if ((lineBuffer->idx + 1) < lineBuffer->len) {
         lineBuffer->buffer[lineBuffer->idx + 1] = 0;
       }
       if(lineBuffer->lineCallback != NULL) {
         lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
       }
-      //   // Reset buffer index
+      // Reset buffer index
       lineBuffer->idx = 0;
     }
     else {
       lineBuffer->idx++;
-      //   // Heavy handed way of dealing with overflow for now
-      //   // Later we can just purge the buffer
-      //   // TODO - log error and clear buffer instead
+      // Heavy handed way of dealing with overflow for now
+      // Later we can just purge the buffer
+      // TODO - log error and clear buffer instead
       configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
     }
-    if (userProcessRxByte) userProcessRxByte(byte);
+    if (userProcessRxByte) {
+      userProcessRxByte(byte);
+    }
   }
 
-/// Called everytime we get a 'line' by processLineBufferedRxByte
+// Called everytime we get a 'line' by processLineBufferedRxByte
   void processLine(void *serialHandle, uint8_t *line, size_t len) {
     configASSERT(serialHandle != NULL);
     SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
@@ -74,12 +76,14 @@ namespace PLUART {
     bm_printf(0, "[%s] | tick: %llu, rtc: %s, line: %.*s", handle->name, uptimeGetMs(), rtcTimeBuffer, len, line);
     printf("[%s] | tick: %llu, rtc: %s, line: %.*s\n", handle->name, uptimeGetMs(), rtcTimeBuffer, len, line);
 
-    if (userProcessLine) userProcessLine(line, len);
+    if (userProcessLine) {
+      userProcessLine(line, len);
+    }
   }
 
   void setBaud(uint32_t new_baud_rate) {
     LL_LPUART_SetBaudRate(static_cast<USART_TypeDef *>(uart_handle.device),
-                          LL_RCC_GetUSARTClockFreq(LL_RCC_USART3_CLKSOURCE),
+                          LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
                           LL_LPUART_PRESCALER_DIV64,
                           new_baud_rate);
   }

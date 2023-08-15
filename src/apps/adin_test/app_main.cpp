@@ -388,7 +388,7 @@ static void defaultTask( void *parameters ) {
     bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
 
     // Re-enable low power mode
-    lpmPeripheralInactive(LPM_BOOT);
+    // lpmPeripheralInactive(LPM_BOOT);
 
     while(1) {
         /* Do nothing */

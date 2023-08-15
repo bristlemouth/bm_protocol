@@ -45,6 +45,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
+    ${SRC_DIR}/lib/common/payload_uart.cpp
     ${SRC_DIR}/lib/common/pcap.c
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
@@ -94,7 +95,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
-    ${SRC_DIR}/lib/bristlefin/payload_uart.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/common/LineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
