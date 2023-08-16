@@ -18,6 +18,7 @@
 #include "ncp_config.h"
 #include "reset_reason.h"
 #include "memfault/core/reboot_tracking.h"
+#include "gpio.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -134,6 +135,21 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
+static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args) {
+    (void) args;
+    (void) pinHandle;
+
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    if(value) {
+      lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+    } else {
+      lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
+    }
+
+    return xHigherPriorityTaskWoken;
+}
+
 void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller,
   cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg, cfg::Configuration* hw_cfg){
   // here we will change the defualt rx interrupt routine to the custom one we have here
@@ -200,6 +216,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.reboot_info_fn = NULL;
   bm_serial_callbacks.network_info_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
+  IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
   serialEnable(ncpSerialHandle);
   ncp_dfu_check_for_update();

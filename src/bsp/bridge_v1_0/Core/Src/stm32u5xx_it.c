@@ -93,6 +93,33 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI Line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+  BaseType_t rval = pdFALSE;
+  /* USER CODE END EXTI0_IRQn 0 */
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_0) != RESET)
+  {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_0);
+    /* USER CODE BEGIN LL_EXTI_LINE_0_FALLING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)BM_INT.pin);
+    /* USER CODE END LL_EXTI_LINE_0_FALLING */
+  }
+  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_0) != RESET)
+  {
+    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_0);
+    /* USER CODE BEGIN LL_EXTI_LINE_0_RISING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)BM_INT.pin);
+    /* USER CODE END LL_EXTI_LINE_0_RISING */
+  }
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+  portYIELD_FROM_ISR(rval);
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI Line8 interrupt.
   */
 void EXTI8_IRQHandler(void)

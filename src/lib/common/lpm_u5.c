@@ -103,9 +103,8 @@ void lpmPeripheralInactiveFromISR(uint32_t peripheralMask) {
 //
 static uint32_t rccCfgrSave;
 static uint32_t rccCrSave;
-#ifdef SUPPORT_MSI_AT_48MHZ
 static uint32_t rccIcscr1Save;
-#endif
+
 #ifdef SUPPORT_VREG_RANGES_1_THROUGH_3
 static uint32_t pwrVosrSave;
 #endif
@@ -140,11 +139,7 @@ void lpmPreSleepProcessing() {
    {
       rccCrSave = RCC->CR;
       rccCfgrSave = RCC->CFGR1;
-      #ifdef SUPPORT_MSI_AT_48MHZ
-      {
-         rccIcscr1Save = RCC->ICSCR1;
-      }
-      #endif
+      rccIcscr1Save = RCC->ICSCR1; // Restoring MSI to original value after stop.
       #ifdef SUPPORT_VREG_RANGES_1_THROUGH_3
       {
          pwrVosrSave = PWR->VOSR;
@@ -176,11 +171,7 @@ void lpmPostSleepProcessing() {
       }
       #endif
 
-      #ifdef SUPPORT_MSI_AT_48MHZ
-      {
-         RCC->ICSCR1 = rccIcscr1Save;
-      }
-      #endif
+      RCC->ICSCR1 = rccIcscr1Save;
 
       RCC->CR = rccCrSave;
       RCC->CFGR1 = rccCfgrSave;

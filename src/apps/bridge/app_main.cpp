@@ -362,7 +362,7 @@ static void defaultTask( void *parameters ) {
 #endif
 
     // // Re-enable low power mode
-    // lpmPeripheralInactive(LPM_BOOT);
+    lpmPeripheralInactive(LPM_BOOT);
 
     while(1) {
         /* Do nothing */

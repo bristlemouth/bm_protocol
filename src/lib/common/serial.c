@@ -15,6 +15,8 @@
 #include "tusb.h"
 #include "util.h"
 
+#include "lpm.h"
+
 // Log_t *SerialLog;
 
 // Number of buffers to queue up for transmission
@@ -240,9 +242,16 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     if (bytesAvailable > 0) {
       // Transmit current byte
       usart_TransmitData8((USART_TypeDef *)handle->device, txByte);
-    } else {
+    } else   if(LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device)) {
       // Disable this interrupt if there are no more bytes to transmit
+      LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
       usart_DisableIT_TXE((USART_TypeDef *)handle->device);
+      if(handle->device == USART3){
+        lpmPeripheralInactiveFromISR(LPM_USART3_TX);
+      }
+      if(handle->device == USART1) {
+        lpmPeripheralInactiveFromISR(LPM_USART1_TX);
+      }
     }
   }
 
@@ -288,6 +297,12 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
   // Make sure we properly handle buffers larger than the streamBuffer
   // totalBytesSent < len takes care of the len == 0 case as well
   // Timeout just in case...
+  if(handle->device == USART3){
+    lpmPeripheralActive(LPM_USART3_TX);
+  }
+  if(handle->device == USART1) {
+    lpmPeripheralActive(LPM_USART1_TX);
+  }
   while (handle->enabled &&
           (totalBytesSent < len) &&
           timeRemainingTicks(startTime, pdMS_TO_TICKS(MAX_TX_TIME_MS)))
@@ -314,6 +329,7 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
       // Enable transmit interrupt if not already transmitting
       if(!usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
         usart_EnableIT_TXE((USART_TypeDef *)handle->device);
+        LL_USART_EnableIT_TC((USART_TypeDef *)handle->device);
       }
 
 #endif

@@ -96,6 +96,7 @@ void SystemPower_Config_ext(void);
 #define BM_MOSI_TX3_GPIO_Port GPIOA
 #define BM_INT_Pin LL_GPIO_PIN_0
 #define BM_INT_GPIO_Port GPIOB
+#define BM_INT_EXTI_IRQn EXTI0_IRQn
 #define LED_R_Pin LL_GPIO_PIN_1
 #define LED_R_GPIO_Port GPIOB
 #define FLASH_SCK_Pin LL_GPIO_PIN_13
