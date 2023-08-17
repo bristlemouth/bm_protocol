@@ -32,9 +32,14 @@ bool LineParser::parseLine(const char* line, uint16_t len) {
     return false;
   }
   // Create a mutable copy for strtok_r to mangle
-  char* work_str = static_cast<char *>(pvPortMalloc(len));
+  // add an extra byte to ensure 0 termination
+  char* work_str = static_cast<char *>(pvPortMalloc(len + 1));
+  configASSERT(work_str);
+  // ensure last byte of strtok working buffer is NULL so it doesn't march off into the sunset.
+  memset(work_str, 0, len + 1);
   memcpy(work_str, line, len);
-  char* free_work_str = work_str; // Create a pointer to free when we're done, need to clobber work_str for strtok_r.
+  // Create a pointer to free when we're done, need to clobber work_str for strtok_r.
+  char* free_work_str = work_str;
 
   // Parse the values
   for (size_t i = 0; i < _numValues; ++i) {
