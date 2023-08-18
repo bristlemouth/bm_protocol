@@ -12,9 +12,11 @@
 #include "ina232.h"
 #include "bme280driver.h"
 #include "tca9546a.h"
+#include "nau7802.h"
 
 // Sampler initialization functions (so we don't need individual headers)
 void powerSamplerInit(INA::INA232 **sensors); // implemented in src/lib/sensor_sampler/powerSampler.cpp
+void loadCellSamplerInit(NAU7802 *sensor); // implemented in src/lib/sensor_sampler/loadCellSampler.cpp
 
 static TCA::TCA9546A bristlefinTCA(&i2c1, TCA9546A_ADDR, &I2C_MUX_RESET);
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
@@ -26,6 +28,7 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
   &debugIna2,
 };
+NAU7802 loadCell(&i2c1, NAU7802_ADDR);
 Bristlefin bristlefin(debugPressure, debugHTU, debugPHTU, bristlefinTCA, debugIna2);
 
 void sensorsInit() {
@@ -34,6 +37,7 @@ void sensorsInit() {
   }
   // Power monitor
   powerSamplerInit(debugIna); // There's technically one INA232 on the mote and one on Bristlefin,
+  loadCellSamplerInit(&loadCell);
   // keep the init functions out of Bristlefin now for convinience.
 
   bristlefin.setGpioDefault();
