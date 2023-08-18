@@ -18,6 +18,7 @@ bool Bristlefin::sensorsInit() {
   bool rval = false;
   do{
     if(tca_mux_.init()){
+      //Changed this to channel 2 to enable load cell.
       tca_mux_.setChannel(TCA::CH_2); // TODO - put a wrapper around this so can do without changing hard-coded here
     } else {
       break;

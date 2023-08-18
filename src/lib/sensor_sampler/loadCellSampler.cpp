@@ -13,11 +13,19 @@
 #include "sensorSampler.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include "bm_network.h"
 
 static NAU7802* _loadCell;
 bool successful_lc_read = false;
 uint64_t read_attempt_duration = 100;
 uint64_t read_start_time;
+
+uint32_t cellular_send_read_counter;
+float mean_force;
+float mean_sum;
+float max_force;
+float min_force;
+uint32_t num_reads = 240; //This should be 4 minutes
 
 #define INA_STR_LEN 80
 
@@ -30,10 +38,13 @@ uint64_t read_start_time;
   sample  --for the NAU7802, this funnels down to
   check   -- For Power and HTU, this is NULL. for baro, it does a checkPROM which funnels down to a readData command. Pretty much just check if you get a reading. We can leave it blank for now.
 */
+
+
+/* Checking with a soak.  */
 static bool loadCellSample() {
+  printf("Load cell sample called");
 //  float voltage, current;
 //  bool success = false;
-
 
   bool rval = true;
 // //  uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
@@ -43,6 +54,7 @@ static bool loadCellSample() {
   float weight = _loadCell->getWeight();
   float calFactor = _loadCell->getCalibrationFactor();
   int32_t zeroOffset = _loadCell->getZeroOffset();
+
 
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
@@ -72,7 +84,7 @@ static bool loadCellSample() {
       bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, weight: %f\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  weight);
 
       // prints to Spotter console
-      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, weight);
+      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %lu", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, weight);
       printf("%llu | weight: %f\n", uptimeGetMicroSeconds()/1000, weight);
       printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds()/1000, calFactor);
       printf("%llu | zeroOffset: %d\n", uptimeGetMicroSeconds()/1000, zeroOffset);
@@ -83,50 +95,40 @@ static bool loadCellSample() {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
+  cellular_send_read_counter++;
+  if(weight<min_force){
+    min_force = weight;
+  }
+  if (weight>max_force){
+    max_force = weight;
+  }
+  mean_sum +=weight;
 
-/*
-//  for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
-//    do {
-//      success = _inaSensors[dev_num]->measurePower();
-//      if (success) {
-//        _inaSensors[dev_num]->getPower(voltage, current);
-//      }
-//    } while( !success && (--retriesRemaining > 0));
-//
-//    if(success) {
-//
-//      struct {
-//        uint16_t address;
-//        float voltage;
-//        float current;
-//      } __attribute__((packed)) _powerData;
-//
-//      _powerData.address = _inaSensors[dev_num]->getAddr();
-//      _powerData.voltage = voltage;
-//      _powerData.current = current;
-//
-//      RTCTimeAndDate_t timeAndDate;
-//      char rtcTimeBuffer[32];
-//      if (rtcGet(&timeAndDate) == pdPASS) {
-//        sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-//                timeAndDate.year,
-//                timeAndDate.month,
-//                timeAndDate.day,
-//                timeAndDate.hour,
-//                timeAndDate.minute,
-//                timeAndDate.second,
-//                timeAndDate.ms);
-//      } else {
-//        strcpy(rtcTimeBuffer, "0");
-//      }
-//
-//      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
-//      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-//      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-//    }
-//    rval &= success;
-//  }
-*/
+
+  if (cellular_send_read_counter%num_reads == 0){
+    printf("\n\n\n\nThis should only print once every 4 mins\n\n\n");
+    mean_force = mean_sum/cellular_send_read_counter;
+
+    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force, max_force, min_force);
+    // float data_package[3] = {mean_force,max_force,min};
+
+    char data_string[100];
+
+    sprintf(data_string,
+            "mean force: %f |  max force: %f  | min force: %f",
+            mean_force, max_force, min_force);
+
+    spotter_tx_data(data_string, 100, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK);
+
+    // printf(data_string);
+
+    mean_sum = 0;
+    cellular_send_read_counter = 0;
+    max_force = 0;
+    min_force = 10000;
+    mean_force = 0;
+  }
+
   return rval;
 }
 
@@ -144,60 +146,15 @@ static bool loadCellInit() {
   //
   _loadCell->setCalibrationFactor(226.33);
   _loadCell->setZeroOffset(-17677.8);
-  // printf("This aught to be getting callllled");
-
-
-
-
 
   printf("loadCell init rval: %u\n", rval);
-
-
-
-/*
-//  for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
-//    do {
-//      success = _inaSensors[dev_num]->measurePower();
-//      if (success) {
-//        _inaSensors[dev_num]->getPower(voltage, current);
-//      }
-//    } while( !success && (--retriesRemaining > 0));
-//
-//    if(success) {
-//
-//      struct {
-//        uint16_t address;
-//        float voltage;
-//        float current;
-//      } __attribute__((packed)) _powerData;
-//
-//      _powerData.address = _inaSensors[dev_num]->getAddr();
-//      _powerData.voltage = voltage;
-//      _powerData.current = current;
-//
-//      RTCTimeAndDate_t timeAndDate;
-//      char rtcTimeBuffer[32];
-//      if (rtcGet(&timeAndDate) == pdPASS) {
-//        sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-//                timeAndDate.year,
-//                timeAndDate.month,
-//                timeAndDate.day,
-//                timeAndDate.hour,
-//                timeAndDate.minute,
-//                timeAndDate.second,
-//                timeAndDate.ms);
-//      } else {
-//        strcpy(rtcTimeBuffer, "0");
-//      }
-//
-//      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
-//      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-//      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-//    }
-//    rval &= success;
-//  }
-*/
   return rval;
+
+  //initial vals for force averaging.
+  cellular_send_read_counter = 0;
+  mean_force = 0;
+  max_force = 0;
+  min_force = 10000;
 }
 
 static bool loadCellCheck() {
