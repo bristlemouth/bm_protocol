@@ -6,7 +6,7 @@
     build_type: Release
     use_bootloader: True
 
-- name: mote_bristlefin on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: mote_bristlefin w/upy on bm_mote_v1.0 - Debug (w/ bootloader)
   type: build_fw
   args:
     app: mote_bristlefin

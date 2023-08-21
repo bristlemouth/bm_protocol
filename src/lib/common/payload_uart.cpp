@@ -3,24 +3,31 @@
 #include "bm_printf.h"
 #include "stm32_rtc.h"
 
+// FreeRTOS Includes
+#include "FreeRTOS.h"
+#include "semphr.h"
+
 namespace PLUART {
 
-// Line termination character
+  #define USER_BYTE_BUFFER_LEN 128
+  // Stream buffer for user bytes
+  static StreamBufferHandle_t user_byte_stream_buffer = NULL;
+
+  static struct {
+    // This mutex protects the buffer, len, and ready flag
+    SemaphoreHandle_t mutex;
+    uint8_t buffer[LPUART1_LINE_BUFF_LEN];
+    uint16_t len = 0;
+    bool ready = false;
+  } _user_line;
+
+  // Line termination character
   static char terminationCharacter = 0;
 
-  char getTerminationCharacter() {
-    return terminationCharacter;
-  }
-
-  void setTerminationCharacter(char term_char) {
-    terminationCharacter = term_char;
-  }
-
-// Called everytime we get a UART byte
-  void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
+  // Process a received byte and store it in a line buffer
+  static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
     configASSERT(serialHandle != NULL);
     SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
-    //  printf("%c", byte);
     // This function requires data to be a pointer to a SerialLineBuffer_t
     configASSERT(handle->data != NULL);
     SerialLineBuffer_t *lineBuffer = reinterpret_cast<SerialLineBuffer_t *>(handle->data);
@@ -45,40 +52,78 @@ namespace PLUART {
       // TODO - log error and clear buffer instead
       configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
     }
-    if (userProcessRxByte) {
-      userProcessRxByte(byte);
+
+    // Send the byte to the user byte stream buffer, if it is full, reset it first
+    if (xStreamBufferIsFull(user_byte_stream_buffer) == pdTRUE) {
+      xStreamBufferReset(user_byte_stream_buffer);
     }
+    xStreamBufferSend(user_byte_stream_buffer, &byte, sizeof(byte), 0);
   }
 
-// Called everytime we get a 'line' by processLineBufferedRxByte
-  void processLine(void *serialHandle, uint8_t *line, size_t len) {
+  // Called everytime we get a 'line' by processLineBufferedRxByte
+  static void processLine(void *serialHandle, uint8_t *line, size_t len) {
     configASSERT(serialHandle != NULL);
-    SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
-
     configASSERT(line != NULL);
+    ( void ) serialHandle;
 
-    RTCTimeAndDate_t timeAndDate;
-    char rtcTimeBuffer[32];
-    if (rtcGet(&timeAndDate) == pdPASS) {
-      sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-              timeAndDate.year,
-              timeAndDate.month,
-              timeAndDate.day,
-              timeAndDate.hour,
-              timeAndDate.minute,
-              timeAndDate.second,
-              timeAndDate.ms);
+    configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
+    // if the last line has not been read, lets reset the buffer
+    memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
+    // lets copy over the line to the user mutex protected buffer
+    memcpy(_user_line.buffer, line, len);
+    _user_line.len = len;
+    _user_line.ready = true;
+    xSemaphoreGive(_user_line.mutex);
+  }
+
+  char getTerminationCharacter() {
+    return terminationCharacter;
+  }
+
+  void setTerminationCharacter(char term_char) {
+    terminationCharacter = term_char;
+  }
+
+  bool byteAvailable(void) {
+    return (!xStreamBufferIsEmpty(user_byte_stream_buffer));
+  }
+
+  bool lineAvailable(void) {
+    bool rval = false;
+    configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
+    rval = _user_line.ready;
+    xSemaphoreGive(_user_line.mutex);
+    return rval;
+  }
+
+  uint8_t readByte(void) {
+    uint8_t rval = 0;
+    xStreamBufferReceive(user_byte_stream_buffer, &rval, sizeof(rval), 0);
+    return rval;
+  }
+
+  uint16_t readLine(char *buffer, size_t len) {
+    int16_t rval = 0;
+    size_t copy_len;
+
+    if (len > _user_line.len) {
+      copy_len = _user_line.len;
     } else {
-      strcpy(rtcTimeBuffer, "0");
+      copy_len = len;
     }
 
-    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, len, line);
-    bm_printf(0, "[%s] | tick: %llu, rtc: %s, line: %.*s", handle->name, uptimeGetMs(), rtcTimeBuffer, len, line);
-    printf("[%s] | tick: %llu, rtc: %s, line: %.*s\n", handle->name, uptimeGetMs(), rtcTimeBuffer, len, line);
+    configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
+    memcpy(buffer, _user_line.buffer, copy_len);
+    memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
+    _user_line.ready = false;
+    rval = copy_len;
+    xSemaphoreGive(_user_line.mutex);
+    return rval;
+  }
 
-    if (userProcessLine) {
-      userProcessLine(line, len);
-    }
+  void write(uint8_t *buffer, size_t len)
+  {
+    serialWrite(&PLUART::uart_handle, buffer, len);
   }
 
   void setBaud(uint32_t new_baud_rate) {
@@ -88,7 +133,11 @@ namespace PLUART {
                           new_baud_rate);
   }
 
-// variable definitions
+  void enable(void) {
+    serialEnable(&uart_handle);
+  }
+
+  // variable definitions
   static uint8_t lpUart1Buffer[LPUART1_LINE_BUFF_LEN];
   SerialLineBuffer_t lpUART1LineBuffer = {
       .buffer = lpUart1Buffer, // pointer to the buffer memory
@@ -113,7 +162,15 @@ namespace PLUART {
       .flags = 0,
   };
 
-  BaseType_t initPayloadUart(uint8_t task_priority) {
+  BaseType_t init(uint8_t task_priority) {
+    // Create the stream buffer for the user bytes to be buffered into and read from
+    user_byte_stream_buffer = xStreamBufferCreate(USER_BYTE_BUFFER_LEN, 1);
+    configASSERT(user_byte_stream_buffer != NULL);
+
+    // Create the mutex used by the payload_uart namespace for users to safely access lines from the payload
+    _user_line.mutex = xSemaphoreCreateMutex();
+    configASSERT(_user_line.mutex != NULL);
+
     MX_LPUART1_UART_Init();
     // Single byte trigger levels for Rx and Tx for fast response time
     uart_handle.txStreamBuffer = xStreamBufferCreate(uart_handle.txBufferSize, 1);
@@ -134,6 +191,7 @@ namespace PLUART {
   }
 
   extern "C" void LPUART1_IRQHandler(void) {
+    configASSERT(&uart_handle);
     serialGenericUartIRQHandler(&uart_handle);
   }
 

@@ -38,6 +38,9 @@ typedef struct {
 // We'll allocate the values buffer later.
 pressureData_t pressure_data = {};
 
+// A buffer for our data from the payload uart
+char payload_buffer[2048];
+
 /// For Turning Text Into Numbers
 /*
  * Setup a LineParser to turn the ASCII serial data from the RBR Coda3 into numbers
@@ -57,51 +60,6 @@ LineParser parser(",", 256, valueTypes, 2);
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
-/*
- * This function is called from the payload UART library in src/lib/common/payload_uart.cpp::processLine function.
- * Every time the uart receives the configured termination character ('\0' character by default),
- * It will:
- * -- print the line to Dev Kit USB console.
- * -- print the line to Spotter USB console.
- * -- write the line to a payload_data.log on the Spotter SD card.
- * -- call this function, so we can do custom things with the data.
- * In this case, we parse and evalute new pressure readings.
- * */
-void PLUART::userProcessLine(uint8_t *line, size_t len) {
-  /// NOTE - this function is called from the LPUartRx task. Interacting with the same data as setup() and loop(),
-  ///   which are called from the USER task, is not thread safe!
-
-  // trigger a pulse on LED2
-  ledLinePulse = uptimeGetMs();
-  // Now when we get a line of text data, our LineParser turns it into numeric values.
-  if (parser.parseLine(reinterpret_cast<const char*>(line), len)) {
-    printf("parsed values: %llu | %f\n", parser.getValue(0).data, parser.getValue(1).data);
-  }
-  else {
-    printf("Error parsing line!\n");
-    return;
-  }
-  // Now let's aggregate those values into statistics
-  if (pressure_data.sample_count >= MAX_PRESSURE_SAMPLES) {
-    printf("ERR - No more room in pressure reading buffer, already have %d readings!\n", MAX_PRESSURE_SAMPLES);
-    return;
-  }
-  if (xUserDataMutex == NULL) {
-    printf("ERR - user data Mutex NULL!\n");
-    return;
-  }
-  if(xSemaphoreTake(xUserDataMutex, portMAX_DELAY) == pdTRUE) {
-    double pressure_reading = parser.getValue(1).data.double_val;
-    pressure_data.values[pressure_data.sample_count++] = pressure_reading;
-    if (pressure_data.sample_count == 1) {
-      pressure_data.max = pressure_reading;
-      pressure_data.min = pressure_reading;
-    } else if (pressure_reading < pressure_data.min) pressure_data.min = pressure_reading;
-    else if (pressure_reading > pressure_data.max) pressure_data.max = pressure_reading;
-    printf("count: %u/%d, min: %f, max: %f\n", pressure_data.sample_count, MAX_PRESSURE_SAMPLES, pressure_data.min, pressure_data.max);
-    xSemaphoreGive(xUserDataMutex);
-  }
-}
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
@@ -110,13 +68,13 @@ void setup(void) {
   // Initialize our LineParser, which will allocated any needed memory for parsing.
   parser.init();
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
-  PLUART::initPayloadUart(USER_TASK_PRIORITY);
+  PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
   PLUART::setBaud(9600);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter('\n');
   // Turn on the UART.
-  serialEnable(&PLUART::uart_handle);
+  PLUART::enable();
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
@@ -133,29 +91,20 @@ void loop(void) {
     pressureStatsTimer = uptimeGetMs();
     double mean = 0, stdev = 0, min = 0, max = 0;
     uint16_t n_samples = 0;
-    if(xSemaphoreTake(xUserDataMutex, portMAX_DELAY) == pdTRUE && pressure_data.sample_count) {
+    if(pressure_data.sample_count) {
       mean = getMean(pressure_data.values, pressure_data.sample_count);
       stdev = getStd(pressure_data.values, pressure_data.sample_count, mean);
       min = pressure_data.min;
       max = pressure_data.max;
       n_samples = pressure_data.sample_count;
       pressure_data.sample_count = 0;
-      xSemaphoreGive(xUserDataMutex);
     }
-    RTCTimeAndDate_t timeAndDate;
+
+    // Get the RTC if available
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
     char rtcTimeBuffer[32];
-    if (rtcGet(&timeAndDate) == pdPASS) {
-      sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-              timeAndDate.year,
-              timeAndDate.month,
-              timeAndDate.day,
-              timeAndDate.hour,
-              timeAndDate.minute,
-              timeAndDate.second,
-              timeAndDate.ms);
-    } else {
-      strcpy(rtcTimeBuffer, "0");
-    }
+    rtcPrint(rtcTimeBuffer, &time_and_date);
 
     bm_fprintf(0, "payload_data_agg.log",
                "tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, std: %.4f\n",
@@ -216,11 +165,38 @@ void loop(void) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
-  /*
-    DO NOT REMOVE
-    This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
-    to allow for lower priority tasks to be serviced.
-    Keep this delay in the range of 10 to 100 ms.
-  */
-  vTaskDelay(pdMS_TO_TICKS(10));
+
+  // Read a line if it is available
+  if (PLUART::lineAvailable()) {
+    uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+      // trigger a pulse on LED2
+    ledLinePulse = uptimeGetMs();
+    // Now when we get a line of text data, our LineParser turns it into numeric values.
+    if (parser.parseLine(payload_buffer, read_len)) {
+      printf("parsed values: %llu | %f\n", parser.getValue(0).data, parser.getValue(1).data);
+    }
+    else {
+      printf("Error parsing line!\n");
+      return; // FIXME: this is a little confusing
+    }
+    // Now let's aggregate those values into statistics
+    if (pressure_data.sample_count >= MAX_PRESSURE_SAMPLES) {
+      printf("ERR - No more room in pressure reading buffer, already have %d readings!\n", MAX_PRESSURE_SAMPLES);
+      return; // FIXME: this is a little confusing
+    }
+
+    double pressure_reading = parser.getValue(1).data.double_val;
+    pressure_data.values[pressure_data.sample_count++] = pressure_reading;
+    if (pressure_data.sample_count == 1) {
+      pressure_data.max = pressure_reading;
+      pressure_data.min = pressure_reading;
+    } else if (pressure_reading < pressure_data.min) {
+      pressure_data.min = pressure_reading;
+    }
+    else if (pressure_reading > pressure_data.max) {
+       pressure_data.max = pressure_reading;
+    }
+
+    printf("count: %u/%d, min: %f, max: %f\n", pressure_data.sample_count, MAX_PRESSURE_SAMPLES, pressure_data.min, pressure_data.max);
+  }
 }

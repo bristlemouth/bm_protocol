@@ -37,7 +37,7 @@ class Bristlefin {
     static constexpr uint8_t I2C_PROBE_MAX_TRIES = 5;
 
   public:
-    Bristlefin(MS5803 &ms5803,HTU21D& htu21d, Bme280 &bme280, TCA::TCA9546A& tca_mux, INA::INA232& ina232);
+    Bristlefin(MS5803 &ms5803, HTU21D& htu21d, Bme280 &bme280, TCA::TCA9546A& tca_mux, INA::INA232& ina232);
     bool sensorsInit();
     void setGpioDefault();
     // Power rail control functions

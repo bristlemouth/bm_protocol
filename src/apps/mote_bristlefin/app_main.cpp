@@ -45,7 +45,6 @@
 #include "app_pub_sub.h"
 #include "util.h"
 #include "bristlefin.h"
-#ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
 #include "nvmPartition.h"
@@ -54,7 +53,6 @@
 #include "debug_dfu.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
-#endif
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"

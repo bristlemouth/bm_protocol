@@ -18,11 +18,6 @@
 #define RESET_DELAY       (1)
 #define AFTER_RESET_DELAY (100)
 
-#ifdef BSP_NUCLEO_U575
-#define ADIN_NSS ADIN_CS
-#define ADIN_INT ADIN_RDY
-#endif // BSP_DEV_MOTE_V1_0
-
 static adi_cb_t gpfIntCallback = NULL;
 static void *gpIntCBParam = NULL;
 
@@ -88,17 +83,6 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
 
   SPIResponse_t status = SPI_OK;
 
-// TODO - make configurable spi bus instead of #defines
-#ifdef BSP_NUCLEO_U575
-  (void) useDma;
-  status = spiTxRx(adin_pins.spiInterface, adin_pins.chipSelect, nBytes, pBufferTx, pBufferRx, 100); // TODO: Figure out timeout value. Set to 100 for now?
-#else
-
-// Skip DMA for now since we haven't enabled it on this BSP
-#ifdef BSP_DEV_MOTE_HYDROPHONE
-  useDma = false;
-#endif
-
   //
   // spi3 has a limit of 1024 bytes per transaction
   // See Table 579 on 59.3 of the reference manual (RM0456)
@@ -121,8 +105,6 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
     }
   }
   IOWrite(adin_pins.chipSelect, 1);
-
-#endif
 
   if (status == SPI_OK) {
     adi_bsp_spi_callback();

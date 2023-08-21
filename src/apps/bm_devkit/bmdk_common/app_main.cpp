@@ -44,8 +44,6 @@
 #include "timer_callback_handler.h"
 #include "app_pub_sub.h"
 #include "util.h"
-#include "bristlefin.h"
-#ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
 #include "nvmPartition.h"
@@ -54,7 +52,6 @@
 #include "debug_dfu.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
-#endif
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -318,6 +315,13 @@ static void user_task(void *parameters) {
 
   for(;;) {
     loop();
+    /*
+      DO NOT REMOVE
+      This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
+      to allow for lower priority tasks to be serviced.
+      Keep this delay in the range of 10 to 100 ms.
+    */
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 /* USER CODE EXECUTED HERE END */

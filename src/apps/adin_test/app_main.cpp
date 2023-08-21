@@ -39,7 +39,6 @@
 #include "timer_callback_handler.h"
 #include "app_pub_sub.h"
 #include "util.h"
-#ifndef BSP_NUCLEO_U575
 #include "w25.h"
 #include "debug_w25.h"
 #include "nvmPartition.h"
@@ -48,7 +47,6 @@
 #include "debug_dfu.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
-#endif
 
 
 #include <stdio.h>
@@ -313,17 +311,7 @@ static void defaultTask( void *parameters ) {
 
     bspInit();
 
-#ifdef BSP_NUCLEO_U575
-    // We don't have a vusb_detect interrupt line on the nucleo board
-    usbInit(NULL, usb_is_connected);
-
-    // USB detect is an analog signal on the NUCLEO, so we can't use
-    // an interrupt to detect when usb is connected/disconnected
-    // So low power mode will not be enabled
-    lpmPeripheralActive(LPM_USB);
-#else
     usbInit(&VUSB_DETECT, usb_is_connected);
-#endif
 
     debugSysInit();
     debugMemfaultInit(&usbCLI);
@@ -339,7 +327,6 @@ static void defaultTask( void *parameters ) {
 #ifdef BSP_DEV_MOTE_V1_0
     gpioISRRegisterCallback(&BOOT_LED, start_stress);
 #endif
-#ifndef BSP_NUCLEO_U575
     spiflash::W25 debugW25(&spi2, &FLASH_CS);
     debugW25Init(&debugW25);
     NvmPartition debug_user_partition(debugW25, user_configuration);
@@ -354,9 +341,6 @@ static void defaultTask( void *parameters ) {
     debugNvmCliInit(&debug_cli_partition, &dfu_partition);
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition,&debug_configuration_user, &debug_configuration_system);
-#else
-    bcl_init(NULL, NULL, NULL);
-#endif
 
 #ifdef BSP_BRIDGE_V1_0
     printf("Enabling 24V!\n");
