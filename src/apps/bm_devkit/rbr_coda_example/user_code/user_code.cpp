@@ -1,20 +1,20 @@
-#include "debug.h"
-#include "util.h"
 #include "user_code.h"
+#include "LineParser.h"
+#include "array_utils.h"
+#include "bm_network.h"
+#include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
+#include "debug.h"
+#include "lwip/inet.h"
+#include "payload_uart.h"
+#include "sensors.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
-#include "lwip/inet.h"
-#include "bm_network.h"
 #include "usart.h"
-#include "payload_uart.h"
-#include "LineParser.h"
-#include "array_utils.h"
-#include "sensors.h"
+#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -26,14 +26,15 @@
 #define PRESSURE_AGG_PERIOD_MS (PRESSURE_AGG_PERIOD_MIN * 60 * 1000)
 /* We have enough RAM that we can keep it simple for shorter durations - use 64 bit doubles, buffer all readings.
    We could be much more RAM and precision efficient by using numerical methods like Kahan summation and Welford's algorithm.*/
-#define MAX_PRESSURE_SAMPLES ((PRESSURE_AGG_PERIOD_MS / 500) + 10) // 10 minutes @ 2Hz + 10 extra samples for padding => 1210, ~10k RAM
+// 10 minutes @ 2Hz + 10 extra samples for padding => 1210, ~10k RAM
+#define MAX_PRESSURE_SAMPLES ((PRESSURE_AGG_PERIOD_MS / 500) + 10)
 typedef struct {
   uint16_t sample_count;
   double min;
   double max;
   double mean;
   double stdev;
-  double* values;
+  double *values;
 } __attribute__((__packed__)) pressureData_t;
 // We'll allocate the values buffer later.
 pressureData_t pressure_data = {};
@@ -64,7 +65,8 @@ static int32_t ledLinePulse = -1;
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Allocate memory for pressure data buffer.
-  pressure_data.values = static_cast<double *>(pvPortMalloc(sizeof(double ) * MAX_PRESSURE_SAMPLES));
+  pressure_data.values = static_cast<double *>(
+      pvPortMalloc(sizeof(double) * MAX_PRESSURE_SAMPLES));
   // Initialize our LineParser, which will allocated any needed memory for parsing.
   parser.init();
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
@@ -91,7 +93,7 @@ void loop(void) {
     pressureStatsTimer = uptimeGetMs();
     double mean = 0, stdev = 0, min = 0, max = 0;
     uint16_t n_samples = 0;
-    if(pressure_data.sample_count) {
+    if (pressure_data.sample_count) {
       mean = getMean(pressure_data.values, pressure_data.sample_count);
       stdev = getStd(pressure_data.values, pressure_data.sample_count, mean);
       min = pressure_data.min;
@@ -107,27 +109,30 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
     bm_fprintf(0, "payload_data_agg.log",
-               "tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, std: %.4f\n",
+               "tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, "
+               "std: %.4f\n",
                uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
-    bm_printf(0, "[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, std: %.4f",
+    bm_printf(0,
+              "[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, "
+              "mean: %.4f, std: %.4f",
               uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
-    printf("[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, std: %.4f\n",
+    printf("[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, "
+           "mean: %.4f, std: %.4f\n",
            uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
     uint8_t tx_data[34] = {};
-    pressureData_t tx_pressure = {
-        .sample_count = n_samples,
-        .min = min,
-        .max = max,
-        .mean = mean,
-        .stdev = stdev,
-        .values = NULL
-    };
-    memcpy(tx_data, (uint8_t*)(&tx_pressure), 34);
-    if(spotter_tx_data(tx_data, 34, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)){
-      printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
-    }
-    else {
-      printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
+    pressureData_t tx_pressure = {.sample_count = n_samples,
+                                  .min = min,
+                                  .max = max,
+                                  .mean = mean,
+                                  .stdev = stdev,
+                                  .values = NULL};
+    memcpy(tx_data, (uint8_t *)(&tx_pressure), 34);
+    if (spotter_tx_data(tx_data, 34, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+      printf("%llut - %s | Sucessfully sent Spotter transmit data request\n",
+             uptimeGetMs(), rtcTimeBuffer);
+    } else {
+      printf("%llut - %s | Failed to send Spotter transmit data request\n",
+             uptimeGetMs(), rtcTimeBuffer);
     }
   }
 
@@ -140,7 +145,8 @@ void loop(void) {
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
-  else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
+  else if (led2State &&
+           ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     bristlefin.setLed(2, Bristlefin::LED_OFF);
     ledLinePulse = -1;
     led2State = false;
@@ -154,34 +160,39 @@ void loop(void) {
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!led1State &&
+      ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
-    // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
+  else if (led1State &&
+           ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
 
   // Read a line if it is available
   if (PLUART::lineAvailable()) {
-    uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
-      // trigger a pulse on LED2
+    uint16_t read_len =
+        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+    // trigger a pulse on LED2
     ledLinePulse = uptimeGetMs();
     // Now when we get a line of text data, our LineParser turns it into numeric values.
     if (parser.parseLine(payload_buffer, read_len)) {
-      printf("parsed values: %llu | %f\n", parser.getValue(0).data, parser.getValue(1).data);
-    }
-    else {
+      printf("parsed values: %llu | %f\n", parser.getValue(0).data,
+             parser.getValue(1).data);
+    } else {
       printf("Error parsing line!\n");
       return; // FIXME: this is a little confusing
     }
     // Now let's aggregate those values into statistics
     if (pressure_data.sample_count >= MAX_PRESSURE_SAMPLES) {
-      printf("ERR - No more room in pressure reading buffer, already have %d readings!\n", MAX_PRESSURE_SAMPLES);
+      printf("ERR - No more room in pressure reading buffer, already have %d "
+             "readings!\n",
+             MAX_PRESSURE_SAMPLES);
       return; // FIXME: this is a little confusing
     }
 
@@ -192,11 +203,11 @@ void loop(void) {
       pressure_data.min = pressure_reading;
     } else if (pressure_reading < pressure_data.min) {
       pressure_data.min = pressure_reading;
-    }
-    else if (pressure_reading > pressure_data.max) {
-       pressure_data.max = pressure_reading;
+    } else if (pressure_reading > pressure_data.max) {
+      pressure_data.max = pressure_reading;
     }
 
-    printf("count: %u/%d, min: %f, max: %f\n", pressure_data.sample_count, MAX_PRESSURE_SAMPLES, pressure_data.min, pressure_data.max);
+    printf("count: %u/%d, min: %f, max: %f\n", pressure_data.sample_count,
+           MAX_PRESSURE_SAMPLES, pressure_data.min, pressure_data.max);
   }
 }

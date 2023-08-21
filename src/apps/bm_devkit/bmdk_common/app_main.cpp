@@ -15,43 +15,43 @@
 #include "task.h"
 #include "task_priorities.h"
 
+#include "app_pub_sub.h"
 #include "bm_l2.h"
 #include "bm_pubsub.h"
+#include "bristlefin.h"
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
-#include "bristlefin.h"
-#include "debug_spotter.h"
+#include "debug_configuration.h"
+#include "debug_dfu.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
+#include "debug_nvm_cli.h"
 #include "debug_rtc.h"
+#include "debug_spotter.h"
 #include "debug_sys.h"
+#include "debug_w25.h"
+#include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
 #include "ms5803.h"
+#include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
-#include "sensors.h"
+#include "ram_partitions.h"
 #include "sensorSampler.h"
+#include "sensors.h"
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
-#include "usb.h"
-#include "watchdog.h"
 #include "timer_callback_handler.h"
-#include "app_pub_sub.h"
+#include "usb.h"
 #include "util.h"
 #include "w25.h"
-#include "debug_w25.h"
-#include "nvmPartition.h"
-#include "external_flash_partitions.h"
-#include "debug_nvm_cli.h"
-#include "debug_dfu.h"
-#include "debug_configuration.h"
-#include "ram_partitions.h"
+#include "watchdog.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -88,7 +88,7 @@ SerialHandle_t usart3 = {
 };
 
 // Serial console USB device
-SerialHandle_t usbCLI   = {
+SerialHandle_t usbCLI = {
     .device = (void *)0, // Using CDC 0
     .name = "vcp-cli",
     .txPin = NULL,
@@ -105,7 +105,7 @@ SerialHandle_t usbCLI   = {
     .flags = 0,
 };
 
-SerialHandle_t usbPcap   = {
+SerialHandle_t usbPcap = {
     .device = (void *)1, // Using CDC 1
     .name = "vcp-bm",
     .txPin = NULL,
@@ -172,15 +172,12 @@ extern "C" int main(void) {
   xUserDataMutex = xSemaphoreCreateMutex();
   configASSERT(xUserDataMutex);
 
-  BaseType_t rval = xTaskCreate(defaultTask,
-                                "Default",
-      // TODO - verify stack size
-                                128 * 4,
-                                NULL,
-      // Start with very high priority during boot then downgrade
-      // once done initializing everything
-                                2,
-                                NULL);
+  BaseType_t rval = xTaskCreate(
+      defaultTask, "Default",
+      128 * 4, // TODO - verify stack size
+      NULL,
+      2, // Start with very high priority during boot then downgrade once done initializing everything
+      NULL);
   configASSERT(rval == pdTRUE);
 
   // Start FreeRTOS scheduler
@@ -188,7 +185,8 @@ extern "C" int main(void) {
 
   /* We should never get here as control is now taken by the scheduler */
 
-  while (1){};
+  while (1) {
+  };
 }
 
 bool start_stress(const void *pinHandle, uint8_t value, void *args) {
@@ -196,22 +194,26 @@ bool start_stress(const void *pinHandle, uint8_t value, void *args) {
   (void)args;
   static bool started;
 
-  if(!started && value) {
+  if (!started && value) {
     started = true;
-    stress_start_tx((2 * 1024)/8);
+    stress_start_tx((2 * 1024) / 8);
   }
 
   return false;
 }
 
-void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_sensor_subscriptions(uint64_t node_id, const char *topic,
+                                 uint16_t topic_len, const uint8_t *data,
+                                 uint16_t data_len, uint8_t type,
+                                 uint8_t version) {
   (void)node_id;
   (void)version;
   (void)type;
   if (strncmp("button", topic, topic_len) == 0) {
-    if (strncmp("on", reinterpret_cast<const char*>(data), data_len) == 0) {
+    if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
       IOWrite(&BF_LED_G1, LED_ON);
-    } else if (strncmp("off", reinterpret_cast<const char*>(data), data_len) == 0) {
+    } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) ==
+               0) {
       IOWrite(&BF_LED_G1, LED_OFF);
     } else {
       // Not handled
@@ -222,12 +224,15 @@ void handle_sensor_subscriptions(uint64_t node_id, const char* topic, uint16_t t
   }
 }
 
-void handle_bm_subscriptions(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_bm_subscriptions(uint64_t node_id, const char *topic,
+                             uint16_t topic_len, const uint8_t *data,
+                             uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
-  if(strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
-    if(type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION){
+  if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
+    if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
       utcDateTime_t time;
-      const bm_common_pub_sub_utc_t *utc = reinterpret_cast<const bm_common_pub_sub_utc_t *>(data);
+      const bm_common_pub_sub_utc_t *utc =
+          reinterpret_cast<const bm_common_pub_sub_utc_t *>(data);
       dateTimeFromUtc(utc->utc_us, &time);
 
       RTCTimeAndDate_t rtc_time = {
@@ -241,14 +246,9 @@ void handle_bm_subscriptions(uint64_t node_id, const char* topic, uint16_t topic
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n",
-               rtc_time.year,
-               rtc_time.month,
-               rtc_time.day,
-               rtc_time.hour,
-               rtc_time.minute,
-               rtc_time.second,
-               rtc_time.ms);
+        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
+               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
+               rtc_time.second, rtc_time.ms);
       } else {
         printf("\n Failed to set RTC.\n");
       }
@@ -299,21 +299,17 @@ static const DebugGpio_t debugGpioPins[] = {
 static void user_task(void *parameters);
 
 void user_code_start() {
-  BaseType_t rval = xTaskCreate(user_task,
-                                "USER",
-                                4096,
-                                NULL,
-                                USER_TASK_PRIORITY,
-                                NULL);
+  BaseType_t rval =
+      xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
   configASSERT(rval == pdPASS);
 }
 
 static void user_task(void *parameters) {
-  (void) parameters;
+  (void)parameters;
 
   setup();
 
-  for(;;) {
+  for (;;) {
     loop();
     /*
       DO NOT REMOVE
@@ -326,9 +322,8 @@ static void user_task(void *parameters) {
 }
 /* USER CODE EXECUTED HERE END */
 
-static void defaultTask( void *parameters ) {
+static void defaultTask(void *parameters) {
   (void)parameters;
-
 
   startIWDGTask();
   startSerial();
@@ -354,7 +349,7 @@ static void defaultTask( void *parameters ) {
   debugSysInit();
   debugMemfaultInit(&usbCLI);
 
-  debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
+  debugGpioInit(debugGpioPins, sizeof(debugGpioPins) / sizeof(DebugGpio_t));
   debugSpotterInit();
   debugRTCInit();
 
@@ -364,23 +359,34 @@ static void defaultTask( void *parameters ) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(debug_user_partition,ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(debug_hardware_partition,ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(debug_system_partition,ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"), sys_cfg_sensorsPollIntervalMs);
-  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"), sys_cfg_sensorsCheckIntervalS);
+  cfg::Configuration debug_configuration_user(
+      debug_user_partition, ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_hardware(
+      debug_hardware_partition, ram_hardware_configuration,
+      RAM_HARDWARE_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_system(debug_system_partition,
+                                                ram_system_configuration,
+                                                RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  debug_configuration_system.getConfig("sensorsPollIntervalMs",
+                                       strlen("sensorsPollIntervalMs"),
+                                       sys_cfg_sensorsPollIntervalMs);
+  debug_configuration_system.getConfig("sensorsCheckIntervalS",
+                                       strlen("sensorsCheckIntervalS"),
+                                       sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user,&debug_configuration_hardware,&debug_configuration_system);
+  debugConfigurationInit(&debug_configuration_user,
+                         &debug_configuration_hardware,
+                         &debug_configuration_system);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  bcl_init(&dfu_partition, &debug_configuration_user,
+           &debug_configuration_system);
 
   sensorConfig_t sensorConfig = {
       .sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
-      .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs
-  };
+      .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
@@ -394,7 +400,7 @@ static void defaultTask( void *parameters ) {
   // Re-enable low power mode
   // lpmPeripheralInactive(LPM_BOOT);
 
-  while(1) {
+  while (1) {
     /* Do nothing */
     vTaskDelay(1000);
   }

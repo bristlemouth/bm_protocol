@@ -1,16 +1,16 @@
-#include "debug.h"
-#include "util.h"
 #include "user_code.h"
+#include "bm_network.h"
+#include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bsp.h"
+#include "debug.h"
+#include "lwip/inet.h"
+#include "payload_uart.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
-#include "lwip/inet.h"
-#include "bm_network.h"
 #include "usart.h"
-#include "payload_uart.h"
+#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -50,7 +50,7 @@ void loop(void) {
   // Read a line if it is available
   if (PLUART::lineAvailable()) {
     // Toggle the LED each time we get a line from the payload
-    if(!led_state) {
+    if (!led_state) {
       IOWrite(&LED_GREEN, 0);
       led_state = true;
     } else {
@@ -58,7 +58,8 @@ void loop(void) {
       led_state = false;
     }
 
-    uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+    uint16_t read_len =
+        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
     printf("line: %s\n", payload_buffer);
 
     // Get the RTC if available
@@ -68,8 +69,11 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
     // Print the payload data to a file, to the bm_printf console, and to the printf console.
-    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    printf("[payload] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n",
+               uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+              rtcTimeBuffer, read_len, payload_buffer);
+    printf("[payload] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
+           rtcTimeBuffer, read_len, payload_buffer);
   }
 }

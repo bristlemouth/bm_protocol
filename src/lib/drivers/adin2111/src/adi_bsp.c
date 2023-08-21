@@ -1,11 +1,10 @@
-#include <string.h>
 #include <errno.h>
 #include <string.h>
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
-#include "task.h"
 #include "semphr.h"
+#include "task.h"
 
 #include "adi_bsp.h"
 #include "bsp.h"
@@ -15,7 +14,7 @@
 #include "task_priorities.h"
 #include "util.h"
 
-#define RESET_DELAY       (1)
+#define RESET_DELAY (1)
 #define AFTER_RESET_DELAY (100)
 
 static adi_cb_t gpfIntCallback = NULL;
@@ -26,7 +25,8 @@ static void *gpSpiCBParam = NULL;
 
 static adi_irq_evt_t _irq_evt_cb = NULL;
 
-static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args);
+static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value,
+                                           void *args);
 
 extern adin_pins_t adin_pins;
 
@@ -55,15 +55,16 @@ void adi_bsp_irq_callback() {
 //
 // ADIN GPIO ISR callback (All calls must be ISR safe!)
 //
-static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args) {
+static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value,
+                                           void *args) {
 
-  (void) args;
-  (void) pinHandle;
-  (void) value;
+  (void)args;
+  (void)pinHandle;
+  (void)value;
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  if(_irq_evt_cb) {
+  if (_irq_evt_cb) {
     _irq_evt_cb(&xHigherPriorityTaskWoken);
   }
 
@@ -79,7 +80,8 @@ void adi_bsp_hw_reset() {
 }
 
 /* SPI transceive wrapper */
-uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nBytes, bool useDma) {
+uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx,
+                                    uint32_t nBytes, bool useDma) {
 
   SPIResponse_t status = SPI_OK;
 
@@ -92,15 +94,21 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint
   IOWrite(adin_pins.chipSelect, 0);
   // NOTE: We cannot send 1024 bytes, since the counter will wrap and be zero and return an error
   // Sending more than 1024 bytes will send nBuytes % 1024 then time out
-  for(uint32_t idx = 0; idx < nBytes; idx += 1023) {
+  for (uint32_t idx = 0; idx < nBytes; idx += 1023) {
     uint32_t bytesRemaining = nBytes - idx;
     uint32_t subNbytes = MIN(bytesRemaining, 1023);
-    if(useDma){
-        status = spiTxRxNonblocking(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+    if (useDma) {
+      status = spiTxRxNonblocking(
+          adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx],
+          &pBufferRx[idx],
+          100); // TODO: Figure out timeout value. Set to 100 for now?
     } else {
-        status = spiTxRx(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx], 100); // TODO: Figure out timeout value. Set to 100 for now?
+      status =
+          spiTxRx(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx],
+                  &pBufferRx[idx],
+                  100); // TODO: Figure out timeout value. Set to 100 for now?
     }
-    if(status != SPI_OK) {
+    if (status != SPI_OK) {
       break;
     }
   }
@@ -128,23 +136,25 @@ uint32_t adi_bsp_init(void) {
 
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for SPI TX
    completion */
-uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback, void *const pCBParam) {
+uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback,
+                                       void *const pCBParam) {
   /* TODO: When we switch to DMA, we need to register the callback */
 
-  gpfSpiCallback = (adi_cb_t) pfCallback;
-  gpSpiCBParam = pCBParam ;
+  gpfSpiCallback = (adi_cb_t)pfCallback;
+  gpSpiCBParam = pCBParam;
   return 0;
 }
 
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY
    interrupts */
-uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback, void * hDevice) {
+uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback,
+                                       void *hDevice) {
   IORegisterCallback(adin_pins.interrupt, adin_bsp_gpio_callback_fromISR, NULL);
-  gpfIntCallback = (adi_cb_t) intCallback;
+  gpfIntCallback = (adi_cb_t)intCallback;
   gpIntCBParam = hDevice;
   return 0;
 }
 
-void adi_bsp_register_irq_evt (adi_irq_evt_t irq_evt_cb) {
+void adi_bsp_register_irq_evt(adi_irq_evt_t irq_evt_cb) {
   _irq_evt_cb = irq_evt_cb;
 }
