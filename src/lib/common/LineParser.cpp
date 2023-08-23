@@ -7,12 +7,14 @@
 #include "util.h"
 #include <cstdlib>
 
-LineParser::LineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues) :
+LineParser::LineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues,
+                       const char* header /*= nullptr*/) :
   _values(nullptr),
   _valueTypes(valueTypes),
   _separator(separator),
   _maxLineLen(maxLineLen),
-  _numValues(numValues) {}
+  _numValues(numValues),
+  _header(header) {}
 
 bool LineParser::init() {
   _values = static_cast<Value *>(pvPortMalloc(sizeof(Value) * _numValues));
@@ -31,6 +33,7 @@ bool LineParser::parseLine(const char* line, uint16_t len) {
     printf("ERR Parser values uninitialized!\n");
     return false;
   }
+
   // Create a mutable copy for strtok_r to mangle
   // add an extra byte to ensure 0 termination
   char* work_str = static_cast<char *>(pvPortMalloc(len + 1));
@@ -41,35 +44,23 @@ bool LineParser::parseLine(const char* line, uint16_t len) {
   // Create a pointer to free when we're done, need to clobber work_str for strtok_r.
   char* free_work_str = work_str;
 
-  // Parse the values
-  for (size_t i = 0; i < _numValues; ++i) {
-    char* saveptr; // Additional pointer for strtok_r
-    char* token = strtok_r(work_str, _separator, &saveptr);
-    if (token == NULL) {
+  // If we've specified a header, verify our line contains it. TODO - verify starts with it?
+  if (_header != nullptr) {
+    char *pos = strstr(work_str, _header);
+    if (pos != nullptr) {
+      // We found the expected header. Move the working pointer past the found header.
+      work_str = pos + strlen(_header);
+    }
+    else {
+      printf("WARN - Header %s not found in line!\n", _header);
       vPortFree(free_work_str);
-      return false; // No separator found
+      return false;
     }
-
-    // Parse the value based on its type
-    switch (_values[i].type) {
-      case TYPE_UINT64:
-        _values[i].data.uint64_val = strtoull(token, NULL, 10);
-        break;
-      case TYPE_INT64:
-        _values[i].data.int64_val = strtoll(token, NULL, 10);
-        break;
-      case TYPE_DOUBLE:
-        _values[i].data.double_val = strtod(token, NULL);
-        break;
-      default:
-        vPortFree(free_work_str);
-        return false; // Unknown type
-    }
-    // Prepare for the next strtok_r call
-    work_str = NULL;
   }
+  // Parse the values
+  bool values_parsed = parseValues(work_str);
   vPortFree(free_work_str);
-  return true;
+  return values_parsed;
 }
 
 Value LineParser::getValue(u_int16_t index) {
@@ -85,4 +76,43 @@ Value LineParser::getValue(u_int16_t index) {
     retVal = _values[index];
   }
   return retVal;
+}
+
+bool LineParser::parseValueFromToken(const char *token, size_t index) {
+  char* endptr;
+  switch (_values[index].type) {
+    case TYPE_UINT64: {
+      uint64_t parseVal = strtoull(token, &endptr, 10);
+      if (endptr == token) {
+        printf("ERR - failed to parse uint64 from: %s\n", token);
+        return false;
+      }
+//      printf("DEBUG - parse val: %llu\n", parseVal);
+      _values[index].data.uint64_val = parseVal;
+      return true;
+    }
+    case TYPE_INT64: {
+      int64_t parseVal = strtoll(token, &endptr, 10);
+      if (endptr == token) {
+        printf("ERR - failed to parse int64 from: %s\n", token);
+        return false;
+      }
+      _values[index].data.int64_val = parseVal;
+      return true;
+    }
+    case TYPE_DOUBLE: {
+      double parseVal = strtod(token, &endptr);
+      if (endptr == token) {
+        printf("ERR - failed to parse double from: %s\n", token);
+        return false;
+      }
+//      printf("DEBUG - parse val: %f\n", parseVal);
+      _values[index].data.double_val = parseVal;
+      return true;
+    }
+    default:
+      printf("ERR - can't parse value of ValueType %d\n", _values[index].type);
+      return false; // Unknown type
+  }
+  return false;
 }

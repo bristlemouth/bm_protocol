@@ -59,3 +59,41 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
+
+- name: aanderaa on bm_mote_bristleback_v1_0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: aanderaa
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=bristleback
+             -DCMAKE_AANDERAA_TYPE=4830
+
+- name: nortek on bm_mote_bristleback_v1_0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: nortek
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=bristleback
+
+- name: aanderaa on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: serial_payload_example
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
+             -DCMAKE_AANDERAA_TYPE=4830
+
+- name: nortek on bm_mote_v1.0 - Debug (w/ bootloader)
+  type: build_fw
+  args:
+    app: nortek
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK

@@ -14,6 +14,10 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
+#include "payload_uart.h"
+#include "OrderedSeparatorLineParser.h"
+#include "array_utils.h"
+#include "sensors.h"
 #include "util.h"
 
 #define LED_ON_TIME_MS 20
@@ -57,7 +61,7 @@ char payload_buffer[2048];
 ValueType valueTypes[] = {TYPE_UINT64, TYPE_DOUBLE};
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
-LineParser parser(",", 256, valueTypes, 2);
+OrderedSeparatorLineParser parser(",", 256, valueTypes, 2);
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;

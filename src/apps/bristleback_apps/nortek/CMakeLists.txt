@@ -95,7 +95,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
-    ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/common/LineParser.cpp
     ${SRC_DIR}/lib/common/OrderedSeparatorLineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
@@ -136,7 +135,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
     ${SRC_DIR}/lib/bridge
-    ${SRC_DIR}/lib/bristlefin
     ${SRC_DIR}/lib/sensor_sampler
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
@@ -228,10 +226,10 @@ set(LWIP_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/bm_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
@@ -242,10 +240,10 @@ set(APP_FILES
     )
 
 set(APP_INCLUDES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/sensors
     ${FREERTOS_INCLUDES}
     ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
