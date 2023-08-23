@@ -62,7 +62,7 @@ Once you're done, you can always deactivate the environment with:
 $ conda deactivate
 ```
 
-Whenever you pull new project changes (specifically those that update environment.yml), you should run `conda env update -f environmnent.yml` again.
+Whenever you pull new project changes (specifically those that update environment.yml), you should run `conda env update -f environment.yml` again.
 
 ### Set up Pre-commit
 
