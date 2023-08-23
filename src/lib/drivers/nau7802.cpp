@@ -465,7 +465,7 @@ bool NAU7802::readData(uint8_t registerAddress, uint8_t *value, size_t dataSize)
     }
     // vTaskDelay(pdMS_TO_TICKS(500));
     //adding this delay to maybe let the
-    rval = readBytes(value, dataSize);
+    rval = readBytes(value, dataSize, 100);
     if(rval != I2C_OK){
       printf("error reading bytes from NAU7802: %d\n", rval);
     }

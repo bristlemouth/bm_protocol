@@ -42,7 +42,7 @@ uint32_t num_reads = 240; //This should be 4 minutes
 
 /* Checking with a soak.  */
 static bool loadCellSample() {
-  printf("Load cell sample called");
+  printf("Load cell sample called\n");
 //  float voltage, current;
 //  bool success = false;
 
