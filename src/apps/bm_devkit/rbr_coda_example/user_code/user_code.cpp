@@ -182,6 +182,13 @@ void loop(void) {
   if (PLUART::lineAvailable()) {
     uint16_t read_len =
         PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+
+    char rtcTimeBuffer[32] = {};
+    rtcPrint(rtcTimeBuffer, NULL);
+    bm_fprintf(0, "rbr_raw.log", "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_printf(0, "[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    printf("[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+
     // trigger a pulse on LED2
     ledLinePulse = uptimeGetMs();
     // Now when we get a line of text data, our LineParser turns it into numeric values.

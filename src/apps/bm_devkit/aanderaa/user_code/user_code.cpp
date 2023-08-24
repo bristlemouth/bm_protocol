@@ -250,6 +250,12 @@ void loop(void) {
 
     uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
+    char rtcTimeBuffer[32] = {};
+    rtcPrint(rtcTimeBuffer, NULL);
+    bm_fprintf(0, "aanderaa_raw.log", "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_printf(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    printf("[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+
     ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
     // Now when we get a line of text data, our LineParser turns it into numeric values.
     if (!parser.parseLine(payload_buffer, read_len)) {

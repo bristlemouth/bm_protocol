@@ -313,6 +313,11 @@ void loop(void) {
 
     uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
+    rtcPrint(rtcTimeBuffer, NULL);
+    bm_fprintf(0, "nortek_raw.log", "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_printf(0, "[nortek] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    printf("[nortek] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+
     if (parser.parseLine(payload_buffer, read_len)) {
       printf("parsed values: %f | %f\n", parser.getValue(23).data, parser.getValue(24).data);
       fillNortekStruct(); //No args. This uses global parser to update global nortkeData
