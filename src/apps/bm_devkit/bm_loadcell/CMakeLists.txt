@@ -96,7 +96,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
-    ${SRC_DIR}/lib/sensor_sampler/loadCellSampler.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/common/LineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
@@ -231,6 +230,7 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/bm_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/loadCellSampler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
