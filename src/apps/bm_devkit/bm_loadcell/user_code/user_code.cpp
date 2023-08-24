@@ -99,11 +99,4 @@ void loop(void) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
-  /*
-    DO NOT REMOVE
-    This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
-    to allow for lower priority tasks to be serviced.
-    Keep this delay in the range of 10 to 100 ms.
-  */
-  vTaskDelay(pdMS_TO_TICKS(10));
 }
