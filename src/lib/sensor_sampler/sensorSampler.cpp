@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "debug.h"
 #include "sensorSampler.h"
+#include "uptime.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timers.h"
@@ -42,6 +43,7 @@ static sensorConfig_t *_config;
 static TimerHandle_t sensorCheckTimer;
 
 static void sensorSampleTask( void *parameters );
+static void sensorTimerCallback(TimerHandle_t timer);
 
 /*!
   Run the checkFn() on all sensors who have one. If the check fails,
@@ -52,26 +54,45 @@ static void sensorSampleTask( void *parameters );
 */
 void checkSensors() {
   // logPrint(SYSLog, LOG_LEVEL_DEBUG, "Running sensor checks.\n");
-  // printf("Running sensor checks.\n");
+  printf("%llu | Running sensor checks.\n", uptimeGetMicroSeconds()/1000);
 
   // Check all sensors to see if they are due for a sample update
-  for(uint32_t sensorIdx = 0; sensorIdx < numSensors; sensorIdx++) {
+  for (uint32_t sensorIdx = 0; sensorIdx < numSensors; sensorIdx++) {
     sensorListItem_t *sensorItem = sensorList[sensorIdx];
 
     // Only check if it was previously enabled (and if there's a check function!)
-    if((sensorItem->timer != NULL) && (sensorItem->sensor->checkFn != NULL)) {
-      if(sensorItem->sensor->checkFn()) {
+    if ((sensorItem->timer != NULL) && (sensorItem->sensor->checkFn != NULL)) {
+      if (sensorItem->sensor->checkFn()) {
         // If the timer had been previously disabled, try to reinitialize
         // and start again
         if (!xTimerIsTimerActive(sensorItem->timer) && sensorItem->sensor->initFn()) {
           xTimerStart(sensorItem->timer, 10);
           // logPrint(SYSLog, LOG_LEVEL_INFO, "%s Re-enabled\n", sensorItem->name);
-          printf("%s Re-enabled\n", sensorItem->name);
+          printf("%llu | %s Re-enabled\n", uptimeGetMicroSeconds()/1000, sensorItem->name);
         }
-      } else if(xTimerIsTimerActive(sensorItem->timer)) {
+      } else if (xTimerIsTimerActive(sensorItem->timer)) {
         xTimerStop(sensorItem->timer, 10);
         // logPrint(SYSLog, LOG_LEVEL_ERROR, "%s Check Failed - Disabling\n", sensorItem->name);
-        printf("%s Check Failed - Disabling\n", sensorItem->name);
+        printf("%llu | %s Check Failed - Disabling\n", uptimeGetMicroSeconds()/1000, sensorItem->name);
+      }
+      // Otherwise, try to re-init if not initted
+    } else if (_config->sensorsPollIntervalMs > 0 && sensorItem->timer == NULL) {
+      printf("%llu | Attempting to re-init sensor %s\n", uptimeGetMicroSeconds()/1000, sensorItem->name);
+      if (sensorItem->sensor->initFn()) {
+        sensorItem->timer = xTimerCreate(
+            sensorItem->name,
+            pdMS_TO_TICKS(_config->sensorsPollIntervalMs),
+            pdTRUE, // Enable auto-reload
+            reinterpret_cast<void *>(sensorItem->flag),
+            sensorTimerCallback
+        );
+        configASSERT(sensorItem->timer != NULL);
+
+        // Start sample timer
+        configASSERT(xTimerStart(sensorItem->timer, 10));
+      } else {
+        // logPrint(SYSLog, LOG_LEVEL_INFO, "Error initializing %s\n", name);
+        printf("%llu | Error initializing %s\n", uptimeGetMicroSeconds() / 1000, sensorItem->name);
       }
     }
   }
@@ -147,12 +168,10 @@ bool sensorSamplerAdd(sensor_t *sensor, const char *name) {
       // Start sample timer
       configASSERT(xTimerStart(sensorItem->timer, 10));
     } else {
-      // logPrint(SYSLog, LOG_LEVEL_INFO, "Error initializing %s\n", name);
-      printf("Error initializing %s\n", name);
+      printf("%llu | Error initializing %s\n", uptimeGetMicroSeconds()/1000, name);
     }
   } else {
-    // logPrint(SYSLog, LOG_LEVEL_INFO, "%s Disabled\n", name);
-    printf("%s Disabled\n", name);
+    printf("%llu | %s Disabled\n", uptimeGetMicroSeconds()/1000, name);
   }
 
   return true;

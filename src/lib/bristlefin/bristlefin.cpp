@@ -5,20 +5,21 @@
 void pressureSamplerInit(AbstractPressureSensor *sensor); // src/lib/sensor_sampler/pressureSampler.cpp
 void htuSamplerInit(AbstractHtu *sensor); // src/lib/sensor_sampler/htuSampler.cpp
 
-Bristlefin::Bristlefin(MS5803 &ms5803,HTU21D& htu21d, Bme280 &bme280, TCA::TCA9546A& tca_mux, INA::INA232& ina232) : 
+Bristlefin::Bristlefin(MS5803 &ms5803,HTU21D& htu21d, Bme280 &bme280, TCA::TCA9546A& tca_mux, INA::INA232& ina232) :
 ms5803_(ms5803),
-htu21d_(htu21d), 
-bme280_(bme280), 
-tca_mux_(tca_mux), 
-ina232_(ina232), 
+htu21d_(htu21d),
+bme280_(bme280),
+tca_mux_(tca_mux),
+ina232_(ina232),
 version_(Bristlefin::BRISTLEFIN_V_UNKNOWN),
 saved_mux_current_channel_(TCA::CH_1){}
- 
+
 bool Bristlefin::sensorsInit() {
   bool rval = false;
   do{
     if(tca_mux_.init()){
-      tca_mux_.setChannel(TCA::CH_1);
+      // Bristlefin has I2C channels 1 and 2 connected. Enable both.
+      setMuxChannel(TCA::CH_1 | TCA::CH_2);
     } else {
       break;
     }
@@ -45,7 +46,7 @@ bool Bristlefin::sensorsInit() {
       version_ = Bristlefin::BRISTLEFIN_V_1_1;
     }
     rval = true;
-  } while(0); 
+  } while(0);
   return rval;
 }
 
@@ -151,16 +152,16 @@ TCA::Channel_t Bristlefin::getMuxChannel() {
 }
 
 void Bristlefin::setMuxChannel(TCA::Channel_t ch) {
+  saved_mux_current_channel_ = ch;
   tca_mux_.setChannel(ch);
 }
 
 void Bristlefin::setGpioDefault() {
   setLed(1, Bristlefin::LED_OFF);
   setLed(2, Bristlefin::LED_OFF);
-  disable5V(); 
+  disable5V();
   enable3V();
   disableVbus();
   disableVout();
   IOWrite(&BF_SDI12_OE, 1);
 }
-
