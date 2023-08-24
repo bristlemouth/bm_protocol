@@ -221,6 +221,22 @@ else()
     add_subdirectory(apps/${APP})
 endif()
 
+# TODO - remove once we are using just one type of Aanderaa current meter
+# Used for differentiation between Blue and 4830 Aanderaa current meters
+if(${APP} STREQUAL "aanderaa")
+	if(NOT DEFINED CMAKE_AANDERAA_TYPE)
+		message(SEND_ERROR "CMAKE_AANDERAA_TYPE is not defined")
+		return()
+	elseif(CMAKE_AANDERAA_TYPE STREQUAL "BLUE")
+		list(APPEND APP_DEFINES "AANDERAA_BLUE")
+	elseif(CMAKE_AANDERAA_TYPE STREQUAL "4830")
+		list(APPEND APP_DEFINES "AANDERAA_4830")
+	else()
+		message(SEND_ERROR "CMAKE_AANDERAA_TYPE is not BLUE or 4830")
+		return()
+	endif()
+endif()
+
 set(EXECUTABLE ${BSP}-${APP_NAME}.elf)
 
 # Compute addresses to be used later for flashing device and padding images

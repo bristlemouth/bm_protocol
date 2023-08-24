@@ -1,47 +1,35 @@
-#include "debug.h"
-#include "util.h"
 #include "user_code.h"
+#include "bm_network.h"
+#include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bsp.h"
+#include "debug.h"
+#include "lwip/inet.h"
+#include "payload_uart.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
-#include "lwip/inet.h"
-#include "bm_network.h"
 #include "usart.h"
-#include "payload_uart.h"
+#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 
 bool led_state = false;
 
-// This function is called from the payload UART library in src/lib/common/payload_uart.cpp::processLine function.
-//  Every time the uart receives the configured termination character ('\0' character by default),
-//  It will:
-//   -- print the line to Dev Kit USB console.
-//   -- print the line to Spotter USB console.
-//   -- write the line to a payload_data.log on the Spotter SD card.
-//   -- call this function, so we can do custom things with the data.
-//      In this case, we just set a trigger to pulse LED2 on the Dev Kit.
-void PLUART::userProcessLine(uint8_t *line, size_t len) {
-  // NOTE - this function is called from the LPUartRx task. Interacting with the same data as setup() and loop(),
-  //   which are called from the USER task, is not thread safe!
-  ( void )line;
-  ( void )len;
-}
+// A buffer to put data from out payload sensor into.
+char payload_buffer[2048];
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
-  PLUART::initPayloadUart(USER_TASK_PRIORITY);
+  PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
   PLUART::setBaud(9600);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter('\n');
   // Turn on the UART.
-  serialEnable(&PLUART::uart_handle);
+  PLUART::enable();
   // Enable the input to the Vout power supply.
   IOWrite(&BB_VBUS_EN, 0);
   // ensure Vbus stable before enable Vout with a 5ms delay.
@@ -53,19 +41,39 @@ void setup(void) {
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
 
-  if(!led_state) {
-    IOWrite(&LED_GREEN, 0);
-    led_state = true;
-  } else {
-    IOWrite(&LED_GREEN, 1);
-    led_state = false;
+  // Read a byte if it is available
+  while (PLUART::byteAvailable()) {
+    uint8_t byte_read = PLUART::readByte();
+    printf("byte: %c\n", (char)byte_read);
   }
 
-  /*
-    DO NOT REMOVE
-    This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
-    to allow for lower priority tasks to be serviced.
-    Keep this delay in the range of 10 to 100 ms.
-  */
-  vTaskDelay(pdMS_TO_TICKS(10));
+  // Read a line if it is available
+  if (PLUART::lineAvailable()) {
+    // Toggle the LED each time we get a line from the payload
+    if (!led_state) {
+      IOWrite(&LED_GREEN, 0);
+      led_state = true;
+    } else {
+      IOWrite(&LED_GREEN, 1);
+      led_state = false;
+    }
+
+    uint16_t read_len =
+        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+    printf("line: %s\n", payload_buffer);
+
+    // Get the RTC if available
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    char rtcTimeBuffer[32];
+    rtcPrint(rtcTimeBuffer, &time_and_date);
+
+    // Print the payload data to a file, to the bm_printf console, and to the printf console.
+    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n",
+               uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+              rtcTimeBuffer, read_len, payload_buffer);
+    printf("[payload] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
+           rtcTimeBuffer, read_len, payload_buffer);
+  }
 }

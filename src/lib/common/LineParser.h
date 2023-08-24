@@ -30,18 +30,26 @@ struct Value {
 
 class LineParser {
 public:
-  LineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues);
+  LineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues,
+             const char* header = nullptr);
+    // NOTE - header must be NULL terminated if used!
   bool init();
   bool parseLine(const char* line, uint16_t len);
   const Value* getValues() { return (const Value*)_values; }
   Value getValue(u_int16_t index);
-
+protected:
+  bool parseValueFromToken(const char* token, size_t index);
 private:
+  virtual bool parseValues(char* workStr) = 0;
+  // parse string at token (must not be nullptr! must be NULL terminated!) and if sucessful add to _values array at i.
+
+protected:
   Value* _values;
   ValueType* _valueTypes;
   const char* _separator;
   size_t _maxLineLen;
   size_t _numValues;
+  const char* _header;
 };
 
 #endif //BRISTLEMOUTH_LINEPARSER_H
