@@ -38,13 +38,13 @@ void setup(void) {
   // Adds the load cell as a sensor for periodic sampling.
   loadCellSamplerInit(&loadCell);
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
-  PLUART::initPayloadUart(USER_TASK_PRIORITY);
+  PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
   PLUART::setBaud(9600);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter('\n');
   // Turn on the UART.
-  serialEnable(&PLUART::uart_handle);
+  PLUART::enable();
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
