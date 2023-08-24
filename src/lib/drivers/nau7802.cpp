@@ -4,7 +4,8 @@
 #include "debug.h"
 #include "uptime.h"
 
-NAU7802::NAU7802(I2CInterface_t* i2cInterface, uint8_t address) {
+NAU7802::NAU7802(I2CInterface_t *i2cInterface, uint8_t address)
+    : _zeroOffset(-17678), _calibrationFactor(226.33) {
   _interface = i2cInterface;
   _addr = static_cast<uint8_t>(address);
 }

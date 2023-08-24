@@ -131,7 +131,7 @@ static bool loadCellInit() {
   vTaskDelay(pdMS_TO_TICKS(3000));
   rval = _loadCell->begin();
   _loadCell->setCalibrationFactor(226.33);
-  _loadCell->setZeroOffset(-17677.8);
+  _loadCell->setZeroOffset(-17678);
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
