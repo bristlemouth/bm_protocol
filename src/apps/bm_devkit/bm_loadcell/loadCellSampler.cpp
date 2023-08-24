@@ -2,20 +2,20 @@
   Power sensor(s) sampling functions
 */
 
-#include "bm_pubsub.h"
+#include "bm_network.h"
 #include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bsp.h"
-#include "stm32_rtc.h"
-#include "uptime.h"
 #include "debug.h"
 #include "nau7802.h"
-#include "sensors.h"
 #include "sensorSampler.h"
+#include "sensors.h"
+#include "stm32_rtc.h"
+#include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "bm_network.h"
 
-static NAU7802* _loadCell;
+static NAU7802 *_loadCell;
 bool successful_lc_read = false;
 uint64_t read_attempt_duration = 100;
 uint64_t read_start_time;
@@ -39,83 +39,71 @@ uint32_t num_reads = 240; //This should be 4 minutes
   check   -- For Power and HTU, this is NULL. for baro, it does a checkPROM which funnels down to a readData command. Pretty much just check if you get a reading. We can leave it blank for now.
 */
 
-
 /* Checking with a soak.  */
 static bool loadCellSample() {
   printf("Load cell sample called\n");
-//  float voltage, current;
-//  bool success = false;
 
   bool rval = true;
-// //  uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-//   rval = _loadCell->begin();
-//   printf("loadCell sample rval: %u\n", rval);
   int32_t reading = _loadCell->getReading();
   float weight = _loadCell->getWeight();
   float calFactor = _loadCell->getCalibrationFactor();
   int32_t zeroOffset = _loadCell->getZeroOffset();
 
-
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
   if (rtcGet(&timeAndDate) == pdPASS) {
     sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-            timeAndDate.year,
-            timeAndDate.month,
-            timeAndDate.day,
-            timeAndDate.hour,
-            timeAndDate.minute,
-            timeAndDate.second,
+            timeAndDate.year, timeAndDate.month, timeAndDate.day,
+            timeAndDate.hour, timeAndDate.minute, timeAndDate.second,
             timeAndDate.ms);
   } else {
     strcpy(rtcTimeBuffer, "0");
   }
   successful_lc_read = false;
-  read_start_time = uptimeGetMicroSeconds()/1000;
-  while((!successful_lc_read) && (((uptimeGetMicroSeconds()/1000)-read_start_time)<read_attempt_duration))
-  {
-    if(_loadCell->available())
-    {
-      printf("%llu | reading: %d\n", uptimeGetMicroSeconds()/1000, reading);
+  read_start_time = uptimeGetMicroSeconds() / 1000;
+  while ((!successful_lc_read) && (((uptimeGetMicroSeconds() / 1000) -
+                                    read_start_time) < read_attempt_duration)) {
+    if (_loadCell->available()) {
+      printf("%llu | reading: %d\n", uptimeGetMicroSeconds() / 1000, reading);
       // printf("%llu | reading corrs: %d\n", uptimeGetMicroSeconds()/1000, reading-333900);
       _loadCell->getInternalOffsetCal();
+
       // prints to SD card file
-      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, reading: %lu\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  reading);
-      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, weight: %f\n",uptimeGetMicroSeconds()/1000, rtcTimeBuffer,  weight);
+      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, reading: %lu\n",
+                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
+      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, weight: %f\n",
+                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
 
       // prints to Spotter console
-      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %lu", uptimeGetMicroSeconds()/1000, rtcTimeBuffer, weight);
-      printf("%llu | weight: %f\n", uptimeGetMicroSeconds()/1000, weight);
-      printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds()/1000, calFactor);
-      printf("%llu | zeroOffset: %d\n", uptimeGetMicroSeconds()/1000, zeroOffset);
+      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %lu",
+                uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
+      printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
+      printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
+      printf("%llu | zeroOffset: %d\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
       successful_lc_read = true;
-    }
-    else
-    {
+    } else {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
   cellular_send_read_counter++;
-  if(weight<min_force){
+  if (weight < min_force) {
     min_force = weight;
   }
-  if (weight>max_force){
+  if (weight > max_force) {
     max_force = weight;
   }
-  mean_sum +=weight;
+  mean_sum += weight;
 
-
-  if (cellular_send_read_counter%num_reads == 0){
+  if (cellular_send_read_counter % num_reads == 0) {
     printf("\n\n\n\nThis should only print once every 4 mins\n\n\n");
-    mean_force = mean_sum/cellular_send_read_counter;
+    mean_force = mean_sum / cellular_send_read_counter;
 
-    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force, max_force, min_force);
-    // float data_package[3] = {mean_force,max_force,min};
+    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force,
+           max_force, min_force);
 
     char data_string[100];
 
-    sprintf(data_string,
-            "mean force: %f |  max force: %f  | min force: %f",
+    sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f",
             mean_force, max_force, min_force);
 
     spotter_tx_data(data_string, 100, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK);
@@ -133,24 +121,22 @@ static bool loadCellSample() {
 }
 
 /*
-  sensorSampler function to initialize the power monitor('s)
+  sensorSampler function to initialize the power monitor(s)
   \return true if successful false otherwise
 */
 static bool loadCellInit() {
-//  float voltage, current;
-//  bool success = false;
   bool rval = true;
-//  uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-  vTaskDelay(pdMS_TO_TICKS(3000)); // Wait 3 seconds before doing the lc self cal in begin().
+
+  // Wait 3 seconds before doing the lc self cal in begin().
+  vTaskDelay(pdMS_TO_TICKS(3000));
   rval = _loadCell->begin();
-  //
   _loadCell->setCalibrationFactor(226.33);
   _loadCell->setZeroOffset(-17677.8);
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
 
-  //initial vals for force averaging.
+  // initial vals for force averaging.
   cellular_send_read_counter = 0;
   mean_force = 0;
   max_force = 0;
@@ -158,18 +144,15 @@ static bool loadCellInit() {
 }
 
 static bool loadCellCheck() {
-  // rval = 1;
   //eventually just put a readData type call in here.
   printf("loadCell check called\n");
 
   return 1;
 }
 
-static sensor_t loadCellSensor = {
-    .initFn = loadCellInit,
-    .sampleFn = loadCellSample,
-    .checkFn = loadCellCheck
-};
+static sensor_t loadCellSensor = {.initFn = loadCellInit,
+                                  .sampleFn = loadCellSample,
+                                  .checkFn = loadCellCheck};
 
 void loadCellSamplerInit(NAU7802 *sensor) {
   _loadCell = sensor;
