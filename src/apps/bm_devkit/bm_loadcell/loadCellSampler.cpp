@@ -1,5 +1,5 @@
 /*!
-  Power sensor(s) sampling functions
+  Load cell sampling functions
 */
 
 #include "bm_network.h"
