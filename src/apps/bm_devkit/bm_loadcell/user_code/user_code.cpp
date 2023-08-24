@@ -32,13 +32,6 @@ static int32_t ledLinePulse = -1;
 //   -- write the line to a payload_data.log on the Spotter SD card.
 //   -- call this function, so we can do custom things with the data.
 //      In this case, we just set a trigger to pulse LED2 on the Dev Kit.
-void PLUART::userProcessLine(uint8_t *line, size_t len) {
-  /// NOTE - this function is called from the LPUartRx task. Interacting with the same data as setup() and loop(),
-  ///   which are called from the USER task, is not thread safe!
-  (void) len; // mark unused, we setup our compiler to treat all Warnings as Errors!
-  (void) line; // mark unused, we setup our compiler to treat all Warnings as Errors!
-  ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
-}
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
