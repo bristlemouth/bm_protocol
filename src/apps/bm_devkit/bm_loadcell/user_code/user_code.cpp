@@ -13,9 +13,14 @@
 #include "usart.h"
 #include "payload_uart.h"
 #include "sensors.h"
+#include "nau7802.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
+
+void loadCellSamplerInit(NAU7802 *sensor);
+
+NAU7802 loadCell(&i2c1, NAU7802_ADDR);
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
@@ -37,6 +42,9 @@ void PLUART::userProcessLine(uint8_t *line, size_t len) {
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
+
+  loadCellSamplerInit(&loadCell);
+
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::initPayloadUart(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
