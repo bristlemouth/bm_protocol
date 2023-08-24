@@ -18,8 +18,8 @@ bool Bristlefin::sensorsInit() {
   bool rval = false;
   do{
     if(tca_mux_.init()){
-      //Changed this to channel 2 to enable load cell.
-      setMuxChannel(TCA::CH_2);
+      // Bristlefin has I2C channels 1 and 2 connected. Enable both.
+      setMuxChannel(TCA::CH_1 | TCA::CH_2);
     } else {
       break;
     }

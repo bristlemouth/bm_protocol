@@ -1,11 +1,11 @@
-#include "debug.h"
 #include "tca9546a.h"
+#include "debug.h"
 #include "util.h"
 
 using namespace TCA;
 
-TCA9546A::TCA9546A(I2CInterface_t* interface, uint8_t address, IOPinHandle_t *resetPin)
-{
+TCA9546A::TCA9546A(I2CInterface_t *interface, uint8_t address,
+                   IOPinHandle_t *resetPin) {
   _interface = interface;
   _addr = static_cast<uint8_t>(address);
   _resetPin = resetPin;
@@ -22,9 +22,9 @@ bool TCA9546A::init() {
   printf("TCA9546A init\n");
 
   uint8_t retriesRemaining = 3;
-  while(!rval && retriesRemaining--){
+  while (!rval && retriesRemaining--) {
     bool res = setChannel(CH_NONE);
-    if(!res){
+    if (!res) {
       printf("Init failed retry - %u\n", retriesRemaining);
       continue;
     } else {
@@ -37,25 +37,28 @@ bool TCA9546A::init() {
 }
 
 /*!
- Set the 8-bit(only uses the lower 4 bits) control register to select a channel
+ Set the 8-bit (only uses the lower 4 bits) control register
+ to select a combination of channels to enable.
 
- \param[in] channel Channel to select
+ Example: setChannel(TCA::CH_1 | TCA::CH_2) will enable channels 1 and 2
+
+ \param[in] channels Channels to enable
  \return true if successfull, false otherwise
 */
-bool TCA9546A::setChannel(Channel_t channel) {
+bool TCA9546A::setChannel(Channel_t channels) {
   bool rval = false;
   do {
-    if (channel == CH_UNKNOWN) {
+    if (channels == CH_UNKNOWN) {
       break;
     }
-    if (writeBytes((uint8_t*)&channel, sizeof(uint8_t)) != I2C_OK) {
+    if (writeBytes(&channels, sizeof(uint8_t)) != I2C_OK) {
       break;
     }
     Channel_t temp_channel = CH_UNKNOWN;
     if (!getChannel(temp_channel)) {
       break;
     }
-    if(temp_channel != channel) {
+    if (temp_channel != channels) {
       break;
     }
     rval = true;
@@ -65,13 +68,13 @@ bool TCA9546A::setChannel(Channel_t channel) {
 }
 
 /*!
-  Read the 8-bit control register to get the current channel
+  Read the 8-bit control register to get the set of currently enabled channels
 
   \return true if successfull, false otherwise
 */
-bool TCA9546A::getChannel(Channel_t &channel){
+bool TCA9546A::getChannel(Channel_t &channel) {
   bool rval = false;
-  if (readBytes((uint8_t*)&channel, sizeof(uint8_t), 100) == I2C_OK){
+  if (readBytes(&channel, sizeof(uint8_t), 100) == I2C_OK) {
     rval = true;
   }
 
@@ -81,7 +84,7 @@ bool TCA9546A::getChannel(Channel_t &channel){
 /*!
  Reset the i2c mux. This will clear the channel selection, leaving no channels selected.
 */
-void TCA9546A::hwReset(){
+void TCA9546A::hwReset() {
   IOWrite(_resetPin, 0);
   vTaskDelay(pdMS_TO_TICKS(50));
   IOWrite(_resetPin, 1);
