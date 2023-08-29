@@ -39,6 +39,7 @@ SerialHandle_t lpuart1  = {
   .name = "lpuart",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 128,
@@ -49,6 +50,8 @@ SerialHandle_t lpuart1  = {
   .data = &lpUART1LineBuffer,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif
 
@@ -66,6 +69,7 @@ SerialHandle_t usart1   = {
   .name = "usart1",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 64,
@@ -76,6 +80,8 @@ SerialHandle_t usart1   = {
   .data = &usart1LineBuffer,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif
 
@@ -93,6 +99,7 @@ SerialHandle_t usart2   = {
   .name = "usart2",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 64,
@@ -103,6 +110,8 @@ SerialHandle_t usart2   = {
   .data = &usart2LineBuffer,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif
 
@@ -120,6 +129,7 @@ SerialHandle_t usart3   = {
   .name = "usart3",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 64,
@@ -130,6 +140,8 @@ SerialHandle_t usart3   = {
   .data = &usart3LineBuffer,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif
 

@@ -42,6 +42,8 @@ static SerialHandle_t *ncpSerialHandle = NULL;
 static void ncpRXTask(void *parameters);
 static void ncpRXProcessor(void *parameters);
 static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
+static void ncpPreTxCb(SerialHandle_t *handle);
+static void ncpPostTxCb(SerialHandle_t *handle);
 
 typedef struct ProcessorQueueItem {
   uint8_t * buffer;
@@ -167,6 +169,10 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
 
   // Set the rxBytesFromISR to the custom NCP one
   ncpSerialHandle->rxBytesFromISR = ncpRXBytesFromISR;
+  ncpSerialHandle->interruptPin = &BM_INT;
+
+  ncpSerialHandle->preTxCb = ncpPreTxCb;
+  ncpSerialHandle->postTxCb = ncpPostTxCb;
 
   configASSERT(dfu_partition);
   configASSERT(power_controller);
@@ -328,4 +334,22 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
   } while(0);
 
   return higherPriorityTaskWoken;
+}
+
+static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
+  configASSERT(handle);
+  LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
+  lpmPeripheralActive(LPM_USART3);
+  LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
+  IOWrite(&BM_INT, 0);
+  vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
+}
+
+static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
+  configASSERT(handle);
+  LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
+  LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
+  // LPM_USART3_RX will get set on the next rising edge
+  lpmPeripheralInactiveFromISR(LPM_USART3_TX);
 }

@@ -75,6 +75,7 @@ SerialHandle_t usart3 = {
     .name = "usart3",
     .txPin = &BM_MOSI_TX3,
     .rxPin = &BM_SCK_RX3,
+    .interruptPin = NULL,
     .txStreamBuffer = NULL,
     .rxStreamBuffer = NULL,
     .txBufferSize = 1024,
@@ -85,6 +86,8 @@ SerialHandle_t usart3 = {
     .data = NULL,
     .enabled = false,
     .flags = 0,
+    .preTxCb = NULL,
+    .postTxCb = NULL,
 };
 
 // Serial console USB device
@@ -93,6 +96,7 @@ SerialHandle_t usbCLI = {
     .name = "vcp-cli",
     .txPin = NULL,
     .rxPin = NULL,
+    .interruptPin = NULL,
     .txStreamBuffer = NULL,
     .rxStreamBuffer = NULL,
     .txBufferSize = 1024,
@@ -103,6 +107,8 @@ SerialHandle_t usbCLI = {
     .data = NULL,
     .enabled = false,
     .flags = 0,
+    .preTxCb = NULL,
+    .postTxCb = NULL,
 };
 
 SerialHandle_t usbPcap = {
@@ -110,6 +116,7 @@ SerialHandle_t usbPcap = {
     .name = "vcp-bm",
     .txPin = NULL,
     .rxPin = NULL,
+    .interruptPin = NULL,
     .txStreamBuffer = NULL,
     .rxStreamBuffer = NULL,
     .txBufferSize = 2048,
@@ -120,6 +127,8 @@ SerialHandle_t usbPcap = {
     .data = NULL,
     .enabled = false,
     .flags = 0,
+    .preTxCb = NULL,
+    .postTxCb = NULL,
 };
 
 // Simple Mutex for users to use, declared in app_main

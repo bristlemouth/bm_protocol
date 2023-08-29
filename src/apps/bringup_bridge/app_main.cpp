@@ -63,6 +63,7 @@ SerialHandle_t usart1 = {
   .name = "debug",
   .txPin = &DEBUG_TX,
   .rxPin = &DEBUG_RX,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 4096,
@@ -73,6 +74,8 @@ SerialHandle_t usart1 = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif /// DEBUG_USE_USART1
 
@@ -82,6 +85,7 @@ SerialHandle_t usbCLI   = {
   .name = "vcp-cli",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 1024,
@@ -92,6 +96,8 @@ SerialHandle_t usbCLI   = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 
 // "bristlemouth" USB serial - Use TBD
@@ -100,6 +106,7 @@ SerialHandle_t usbPcap   = {
   .name = "vcp-bm",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 2048,
@@ -110,6 +117,8 @@ SerialHandle_t usbPcap   = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 
 

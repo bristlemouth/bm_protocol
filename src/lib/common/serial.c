@@ -246,11 +246,8 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
       // Disable this interrupt if there are no more bytes to transmit
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
       usart_DisableIT_TXE((USART_TypeDef *)handle->device);
-      if(handle->device == USART3){
-        lpmPeripheralInactiveFromISR(LPM_USART3_TX);
-      }
-      if(handle->device == USART1) {
-        lpmPeripheralInactiveFromISR(LPM_USART1_TX);
+      if(handle->postTxCb){
+        handle->postTxCb(handle);
       }
     }
   }
@@ -291,18 +288,14 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
     }
   }
 #endif
-
+  if(handle->preTxCb){
+    handle->preTxCb(handle);
+  }
   uint32_t startTime = xTaskGetTickCount();
 
   // Make sure we properly handle buffers larger than the streamBuffer
   // totalBytesSent < len takes care of the len == 0 case as well
   // Timeout just in case...
-  if(handle->device == USART3){
-    lpmPeripheralActive(LPM_USART3_TX);
-  }
-  if(handle->device == USART1) {
-    lpmPeripheralActive(LPM_USART1_TX);
-  }
   while (handle->enabled &&
           (totalBytesSent < len) &&
           timeRemainingTicks(startTime, pdMS_TO_TICKS(MAX_TX_TIME_MS)))

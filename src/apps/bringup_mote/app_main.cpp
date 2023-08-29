@@ -72,6 +72,7 @@ SerialHandle_t lpuart1 = {
   .name = "payload",
   .txPin = &PAYLOAD_TX,
   .rxPin = &PAYLOAD_RX,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 128,
@@ -82,6 +83,8 @@ SerialHandle_t lpuart1 = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif // DEBUG_USE_LPUART1
 
@@ -91,6 +94,7 @@ SerialHandle_t usart3 = {
   .name = "BM",
   .txPin = &BM_MOSI_TX3,
   .rxPin = &BM_SCK_RX3,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 4096,
@@ -101,6 +105,8 @@ SerialHandle_t usart3 = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 #endif /// DEBUG_USE_USART3
 
@@ -110,6 +116,7 @@ SerialHandle_t usbCLI   = {
   .name = "vcp-cli",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 1024,
@@ -120,6 +127,8 @@ SerialHandle_t usbCLI   = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 
 // "bristlemouth" USB serial - Use TBD
@@ -128,6 +137,7 @@ SerialHandle_t usbPcap   = {
   .name = "vcp-bm",
   .txPin = NULL,
   .rxPin = NULL,
+  .interruptPin = NULL,
   .txStreamBuffer = NULL,
   .rxStreamBuffer = NULL,
   .txBufferSize = 2048,
@@ -138,6 +148,8 @@ SerialHandle_t usbPcap   = {
   .data = NULL,
   .enabled = false,
   .flags = 0,
+  .preTxCb = NULL,
+  .postTxCb = NULL,
 };
 
 

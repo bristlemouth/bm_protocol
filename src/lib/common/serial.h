@@ -34,6 +34,7 @@ typedef struct SerialHandle {
   // Pin references for low power enable/disable
   IOPinHandle_t *txPin;
   IOPinHandle_t *rxPin;
+  IOPinHandle_t *interruptPin;
 
   // Tx stream buffer to feed ISR
   StreamBufferHandle_t txStreamBuffer;
@@ -65,6 +66,11 @@ typedef struct SerialHandle {
   // Misc flags
   volatile uint32_t flags;
 
+  // Function to run before tx (called from task context)
+  void (*preTxCb)(struct SerialHandle *handle);
+
+  // Function to run after tx (called from ISR context)
+  void (*postTxCb)(struct SerialHandle *handle);
 } SerialHandle_t;
 
 // Dropped rx characters

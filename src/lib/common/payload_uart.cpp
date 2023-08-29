@@ -145,18 +145,19 @@ SerialHandle_t uart_handle = {
     .name = "payload",
     .txPin = &PAYLOAD_TX,
     .rxPin = &PAYLOAD_RX,
+    .interruptPin = NULL,
     .txStreamBuffer = NULL,
     .rxStreamBuffer = NULL,
     .txBufferSize = 128,
     .rxBufferSize = 2048,
     .rxBytesFromISR = serialGenericRxBytesFromISR,
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-    .processByte =
-        processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
-    .data =
-        &lpUART1LineBuffer, // Pointer to the line buffer this handle should use
+    .processByte = processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
+    .data = &lpUART1LineBuffer, // Pointer to the line buffer this handle should use
     .enabled = false,
     .flags = 0,
+    .preTxCb = NULL,
+    .postTxCb = NULL,
 };
 
 BaseType_t init(uint8_t task_priority) {

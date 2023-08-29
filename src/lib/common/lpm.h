@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#define LPM_WAKE_TIME_MS (1)
 // List of peripherals that cannot operate in STOP2 mode
 // TODO - Assign these dynamically as needed?
 
@@ -16,8 +17,10 @@ extern "C" {
 #define LPM_USB         (1UL << 5)
 #define LPM_USART1_TX   (1UL << 6)
 #define LPM_USART1_RX   (1UL << 7)
+#define LPM_USART1      (LPM_USART1_TX | LPM_USART1_RX)
 #define LPM_USART3_TX   (1UL << 8)
 #define LPM_USART3_RX   (1UL << 9)
+#define LPM_USART3      (LPM_USART3_TX | LPM_USART3_RX)
 #define LPM_I2S         (1UL << 30)
 
 // If any of the above peripherals are ok in STOP1 mode, add them to LPM_OK_IN_STOP1
