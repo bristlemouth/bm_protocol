@@ -90,18 +90,6 @@ void bspInit() {
   IOConfigure(&BF_LED_R1, NULL);
   IOConfigure(&BF_LED_G2, NULL);
   IOConfigure(&BF_LED_R2, NULL);
-
-  // Turn off the BUCK by default (it's enabled when low)
-  IOWrite(&BF_PL_BUCK_EN, 1);
-
-  // Turn off the 5V by default (it's enabled when low)
-  IOWrite(&BF_5V_EN, 1);
-
-  // Turn it on by default
-  IOWrite(&BF_3V3_EN, 1);
-
-  // High by default
-  IOWrite(&BF_HFIO, 1);
 }
 
 bool usb_is_connected() {

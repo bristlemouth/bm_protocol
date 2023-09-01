@@ -163,5 +163,6 @@ void Bristlefin::setGpioDefault() {
   enable3V();
   disableVbus();
   disableVout();
-  IOWrite(&BF_SDI12_OE, 1);
+  IOWrite(&BF_HFIO, 0);
+  IOWrite(&BF_SDI12_OE, 0);
 }
