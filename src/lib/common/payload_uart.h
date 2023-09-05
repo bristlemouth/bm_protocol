@@ -31,6 +31,14 @@ void write(uint8_t *buffer, size_t len);
 char getTerminationCharacter();
 void setTerminationCharacter(char term_char);
 
+// Getter and setter for _useLineBuffer
+bool getUseLineBuffer();
+void setUseLineBuffer(bool enable);
+
+// Getter and setter for _useByteStreamBuffer
+  bool getUseByteStreamBuffer();
+  void setUseByteStreamBuffer(bool enable);
+
 // Setup Rx and Tx stream buffers, and start the Rx handler task LPUartRx
 BaseType_t init(uint8_t task_priority);
 

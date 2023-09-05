@@ -9,7 +9,7 @@
 
 namespace PLUART {
 
-#define USER_BYTE_BUFFER_LEN 128
+#define USER_BYTE_BUFFER_LEN 2048
 // Stream buffer for user bytes
 static StreamBufferHandle_t user_byte_stream_buffer = NULL;
 
@@ -23,41 +23,52 @@ static struct {
 
 // Line termination character
 static char terminationCharacter = 0;
+// Flag to use lineBuffer or not. If not, user can pull bytes directly from the stream.
+static bool _useLineBuffer = true;
+// Flag to use xStreamBufferIsFull or not. If not, user can use LineBuffer.
+static bool _useByteStreamBuffer = false;
 
 // Process a received byte and store it in a line buffer
 static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
   configASSERT(serialHandle != NULL);
   SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
-  // This function requires data to be a pointer to a SerialLineBuffer_t
-  configASSERT(handle->data != NULL);
-  SerialLineBuffer_t *lineBuffer =
-      reinterpret_cast<SerialLineBuffer_t *>(handle->data);
-  // We need a buffer to use!
-  configASSERT(lineBuffer->buffer != NULL);
-  lineBuffer->buffer[lineBuffer->idx] = byte;
-  if (lineBuffer->buffer[lineBuffer->idx] == terminationCharacter) {
-    // Zero terminate the line
-    if ((lineBuffer->idx + 1) < lineBuffer->len) {
-      lineBuffer->buffer[lineBuffer->idx + 1] = 0;
+
+  if (_useLineBuffer) {
+    // This function requires data to be a pointer to a SerialLineBuffer_t
+    configASSERT(handle->data != NULL);
+    SerialLineBuffer_t *lineBuffer =
+        reinterpret_cast<SerialLineBuffer_t *>(handle->data);
+    // We need a buffer to use!
+    configASSERT(lineBuffer->buffer != NULL);
+    lineBuffer->buffer[lineBuffer->idx] = byte;
+    if (lineBuffer->buffer[lineBuffer->idx] == terminationCharacter) {
+      // Zero terminate the line
+      if ((lineBuffer->idx + 1) < lineBuffer->len) {
+        lineBuffer->buffer[lineBuffer->idx + 1] = 0;
+      }
+      if (lineBuffer->lineCallback != NULL) {
+        lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
+      }
+      // Reset buffer index
+      lineBuffer->idx = 0;
+//    printf("buffer reset!\n");
+    } else {
+      lineBuffer->idx++;
+      // Heavy handed way of dealing with overflow for now
+      // Later we can just purge the buffer
+      // TODO - log error and clear buffer instead
+      configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
     }
-    if (lineBuffer->lineCallback != NULL) {
-      lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
-    }
-    // Reset buffer index
-    lineBuffer->idx = 0;
-  } else {
-    lineBuffer->idx++;
-    // Heavy handed way of dealing with overflow for now
-    // Later we can just purge the buffer
-    // TODO - log error and clear buffer instead
-    configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
   }
 
-  // Send the byte to the user byte stream buffer, if it is full, reset it first
-  if (xStreamBufferIsFull(user_byte_stream_buffer) == pdTRUE) {
-    xStreamBufferReset(user_byte_stream_buffer);
+  if (_useByteStreamBuffer) {
+    // Send the byte to the user byte stream buffer, if it is full, reset it first
+    if (xStreamBufferIsFull(user_byte_stream_buffer) == pdTRUE) {
+      printf("WARN payload uart user byte stream buffer full!\n");
+      xStreamBufferReset(user_byte_stream_buffer);
+    }
+    xStreamBufferSend(user_byte_stream_buffer, &byte, sizeof(byte), 0);
   }
-  xStreamBufferSend(user_byte_stream_buffer, &byte, sizeof(byte), 0);
 }
 
 // Called everytime we get a 'line' by processLineBufferedRxByte
@@ -81,6 +92,18 @@ char getTerminationCharacter() { return terminationCharacter; }
 void setTerminationCharacter(char term_char) {
   terminationCharacter = term_char;
 }
+
+bool getUseLineBuffer() { return _useLineBuffer; }
+
+void setUseLineBuffer(bool enable) {
+  _useLineBuffer = enable;
+}
+
+  bool getUseByteStreamBuffer() { return _useByteStreamBuffer; }
+
+  void setUseByteStreamBuffer(bool enable) {
+    _useByteStreamBuffer = enable;
+  }
 
 bool byteAvailable(void) {
   return (!xStreamBufferIsEmpty(user_byte_stream_buffer));
