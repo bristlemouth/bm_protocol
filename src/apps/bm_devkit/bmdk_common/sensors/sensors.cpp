@@ -29,12 +29,11 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
 Bristlefin bristlefin(debugPressure, debugHTU, debugPHTU, bristlefinTCA, debugIna2);
 
 void sensorsInit() {
+  bristlefin.setGpioDefault();
   if(!bristlefin.sensorsInit()){
     printf("Failed to init bristlefin\n");
   }
   // Power monitor
   powerSamplerInit(debugIna); // There's technically one INA232 on the mote and one on Bristlefin,
   // keep the init functions out of Bristlefin now for convinience.
-
-  bristlefin.setGpioDefault();
 }
