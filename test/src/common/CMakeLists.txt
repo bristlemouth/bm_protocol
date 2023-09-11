@@ -194,6 +194,7 @@ target_sources(bcmp_dfu_tests
     ${TEST_DIR}/stubs/mock_reset_reason.cpp
     ${TEST_DIR}/stubs/mock_device_info.cpp
     ${TEST_DIR}/stubs/mock_timer_callback_handler.cpp
+    ${TEST_DIR}/stubs/mock_lpm.cpp
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c
 

@@ -12,6 +12,7 @@
 #include "sysflash/sysflash.h"
 #include "util.h"
 #include <stdio.h>
+#include "lpm.h"
 
 typedef struct __attribute__((__packed__)) {
   uint32_t magic;

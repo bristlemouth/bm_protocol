@@ -9,6 +9,7 @@
 #include "bm_dfu_host.h"
 #include "task_priorities.h"
 #include "device_info.h"
+#include "lpm.h"
 
 typedef struct dfu_core_ctx_t {
     libSmContext_t sm_ctx;
@@ -38,6 +39,7 @@ static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state);
 
 static void s_init_run(void);
 static void s_idle_entry(void);
+static void s_idle_exit(void);
 static void s_idle_run(void);
 static void s_error_run(void) {}
 static void s_error_entry(void);
@@ -54,7 +56,7 @@ static const libSmState_t dfu_states[BM_NUM_DFU_STATES] = {
         .stateEnum = BM_DFU_STATE_IDLE,
         .stateName = "Idle",
         .run = s_idle_run,
-        .onStateExit = NULL,
+        .onStateExit = s_idle_exit,
         .onStateEntry = s_idle_entry,
     },
     {
@@ -142,6 +144,7 @@ static void s_init_run(void) {
 }
 
 static void s_idle_entry(void) {
+    lpmPeripheralInactive(LPM_DFU_BRISTLEMOUTH);
     memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
 }
 
@@ -159,6 +162,10 @@ static void s_idle_run(void) {
     }
 }
 
+static void s_idle_exit(void) {
+    lpmPeripheralActive(LPM_DFU_BRISTLEMOUTH);
+}
+
 /**
  * @brief Entry Function for the Error State
  *
@@ -167,6 +174,7 @@ static void s_idle_run(void) {
  * @return none
  */
 static void s_error_entry(void) {
+    lpmPeripheralInactive(LPM_DFU_BRISTLEMOUTH);
     switch (dfu_ctx.error) {
         case BM_DFU_ERR_FLASH_ACCESS:
             printf("Flash access error (Fatal Error)\n");
