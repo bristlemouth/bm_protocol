@@ -1,3 +1,4 @@
+#include "avgSampler.h"
 #include "debug.h"
 #include "util.h"
 #include "user_code.h"
@@ -38,13 +39,12 @@ typedef struct {
   float max;
   float mean;
   float stdev;
-  double* values;
 } __attribute__((__packed__)) currentData_t;
 // create a working instance here, we'll allocate memory for values later.
 #ifdef AANDERAA_BLUE
-currentData_t current_data[10] = {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
+AveragingSampler current_data[10];
 #else
-currentData_t current_data[9] = {{}, {}, {}, {}, {}, {}, {}, {}, {}};
+AveragingSampler current_data[9];
 #endif
 char* stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
 RTCTimeAndDate_t statsStartRtc = {}; // Timestampt that tracks the start of aggregation periods.
@@ -96,16 +96,16 @@ OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, line
 static int32_t ledLinePulse = -1;
 
 
-currentData_t aggregateStats(currentData_t &stats) {
+currentData_t aggregateStats(AveragingSampler &sampler) {
   currentData_t ret_stats = {};
-  if ( stats.sample_count) {
-    ret_stats.mean = getMean(stats.values, stats.sample_count);
-    ret_stats.stdev = getStd(stats.values, stats.sample_count, ret_stats.mean);
-    ret_stats.min = stats.min;
-    ret_stats.max = stats.max;
-    ret_stats.sample_count = stats.sample_count;
-    /// NOTE - side-effect here! clear sample_count of the input stats to reset the buffer.
-    stats.sample_count = 0;
+  if ( sampler.getNumSamples() > 0) {
+    ret_stats.mean = sampler.getMean();
+    ret_stats.stdev = sampler.getStd(ret_stats.mean);
+    ret_stats.min = sampler.getMin();
+    ret_stats.max = sampler.getMax();
+    ret_stats.sample_count = sampler.getNumSamples();
+    /// NOTE - Reset the buffer.
+    sampler.clear();
   }
   return ret_stats;
 }
@@ -114,7 +114,7 @@ void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Allocate memory for pressure data buffer.
   for (uint8_t i=0; i<NUM_PARAMS_TO_AGG; i++) {
-    current_data[i].values = static_cast<double *>(pvPortMalloc(sizeof(double ) * MAX_CURRENT_SAMPLES));
+    current_data[i].initBuffer(MAX_CURRENT_SAMPLES);
   }
   stats_print_buffer = static_cast<char *>(pvPortMalloc(sizeof(char) * 1500)); // Trial and error, should be plenty of space
   // Initialize our LineParser, which will allocated any needed memory for parsing.
@@ -264,7 +264,7 @@ void loop(void) {
       return;
     }
     // Now let's aggregate those values into statistics
-    if (current_data[0].sample_count >= MAX_CURRENT_SAMPLES) {
+    if (current_data[0].getNumSamples() >= MAX_CURRENT_SAMPLES) {
       printf("ERR - No more room in current reading buffer, already have %d readings!\n", MAX_CURRENT_SAMPLES);
       return;
     }
@@ -272,17 +272,8 @@ void loop(void) {
     printf("parsed values:\n");
     for (uint8_t i=0; i<NUM_PARAMS_TO_AGG; i++) {
       double param_reading = parser.getValue(i).data.double_val;
-      current_data[i].values[current_data[i].sample_count++] = param_reading;
-      if (current_data[i].sample_count == 1) {
-        current_data[i].max = param_reading;
-        current_data[i].min = param_reading;
-      } else if (param_reading < current_data[i].min) {
-        current_data[i].min = param_reading;
-      }
-      else if (param_reading > current_data[i].max) {
-        current_data[i].max = param_reading;
-      }
-      printf("\t%s | value: %f, count: %u/%d, min: %f, max: %f\n", keys[i], param_reading, current_data[i].sample_count, MAX_CURRENT_SAMPLES-N_SAMPLES_PAD, current_data[i].min, current_data[i].max);
+      current_data[i].addSample(param_reading);
+      printf("\t%s | value: %f, count: %u/%d, min: %f, max: %f\n", keys[i], param_reading, current_data[i].getNumSamples(), MAX_CURRENT_SAMPLES-N_SAMPLES_PAD, current_data[i].getMin(), current_data[i].getMax());
     }
   }
 }

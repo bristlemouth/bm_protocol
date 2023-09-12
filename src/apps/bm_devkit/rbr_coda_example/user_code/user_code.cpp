@@ -1,3 +1,4 @@
+#include "avgSampler.h"
 #include "user_code.h"
 #include "LineParser.h"
 #include "array_utils.h"
@@ -38,10 +39,11 @@ typedef struct {
   double max;
   double mean;
   double stdev;
-  double *values;
 } __attribute__((__packed__)) pressureData_t;
-// We'll allocate the values buffer later.
-pressureData_t pressure_data = {};
+#define PRESSURE_DATA_SIZE sizeof(pressureData_t)
+
+// Create an instance of the averaging sampler for our data
+static AveragingSampler pressure_data;
 
 // A buffer for our data from the payload uart
 char payload_buffer[2048];
@@ -68,9 +70,9 @@ static int32_t ledLinePulse = -1;
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
-  // Allocate memory for pressure data buffer.
-  pressure_data.values = static_cast<double *>(
-      pvPortMalloc(sizeof(double) * MAX_PRESSURE_SAMPLES));
+
+  // Initialize the pressure data buffer to be the size we need.
+  pressure_data.initBuffer(MAX_PRESSURE_SAMPLES);
   // Initialize our LineParser, which will allocated any needed memory for parsing.
   parser.init();
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
@@ -91,19 +93,19 @@ void setup(void) {
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-  /// This aggregates pressure readings into stats, and sends them along to Spotter
+  // This aggregates pressure readings into stats, and sends them along to Spotter
   static u_int32_t pressureStatsTimer = uptimeGetMs();
   if ((u_int32_t)uptimeGetMs() - pressureStatsTimer >= PRESSURE_AGG_PERIOD_MS) {
     pressureStatsTimer = uptimeGetMs();
     double mean = 0, stdev = 0, min = 0, max = 0;
     uint16_t n_samples = 0;
-    if (pressure_data.sample_count) {
-      mean = getMean(pressure_data.values, pressure_data.sample_count);
-      stdev = getStd(pressure_data.values, pressure_data.sample_count, mean);
-      min = pressure_data.min;
-      max = pressure_data.max;
-      n_samples = pressure_data.sample_count;
-      pressure_data.sample_count = 0;
+    if (pressure_data.getNumSamples()) {
+      mean = pressure_data.getMean();
+      stdev = pressure_data.getStd(mean);
+      min = pressure_data.getMin();
+      max = pressure_data.getMax();
+      n_samples = pressure_data.getNumSamples();
+      pressure_data.clear();
     }
 
     // Get the RTC if available
@@ -123,15 +125,14 @@ void loop(void) {
     printf("[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, "
            "mean: %.4f, std: %.4f\n",
            uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
-    uint8_t tx_data[34] = {};
+    uint8_t tx_data[PRESSURE_DATA_SIZE] = {};
     pressureData_t tx_pressure = {.sample_count = n_samples,
                                   .min = min,
                                   .max = max,
                                   .mean = mean,
-                                  .stdev = stdev,
-                                  .values = NULL};
-    memcpy(tx_data, (uint8_t *)(&tx_pressure), 34);
-    if (spotter_tx_data(tx_data, 34, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+                                  .stdev = stdev};
+    memcpy(tx_data, (uint8_t *)(&tx_pressure), PRESSURE_DATA_SIZE);
+    if (spotter_tx_data(tx_data, PRESSURE_DATA_SIZE, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
       printf("%llut - %s | Sucessfully sent Spotter transmit data request\n",
              uptimeGetMs(), rtcTimeBuffer);
     } else {
@@ -143,7 +144,7 @@ void loop(void) {
   /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.
   ///   Each time this happens, we pulse LED2 Green.
   static bool led2State = false;
-  // If LED2 is off and the ledLinePulse flag is set (done in our payload UART process line function), turn it on Green.
+  // If LED2 is off and the ledLinePulse flag is set, turn it on Green.
   if (!led2State && ledLinePulse > -1) {
     bristlefin.setLed(2, Bristlefin::LED_GREEN);
     led2State = true;
@@ -200,7 +201,7 @@ void loop(void) {
       return; // FIXME: this is a little confusing
     }
     // Now let's aggregate those values into statistics
-    if (pressure_data.sample_count >= MAX_PRESSURE_SAMPLES) {
+    if (pressure_data.getNumSamples() >= MAX_PRESSURE_SAMPLES) {
       printf("ERR - No more room in pressure reading buffer, already have %d "
              "readings!\n",
              MAX_PRESSURE_SAMPLES);
@@ -208,17 +209,9 @@ void loop(void) {
     }
 
     double pressure_reading = parser.getValue(1).data.double_val;
-    pressure_data.values[pressure_data.sample_count++] = pressure_reading;
-    if (pressure_data.sample_count == 1) {
-      pressure_data.max = pressure_reading;
-      pressure_data.min = pressure_reading;
-    } else if (pressure_reading < pressure_data.min) {
-      pressure_data.min = pressure_reading;
-    } else if (pressure_reading > pressure_data.max) {
-      pressure_data.max = pressure_reading;
-    }
+    pressure_data.addSample(pressure_reading);
 
-    printf("count: %u/%d, min: %f, max: %f\n", pressure_data.sample_count,
-           MAX_PRESSURE_SAMPLES, pressure_data.min, pressure_data.max);
+    printf("count: %u/%d, min: %f, max: %f\n", pressure_data.getNumSamples(),
+           MAX_PRESSURE_SAMPLES, pressure_data.getMin(), pressure_data.getMax());
   }
 }

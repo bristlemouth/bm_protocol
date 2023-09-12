@@ -10,6 +10,7 @@
  */
 
 #include "user_code.h"
+#include "avgSampler.h"
 #include "array_utils.h"
 #include "bm_network.h"
 #include "bm_printf.h"
@@ -51,19 +52,17 @@ typedef struct {
   double max;
   double mean;
   double stdev;
-  double *values;
 } __attribute__((__packed__)) sensorStatData_t;
-// We'll allocate memory for the values buffers later.
-sensorStatData_t power_voltage_stats = {};
-sensorStatData_t power_current_stats = {};
-sensorStatData_t hum_stats = {};
-sensorStatData_t temp_stats = {};
-sensorStatData_t pressure_stats = {};
 
-char *
-    stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
-RTCTimeAndDate_t statsStartRtc =
-    {}; // Timestampt that tracks the start of aggregation periods.
+static AveragingSampler power_voltage_stats;
+static AveragingSampler power_current_stats;
+static AveragingSampler hum_stats;
+static AveragingSampler temp_stats;
+static AveragingSampler pressure_stats;
+
+char stats_print_buffer[750]; // Buffer to store debug print data for the stats aggregation.
+// The size of this buffer is trial and error, but 750 should be plenty of space.
+RTCTimeAndDate_t statsStartRtc = {}; // Timestamp that tracks the start of aggregation periods.
 
 void userPressureSample(pressureSample_t pressure_sample) {
   /// NOTE - this function is called from the sensorSample task. Interacting with the same data as setup() and loop(),
@@ -72,26 +71,17 @@ void userPressureSample(pressureSample_t pressure_sample) {
     printf("ERR - Failed to take user data Mutex!");
     return;
   }
-  if (pressure_stats.sample_count >= MAX_SENSOR_SAMPLES) {
+  if (pressure_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
     xSemaphoreGive(xUserDataMutex);
     printf("ERR - No more room in pressure stats buffer, already have %lu "
            "readings!\n",
            MAX_SENSOR_SAMPLES);
     return;
   }
-  pressure_stats.values[pressure_stats.sample_count++] =
-      pressure_sample.pressure;
-  if (pressure_stats.sample_count == 1) {
-    pressure_stats.max = pressure_sample.pressure;
-    pressure_stats.min = pressure_sample.pressure;
-  } else if (pressure_sample.pressure < pressure_stats.min) {
-    pressure_stats.min = pressure_sample.pressure;
-  } else if (pressure_sample.pressure > pressure_stats.max) {
-    pressure_stats.max = pressure_sample.pressure;
-  }
+  pressure_stats.addSample(pressure_sample.pressure);
   printf("pressure stats | count: %u/%lu, min: %f, max: %f\n",
-         pressure_stats.sample_count, MAX_SENSOR_SAMPLES - 10,
-         pressure_stats.min, pressure_stats.max);
+         pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
+         pressure_stats.getMin(), pressure_stats.getMax());
   xSemaphoreGive(xUserDataMutex);
   return;
 }
@@ -107,39 +97,21 @@ void userPowerSample(powerSample_t power_sample) {
     printf("ERR - Failed to take user data Mutex!");
     return;
   }
-  if (power_voltage_stats.sample_count >= MAX_SENSOR_SAMPLES) {
+  if (power_voltage_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
     xSemaphoreGive(xUserDataMutex);
     printf("ERR - No more room in power stats buffer, already have %lu "
            "readings!\n",
            MAX_SENSOR_SAMPLES);
     return;
   }
-  power_voltage_stats.values[power_voltage_stats.sample_count++] =
-      power_sample.voltage;
-  if (power_voltage_stats.sample_count == 1) {
-    power_voltage_stats.max = power_sample.voltage;
-    power_voltage_stats.min = power_sample.voltage;
-  } else if (power_sample.voltage < power_voltage_stats.min) {
-    power_voltage_stats.min = power_sample.voltage;
-  } else if (power_sample.voltage > power_voltage_stats.max) {
-    power_voltage_stats.max = power_sample.voltage;
-  }
+  power_voltage_stats.addSample(power_sample.voltage);
+  power_current_stats.addSample(power_sample.current);
 
-  power_current_stats.values[power_current_stats.sample_count++] =
-      power_sample.current;
-  if (power_current_stats.sample_count == 1) {
-    power_current_stats.max = power_sample.current;
-    power_current_stats.min = power_sample.current;
-  } else if (power_sample.current < power_current_stats.min) {
-    power_current_stats.min = power_sample.current;
-  } else if (power_sample.current > power_current_stats.max) {
-    power_current_stats.max = power_sample.current;
-  }
   printf("power stats | count: %u/%lu, min_V: %f, max_V: %f, min_I: %f, max_I: "
          "%f\n",
-         power_voltage_stats.sample_count, MAX_SENSOR_SAMPLES - 10,
-         power_voltage_stats.min, power_voltage_stats.max,
-         power_current_stats.min, power_current_stats.max);
+         power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
+         power_voltage_stats.getMin(), power_voltage_stats.getMax(),
+         power_current_stats.getMin(), power_current_stats.getMax());
   xSemaphoreGive(xUserDataMutex);
   return;
 }
@@ -151,50 +123,33 @@ void userHumTempSample(humTempSample_t hum_temp_sample) {
     printf("ERR - Failed to take user data Mutex!");
     return;
   }
-  if (hum_stats.sample_count >= MAX_SENSOR_SAMPLES) {
+  if (hum_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
     xSemaphoreGive(xUserDataMutex);
     printf("ERR - No more room in hum/temp stats buffer, already have %lu "
            "readings!\n",
            MAX_SENSOR_SAMPLES);
     return;
   }
-  hum_stats.values[hum_stats.sample_count++] = hum_temp_sample.humidity;
-  if (hum_stats.sample_count == 1) {
-    hum_stats.max = hum_temp_sample.humidity;
-    hum_stats.min = hum_temp_sample.humidity;
-  } else if (hum_temp_sample.humidity < hum_stats.min) {
-    hum_stats.min = hum_temp_sample.humidity;
-  } else if (hum_temp_sample.humidity > hum_stats.max) {
-    hum_stats.max = hum_temp_sample.humidity;
-  }
-
-  temp_stats.values[temp_stats.sample_count++] = hum_temp_sample.temperature;
-  if (temp_stats.sample_count == 1) {
-    temp_stats.max = hum_temp_sample.temperature;
-    temp_stats.min = hum_temp_sample.temperature;
-  } else if (hum_temp_sample.temperature < temp_stats.min) {
-    temp_stats.min = hum_temp_sample.temperature;
-  } else if (hum_temp_sample.temperature > temp_stats.max) {
-    temp_stats.max = hum_temp_sample.temperature;
-  }
+  hum_stats.addSample(hum_temp_sample.humidity);
+  temp_stats.addSample(hum_temp_sample.temperature);
   printf("hum-temp stats | count: %u/%lu, min_T: %f, max_T: %f, min_H: %f, "
          "max_H: %f\n",
-         hum_stats.sample_count, MAX_SENSOR_SAMPLES - 10, temp_stats.min,
-         temp_stats.max, hum_stats.min, hum_stats.max);
+         hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
+         temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
   xSemaphoreGive(xUserDataMutex);
   return;
 }
 
-sensorStatData_t aggregateStats(sensorStatData_t &stats) {
+sensorStatData_t aggregateStats(AveragingSampler &sampler) {
   sensorStatData_t ret_stats = {};
-  if (stats.sample_count) {
-    ret_stats.mean = getMean(stats.values, stats.sample_count);
-    ret_stats.stdev = getStd(stats.values, stats.sample_count, ret_stats.mean);
-    ret_stats.min = stats.min;
-    ret_stats.max = stats.max;
-    ret_stats.sample_count = stats.sample_count;
-    /// NOTE - side-effect here! clear sample_count of the input stats to reset the buffer.
-    stats.sample_count = 0;
+  if (sampler.getNumSamples() > 0) {
+    ret_stats.mean = sampler.getMean();
+    ret_stats.stdev = sampler.getStd(ret_stats.mean);
+    ret_stats.min = sampler.getMin();
+    ret_stats.max = sampler.getMax();
+    ret_stats.sample_count = sampler.getNumSamples();
+    /// NOTE - Reset the buffer.
+    sampler.clear();
   }
   return ret_stats;
 }
@@ -202,18 +157,11 @@ sensorStatData_t aggregateStats(sensorStatData_t &stats) {
 void setup() {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Allocate memory for stats data buffers.
-  power_voltage_stats.values =
-      static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  power_current_stats.values =
-      static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  temp_stats.values =
-      static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  hum_stats.values =
-      static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  pressure_stats.values =
-      static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  stats_print_buffer = static_cast<char *>(pvPortMalloc(
-      sizeof(char) * 750)); // Trial and error, should be plenty of space
+  power_voltage_stats.initBuffer(MAX_SENSOR_SAMPLES);
+  power_current_stats.initBuffer(MAX_SENSOR_SAMPLES);
+  temp_stats.initBuffer(MAX_SENSOR_SAMPLES);
+  hum_stats.initBuffer(MAX_SENSOR_SAMPLES);
+  pressure_stats.initBuffer(MAX_SENSOR_SAMPLES);
   rtcGet(&statsStartRtc);
   userConfigurationPartition->getConfig("sensorAggPeriodMin",
                                         strlen("sensorAggPeriodMin"),
@@ -274,8 +222,7 @@ void loop(void) {
     rtcGet(&time_and_date);
     statsStartRtc = time_and_date;
     // Setup raw bytes for Tx data buffer.
-    //    We don't need tthe full sizeof(sensorStatData_t), don't need pointer to values.
-    static const uint8_t N_STAT_ELEM_BYTES = 34;
+    static const uint8_t N_STAT_ELEM_BYTES = sizeof(sensorStatData_t);
     sensorStatData_t *tx_data_structs[] = {&temp_tx_data, &hum_tx_data,
                                            &voltage_tx_data, &current_tx_data,
                                            &pressure_tx_data};
