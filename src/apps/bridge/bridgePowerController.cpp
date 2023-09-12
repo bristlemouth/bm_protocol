@@ -18,32 +18,38 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
                                              uint32_t subsampleIntervalMs,
                                              uint32_t subsampleDurationMs,
                                              bool subSamplingEnabled,
-                                             bool powerControllerEnabled)
+                                             bool powerControllerEnabled,
+                                             uint32_t alignmentS)
     : _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
-      _sampleIntervalMs(sampleIntervalMs), _sampleDurationMs(sampleDurationMs),
-      _subsampleIntervalMs(subsampleIntervalMs),
-      _subsampleDurationMs(subsampleDurationMs), _sampleIntervalStartTicks(0),
-      _subSampleIntervalStartTicks(0), _rtcSet(false), _initDone(false),
+      _sampleIntervalS(sampleIntervalMs/1000), _sampleDurationS(sampleDurationMs/1000),
+      _subsampleIntervalS(subsampleIntervalMs/1000),
+      _subsampleDurationS(subsampleDurationMs/1000), _sampleIntervalStartS(0),
+      _subSampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
       _subSamplingEnabled(subSamplingEnabled), _adin_handle(NULL) {
-  if (_sampleIntervalMs > MAX_SAMPLE_INTERVAL_MS ||
-      _sampleIntervalMs < MIN_SAMPLE_INTERVAL_MS) {
+  if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S ||
+      _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
-    _sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
+    _sampleIntervalS = DEFAULT_SAMPLE_INTERVAL_S;
   }
-  if (_sampleDurationMs > MAX_SAMPLE_DURATION_MS ||
-      _sampleDurationMs < MIN_SAMPLE_DURATION_MS) {
+  if (_sampleDurationS > MAX_SAMPLE_DURATION_S ||
+      _sampleDurationS < MIN_SAMPLE_DURATION_S) {
     printf("INVALID SAMPLE DURATION, using default.\n");
-    _sampleDurationMs = DEFAULT_SAMPLE_DURATION_MS;
+    _sampleDurationS = DEFAULT_SAMPLE_DURATION_S;
   }
-  if (_subsampleIntervalMs > MAX_SUBSAMPLE_INTERVAL_MS ||
-      _subsampleIntervalMs < MIN_SUBSAMPLE_INTERVAL_MS) {
+  if (_subsampleIntervalS > MAX_SUBSAMPLE_INTERVAL_S ||
+      _subsampleIntervalS < MIN_SUBSAMPLE_INTERVAL_S) {
     printf("INVALID SUBSAMPLE INTERVAL, using default.\n");
-    _subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_MS;
+    _subsampleIntervalS = DEFAULT_SUBSAMPLE_INTERVAL_S;
   }
-  if (_subsampleDurationMs > MAX_SUBSAMPLE_DURATION_MS ||
-      _subsampleDurationMs < MIN_SUBSAMPLE_DURATION_MS) {
+  if (_subsampleDurationS > MAX_SUBSAMPLE_DURATION_S ||
+      _subsampleDurationS < MIN_SUBSAMPLE_DURATION_S) {
     printf("INVALID SUBSAMPLE DURATION, using default.\n");
-    _subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_MS;
+    _subsampleDurationS = DEFAULT_SUBSAMPLE_DURATION_S;
+  }
+  if(_alignmentS > MAX_ALIGNMENT_S ||
+    _alignmentS < MIN_ALIGNMENT_S) {
+    printf("INVALID ALIGNMENT, using default.\n");
+    _alignmentS = DEFAULT_ALIGNMENT_S;
   }
   _busPowerEventGroup = xEventGroupCreate();
   configASSERT(_busPowerEventGroup);
@@ -62,8 +68,8 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
 void BridgePowerController::powerControlEnable(bool enable) {
   _powerControlEnabled = enable;
   if (enable) {
-    _sampleIntervalStartTicks = xTaskGetTickCount();
-    _subSampleIntervalStartTicks = xTaskGetTickCount();
+    _sampleIntervalStartS = getEpochS();
+    _subSampleIntervalStartS = _sampleIntervalStartS;
     printf("Bridge power controller enabled\n");
   } else {
     printf("Bridge power controller disabled\n");
@@ -92,27 +98,33 @@ bool BridgePowerController::waitForSignal(bool on, TickType_t ticks_to_wait) {
 }
 
 void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
-  EventBits_t signal_to_set =
+  do {
+    uint8_t enabled;
+    if(IORead(&_BusPowerPin, &enabled) && (enabled == on)) {
+      break;
+    }
+    EventBits_t signal_to_set =
       (on) ? BridgePowerController::ON : BridgePowerController::OFF;
-  EventBits_t signal_to_clear =
-      (on) ? BridgePowerController::OFF : BridgePowerController::ON;
-  xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
-  IOWrite(&_BusPowerPin, on);
-  xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
-  if (notifyL2) {
-    if (_adin_handle) {
-      bm_l2_netif_set_power(_adin_handle, on);
-    } else {
-      if (getAdinDevice()) {
+    EventBits_t signal_to_clear =
+        (on) ? BridgePowerController::OFF : BridgePowerController::ON;
+    xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
+    IOWrite(&_BusPowerPin, on);
+    xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
+    if (notifyL2) {
+      if (_adin_handle) {
         bm_l2_netif_set_power(_adin_handle, on);
+      } else {
+        if (getAdinDevice()) {
+          bm_l2_netif_set_power(_adin_handle, on);
+        }
       }
     }
-  }
-  constexpr size_t bufsize = 25;
-  static char buffer[bufsize];
-  int len =
-      snprintf(buffer, bufsize, "Bridge bus power: %d\n", static_cast<int>(on));
-  BRIDGE_LOG_PRINTN(buffer, len);
+    constexpr size_t bufsize = 25;
+    static char buffer[bufsize];
+    int len =
+        snprintf(buffer, bufsize, "Bridge bus power: %d\n", static_cast<int>(on));
+    BRIDGE_LOG_PRINTN(buffer, len);
+  } while(0);
 }
 
 bool BridgePowerController::isBridgePowerOn(void) {
@@ -143,40 +155,41 @@ void BridgePowerController::_update(
       configASSERT(printbuf);
       size_t len = snprintf(printbuf, printBufSize,
                             "Sample enabled %d\n"
-                            "Sample Duration: %" PRIu32 " ms\n"
-                            "Sample Interval: %" PRIu32 " ms\n"
+                            "Sample Duration: %" PRIu32 " s\n"
+                            "Sample Interval: %" PRIu32 " s\n"
                             "Subsample enabled: %d \n"
-                            "Subsample Duration: %" PRIu32 " ms\n"
-                            "Subsample Interval: %" PRIu32 " ms\n",
-                            _powerControlEnabled, _sampleDurationMs,
-                            _sampleIntervalMs, _subSamplingEnabled,
-                            _subsampleDurationMs, _subsampleIntervalMs);
+                            "Subsample Duration: %" PRIu32 " s\n"
+                            "Subsample Interval: %" PRIu32 " s\n"
+                            "Alignment Interval: %" PRIu32 " s\n",
+                            _powerControlEnabled, _sampleDurationS,
+                            _sampleIntervalS, _subSamplingEnabled,
+                            _subsampleDurationS, _subsampleIntervalS,
+                            _alignmentS);
       BRIDGE_LOG_PRINTN(printbuf, len);
       vPortFree(printbuf);
       BRIDGE_LOG_PRINT("Bridge State Init Complete\n");
       checkAndUpdateRTC();
       _initDone = true;
     } else if (_powerControlEnabled && _rtcSet) { // Sampling Enabled
-      uint32_t currentCycleTicks = xTaskGetTickCount();
-      if (timeRemainingTicks(_sampleIntervalStartTicks,
-                             pdMS_TO_TICKS(_sampleDurationMs))) {
+      uint32_t currentCycleS = getEpochS();
+      uint32_t sampleTimeRemainingS = timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
+      if (sampleTimeRemainingS) {
         if (_subSamplingEnabled) { // Subsampling Enabled
-          if (timeRemainingTicks(_subSampleIntervalStartTicks,
-                                 pdMS_TO_TICKS(_subsampleDurationMs))) {
+          uint32_t subsampleTimeRemainingS = timeRemainingGeneric(_subSampleIntervalStartS,currentCycleS, _subsampleDurationS);
+          if (subsampleTimeRemainingS) {
             BRIDGE_LOG_PRINT("Bridge State Subsample\n");
             powerBusAndSetSignal(true);
-            time_to_sleep_ms = MAX(_subsampleDurationMs, MIN_TASK_SLEEP_MS);
+            time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
             break;
           } else {
-            BRIDGE_LOG_PRINT("Bridge State Off\n");
-            _subSampleIntervalStartTicks =
-                currentCycleTicks +
-                (_subsampleIntervalMs - _subsampleDurationMs);
+            BRIDGE_LOG_PRINT("Bridge State Subsampling Off\n");
+            uint32_t nextSubsampleEpochS = _subSampleIntervalStartS + _subsampleIntervalS;
+            _subSampleIntervalStartS = nextSubsampleEpochS;
             time_to_sleep_ms =
-                MAX((_subsampleIntervalMs - _subsampleDurationMs),
+                MAX((nextSubsampleEpochS - currentCycleS) * 1000,
                     MIN_TASK_SLEEP_MS);
-            if (_subSampleIntervalStartTicks !=
-                currentCycleTicks) { // Prevent bus thrash
+            if (_subSampleIntervalStartS !=
+                currentCycleS) { // Prevent bus thrash
               powerBusAndSetSignal(false);
             }
             break;
@@ -184,19 +197,18 @@ void BridgePowerController::_update(
         } else { // Subsampling disabled
           BRIDGE_LOG_PRINT("Bridge State Sample\n");
           powerBusAndSetSignal(true);
-          time_to_sleep_ms = MAX(_sampleDurationMs, MIN_TASK_SLEEP_MS);
+          time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
           break;
         }
       } else {
-        BRIDGE_LOG_PRINT("Bridge State Off\n");
-        _sampleIntervalStartTicks =
-            currentCycleTicks + (_sampleIntervalMs - _sampleDurationMs);
-        _subSampleIntervalStartTicks =
-            currentCycleTicks + (_sampleIntervalMs - _sampleDurationMs);
+        BRIDGE_LOG_PRINT("Bridge State Sampling Off\n");
+        uint32_t nextSampleEpochS = alignEpoch(_sampleIntervalStartS + _sampleIntervalS);
+        _sampleIntervalStartS = nextSampleEpochS;
+        _subSampleIntervalStartS = nextSampleEpochS;
         time_to_sleep_ms =
-            MAX((_sampleIntervalMs - _sampleDurationMs), MIN_TASK_SLEEP_MS);
-        if (_sampleIntervalStartTicks !=
-            currentCycleTicks) { // Prevent bus thrash
+            MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
+        if (_sampleIntervalStartS !=
+            currentCycleS) { // Prevent bus thrash
           powerBusAndSetSignal(false);
         }
         break;
@@ -222,6 +234,7 @@ void BridgePowerController::_update(
   } while (0);
 #ifndef CI_TEST
   uint32_t taskNotifyValue = 0;
+
   xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue,
                   pdMS_TO_TICKS(time_to_sleep_ms));
 #else // CI_TEST
@@ -255,8 +268,24 @@ bool BridgePowerController::getAdinDevice() {
 void BridgePowerController::checkAndUpdateRTC() {
   if (isRTCSet() && !_rtcSet) {
     printf("Bridge Power Controller RTC is set.\n");
-    _sampleIntervalStartTicks = xTaskGetTickCount();
-    _subSampleIntervalStartTicks = xTaskGetTickCount();
+    _sampleIntervalStartS = getEpochS();
+    _subSampleIntervalStartS = _sampleIntervalStartS;
     _rtcSet = true;
   }
+}
+
+uint32_t BridgePowerController::getEpochS() {
+  RTCTimeAndDate_t datetime;
+  rtcGet(&datetime);
+  return static_cast<uint32_t>(rtcGetMicroSeconds(&datetime) * 1e-6);
+}
+
+uint32_t BridgePowerController::alignEpoch(uint32_t epochS) {
+  uint32_t alignedEpoch = epochS;
+  uint32_t alignmentDeltaS = 0;
+  if(epochS % _alignmentS != 0){
+    alignmentDeltaS = (_alignmentS - (epochS % _alignmentS));
+    alignedEpoch = epochS + alignmentDeltaS;
+  }
+  return alignedEpoch;
 }
