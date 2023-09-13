@@ -4,43 +4,41 @@
 
 // The fixture for testing class Foo.
 class AvgSamplerTest : public ::testing::Test {
- protected:
+protected:
   // You can remove any or all of the following functions if its body
   // is empty.
 
   AvgSamplerTest() {
-     // You can do set-up work for each test here.
+    // You can do set-up work for each test here.
   }
 
   ~AvgSamplerTest() override {
-     // You can do clean-up work that doesn't throw exceptions here.
+    // You can do clean-up work that doesn't throw exceptions here.
   }
 
   // If the constructor and destructor are not enough for setting up
   // and cleaning up each test, you can define the following methods:
 
   void SetUp() override {
-     // Code here will be called immediately after the constructor (right
-     // before each test).
+    // Code here will be called immediately after the constructor (right
+    // before each test).
   }
 
   void TearDown() override {
-     // Code here will be called immediately after each test (right
-     // before the destructor).
+    // Code here will be called immediately after each test (right
+    // before the destructor).
   }
 
   // Objects declared here can be used by all tests in the test suite for Foo.
 };
 
-
-TEST_F(AvgSamplerTest, normal)
-{
+TEST_F(AvgSamplerTest, normal) {
   AveragingSampler sampler;
   sampler.initBuffer(4);
   double samples[] = {1, 1, 3, 3};
-  const uint32_t num_samples = sizeof(samples)/sizeof(double);
+  const uint32_t num_samples = sizeof(samples) / sizeof(double);
 
-  for(uint16_t sample=0; sample < num_samples; sample++) {
+  for (uint16_t sample = 0; sample < num_samples; sample++) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(samples[sample], (sample + 1)));
   }
@@ -51,15 +49,14 @@ TEST_F(AvgSamplerTest, normal)
   EXPECT_DOUBLE_EQ(sampler.getMin(), 1.0);
 }
 
-TEST_F(AvgSamplerTest, partial)
-{
+TEST_F(AvgSamplerTest, partial) {
   // Make buffer larger than number of samples
   AveragingSampler sampler;
   sampler.initBuffer(16);
   double samples[] = {1, 1, 3, 3};
-  const uint32_t num_samples = sizeof(samples)/sizeof(double);
+  const uint32_t num_samples = sizeof(samples) / sizeof(double);
 
-  for(uint32_t sample=0; sample < num_samples; sample++) {
+  for (uint32_t sample = 0; sample < num_samples; sample++) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(samples[sample], (sample + 1)));
   }
@@ -70,14 +67,13 @@ TEST_F(AvgSamplerTest, partial)
   EXPECT_DOUBLE_EQ(sampler.getMin(), 1.0);
 }
 
-TEST_F(AvgSamplerTest, wraparound)
-{
+TEST_F(AvgSamplerTest, wraparound) {
   AveragingSampler sampler;
   sampler.initBuffer(4);
   double samples[] = {0, 0, 0, 0, 2, 2, 4, 4};
-  const uint32_t num_samples = sizeof(samples)/sizeof(double);
+  const uint32_t num_samples = sizeof(samples) / sizeof(double);
 
-  for(uint32_t sample=0; sample < num_samples; sample++) {
+  for (uint32_t sample = 0; sample < num_samples; sample++) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(samples[sample], (sample + 1)));
   }
@@ -88,8 +84,7 @@ TEST_F(AvgSamplerTest, wraparound)
   EXPECT_DOUBLE_EQ(sampler.getStd(), sqrt(1.0));
 }
 
-TEST_F(AvgSamplerTest, empty)
-{
+TEST_F(AvgSamplerTest, empty) {
   AveragingSampler sampler;
   sampler.initBuffer(4);
   EXPECT_TRUE(isnan(sampler.getMean()) && isnan(NAN));
@@ -99,14 +94,39 @@ TEST_F(AvgSamplerTest, empty)
   EXPECT_TRUE(isnan(sampler.getMax()) && isnan(NAN));
 }
 
-TEST_F(AvgSamplerTest, baro_256)
-{
-  double samples[] = {1019.64,1019.64,1019.59,1019.59,1019.59,1019.52,1019.62,1019.62,1019.67,1019.65,1019.61,1019.65,1019.57,1019.57,1019.60,1019.63,1019.65,1019.63,1019.62,1019.61,1019.63,1019.66,1019.61,1019.64,1019.62,1019.63,1019.57,1019.61,1019.63,1019.62,1019.64,1019.63,1019.62,1019.61,1019.60,1019.66,1019.61,1019.58,1019.65,1019.58,1019.61,1019.62,1019.62,1019.66,1019.67,1019.60,1019.64,1019.66,1019.61,1019.61,1019.60,1019.61,1019.60,1019.61,1019.62,1019.66,1019.61,1019.65,1019.68,1019.64,1019.67,1019.63,1019.64,1019.62,1019.64,1019.62,1019.65,1019.65,1019.62,1019.68,1019.60,1019.65,1019.61,1019.60,1019.63,1019.65,1019.65,1019.59,1019.61,1019.59,1019.67,1019.66,1019.61,1019.63,1019.61,1019.71,1019.59,1019.65,1019.62,1019.69,1019.60,1019.63,1019.67,1019.68,1019.62,1019.66,1019.69,1019.64,1019.65,1019.65,1019.62,1019.65,1019.63,1019.62,1019.60,1019.55,1019.60,1019.65,1019.62,1019.64,1019.69,1019.61,1019.63,1019.62,1019.63,1019.61,1019.63,1019.70,1019.65,1019.67,1019.65,1019.69,1019.65,1019.70,1019.64,1019.64,1019.64,1019.65,1019.61,1019.70,1019.68,1019.66,1019.63,1019.61,1019.61,1019.61,1019.65,1019.67,1019.63,1019.61,1019.62,1019.63,1019.65,1019.62,1019.68,1019.66,1019.66,1019.63,1019.61,1019.63,1019.60,1019.57,1019.62,1019.66,1019.60,1019.63,1019.62,1019.62,1019.63,1019.59,1019.56,1019.65,1019.63,1019.64,1019.62,1019.70,1019.61,1019.66,1019.62,1019.61,1019.63,1019.66,1019.66,1019.63,1019.67,1019.60,1019.59,1019.62,1019.65,1019.61,1019.67,1019.61,1019.66,1019.65,1019.63,1019.66,1019.60,1019.62,1019.65,1019.63,1019.60,1019.66,1019.57,1019.60,1019.60,1019.60,1019.63,1019.59,1019.66,1019.62,1019.62,1019.63,1019.61,1019.58,1019.60,1019.58,1019.59,1019.61,1019.62,1019.59,1019.63,1019.57,1019.62,1019.58,1019.63,1019.64,1019.59,1019.58,1019.64,1019.59,1019.61,1019.61,1019.62,1019.63,1019.62,1019.61,1019.61,1019.61,1019.64,1019.64,1019.66,1019.63,1019.59,1019.63,1019.65,1019.61,1019.63,1019.67,1019.63,1019.63,1019.66,1019.66,1019.64,1019.58,1019.61,1019.59,1019.57,1019.61,1019.64,1019.61,1019.65,1019.62,1019.64,1019.59,1019.62,1019.60};
-  const uint32_t num_samples = sizeof(samples)/sizeof(double);
+TEST_F(AvgSamplerTest, baro_256) {
+  double samples[] = {
+      1019.64, 1019.64, 1019.59, 1019.59, 1019.59, 1019.52, 1019.62, 1019.62, 1019.67, 1019.65,
+      1019.61, 1019.65, 1019.57, 1019.57, 1019.60, 1019.63, 1019.65, 1019.63, 1019.62, 1019.61,
+      1019.63, 1019.66, 1019.61, 1019.64, 1019.62, 1019.63, 1019.57, 1019.61, 1019.63, 1019.62,
+      1019.64, 1019.63, 1019.62, 1019.61, 1019.60, 1019.66, 1019.61, 1019.58, 1019.65, 1019.58,
+      1019.61, 1019.62, 1019.62, 1019.66, 1019.67, 1019.60, 1019.64, 1019.66, 1019.61, 1019.61,
+      1019.60, 1019.61, 1019.60, 1019.61, 1019.62, 1019.66, 1019.61, 1019.65, 1019.68, 1019.64,
+      1019.67, 1019.63, 1019.64, 1019.62, 1019.64, 1019.62, 1019.65, 1019.65, 1019.62, 1019.68,
+      1019.60, 1019.65, 1019.61, 1019.60, 1019.63, 1019.65, 1019.65, 1019.59, 1019.61, 1019.59,
+      1019.67, 1019.66, 1019.61, 1019.63, 1019.61, 1019.71, 1019.59, 1019.65, 1019.62, 1019.69,
+      1019.60, 1019.63, 1019.67, 1019.68, 1019.62, 1019.66, 1019.69, 1019.64, 1019.65, 1019.65,
+      1019.62, 1019.65, 1019.63, 1019.62, 1019.60, 1019.55, 1019.60, 1019.65, 1019.62, 1019.64,
+      1019.69, 1019.61, 1019.63, 1019.62, 1019.63, 1019.61, 1019.63, 1019.70, 1019.65, 1019.67,
+      1019.65, 1019.69, 1019.65, 1019.70, 1019.64, 1019.64, 1019.64, 1019.65, 1019.61, 1019.70,
+      1019.68, 1019.66, 1019.63, 1019.61, 1019.61, 1019.61, 1019.65, 1019.67, 1019.63, 1019.61,
+      1019.62, 1019.63, 1019.65, 1019.62, 1019.68, 1019.66, 1019.66, 1019.63, 1019.61, 1019.63,
+      1019.60, 1019.57, 1019.62, 1019.66, 1019.60, 1019.63, 1019.62, 1019.62, 1019.63, 1019.59,
+      1019.56, 1019.65, 1019.63, 1019.64, 1019.62, 1019.70, 1019.61, 1019.66, 1019.62, 1019.61,
+      1019.63, 1019.66, 1019.66, 1019.63, 1019.67, 1019.60, 1019.59, 1019.62, 1019.65, 1019.61,
+      1019.67, 1019.61, 1019.66, 1019.65, 1019.63, 1019.66, 1019.60, 1019.62, 1019.65, 1019.63,
+      1019.60, 1019.66, 1019.57, 1019.60, 1019.60, 1019.60, 1019.63, 1019.59, 1019.66, 1019.62,
+      1019.62, 1019.63, 1019.61, 1019.58, 1019.60, 1019.58, 1019.59, 1019.61, 1019.62, 1019.59,
+      1019.63, 1019.57, 1019.62, 1019.58, 1019.63, 1019.64, 1019.59, 1019.58, 1019.64, 1019.59,
+      1019.61, 1019.61, 1019.62, 1019.63, 1019.62, 1019.61, 1019.61, 1019.61, 1019.64, 1019.64,
+      1019.66, 1019.63, 1019.59, 1019.63, 1019.65, 1019.61, 1019.63, 1019.67, 1019.63, 1019.63,
+      1019.66, 1019.66, 1019.64, 1019.58, 1019.61, 1019.59, 1019.57, 1019.61, 1019.64, 1019.61,
+      1019.65, 1019.62, 1019.64, 1019.59, 1019.62, 1019.60};
+  const uint32_t num_samples = sizeof(samples) / sizeof(double);
   AveragingSampler sampler;
   sampler.initBuffer(num_samples);
 
-  for(uint32_t sample=0; sample < num_samples; sample++) {
+  for (uint32_t sample = 0; sample < num_samples; sample++) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(samples[sample], (sample + 1)));
   }
@@ -120,14 +140,13 @@ TEST_F(AvgSamplerTest, baro_256)
   EXPECT_DOUBLE_EQ(sampler.getMin(), 1019.52);
 }
 
-TEST_F(AvgSamplerTest, clear)
-{
+TEST_F(AvgSamplerTest, clear) {
   AveragingSampler sampler;
   sampler.initBuffer(4);
   double samples[] = {1.2, 2.3, 3.2, 1.2, 2.0, 2.0, 4.0, 4.0};
-  const uint32_t num_samples = sizeof(samples)/sizeof(double);
+  const uint32_t num_samples = sizeof(samples) / sizeof(double);
 
-  for(uint32_t sample=0; sample < num_samples; sample++) {
+  for (uint32_t sample = 0; sample < num_samples; sample++) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(samples[sample], (sample + 1)));
   }
@@ -137,14 +156,13 @@ TEST_F(AvgSamplerTest, clear)
   EXPECT_TRUE(isnan(sampler.getMean()) && isnan(NAN));
 }
 
-TEST_F(AvgSamplerTest, clear2)
-{
+TEST_F(AvgSamplerTest, clear2) {
   AveragingSampler sampler;
   sampler.initBuffer(4);
   double samples[] = {1.2, 2.3, 3.2, 1.2, 2.0, 2.0, 4.0, 4.0};
-  const uint32_t num_samples = sizeof(samples)/sizeof(double);
+  const uint32_t num_samples = sizeof(samples) / sizeof(double);
 
-  for(uint32_t sample=0; sample < num_samples; sample++) {
+  for (uint32_t sample = 0; sample < num_samples; sample++) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(samples[sample], (sample + 1)));
   }
@@ -157,8 +175,7 @@ TEST_F(AvgSamplerTest, clear2)
   EXPECT_DOUBLE_EQ(sampler.getMean(), 15.0);
 }
 
-TEST_F(AvgSamplerTest, timestamp_test)
-{
+TEST_F(AvgSamplerTest, timestamp_test) {
   AveragingSampler sampler;
   sampler.initBuffer(4);
 

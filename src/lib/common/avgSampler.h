@@ -1,18 +1,17 @@
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #include "FreeRTOS.h"
 #include <math.h>
-
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 class AveragingSampler {
 public:
   AveragingSampler();
   ~AveragingSampler();
   bool addSample(double sample);
-  bool addSampleTimestamped(double sample, uint32_t timestamp=0);
+  bool addSampleTimestamped(double sample, uint32_t timestamp = 0);
   double getMean(bool useKahan = false);
   double getStd(double mean = 0.0, double variance = 0.0, bool useKahan = false);
   double getVariance(double mean = 0.0, bool useKahan = false);

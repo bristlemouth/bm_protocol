@@ -10,8 +10,8 @@
  */
 
 #include "user_code.h"
-#include "avgSampler.h"
 #include "array_utils.h"
+#include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
 #include "bm_pubsub.h"
@@ -41,9 +41,9 @@ float sensor_agg_period_min = DEFAULT_SENSOR_AGG_PERIOD_MIN;
 #define SENSOR_AGG_PERIOD_MS ((double)sensor_agg_period_min * 60.0 * 1000.0)
 /* We have enough RAM that we can keep it simple for shorter durations - use 64 bit doubles, buffer all readings.
    We could be much more RAM and precision efficient by using numerical methods like Kahan summation and Welford's algorithm.*/
-#define MAX_SENSOR_SAMPLES                                                     \
-  (((uint64_t)SENSOR_AGG_PERIOD_MS / sys_cfg_sensorsPollIntervalMs) +          \
-   10) // 10 minutes @1Hz + 10 extra samples for padding => 610, ~5k RAM per sensor
+// 10 minutes @1Hz + 10 extra samples for padding => 610, ~5k RAM per sensor
+#define MAX_SENSOR_SAMPLES                                                                     \
+  (((uint64_t)SENSOR_AGG_PERIOD_MS / sys_cfg_sensorsPollIntervalMs) + 10)
 
 // Structures to store aggregated stats for our on-board sensors.
 typedef struct {
@@ -79,9 +79,8 @@ void userPressureSample(pressureSample_t pressure_sample) {
     return;
   }
   pressure_stats.addSample(pressure_sample.pressure);
-  printf("pressure stats | count: %u/%lu, min: %f, max: %f\n",
-         pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
-         pressure_stats.getMin(), pressure_stats.getMax());
+  printf("pressure stats | count: %u/%lu, min: %f, max: %f\n", pressure_stats.getNumSamples(),
+         MAX_SENSOR_SAMPLES - 10, pressure_stats.getMin(), pressure_stats.getMax());
   xSemaphoreGive(xUserDataMutex);
   return;
 }
@@ -163,8 +162,7 @@ void setup() {
   hum_stats.initBuffer(MAX_SENSOR_SAMPLES);
   pressure_stats.initBuffer(MAX_SENSOR_SAMPLES);
   rtcGet(&statsStartRtc);
-  userConfigurationPartition->getConfig("sensorAggPeriodMin",
-                                        strlen("sensorAggPeriodMin"),
+  userConfigurationPartition->getConfig("sensorAggPeriodMin", strlen("sensorAggPeriodMin"),
                                         sensor_agg_period_min);
 }
 
@@ -202,15 +200,13 @@ void loop(void) {
             "current_mean: %.4f, current_std: %.4f, "
             "pressure_n: %u, pressure_min: %.4f, pressure_max: %.4f, "
             "pressure_mean: %.4f, pressure_std: %.4f",
-            rtcTimeBuffer, statsStartTick, statsEndTick,
-            temp_tx_data.sample_count, temp_tx_data.min, temp_tx_data.max,
-            temp_tx_data.mean, temp_tx_data.stdev, hum_tx_data.sample_count,
-            hum_tx_data.min, hum_tx_data.max, hum_tx_data.mean,
-            hum_tx_data.stdev, voltage_tx_data.sample_count,
-            voltage_tx_data.min, voltage_tx_data.max, voltage_tx_data.mean,
-            voltage_tx_data.stdev, current_tx_data.sample_count,
-            current_tx_data.min, current_tx_data.max, current_tx_data.mean,
-            current_tx_data.stdev, pressure_tx_data.sample_count,
+            rtcTimeBuffer, statsStartTick, statsEndTick, temp_tx_data.sample_count,
+            temp_tx_data.min, temp_tx_data.max, temp_tx_data.mean, temp_tx_data.stdev,
+            hum_tx_data.sample_count, hum_tx_data.min, hum_tx_data.max, hum_tx_data.mean,
+            hum_tx_data.stdev, voltage_tx_data.sample_count, voltage_tx_data.min,
+            voltage_tx_data.max, voltage_tx_data.mean, voltage_tx_data.stdev,
+            current_tx_data.sample_count, current_tx_data.min, current_tx_data.max,
+            current_tx_data.mean, current_tx_data.stdev, pressure_tx_data.sample_count,
             pressure_tx_data.min, pressure_tx_data.max, pressure_tx_data.mean,
             pressure_tx_data.stdev);
     bm_fprintf(0, "bmdk_sensor_agg.log", "%s\n", stats_print_buffer);
@@ -223,27 +219,23 @@ void loop(void) {
     statsStartRtc = time_and_date;
     // Setup raw bytes for Tx data buffer.
     static const uint8_t N_STAT_ELEM_BYTES = sizeof(sensorStatData_t);
-    sensorStatData_t *tx_data_structs[] = {&temp_tx_data, &hum_tx_data,
-                                           &voltage_tx_data, &current_tx_data,
-                                           &pressure_tx_data};
-    static const uint8_t N_STAT_SENSORS =
-        sizeof(tx_data_structs) / sizeof(tx_data_structs[0]);
+    sensorStatData_t *tx_data_structs[] = {&temp_tx_data, &hum_tx_data, &voltage_tx_data,
+                                           &current_tx_data, &pressure_tx_data};
+    static const uint8_t N_STAT_SENSORS = sizeof(tx_data_structs) / sizeof(tx_data_structs[0]);
     static const uint16_t N_TX_DATA_BYTES = N_STAT_ELEM_BYTES * N_STAT_SENSORS;
     uint8_t tx_data[N_TX_DATA_BYTES] = {};
     // Iterate through all of our aggregated stats, and copy data to our tx buffer.
     for (uint8_t i = 0; i < N_STAT_SENSORS; i++) {
-      memcpy(tx_data + N_STAT_ELEM_BYTES * i,
-             reinterpret_cast<uint8_t *>(tx_data_structs[i]),
+      memcpy(tx_data + N_STAT_ELEM_BYTES * i, reinterpret_cast<uint8_t *>(tx_data_structs[i]),
              N_STAT_ELEM_BYTES);
     }
     //
-    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES,
-                        BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
-      printf("%llut - %s | Sucessfully sent Spotter transmit data request\n",
-             uptimeGetMs(), rtcTimeBuffer);
+    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+      printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
+             rtcTimeBuffer);
     } else {
-      printf("%llut - %s | Failed to send Spotter transmit data request\n",
-             uptimeGetMs(), rtcTimeBuffer);
+      printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(),
+             rtcTimeBuffer);
     }
   }
 
@@ -262,8 +254,7 @@ void loop(void) {
     ledState = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (ledState &&
-           ((uint32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (ledState && ((uint32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     ledState = false;
   }

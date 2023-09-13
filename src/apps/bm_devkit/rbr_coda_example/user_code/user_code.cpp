@@ -1,7 +1,8 @@
-#include "avgSampler.h"
 #include "user_code.h"
 #include "LineParser.h"
+#include "OrderedSeparatorLineParser.h"
 #include "array_utils.h"
+#include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
 #include "bm_pubsub.h"
@@ -15,10 +16,6 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "payload_uart.h"
-#include "OrderedSeparatorLineParser.h"
-#include "array_utils.h"
-#include "sensors.h"
 #include "util.h"
 
 #define LED_ON_TIME_MS 20
@@ -126,18 +123,15 @@ void loop(void) {
            "mean: %.4f, std: %.4f\n",
            uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
     uint8_t tx_data[PRESSURE_DATA_SIZE] = {};
-    pressureData_t tx_pressure = {.sample_count = n_samples,
-                                  .min = min,
-                                  .max = max,
-                                  .mean = mean,
-                                  .stdev = stdev};
+    pressureData_t tx_pressure = {
+        .sample_count = n_samples, .min = min, .max = max, .mean = mean, .stdev = stdev};
     memcpy(tx_data, (uint8_t *)(&tx_pressure), PRESSURE_DATA_SIZE);
     if (spotter_tx_data(tx_data, PRESSURE_DATA_SIZE, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
-      printf("%llut - %s | Sucessfully sent Spotter transmit data request\n",
-             uptimeGetMs(), rtcTimeBuffer);
+      printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
+             rtcTimeBuffer);
     } else {
-      printf("%llut - %s | Failed to send Spotter transmit data request\n",
-             uptimeGetMs(), rtcTimeBuffer);
+      printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(),
+             rtcTimeBuffer);
     }
   }
 
@@ -150,8 +144,7 @@ void loop(void) {
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
-  else if (led2State &&
-           ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
+  else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     bristlefin.setLed(2, Bristlefin::LED_OFF);
     ledLinePulse = -1;
     led2State = false;
@@ -165,37 +158,36 @@ void loop(void) {
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!led1State &&
-      ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State &&
-           ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
 
   // Read a line if it is available
   if (PLUART::lineAvailable()) {
-    uint16_t read_len =
-        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+    uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, "rbr_raw.log", "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    printf("[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    bm_fprintf(0, "rbr_raw.log", "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
+               rtcTimeBuffer, read_len, payload_buffer);
+    bm_printf(0, "[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
+              read_len, payload_buffer);
+    printf("[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+           read_len, payload_buffer);
 
     // trigger a pulse on LED2
     ledLinePulse = uptimeGetMs();
     // Now when we get a line of text data, our LineParser turns it into numeric values.
     if (parser.parseLine(payload_buffer, read_len)) {
-      printf("parsed values: %llu | %f\n", parser.getValue(0).data,
-             parser.getValue(1).data);
+      printf("parsed values: %llu | %f\n", parser.getValue(0).data, parser.getValue(1).data);
     } else {
       printf("Error parsing line!\n");
       return; // FIXME: this is a little confusing

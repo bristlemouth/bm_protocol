@@ -8,8 +8,8 @@ AveragingSampler::AveragingSampler() {
   _samples = NULL;
 }
 
-AveragingSampler::~AveragingSampler(){
-  if(_samples != NULL) {
+AveragingSampler::~AveragingSampler() {
+  if (_samples != NULL) {
     vPortFree(_samples);
   }
 }
@@ -19,7 +19,7 @@ AveragingSampler::~AveragingSampler(){
 
   \param[in] maxSample maximum number of samples to store
 */
-void AveragingSampler::initBuffer(uint32_t maxSamples){
+void AveragingSampler::initBuffer(uint32_t maxSamples) {
   configASSERT(maxSamples > 0);
   _maxSamples = maxSamples;
   if (_samples != NULL) {
@@ -52,12 +52,12 @@ bool AveragingSampler::addSampleTimestamped(double sample, uint32_t timestamp) {
   bool rval = false;
   configASSERT(_samples != NULL);
   // Ignore timestamp if it is zero
-  if(!timestamp || (timestamp != _lastSampleTime)) {
+  if (!timestamp || (timestamp != _lastSampleTime)) {
     _samples[_sampleIdx] = sample;
     _lastSampleTime = timestamp;
 
     // Wrap around
-    if(++_sampleIdx == _maxSamples) {
+    if (++_sampleIdx == _maxSamples) {
       _fullBuffer = true;
       _sampleIdx = 0;
     }
@@ -73,7 +73,7 @@ bool AveragingSampler::addSampleTimestamped(double sample, uint32_t timestamp) {
   \return Number of samples in circular buffer
 */
 uint32_t AveragingSampler::getNumSamples() {
-  if(!_fullBuffer) {
+  if (!_fullBuffer) {
     return _sampleIdx;
   } else {
     return _maxSamples;
@@ -115,16 +115,16 @@ double AveragingSampler::getMean(bool useKahan) {
   if (useKahan) {
     double c = 0.0;
     for (uint32_t i = 0; i < numSamples; i++) {
-      total = kahanSum(total,  _samples[i], c);
+      total = kahanSum(total, _samples[i], c);
     }
   } else {
-    for(uint32_t i = 0; i < numSamples; i++) {
+    for (uint32_t i = 0; i < numSamples; i++) {
       total += _samples[i];
     }
   }
 
   // Don't divide by zero!
-  if(numSamples) {
+  if (numSamples) {
     mean = total / numSamples;
   } else {
     mean = NAN;
@@ -142,7 +142,7 @@ double AveragingSampler::getMean(bool useKahan) {
   \return standard deviation of all the samples
 */
 double AveragingSampler::getStd(double mean, double variance, bool useKahan) {
-  if( variance != 0.0 ) {
+  if (variance != 0.0) {
     return sqrt(variance);
   }
 
@@ -161,8 +161,8 @@ double AveragingSampler::getMax() {
     return NAN;
   }
   double max = _samples[0];
-  for(uint32_t i  = 0; i < numSamples; i++) {
-    if (_samples[i] > max){
+  for (uint32_t i = 0; i < numSamples; i++) {
+    if (_samples[i] > max) {
       max = _samples[i];
     }
   }
@@ -180,8 +180,8 @@ double AveragingSampler::getMin() {
     return NAN;
   }
   double min = _samples[0];
-  for(uint32_t i  = 0; i < numSamples; i++) {
-    if (_samples[i] < min){
+  for (uint32_t i = 0; i < numSamples; i++) {
+    if (_samples[i] < min) {
       min = _samples[i];
     }
   }
@@ -196,7 +196,7 @@ double AveragingSampler::getMin() {
   \param[in/out] c - running compensation
   \return true if successful, false otherwise (no samples available)
 */
-double AveragingSampler::kahanSum( double total, double input, double& c ) {
+double AveragingSampler::kahanSum(double total, double input, double &c) {
   volatile double sum = total;
   double y = input - c;
   volatile double t = sum + y;
@@ -217,8 +217,8 @@ double AveragingSampler::getVariance(double mean, bool useKahan) {
   double var = 0.0;
   uint32_t numSamples = getNumSamples();
 
-  for( uint16_t i = 0; i < numSamples; i++ ){
-    var = var + ( (_samples[i] - avg) * (_samples[i] - avg) );
+  for (uint16_t i = 0; i < numSamples; i++) {
+    var = var + ((_samples[i] - avg) * (_samples[i] - avg));
   }
   // Don't divide by zero!
   if (numSamples) {
