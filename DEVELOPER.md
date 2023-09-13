@@ -10,18 +10,18 @@ Where is everything?!
 ## [src/](src/)
 The src directory contains all of the firmware source files for the project.
 
-### [src/apps/])(src/apps/)
+### [src/apps/](src/apps/)
 This directory contains all of the separate applications in their own directories.
 
-### [src/bsp/])(src/bsp/)
+### [src/bsp/](src/bsp/)
 This directory contains all of the different Board Support Packages(BSP's) for all of the different hardware revisions/configurations. Whenever you want to change peripheral mapping, IO pins, etc, you'll have to look in here.
 
 We're currently using [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html) to do the initial pin/peripheral configuration and code generation. We haven't yet documented that process, so if you need help, reach out to the firmware team.
 
-### [src/lib/])(src/lib/)
+### [src/lib/](src/lib/)
 The lib directory has most of the source code in the project. This is where you'll find most drivers/libraries.
 
-### [src/third_party/])(src/third_party/)
+### [src/third_party/](src/third_party/)
 This directory contains all third party libraries (usually included as git submodules) used by the project.
 
 ## [test/](test/)
