@@ -25,14 +25,18 @@
 #else
 #define NUM_PARAMS_TO_AGG 9 // Need to manually adjust current_data, valueTypes and keys when changing
 #endif
-#define N_SKIP_SAMPLES 2 // Skip the first couple of readings for now. It takes time for stuff to init, and we're not parsing the "*" characters to infer errors yet
+// Skip the first couple of readings for now. It takes time for stuff to init,
+// and we're not parsing the "*" characters to infer errors yet.
+#define N_SKIP_SAMPLES 2
 uint8_t samples_skipped = 0;
-bool ready_to_send = true; // flip this off after sending to make it a one-shot
-#define CURRENT_AGG_PERIOD_MIN 3 // aggregate after 3 minutes of run time
-#define CURRENT_SAMPLE_PERIOD_MS 2000 // configure Aanderaa sensor to generate reading every 2 seconds
-#define CURRENT_AGG_PERIOD_MS (CURRENT_AGG_PERIOD_MIN * 60 * 1000)
-#define N_SAMPLES_PAD 10 // number of extra sample padding to allocate memory for to account for timing slop
-#define MAX_CURRENT_SAMPLES ((CURRENT_AGG_PERIOD_MS / CURRENT_SAMPLE_PERIOD_MS) + N_SAMPLES_PAD) // 2 minutes @ 0.5Hz + 10 extra samples for padding => 70 samples
+bool ready_to_send = true; // Flip this off after sending to make it a one-shot.
+#define DEFAULT_CURRENT_AGG_PERIOD_MIN (3.0) // Aggregate after 3 minutes.
+// Global variable to store configuration setting. We'll retrieve it in setup().
+float current_agg_period_min = DEFAULT_CURRENT_AGG_PERIOD_MIN;
+#define CURRENT_SAMPLE_PERIOD_MS 2000 // Aanderaa "interval" config setting.
+#define CURRENT_AGG_PERIOD_MS ((double)current_agg_period_min * 60 * 1000)
+#define N_SAMPLES_PAD 10 // Extra sample padding to account for timing slop.
+#define MAX_CURRENT_SAMPLES (((uint64_t)CURRENT_AGG_PERIOD_MS / CURRENT_SAMPLE_PERIOD_MS) + N_SAMPLES_PAD)
 typedef struct {
   uint16_t sample_count;
   float min;
@@ -48,6 +52,9 @@ AveragingSampler current_data[9];
 #endif
 char* stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
 RTCTimeAndDate_t statsStartRtc = {}; // Timestampt that tracks the start of aggregation periods.
+
+// app_main passes a handle to the user config partition in NVM.
+extern cfg::Configuration* userConfigurationPartition;
 
 /*
  * Setup a LineParser to turn the ASCII serial data from the Aanderaa into numbers
@@ -112,6 +119,11 @@ currentData_t aggregateStats(AveragingSampler &sampler) {
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
+  // Retrieve user-set config values out of NVM.
+  userConfigurationPartition->getConfig("currentAggPeriodMin",
+                                        strlen("currentAggPeriodMin"),
+                                        current_agg_period_min);
+
   // Allocate memory for pressure data buffer.
   for (uint8_t i=0; i<NUM_PARAMS_TO_AGG; i++) {
     current_data[i].initBuffer(MAX_CURRENT_SAMPLES);
