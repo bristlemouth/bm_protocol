@@ -131,8 +131,6 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
-// Simple Mutex for users to use, declared in app_main
-SemaphoreHandle_t xUserDataMutex = NULL;
 cfg::Configuration *userConfigurationPartition = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
@@ -176,10 +174,6 @@ extern "C" int main(void) {
 
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
-
-  // Init user data Mutex
-  xUserDataMutex = xSemaphoreCreateMutex();
-  configASSERT(xUserDataMutex);
 
   BaseType_t rval = xTaskCreate(
       defaultTask, "Default",

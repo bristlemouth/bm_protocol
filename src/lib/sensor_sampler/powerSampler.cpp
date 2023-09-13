@@ -16,6 +16,9 @@
 using namespace INA;
 
 static INA232** _inaSensors;
+static float _latestVoltage[NUM_INA232_DEV] = {};
+static float _latestCurrent[NUM_INA232_DEV] = {};
+static bool _newPowerDataAvailable[NUM_INA232_DEV] = {};
 
 // Optional user-defined sample processing function
 void userPowerSample(powerSample_t power_sample) __attribute__((weak));
@@ -54,10 +57,15 @@ static bool powerSample() {
       printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
       bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
       bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-      if (userPowerSample) userPowerSample(_powerData);
+
+      taskENTER_CRITICAL();
+      _newPowerDataAvailable[dev_num] = true;
+      _latestVoltage[dev_num] = voltage;
+      _latestCurrent[dev_num] = current;
+      taskEXIT_CRITICAL();
     }
     else {
-      printf("ERR Failed to sample power monitr %u!", dev_num);
+      printf("ERR Failed to sample power monitor %u!", dev_num);
     }
     rval &= success;
   }
@@ -95,4 +103,23 @@ static sensor_t powerSensors = {
 void powerSamplerInit(INA::INA232 **sensors) {
   _inaSensors = sensors;
   sensorSamplerAdd(&powerSensors, "PWR");
+}
+
+bool powerSamplerGetLatest(uint8_t power_monitor_address, float &voltage, float &current) {
+  bool rval = false;
+  uint8_t dev_num;
+  for (dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
+    if (_inaSensors[dev_num]->getAddr() == power_monitor_address) {
+      break;
+    }
+  }
+  taskENTER_CRITICAL();
+  if (_newPowerDataAvailable[dev_num]) {
+    voltage = _latestVoltage[dev_num];
+    current = _latestCurrent[dev_num];
+    rval = true;
+    _newPowerDataAvailable[dev_num] = false;
+  }
+  taskEXIT_CRITICAL();
+  return rval;
 }

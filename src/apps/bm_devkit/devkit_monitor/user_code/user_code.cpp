@@ -20,6 +20,9 @@
 #include "debug.h"
 #include "lwip/inet.h"
 #include "sensorSampler.h"
+#include "pressureSampler.h"
+#include "powerSampler.h"
+#include "htuSampler.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
@@ -64,81 +67,6 @@ char stats_print_buffer[750]; // Buffer to store debug print data for the stats 
 // The size of this buffer is trial and error, but 750 should be plenty of space.
 RTCTimeAndDate_t statsStartRtc = {}; // Timestamp that tracks the start of aggregation periods.
 
-void userPressureSample(pressureSample_t pressure_sample) {
-  /// NOTE - this function is called from the sensorSample task. Interacting with the same data as setup() and loop(),
-  ///   which are called from the USER task, is not thread safe!
-  if (xSemaphoreTake(xUserDataMutex, portMAX_DELAY) != pdTRUE) {
-    printf("ERR - Failed to take user data Mutex!");
-    return;
-  }
-  if (pressure_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    xSemaphoreGive(xUserDataMutex);
-    printf("ERR - No more room in pressure stats buffer, already have %lu "
-           "readings!\n",
-           MAX_SENSOR_SAMPLES);
-    return;
-  }
-  pressure_stats.addSample(pressure_sample.pressure);
-  printf("pressure stats | count: %u/%lu, min: %f, max: %f\n", pressure_stats.getNumSamples(),
-         MAX_SENSOR_SAMPLES - 10, pressure_stats.getMin(), pressure_stats.getMax());
-  xSemaphoreGive(xUserDataMutex);
-  return;
-}
-
-void userPowerSample(powerSample_t power_sample) {
-  /// NOTE - this function is called from the sensorSample task. Interacting with the same data as setup() and loop(),
-  ///   which are called from the USER task, is not thread safe!
-  // We'll start with the monitor that measure power going through our Mote.
-  // Note there's another power monitor at address I2C_ADDR_BMDK_LOAD_POWER_MON that monitors power to Vout.
-  if (power_sample.address != Bristlefin::I2C_ADDR_MOTE_THROUGH_POWER_MON)
-    return;
-  if (xSemaphoreTake(xUserDataMutex, portMAX_DELAY) != pdTRUE) {
-    printf("ERR - Failed to take user data Mutex!");
-    return;
-  }
-  if (power_voltage_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    xSemaphoreGive(xUserDataMutex);
-    printf("ERR - No more room in power stats buffer, already have %lu "
-           "readings!\n",
-           MAX_SENSOR_SAMPLES);
-    return;
-  }
-  power_voltage_stats.addSample(power_sample.voltage);
-  power_current_stats.addSample(power_sample.current);
-
-  printf("power stats | count: %u/%lu, min_V: %f, max_V: %f, min_I: %f, max_I: "
-         "%f\n",
-         power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
-         power_voltage_stats.getMin(), power_voltage_stats.getMax(),
-         power_current_stats.getMin(), power_current_stats.getMax());
-  xSemaphoreGive(xUserDataMutex);
-  return;
-}
-
-void userHumTempSample(humTempSample_t hum_temp_sample) {
-  /// NOTE - this function is called from the sensorSample task. Interacting with the same data as setup() and loop(),
-  ///   which are called from the USER task, is not thread safe!
-  if (xSemaphoreTake(xUserDataMutex, portMAX_DELAY) != pdTRUE) {
-    printf("ERR - Failed to take user data Mutex!");
-    return;
-  }
-  if (hum_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    xSemaphoreGive(xUserDataMutex);
-    printf("ERR - No more room in hum/temp stats buffer, already have %lu "
-           "readings!\n",
-           MAX_SENSOR_SAMPLES);
-    return;
-  }
-  hum_stats.addSample(hum_temp_sample.humidity);
-  temp_stats.addSample(hum_temp_sample.temperature);
-  printf("hum-temp stats | count: %u/%lu, min_T: %f, max_T: %f, min_H: %f, "
-         "max_H: %f\n",
-         hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
-         temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
-  xSemaphoreGive(xUserDataMutex);
-  return;
-}
-
 sensorStatData_t aggregateStats(AveragingSampler &sampler) {
   sensorStatData_t ret_stats = {};
   if (sampler.getNumSamples() > 0) {
@@ -173,18 +101,15 @@ void loop(void) {
   static uint32_t statsStartTick = uptimeGetMs();
   if ((uint32_t)uptimeGetMs() - sensorStatsTimer >= SENSOR_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
-    sensorStatData_t temp_tx_data = {}, hum_tx_data = {}, voltage_tx_data = {},
-                     current_tx_data = {}, pressure_tx_data = {};
-    // The aggregateStats function accesses the data that is modified by the functions called from
-    // the sensorSample task. Not thread safe without protection!
-    if (xSemaphoreTake(xUserDataMutex, portMAX_DELAY) == pdTRUE) {
-      temp_tx_data = aggregateStats(temp_stats);
-      hum_tx_data = aggregateStats(hum_stats);
-      voltage_tx_data = aggregateStats(power_voltage_stats);
-      current_tx_data = aggregateStats(power_current_stats);
-      pressure_tx_data = aggregateStats(pressure_stats);
-      xSemaphoreGive(xUserDataMutex);
-    }
+
+    sensorStatData_t temp_tx_data, hum_tx_data, voltage_tx_data, current_tx_data, pressure_tx_data;
+
+    temp_tx_data = aggregateStats(temp_stats);
+    hum_tx_data = aggregateStats(hum_stats);
+    voltage_tx_data = aggregateStats(power_voltage_stats);
+    current_tx_data = aggregateStats(power_current_stats);
+    pressure_tx_data = aggregateStats(pressure_stats);
+
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, &statsStartRtc);
     uint32_t statsEndTick = uptimeGetMs();
@@ -236,6 +161,52 @@ void loop(void) {
     } else {
       printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(),
              rtcTimeBuffer);
+    }
+  }
+
+  if (pressure_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
+    printf("ERR - No more room in pressure stats buffer, already have %lu readings!\n",
+           MAX_SENSOR_SAMPLES);
+  } else {
+    float temperature, pressure = 0.0;
+    if(pressureSamplerGetLatest(pressure, temperature)) {
+      pressure_stats.addSample(pressure);
+      printf("pressure stats | count: %u/%lu, min: %f, max: %f\n",
+            pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
+            pressure_stats.getMin(), pressure_stats.getMax());
+    }
+  }
+
+  if (hum_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
+    printf("ERR - No more room in hum/temp stats buffer, already have %lu readings!\n",
+           MAX_SENSOR_SAMPLES);
+  } else {
+    float temperature, humidity = 0.0;
+    if (htuSamplerGetLatest(humidity, temperature)) {
+      hum_stats.addSample(humidity);
+      temp_stats.addSample(temperature);
+      printf("hum-temp stats | count: %u/%lu, min_T: %f, max_T: %f, min_H: %f, "
+            "max_H: %f\n",
+            hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
+            temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
+    }
+  }
+
+  if (power_voltage_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
+    printf("ERR - No more room in power stats buffer, already have %lu "
+           "readings!\n",
+           MAX_SENSOR_SAMPLES);
+  } else {
+    float voltage_mote, current_mote = 0.0;
+    if (powerSamplerGetLatest(Bristlefin::I2C_ADDR_MOTE_THROUGH_POWER_MON, voltage_mote, current_mote)) {
+      power_voltage_stats.addSample(voltage_mote);
+      power_current_stats.addSample(current_mote);
+
+      printf("power stats | count: %u/%lu, min_V: %f, max_V: %f, min_I: %f, max_I: "
+            "%f\n",
+            power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
+            power_voltage_stats.getMin(), power_voltage_stats.getMax(),
+            power_current_stats.getMin(), power_current_stats.getMax());
     }
   }
 

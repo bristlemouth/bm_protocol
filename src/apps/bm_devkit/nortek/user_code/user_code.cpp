@@ -139,8 +139,6 @@ sensorStatDataDouble_t direction_stats = {};
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
 
-extern SemaphoreHandle_t xUserDataMutex; //Mutex for
-
 char rtcTimeBuffer[32] = {}; // Let's get UTC time string for convenience
 uint64_t this_uptime = 0;
 uint64_t net_time = 0;

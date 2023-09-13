@@ -13,8 +13,5 @@ extern uint32_t sys_cfg_sensorsPollIntervalMs;
 // app_main passes user space a handle to the user config partition, so we can define customer configs in our app.
 extern cfg::Configuration* userConfigurationPartition;
 
-// Simple Mutex for users to use, declared in app_main.
-extern SemaphoreHandle_t xUserDataMutex;
-
 void setup(void);
 void loop(void);

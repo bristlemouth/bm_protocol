@@ -1,7 +1,7 @@
 /*!
   Pressure sensor sampling functions
 */
-
+#include "pressureSampler.h"
 #include "bm_pubsub.h"
 #include "bm_printf.h"
 #include "bsp.h"
@@ -15,7 +15,9 @@
 #include "abstract_pressure_sensor.h"
 
 static AbstractPressureSensor* _pressureSensor;
-
+static float _latestPressure = 0.0;
+static float _latestTemperature = 0.0;
+static bool _newPressureDataAvailable = false;
 // Optional user-defined sample processing function
 void userPressureSample(pressureSample_t pressure_sample) __attribute__((weak));
 
@@ -47,7 +49,12 @@ static bool baroSample() {
     printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
     bm_fprintf(0, "pressure.log", "tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
     bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
-    if (userPressureSample) userPressureSample(_pressureData);
+
+    taskENTER_CRITICAL();
+    _latestPressure = pressure;
+    _latestTemperature = temperature;
+    _newPressureDataAvailable = true;
+    taskEXIT_CRITICAL();
   }
   else {
     printf("ERR Failed to sample pressure sensor!");
@@ -83,4 +90,19 @@ static sensor_t pressureSensor = {
 void pressureSamplerInit(AbstractPressureSensor *sensor) {
   _pressureSensor = sensor;
   sensorSamplerAdd(&pressureSensor, "BARO");
+}
+
+bool pressureSamplerGetLatest(float &pressure, float &temperature) {
+  bool rval = false;
+
+  taskENTER_CRITICAL();
+  if (_newPressureDataAvailable) {
+    pressure = _latestPressure;
+    temperature = _latestTemperature;
+    rval = true;
+    _newPressureDataAvailable = false;
+  }
+  taskEXIT_CRITICAL();
+
+  return rval;
 }

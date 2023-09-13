@@ -15,6 +15,9 @@
 #include "abstract_htu_sensor.h"
 
 static AbstractHtu* _htu;
+static float _latestHumidity = 0.0;
+static float _latestTemperature = 0.0;
+static bool _newHumTempDataAvailable = false;
 
 // Optional user-defined sample processing function
 void userHumTempSample(humTempSample_t hum_temp_sample) __attribute__((weak));
@@ -56,7 +59,12 @@ static bool htuSample() {
     printf("hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
     bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
     bm_printf(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
-    if (userHumTempSample) userHumTempSample(_humTempData);
+
+    taskENTER_CRITICAL();
+    _latestHumidity = humidity;
+    _latestTemperature = temperature;
+    _newHumTempDataAvailable = true;
+    taskEXIT_CRITICAL();
   }
   else {
     printf("ERR Failed to sample pressure sensor!");
@@ -73,4 +81,17 @@ static sensor_t htuSensor = {
 void htuSamplerInit(AbstractHtu *sensor) {
   _htu = sensor;
   sensorSamplerAdd(&htuSensor, "HTU");
+}
+
+bool htuSamplerGetLatest(float &temperature, float &humidity) {
+  bool rval = false;
+  taskENTER_CRITICAL();
+  if(_newHumTempDataAvailable) {
+    temperature = _latestTemperature;
+    humidity = _latestHumidity;
+    _newHumTempDataAvailable = false;
+    rval = true;
+  }
+  taskEXIT_CRITICAL();
+  return rval;
 }
