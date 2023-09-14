@@ -67,8 +67,7 @@ The Hello World App demonstrates basic Bristlemouth and Dev Kit functionality:
 ### Serial Payload Example
 The Serial Payload Example App builds on top of the Hello World App by adding functionality to interact with a sensor
 on the Low Power Payload UART Interface. This interface drives the RS232, RS485, SDI-12, and UART interfaces of the Dev Kit.
-See [Bristlemouth Dev Kit Guide 3 Integrating a Serial Sensor](https://bristlemouth.notion.site/Bristlemouth-Dev-Kit-Guide-3-Exploring-Bristlemouth-Features-f08a56dc01ac47d889a4eacb9f4904f8?pvs=4)
-in the online docs for an example walk-through.
+See **Bristlemouth Dev Kit Guide 6** in the online docs for an example walk-through.
 - Initialize and read data from the Payload UART.
   - Use an ASCII serial line buffer.
 - Vbus & Vout power supply control.
@@ -76,7 +75,7 @@ in the online docs for an example walk-through.
 ### RBR Coda3 Integration
 The RBR Coda3 Integration App builds on top of the Serial Payload Example App by implementing a basic parsing and analysis
 for reading data from a popular marine depth sensor - the RBR Coda3.D. Follow along the process of building the app in
-the [Bristlemouth Dev Kit Guide 3 Integrating a Serial Sensor](https://bristlemouth.notion.site/Bristlemouth-Dev-Kit-Guide-3-Exploring-Bristlemouth-Features-f08a56dc01ac47d889a4eacb9f4904f8?pvs=4).
+ **Bristlemouth Dev Kit Guide 6**.
 - Parsing text into numeric values.
 - Aggregating basic statistics.
 - Using Bristlemouth from user_code to print to Spotter's USB console, SD card, and transmit data over cellular or satellite.
