@@ -1,6 +1,6 @@
-#include "serial.h"
 #include "bsp.h"
 #include "debug_configuration.h"
+#include "serial.h"
 
 #pragma once
 
@@ -11,7 +11,7 @@
 extern uint32_t sys_cfg_sensorsPollIntervalMs;
 
 // app_main passes user space a handle to the user config partition, so we can define customer configs in our app.
-extern cfg::Configuration* userConfigurationPartition;
+extern cfg::Configuration *userConfigurationPartition;
 
 void setup(void);
 void loop(void);

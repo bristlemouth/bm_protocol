@@ -18,11 +18,11 @@
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
-#include "lwip/inet.h"
-#include "sensorSampler.h"
-#include "pressureSampler.h"
-#include "powerSampler.h"
 #include "htuSampler.h"
+#include "lwip/inet.h"
+#include "powerSampler.h"
+#include "pressureSampler.h"
+#include "sensorSampler.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
@@ -102,7 +102,8 @@ void loop(void) {
   if ((uint32_t)uptimeGetMs() - sensorStatsTimer >= SENSOR_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
 
-    sensorStatData_t temp_tx_data, hum_tx_data, voltage_tx_data, current_tx_data, pressure_tx_data;
+    sensorStatData_t temp_tx_data, hum_tx_data, voltage_tx_data, current_tx_data,
+        pressure_tx_data;
 
     temp_tx_data = aggregateStats(temp_stats);
     hum_tx_data = aggregateStats(hum_stats);
@@ -169,11 +170,11 @@ void loop(void) {
            MAX_SENSOR_SAMPLES);
   } else {
     float temperature, pressure = 0.0;
-    if(pressureSamplerGetLatest(pressure, temperature)) {
+    if (pressureSamplerGetLatest(pressure, temperature)) {
       pressure_stats.addSample(pressure);
       printf("pressure stats | count: %u/%lu, min: %f, max: %f\n",
-            pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
-            pressure_stats.getMin(), pressure_stats.getMax());
+             pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, pressure_stats.getMin(),
+             pressure_stats.getMax());
     }
   }
 
@@ -186,9 +187,9 @@ void loop(void) {
       hum_stats.addSample(humidity);
       temp_stats.addSample(temperature);
       printf("hum-temp stats | count: %u/%lu, min_T: %f, max_T: %f, min_H: %f, "
-            "max_H: %f\n",
-            hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
-            temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
+             "max_H: %f\n",
+             hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
+             temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
     }
   }
 
@@ -198,15 +199,16 @@ void loop(void) {
            MAX_SENSOR_SAMPLES);
   } else {
     float voltage_mote, current_mote = 0.0;
-    if (powerSamplerGetLatest(Bristlefin::I2C_ADDR_MOTE_THROUGH_POWER_MON, voltage_mote, current_mote)) {
+    if (powerSamplerGetLatest(Bristlefin::I2C_ADDR_MOTE_THROUGH_POWER_MON, voltage_mote,
+                              current_mote)) {
       power_voltage_stats.addSample(voltage_mote);
       power_current_stats.addSample(current_mote);
 
       printf("power stats | count: %u/%lu, min_V: %f, max_V: %f, min_I: %f, max_I: "
-            "%f\n",
-            power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
-            power_voltage_stats.getMin(), power_voltage_stats.getMax(),
-            power_current_stats.getMin(), power_current_stats.getMax());
+             "%f\n",
+             power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
+             power_voltage_stats.getMin(), power_voltage_stats.getMax(),
+             power_current_stats.getMin(), power_current_stats.getMax());
     }
   }
 

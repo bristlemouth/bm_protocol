@@ -2,19 +2,19 @@
   Temperature/Humidity sensor sampling functions
 */
 
-#include "bm_pubsub.h"
+#include "abstract_htu_sensor.h"
 #include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bsp.h"
+#include "debug.h"
+#include "sensorSampler.h"
+#include "sensors.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
-#include "debug.h"
-#include "sensors.h"
-#include "sensorSampler.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "abstract_htu_sensor.h"
 
-static AbstractHtu* _htu;
+static AbstractHtu *_htu;
 static float _latestHumidity = 0.0;
 static float _latestTemperature = 0.0;
 static bool _newHumTempDataAvailable = false;
@@ -42,31 +42,31 @@ static bool htuSample() {
 
   do {
     success = _htu->read(temperature, humidity);
-  } while(!success && (--retriesRemaining > 0));
+  } while (!success && (--retriesRemaining > 0));
 
-  if(success) {
+  if (success) {
     RTCTimeAndDate_t time_and_date = {};
     rtcGet(&time_and_date);
-    humTempSample_t _humTempData {
-      .uptime = uptimeGetMs(),
-      .rtcTime = time_and_date,
-      .temperature = temperature,
-      .humidity = humidity
-    };
+    humTempSample_t _humTempData{.uptime = uptimeGetMs(),
+                                 .rtcTime = time_and_date,
+                                 .temperature = temperature,
+                                 .humidity = humidity};
 
     char rtcTimeBuffer[32];
     rtcPrint(rtcTimeBuffer, &time_and_date);
-    printf("hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
-    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
-    bm_printf(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(), rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
+    printf("hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
+           _humTempData.humidity, _humTempData.temperature);
+    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(),
+               rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
+    bm_printf(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(),
+              rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
 
     taskENTER_CRITICAL();
     _latestHumidity = humidity;
     _latestTemperature = temperature;
     _newHumTempDataAvailable = true;
     taskEXIT_CRITICAL();
-  }
-  else {
+  } else {
     printf("ERR Failed to sample pressure sensor!");
   }
   return success;
@@ -86,7 +86,7 @@ void htuSamplerInit(AbstractHtu *sensor) {
 bool htuSamplerGetLatest(float &temperature, float &humidity) {
   bool rval = false;
   taskENTER_CRITICAL();
-  if(_newHumTempDataAvailable) {
+  if (_newHumTempDataAvailable) {
     temperature = _latestTemperature;
     humidity = _latestHumidity;
     _newHumTempDataAvailable = false;

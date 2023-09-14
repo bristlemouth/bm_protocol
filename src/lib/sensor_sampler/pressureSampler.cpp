@@ -2,19 +2,19 @@
   Pressure sensor sampling functions
 */
 #include "pressureSampler.h"
-#include "bm_pubsub.h"
+#include "abstract_pressure_sensor.h"
 #include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bsp.h"
 #include "debug.h"
+#include "sensorSampler.h"
+#include "sensors.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
-#include "sensors.h"
-#include "sensorSampler.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "abstract_pressure_sensor.h"
 
-static AbstractPressureSensor* _pressureSensor;
+static AbstractPressureSensor *_pressureSensor;
 static float _latestPressure = 0.0;
 static float _latestTemperature = 0.0;
 static bool _newPressureDataAvailable = false;
@@ -32,31 +32,31 @@ static bool baroSample() {
 
   do {
     success = _pressureSensor->readPTRaw(pressure, temperature);
-  } while(!success && (--retriesRemaining > 0));
+  } while (!success && (--retriesRemaining > 0));
 
-  if(success) {
+  if (success) {
     RTCTimeAndDate_t time_and_date = {};
     rtcGet(&time_and_date);
-    pressureSample_t _pressureData {
-        .uptime = uptimeGetMs(),
-        .rtcTime = time_and_date,
-        .temperature = temperature,
-        .pressure = pressure
-    };
+    pressureSample_t _pressureData{.uptime = uptimeGetMs(),
+                                   .rtcTime = time_and_date,
+                                   .temperature = temperature,
+                                   .pressure = pressure};
 
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, &time_and_date);
-    printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
-    bm_fprintf(0, "pressure.log", "tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
-    bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
+    printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(),
+           rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
+    bm_fprintf(0, "pressure.log", "tick: %llu, rtc: %s, temp: %f, pressure: %f\n",
+               uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
+    bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(),
+              rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
 
     taskENTER_CRITICAL();
     _latestPressure = pressure;
     _latestTemperature = temperature;
     _newPressureDataAvailable = true;
     taskEXIT_CRITICAL();
-  }
-  else {
+  } else {
     printf("ERR Failed to sample pressure sensor!");
   }
   return success;

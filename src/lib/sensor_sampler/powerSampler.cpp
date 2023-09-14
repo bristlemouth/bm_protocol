@@ -2,20 +2,20 @@
   Power sensor(s) sampling functions
 */
 
-#include "bm_pubsub.h"
 #include "bm_printf.h"
+#include "bm_pubsub.h"
 #include "bsp.h"
-#include "uptime.h"
 #include "debug.h"
 #include "ina232.h"
-#include "sensors.h"
 #include "sensorSampler.h"
+#include "sensors.h"
+#include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 using namespace INA;
 
-static INA232** _inaSensors;
+static INA232 **_inaSensors;
 static float _latestVoltage[NUM_INA232_DEV] = {};
 static float _latestCurrent[NUM_INA232_DEV] = {};
 static bool _newPowerDataAvailable[NUM_INA232_DEV] = {};
@@ -33,38 +33,40 @@ static bool powerSample() {
   bool rval = true;
   uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
 
-  for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
+  for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++) {
     do {
       success = _inaSensors[dev_num]->measurePower();
       if (success) {
         _inaSensors[dev_num]->getPower(voltage, current);
       }
-    } while( !success && (--retriesRemaining > 0));
+    } while (!success && (--retriesRemaining > 0));
 
-    if(success) {
+    if (success) {
       RTCTimeAndDate_t time_and_date = {};
       rtcGet(&time_and_date);
-      powerSample_t _powerData {
-          .uptime = uptimeGetMs(),
-          .rtcTime = time_and_date,
-          .address = _inaSensors[dev_num]->getAddr(),
-          .voltage = voltage,
-          .current = current
-      };
+      powerSample_t _powerData{.uptime = uptimeGetMs(),
+                               .rtcTime = time_and_date,
+                               .address = _inaSensors[dev_num]->getAddr(),
+                               .voltage = voltage,
+                               .current = current};
 
       char rtcTimeBuffer[32];
       rtcPrint(rtcTimeBuffer, &time_and_date);
-      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n", uptimeGetMs(), rtcTimeBuffer,  _powerData.address, _powerData.voltage, _powerData.current);
-      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(),
+             rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
+                 uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
+                 _powerData.current);
+      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
+                uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
+                _powerData.current);
 
       taskENTER_CRITICAL();
       _newPowerDataAvailable[dev_num] = true;
       _latestVoltage[dev_num] = voltage;
       _latestCurrent[dev_num] = current;
       taskEXIT_CRITICAL();
-    }
-    else {
+    } else {
       printf("ERR Failed to sample power monitor %u!", dev_num);
     }
     rval &= success;
@@ -79,8 +81,8 @@ static bool powerSample() {
 */
 static bool powerInit() {
   bool rval = true;
-  for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
-    if (_inaSensors[dev_num]->init()){
+  for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++) {
+    if (_inaSensors[dev_num]->init()) {
       // set shunt to 10mOhms
       _inaSensors[dev_num]->setShuntValue(0.01);
 
@@ -108,7 +110,7 @@ void powerSamplerInit(INA::INA232 **sensors) {
 bool powerSamplerGetLatest(uint8_t power_monitor_address, float &voltage, float &current) {
   bool rval = false;
   uint8_t dev_num;
-  for (dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++){
+  for (dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++) {
     if (_inaSensors[dev_num]->getAddr() == power_monitor_address) {
       break;
     }

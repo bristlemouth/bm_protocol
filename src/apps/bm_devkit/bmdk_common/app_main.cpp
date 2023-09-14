@@ -205,9 +205,8 @@ bool start_stress(const void *pinHandle, uint8_t value, void *args) {
   return false;
 }
 
-void handle_sensor_subscriptions(uint64_t node_id, const char *topic,
-                                 uint16_t topic_len, const uint8_t *data,
-                                 uint16_t data_len, uint8_t type,
+void handle_sensor_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
+                                 const uint8_t *data, uint16_t data_len, uint8_t type,
                                  uint8_t version) {
   (void)node_id;
   (void)version;
@@ -215,8 +214,7 @@ void handle_sensor_subscriptions(uint64_t node_id, const char *topic,
   if (strncmp("button", topic, topic_len) == 0) {
     if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
       IOWrite(&BF_LED_G1, LED_ON);
-    } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) ==
-               0) {
+    } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) == 0) {
       IOWrite(&BF_LED_G1, LED_OFF);
     } else {
       // Not handled
@@ -227,9 +225,9 @@ void handle_sensor_subscriptions(uint64_t node_id, const char *topic,
   }
 }
 
-void handle_bm_subscriptions(uint64_t node_id, const char *topic,
-                             uint16_t topic_len, const uint8_t *data,
-                             uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_bm_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
+                             const uint8_t *data, uint16_t data_len, uint8_t type,
+                             uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
@@ -249,9 +247,8 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
-               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
-               rtc_time.second, rtc_time.ms);
+        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year, rtc_time.month,
+               rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.ms);
       } else {
         printf("\n Failed to set RTC.\n");
       }
@@ -302,8 +299,7 @@ static const DebugGpio_t debugGpioPins[] = {
 static void user_task(void *parameters);
 
 void user_code_start() {
-  BaseType_t rval =
-      xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
+  BaseType_t rval = xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
   configASSERT(rval == pdPASS);
 }
 
@@ -362,34 +358,27 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(
-      debug_user_partition, ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_user(debug_user_partition, ram_user_configuration,
+                                              RAM_USER_CONFIG_SIZE_BYTES);
   cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration,
-      RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(debug_system_partition,
-                                                ram_system_configuration,
-                                                RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debug_configuration_system.getConfig("sensorsPollIntervalMs",
-                                       strlen("sensorsPollIntervalMs"),
+      debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
+  cfg::Configuration debug_configuration_system(
+      debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
                                        sys_cfg_sensorsPollIntervalMs);
-  debug_configuration_system.getConfig("sensorsCheckIntervalS",
-                                       strlen("sensorsCheckIntervalS"),
+  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user,
-                         &debug_configuration_hardware,
+  debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
                          &debug_configuration_system);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user,
-           &debug_configuration_system);
+  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
-  sensorConfig_t sensorConfig = {
-      .sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
-      .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
+  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
