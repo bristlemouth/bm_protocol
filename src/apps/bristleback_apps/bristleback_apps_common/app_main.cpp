@@ -61,8 +61,8 @@
 #include "micropython_freertos.h"
 #endif
 
-#define LED_ON (0)
-#define LED_OFF (1)
+#define LED_ON (1)
+#define LED_OFF (0)
 
 #include <stdio.h>
 #include <string.h>
