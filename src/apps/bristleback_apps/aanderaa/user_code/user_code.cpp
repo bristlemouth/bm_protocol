@@ -222,11 +222,11 @@ void loop(void) {
   static bool led2State = false;
   // If LED_GREEN is off and the ledLinePulse flag is set, turn it on.
   if (!led2State && ledLinePulse > -1) {
-    IOWrite(&LED_GREEN, 1);
+    IOWrite(&LED_GREEN, BB_LED_ON);
     led2State = true;
   } // If LED_GREEN has been on for LED_ON_TIME_MS, turn it off.
   else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_GREEN, 0);
+    IOWrite(&LED_GREEN, BB_LED_OFF);
     ledLinePulse = -1;
     led2State = false;
   }
@@ -237,13 +237,13 @@ void loop(void) {
   static bool led1State = false;
   // Turn LED_RED on every LED_PERIOD_MS milliseconds.
   if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    IOWrite(&LED_RED, 1);
+    IOWrite(&LED_RED, BB_LED_ON);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   } // If LED_RED has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_RED, 0);
+    IOWrite(&LED_RED, BB_LED_OFF);
     led1State = false;
   }
 

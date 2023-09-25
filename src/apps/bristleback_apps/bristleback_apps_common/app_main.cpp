@@ -61,9 +61,6 @@
 #include "micropython_freertos.h"
 #endif
 
-#define LED_ON (1)
-#define LED_OFF (0)
-
 #include <stdio.h>
 #include <string.h>
 
@@ -219,10 +216,10 @@ void handle_sensor_subscriptions(uint64_t node_id, const char *topic,
   (void)type;
   if (strncmp("button", topic, topic_len) == 0) {
     if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
-      IOWrite(&LED_GREEN, LED_ON);
+      IOWrite(&LED_GREEN, BB_LED_ON);
     } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) ==
                0) {
-      IOWrite(&LED_GREEN, LED_OFF);
+      IOWrite(&LED_GREEN, BB_LED_OFF);
     } else {
       // Not handled
     }
@@ -387,9 +384,9 @@ static void defaultTask(void *parameters) {
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
   // Turn of the bristleback leds
-  IOWrite(&LED_GREEN, LED_OFF);
-  IOWrite(&LED_BLUE, LED_OFF);
-  IOWrite(&LED_RED, LED_OFF);
+  IOWrite(&LED_GREEN, BB_LED_OFF);
+  IOWrite(&LED_BLUE, BB_LED_OFF);
+  IOWrite(&LED_RED, BB_LED_OFF);
   IOWrite(&BB_3V3_EN,
           1); // 1 enables, 0 disables. Needed for I2C and I/O control.
   IOWrite(&BB_VBUS_EN, 1);    // 0 enables, 1 disables. Needed for VOUT and 5V.
