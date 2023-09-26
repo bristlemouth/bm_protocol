@@ -81,8 +81,8 @@ void SystemPower_Config_ext(void);
 #define ADIN_PWR_GPIO_Port GPIOH
 #define ADIN_RST_Pin LL_GPIO_PIN_0
 #define ADIN_RST_GPIO_Port GPIOA
-#define LED_RED_Pin LL_GPIO_PIN_1
-#define LED_RED_GPIO_Port GPIOA
+#define LED_BLUE_Pin LL_GPIO_PIN_1
+#define LED_BLUE_GPIO_Port GPIOA
 #define PAYLOAD_TX_Pin LL_GPIO_PIN_2
 #define PAYLOAD_TX_GPIO_Port GPIOA
 #define PAYLOAD_RX_Pin LL_GPIO_PIN_3
@@ -95,8 +95,8 @@ void SystemPower_Config_ext(void);
 #define BM_MISO_GPIO_Port GPIOA
 #define BM_MOSI_TX3_Pin LL_GPIO_PIN_7
 #define BM_MOSI_TX3_GPIO_Port GPIOA
-#define LED_BLUE_Pin LL_GPIO_PIN_0
-#define LED_BLUE_GPIO_Port GPIOB
+#define LED_RED_Pin LL_GPIO_PIN_0
+#define LED_RED_GPIO_Port GPIOB
 #define BB_VBUS_EN_Pin LL_GPIO_PIN_1
 #define BB_VBUS_EN_GPIO_Port GPIOB
 #define FLASH_SCK_Pin LL_GPIO_PIN_13

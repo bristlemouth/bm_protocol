@@ -17,6 +17,10 @@ extern "C" {
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
+// Bristleback LED logic levels.
+#define BB_LED_ON (1)
+#define BB_LED_OFF (0)
+
 void bspInit();
 
 // Pin definitions

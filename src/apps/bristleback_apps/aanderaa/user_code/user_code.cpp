@@ -218,38 +218,32 @@ void loop(void) {
     }
   }
 
+  /// Blink green LED when data is received from the payload UART.
   static bool led2State = false;
-  /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.
-  ///   Each time this happens, we pulse LED2 Green.
-  // If LED2 is off and the ledLinePulse flag is set, turn it on Green.
+  // If LED_GREEN is off and the ledLinePulse flag is set, turn it on.
   if (!led2State && ledLinePulse > -1) {
-    IOWrite(&LED_GREEN, 0);
+    IOWrite(&LED_GREEN, BB_LED_ON);
     led2State = true;
-  }
-  // If LED2 has been on for LED_ON_TIME_MS, turn it off.
+  } // If LED_GREEN has been on for LED_ON_TIME_MS, turn it off.
   else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_GREEN, 1);
+    IOWrite(&LED_GREEN, BB_LED_OFF);
     ledLinePulse = -1;
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
+  // Blink red LED on a simple timer.
   static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
-  // Turn LED1 on green every LED_PERIOD_MS milliseconds.
+  // Turn LED_RED on every LED_PERIOD_MS milliseconds.
   if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    IOWrite(&LED_RED, 0);
+    IOWrite(&LED_RED, BB_LED_ON);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
-  }
-    // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
+  } // If LED_RED has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_RED, 1);
+    IOWrite(&LED_RED, BB_LED_OFF);
     led1State = false;
   }
 
