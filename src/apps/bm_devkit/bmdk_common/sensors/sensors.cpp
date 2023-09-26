@@ -30,6 +30,10 @@ Bristlefin bristlefin(debugPressure, debugHTU, debugPHTU, bristlefinTCA, debugIn
 
 void sensorsInit() {
   bristlefin.setGpioDefault();
+
+  // Wait for the 3V3 rail to stabilize before communicating with the mux
+  vTaskDelay(pdMS_TO_TICKS(5));
+
   if(!bristlefin.sensorsInit()){
     printf("Failed to init bristlefin\n");
   }
