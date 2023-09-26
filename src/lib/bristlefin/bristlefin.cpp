@@ -12,7 +12,7 @@ bme280_(bme280),
 tca_mux_(tca_mux),
 ina232_(ina232),
 version_(Bristlefin::BRISTLEFIN_V_UNKNOWN),
-saved_mux_current_channel_(TCA::CH_1){}
+saved_mux_current_channel_(TCA::CH_UNKNOWN){}
 
 bool Bristlefin::sensorsInit() {
   bool rval = false;
@@ -77,8 +77,8 @@ void Bristlefin::disableVout() {
 
 void Bristlefin::enable3V() {
   IOWrite(&BF_IMU_RST, 1); // https://github.com/wavespotter/bristlemouth/issues/422 - Drive IMU RST high to avoid backpowering scenario.
-  setMuxChannel(saved_mux_current_channel_);
   IOWrite(&BF_3V3_EN, 1); // 1 enables, 0 disables. Needed for I2C and I/O control.
+  setMuxChannel(saved_mux_current_channel_); // Can't talk to mux until 3v3 is enabled
 }
 
 void Bristlefin::disable3V() {
