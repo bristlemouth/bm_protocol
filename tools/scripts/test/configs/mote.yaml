@@ -1,4 +1,4 @@
-- name: mote_bristlefin on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: mote_bristlefin on bm_mote_v1.0
   type: build_fw
   args:
     app: mote_bristlefin
@@ -6,7 +6,7 @@
     build_type: Release
     use_bootloader: True
 
-- name: mote_bristlefin w/upy on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: mote_bristlefin w/upy on bm_mote_v1.0
   type: build_fw
   args:
     app: mote_bristlefin
@@ -15,7 +15,7 @@
     use_bootloader: True
     defines: -DUSE_MICROPYTHON=1
 
-- name: hello_world on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: hello_world on bm_mote_v1.0
   type: build_fw
   args:
     app: hello_world
@@ -24,7 +24,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
 
-- name: rbr_coda_example on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: rbr_coda_example on bm_mote_v1.0
   type: build_fw
   args:
     app: rbr_coda_example
@@ -33,7 +33,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
 
-- name: serial_payload_example on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: serial_payload_example on bm_mote_v1.0
   type: build_fw
   args:
     app: serial_payload_example
@@ -42,7 +42,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
 
-- name: devkit_monitor on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: devkit_monitor on bm_mote_v1.0
   type: build_fw
   args:
     app: devkit_monitor
@@ -51,7 +51,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
 
-- name: serial_payload_example on bm_mote_bristleback_v1_0 - Debug (w/ bootloader)
+- name: serial_payload_example on bm_mote_bristleback_v1_0
   type: build_fw
   args:
     app: serial_payload_example
@@ -60,7 +60,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
 
-- name: aanderaa on bm_mote_bristleback_v1_0 - Debug (w/ bootloader)
+- name: aanderaa on bm_mote_bristleback_v1_0
   type: build_fw
   args:
     app: aanderaa
@@ -70,7 +70,7 @@
     defines: -DCMAKE_APP_TYPE=bristleback
              -DCMAKE_AANDERAA_TYPE=4830
 
-- name: nortek on bm_mote_bristleback_v1_0 - Debug (w/ bootloader)
+- name: nortek on bm_mote_bristleback_v1_0
   type: build_fw
   args:
     app: nortek
@@ -79,7 +79,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
 
-- name: aanderaa on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: aanderaa on bm_mote_v1.0
   type: build_fw
   args:
     app: serial_payload_example
@@ -89,7 +89,7 @@
     defines: -DCMAKE_APP_TYPE=BMDK
              -DCMAKE_AANDERAA_TYPE=4830
 
-- name: nortek on bm_mote_v1.0 - Debug (w/ bootloader)
+- name: nortek on bm_mote_v1.0
   type: build_fw
   args:
     app: nortek
@@ -97,3 +97,21 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
+
+- name: loadcell on bm_mote_v1.0
+  type: build_fw
+  args:
+    app: bm_loadcell
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
+
+- name: loadcell on bristleback
+  type: build_fw
+  args:
+    app: loadcell
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=bristleback

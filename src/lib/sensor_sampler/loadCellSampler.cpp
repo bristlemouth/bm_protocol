@@ -2,12 +2,12 @@
   Load cell sampling functions
 */
 
+#include "loadCellSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
 #include "bm_pubsub.h"
 #include "bsp.h"
 #include "debug.h"
-#include "nau7802.h"
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
