@@ -322,6 +322,7 @@ static void defaultTask( void *parameters ) {
 
   usbInit(&VUSB_DETECT, usb_is_connected);
 
+  bristlefin.setGpioDefault();
   if(bristlefinTCA.init()){
     bristlefinTCA.setChannel(TCA::CH_1);
   }
@@ -353,9 +354,6 @@ static void defaultTask( void *parameters ) {
   mcubootCliInit();
 #endif
   debugRTCInit();
-
-  // Turn of the bristlefin leds and correct gpio init state.
-  bristlefin.setGpioDefault();
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
