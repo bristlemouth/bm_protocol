@@ -126,6 +126,22 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
   return (rtcSet(&rtc_time) == pdPASS);
 }
 
+static bool bcmp_info_request_cb(uint64_t node_id) {
+  (void)node_id;
+
+  printf("received info request\n");
+
+  return true;
+}
+
+static bool bcmp_resource_request_cb(uint64_t node_id) {
+  (void)node_id;
+
+  printf("received resource request\n");
+
+  return true;
+}
+
 // Used by spotter to request a self test
 static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   (void)node_id;
@@ -221,6 +237,10 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
   bm_serial_callbacks.reboot_info_fn = NULL;
   bm_serial_callbacks.network_info_fn = NULL;
+  bm_serial_callbacks.bcmp_info_request_fn = bcmp_info_request_cb;
+  bm_serial_callbacks.bcmp_info_response_fn = NULL;
+  bm_serial_callbacks.bcmp_resource_request_fn = bcmp_resource_request_cb;
+  bm_serial_callbacks.bcmp_resource_response_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
