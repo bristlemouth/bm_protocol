@@ -126,10 +126,56 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
   return (rtcSet(&rtc_time) == pdPASS);
 }
 
-static bool bcmp_info_request_cb(uint64_t node_id) {
-  (void)node_id;
+// TODO - redefine, or define in a spot where this is only needed once!
+#define VER_STR_MAX_LEN 255
 
-  printf("received info request\n");
+static bool bcmp_info_request_cb(uint64_t node_id) {
+
+  if (node_id ==  getNodeId()) {
+    // send back our info!
+    printf("received info request for ourself\n");
+    char *ver_str = (char *)pvPortMalloc(VER_STR_MAX_LEN);
+    configASSERT(ver_str);
+    memset(ver_str, 0, VER_STR_MAX_LEN);
+
+    uint8_t ver_str_len = snprintf(ver_str, VER_STR_MAX_LEN, "%s@%s", APP_NAME, getFWVersionStr());
+
+    // TODO - use device name instead of UID str
+    uint8_t dev_name_len = strlen(getUIDStr());
+
+    uint16_t info_len = sizeof(bm_serial_device_info_reply_t) +
+                          ver_str_len +
+                          dev_name_len;
+
+    uint8_t *dev_info_buff = (uint8_t *)pvPortMalloc(info_len);
+    configASSERT(info_len);
+
+    memset(dev_info_buff, 0, info_len);
+
+    bm_serial_device_info_reply_t *dev_info = (bm_serial_device_info_reply_t *)dev_info_buff;
+    dev_info->info.node_id = getNodeId();
+
+    // TODO - fill these with actual values
+    dev_info->info.vendor_id = 0;
+    dev_info->info.product_id = 0;
+    memset(dev_info->info.serial_num, '0', sizeof(dev_info->info.serial_num));
+
+    dev_info->info.git_sha = getGitSHA();
+    getFWVersion(&dev_info->info.ver_major, &dev_info->info.ver_minor, &dev_info->info.ver_rev);
+
+    // TODO - get actual hardware version
+    dev_info->info.ver_hw = 0;
+
+    dev_info->ver_str_len = ver_str_len;
+    dev_info->dev_name_len = dev_name_len;
+
+    memcpy(&dev_info->strings[0], ver_str, ver_str_len);
+    memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
+    bm_serial_send_info_reply(getNodeId(), dev_info);
+  } else {
+    // send back the info for the node_id
+    printf("received info request for node %" PRIx64 "\n", node_id);
+  }
 
   return true;
 }
