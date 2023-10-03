@@ -3,8 +3,10 @@
 #include "task.h"
 
 #include "bcmp.h"
+#include "bm_serial.h"
 #include "bcmp_neighbors.h"
 #include "device_info.h"
+#include "ncp_uart.h"
 
 static uint64_t _info_expect_node_id;
 
@@ -162,27 +164,40 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
 err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
   configASSERT(dev_info);
 
-  //
-  // Find neighbor and add info to table if present
-  // Only add neighbor info when received to link local multicast address
-  //
-  bm_neighbor_t *neighbor = bcmp_find_neighbor(dev_info->info.node_id);
-  if(neighbor) {
-    // Update neighbor info
-    _populate_neighbor_info(neighbor, dev_info);
-  } else if (_info_expect_node_id && (dev_info->info.node_id == _info_expect_node_id)) {
-    _info_expect_node_id = 0;
+  do {
 
-    // Create temporary neighbor struct that is used by the print function
-    bm_neighbor_t *tmp_neighbor = (bm_neighbor_t *)pvPortMalloc(sizeof(bm_neighbor_t));
-    memset(tmp_neighbor, 0, sizeof(bm_neighbor_t));
+    taskENTER_CRITICAL();
+    bool serial_info_request = ncp_info_requested();
+    taskEXIT_CRITICAL();
 
-    _populate_neighbor_info(tmp_neighbor, dev_info);
-    bcmp_print_neighbor_info(tmp_neighbor);
+    if (serial_info_request) {
+      // send via serial
+      bm_serial_send_info_reply(dev_info->info.node_id, (bm_serial_device_info_reply_t *)dev_info); // TODO - remove this cast once bm_serial uses bcmp_device_info_reply_t
+      break;
+    }
 
-    // Clean up
-    configASSERT(bcmp_free_neighbor(tmp_neighbor));
-  }
+    //
+    // Find neighbor and add info to table if present
+    // Only add neighbor info when received to link local multicast address
+    //
+    bm_neighbor_t *neighbor = bcmp_find_neighbor(dev_info->info.node_id);
+    if(neighbor) {
+      // Update neighbor info
+      _populate_neighbor_info(neighbor, dev_info);
+    } else if (_info_expect_node_id && (dev_info->info.node_id == _info_expect_node_id)) {
+      _info_expect_node_id = 0;
+
+      // Create temporary neighbor struct that is used by the print function
+      bm_neighbor_t *tmp_neighbor = (bm_neighbor_t *)pvPortMalloc(sizeof(bm_neighbor_t));
+      memset(tmp_neighbor, 0, sizeof(bm_neighbor_t));
+
+      _populate_neighbor_info(tmp_neighbor, dev_info);
+      bcmp_print_neighbor_info(tmp_neighbor);
+
+      // Clean up
+      configASSERT(bcmp_free_neighbor(tmp_neighbor));
+    }
+  } while (0);
 
   return ERR_OK;
 }

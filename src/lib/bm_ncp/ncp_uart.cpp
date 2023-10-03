@@ -3,6 +3,8 @@
 #include "task.h"
 #include "queue.h"
 
+#include "bcmp.h"
+#include "bcmp_info.h"
 #include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
@@ -38,6 +40,8 @@ static QueueHandle_t ncp_processor_queue_handle;
 static TaskHandle_t ncpRXTaskHandle;
 
 static SerialHandle_t *ncpSerialHandle = NULL;
+
+static bool serial_info_request = false;
 
 static void ncpRXTask(void *parameters);
 static void ncpRXProcessor(void *parameters);
@@ -173,11 +177,22 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
     bm_serial_send_info_reply(getNodeId(), dev_info);
   } else {
-    // send back the info for the node_id
     printf("received info request for node %" PRIx64 "\n", node_id);
+    // send back the info for the node_id
+    taskENTER_CRITICAL();
+    serial_info_request = true;
+    taskEXIT_CRITICAL();
+    bcmp_request_info(node_id, &multicast_global_addr);
   }
 
   return true;
+}
+
+bool ncp_info_requested() {
+  taskENTER_CRITICAL();
+  bool rval = serial_info_request;
+  taskEXIT_CRITICAL();
+  return rval;
 }
 
 static bool bcmp_resource_request_cb(uint64_t node_id) {
