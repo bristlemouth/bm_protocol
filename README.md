@@ -1,6 +1,6 @@
 # Bristlemouth
 
-For information on the Bristlemouth project, check out the official webiste [bristlemouth.org](https://bristlemouth.org)
+For information on the Bristlemouth project, check out the official website [bristlemouth.org](https://bristlemouth.org)
 
 ## Developing
 
