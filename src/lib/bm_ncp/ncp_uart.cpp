@@ -133,6 +133,11 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
 // TODO - redefine, or define in a spot where this is only needed once!
 #define VER_STR_MAX_LEN 255
 
+static void bcmp_info_reply_cb(void* bcmp_info_reply){
+  bm_serial_device_info_reply_t *info_reply = (bm_serial_device_info_reply_t *)bcmp_info_reply;
+  bm_serial_send_info_reply(info_reply->info.node_id, info_reply);
+}
+
 static bool bcmp_info_request_cb(uint64_t node_id) {
 
   if (node_id ==  getNodeId()) {
@@ -182,17 +187,10 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     taskENTER_CRITICAL();
     serial_info_request = true;
     taskEXIT_CRITICAL();
-    bcmp_request_info(node_id, &multicast_global_addr);
+    bcmp_request_info(node_id, &multicast_global_addr, bcmp_info_reply_cb);
   }
 
   return true;
-}
-
-bool ncp_info_requested() {
-  taskENTER_CRITICAL();
-  bool rval = serial_info_request;
-  taskEXIT_CRITICAL();
-  return rval;
 }
 
 static bool bcmp_resource_request_cb(uint64_t node_id) {

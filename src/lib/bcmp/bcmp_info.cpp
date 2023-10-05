@@ -3,12 +3,15 @@
 #include "task.h"
 
 #include "bcmp.h"
+#include "bcmp_linked_list_generic.h"
 #include "bm_serial.h"
 #include "bcmp_neighbors.h"
 #include "device_info.h"
 #include "ncp_uart.h"
 
 static uint64_t _info_expect_node_id;
+
+static BCMP_Linked_List_Generic callback_list;
 
 /*!
   Set node id to expect information from. Will print out the information
@@ -29,7 +32,10 @@ void bcmp_expect_info_from_node_id(uint64_t node_id) {
   \param *addr - ip address to send request to
   \return ERR_OK if successful
 */
-err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr) {
+err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr, void (*cb)(void*)) {
+
+  callback_list.add(target_node_id, cb);
+
   bcmp_device_info_request_t info_req = {
     .target_node_id=target_node_id
   };
@@ -164,17 +170,13 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
 err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
   configASSERT(dev_info);
 
-  do {
-
-    taskENTER_CRITICAL();
-    bool serial_info_request = ncp_info_requested();
-    taskEXIT_CRITICAL();
-
-    if (serial_info_request) {
-      // send via serial
-      bm_serial_send_info_reply(dev_info->info.node_id, (bm_serial_device_info_reply_t *)dev_info); // TODO - remove this cast once bm_serial uses bcmp_device_info_reply_t
-      break;
+  bcmp_ll_node_t *node = callback_list.find(dev_info->info.node_id);
+  if (node != NULL) {
+    if (node->fp != NULL) {
+      node->fp(dev_info);
     }
+    callback_list.remove(node);
+  } else {
 
     //
     // Find neighbor and add info to table if present
@@ -197,7 +199,7 @@ err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
       // Clean up
       configASSERT(bcmp_free_neighbor(tmp_neighbor));
     }
-  } while (0);
+  }
 
   return ERR_OK;
 }
