@@ -34,6 +34,10 @@ void bcmp_expect_info_from_node_id(uint64_t node_id) {
 */
 err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr, void (*cb)(void*)) {
 
+  // if (callback_list.mutex == NULL) {
+  //   callback_list.mutex = xSemaphoreCreateMutex();
+  // }
+
   callback_list.add(target_node_id, cb);
 
   bcmp_device_info_request_t info_req = {

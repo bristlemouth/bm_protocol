@@ -34,4 +34,5 @@ class BCMP_Linked_List_Generic {
     bcmp_ll_node_t *tail;
     int size;
     SemaphoreHandle_t mutex;
+    StaticSemaphore_t mutexBuffer;
 };
