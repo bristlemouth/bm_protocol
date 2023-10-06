@@ -133,13 +133,13 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
 #define VER_STR_MAX_LEN 255
 
 static void bcmp_info_reply_cb(void* bcmp_info_reply){
-  bm_serial_device_info_reply_t *info_reply = (bm_serial_device_info_reply_t *)bcmp_info_reply;
+  bm_serial_device_info_reply_t *info_reply = reinterpret_cast<bm_serial_device_info_reply_t *>(bcmp_info_reply);
   bm_serial_send_info_reply(info_reply->info.node_id, info_reply);
 }
 
 static void bcmp_resource_table_reply_cb(void* bcmp_resource_table_reply){
-  bm_serial_resource_table_reply_t *resource_reply = (bm_serial_resource_table_reply_t *)bcmp_resource_table_reply;
-  bm_serial_send_resource_table_reply(resource_reply->node_id, resource_reply);
+  bm_serial_resource_table_reply_t *resource_reply = reinterpret_cast<bm_serial_resource_table_reply_t *>(bcmp_resource_table_reply);
+  bm_serial_send_resource_reply(resource_reply->node_id, resource_reply);
 }
 
 static bool bcmp_info_request_cb(uint64_t node_id) {
@@ -165,7 +165,7 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
 
     memset(dev_info_buff, 0, info_len);
 
-    bm_serial_device_info_reply_t *dev_info = (bm_serial_device_info_reply_t *)dev_info_buff;
+    bm_serial_device_info_reply_t *dev_info = reinterpret_cast<bm_serial_device_info_reply_t *>(dev_info_buff);
     dev_info->info.node_id = getNodeId();
 
     // TODO - fill these with actual values
@@ -202,14 +202,14 @@ static bool bcmp_resource_request_cb(uint64_t node_id) {
     printf("received resource request for ourself\n");
     bcmp_resource_table_reply_t* local_resources = bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
     // Sending via serial will make a copy of the resources so we can free them after sending
-     (getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
+    bm_serial_send_resource_reply(getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
     // getting the local resources allocates them, we need to free them after sending them out
     vPortFree(local_resources);
 
   } else {
     printf("received resource request for node %" PRIx64 "\n", node_id);
     // send back the resource info for the node_id
-    bcmp_resource_discovery_send_request(node_id);
+    bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
   }
 
   return true;

@@ -373,5 +373,5 @@ bcmp_resource_table_reply_t* bcmp_resource_discovery::bcmp_resource_discovery_ge
             reply_rval = NULL;
         }
     }
-    return repl;
+    return reply_rval;
 }
