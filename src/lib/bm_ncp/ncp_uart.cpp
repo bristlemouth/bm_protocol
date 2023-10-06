@@ -5,6 +5,7 @@
 
 #include "bcmp.h"
 #include "bcmp_info.h"
+#include "bcmp_resource_discovery.h"
 #include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
@@ -40,8 +41,6 @@ static QueueHandle_t ncp_processor_queue_handle;
 static TaskHandle_t ncpRXTaskHandle;
 
 static SerialHandle_t *ncpSerialHandle = NULL;
-
-static bool serial_info_request = false;
 
 static void ncpRXTask(void *parameters);
 static void ncpRXProcessor(void *parameters);
@@ -138,12 +137,17 @@ static void bcmp_info_reply_cb(void* bcmp_info_reply){
   bm_serial_send_info_reply(info_reply->info.node_id, info_reply);
 }
 
+static void bcmp_resource_table_reply_cb(void* bcmp_resource_table_reply){
+  bm_serial_resource_table_reply_t *resource_reply = (bm_serial_resource_table_reply_t *)bcmp_resource_table_reply;
+  bm_serial_send_resource_table_reply(resource_reply->node_id, resource_reply);
+}
+
 static bool bcmp_info_request_cb(uint64_t node_id) {
 
   if (node_id ==  getNodeId()) {
     // send back our info!
     printf("received info request for ourself\n");
-    char *ver_str = (char *)pvPortMalloc(VER_STR_MAX_LEN);
+    char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
     configASSERT(ver_str);
     memset(ver_str, 0, VER_STR_MAX_LEN);
 
@@ -156,7 +160,7 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
                           ver_str_len +
                           dev_name_len;
 
-    uint8_t *dev_info_buff = (uint8_t *)pvPortMalloc(info_len);
+    uint8_t *dev_info_buff = static_cast<uint8_t *>(pvPortMalloc(info_len));
     configASSERT(info_len);
 
     memset(dev_info_buff, 0, info_len);
@@ -181,12 +185,11 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     memcpy(&dev_info->strings[0], ver_str, ver_str_len);
     memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
     bm_serial_send_info_reply(getNodeId(), dev_info);
+    vPortFree(ver_str);
+    vPortFree(dev_info_buff);
   } else {
     printf("received info request for node %" PRIx64 "\n", node_id);
     // send back the info for the node_id
-    taskENTER_CRITICAL();
-    serial_info_request = true;
-    taskEXIT_CRITICAL();
     bcmp_request_info(node_id, &multicast_global_addr, bcmp_info_reply_cb);
   }
 
@@ -194,9 +197,20 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
 }
 
 static bool bcmp_resource_request_cb(uint64_t node_id) {
-  (void)node_id;
+  if (node_id ==  getNodeId()) {
+    // send back our resource info!
+    printf("received resource request for ourself\n");
+    bcmp_resource_table_reply_t* local_resources = bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
+    // Sending via serial will make a copy of the resources so we can free them after sending
+     (getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
+    // getting the local resources allocates them, we need to free them after sending them out
+    vPortFree(local_resources);
 
-  printf("received resource request\n");
+  } else {
+    printf("received resource request for node %" PRIx64 "\n", node_id);
+    // send back the resource info for the node_id
+    bcmp_resource_discovery_send_request(node_id);
+  }
 
   return true;
 }

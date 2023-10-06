@@ -11,7 +11,7 @@
 
 static uint64_t _info_expect_node_id;
 
-static BCMP_Linked_List_Generic callback_list;
+static BCMP_Linked_List_Generic _callback_list;
 
 /*!
   Set node id to expect information from. Will print out the information
@@ -33,12 +33,7 @@ void bcmp_expect_info_from_node_id(uint64_t node_id) {
   \return ERR_OK if successful
 */
 err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr, void (*cb)(void*)) {
-
-  // if (callback_list.mutex == NULL) {
-  //   callback_list.mutex = xSemaphoreCreateMutex();
-  // }
-
-  callback_list.add(target_node_id, cb);
+  _callback_list.add(target_node_id, cb);
 
   bcmp_device_info_request_t info_req = {
     .target_node_id=target_node_id
@@ -174,12 +169,12 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
 err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
   configASSERT(dev_info);
 
-  bcmp_ll_node_t *node = callback_list.find(dev_info->info.node_id);
+  bcmp_ll_node_t *node = _callback_list.find(dev_info->info.node_id);
   if (node != NULL) {
     if (node->fp != NULL) {
       node->fp(dev_info);
     }
-    callback_list.remove(node);
+    _callback_list.remove(node);
   } else {
 
     //

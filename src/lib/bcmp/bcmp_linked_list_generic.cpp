@@ -1,18 +1,12 @@
 #include "bcmp_linked_list_generic.h"
 
-
-// SemaphoreHandle_t test_mutex = xSemaphoreCreateMutex();
-
-// uint8_t *test_buffer = (uint8_t *)pvPortMalloc(100);
-
 // create a new linked list
 BCMP_Linked_List_Generic::BCMP_Linked_List_Generic() {
   head = NULL;
   tail = NULL;
   size = 0;
-  // mutex = xSemaphoreCreateMutexStatic(&mutexBuffer);
-  // configASSERT( mutex != NULL );
   mutex = xSemaphoreCreateMutex();
+  configASSERT( mutex != NULL );
 }
 
 // free the linked list
