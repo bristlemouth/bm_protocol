@@ -4,10 +4,8 @@
 
 #include "bcmp.h"
 #include "bcmp_linked_list_generic.h"
-#include "bm_serial.h"
 #include "bcmp_neighbors.h"
 #include "device_info.h"
-#include "ncp_uart.h"
 
 static uint64_t _info_expect_node_id;
 
@@ -52,7 +50,7 @@ err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr, void (*c
 */
 static err_t bcmp_send_info(const ip_addr_t *dst) {
 
-  char *ver_str = (char *)pvPortMalloc(VER_STR_MAX_LEN);
+  char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
   configASSERT(ver_str);
   memset(ver_str, 0, VER_STR_MAX_LEN);
 
@@ -65,12 +63,12 @@ static err_t bcmp_send_info(const ip_addr_t *dst) {
                         ver_str_len +
                         dev_name_len;
 
-  uint8_t *dev_info_buff = (uint8_t *)pvPortMalloc(info_len);
+  uint8_t *dev_info_buff = static_cast<uint8_t *>(pvPortMalloc(info_len));
   configASSERT(info_len);
 
   memset(dev_info_buff, 0, info_len);
 
-  bcmp_device_info_reply_t *dev_info = (bcmp_device_info_reply_t *)dev_info_buff;
+  bcmp_device_info_reply_t *dev_info = reinterpret_cast<bcmp_device_info_reply_t *>(dev_info_buff);
   dev_info->info.node_id = getNodeId();
 
   // TODO - fill these with actual values
@@ -90,7 +88,7 @@ static err_t bcmp_send_info(const ip_addr_t *dst) {
   memcpy(&dev_info->strings[0], ver_str, ver_str_len);
   memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
 
-  err_t rval = bcmp_tx(dst, BCMP_DEVICE_INFO_REPLY, (uint8_t *)dev_info, info_len);
+  err_t rval = bcmp_tx(dst, BCMP_DEVICE_INFO_REPLY, dev_info_buff, info_len);
 
   vPortFree(dev_info_buff);
   vPortFree(ver_str);
@@ -138,7 +136,7 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
       if(neighbor->version_str != NULL) {
         vPortFree(neighbor->version_str);
       }
-      neighbor->version_str = (char *)pvPortMalloc(dev_info->ver_str_len + 1);
+      neighbor->version_str = static_cast<char *>(pvPortMalloc(dev_info->ver_str_len + 1));
       configASSERT(neighbor->version_str);
       memcpy(neighbor->version_str, &dev_info->strings[0], dev_info->ver_str_len);
       neighbor->version_str[dev_info->ver_str_len] = 0; // null terminate string
@@ -149,7 +147,7 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
       if(neighbor->device_name != NULL) {
         vPortFree(neighbor->device_name);
       }
-      neighbor->device_name = (char *)pvPortMalloc(dev_info->dev_name_len + 1);
+      neighbor->device_name = static_cast<char *>(pvPortMalloc(dev_info->dev_name_len + 1));
       configASSERT(neighbor->device_name);
       memcpy(neighbor->device_name, &dev_info->strings[dev_info->ver_str_len], dev_info->dev_name_len);
       neighbor->device_name[dev_info->dev_name_len] = 0; // null terminate string
@@ -189,7 +187,7 @@ err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
       _info_expect_node_id = 0;
 
       // Create temporary neighbor struct that is used by the print function
-      bm_neighbor_t *tmp_neighbor = (bm_neighbor_t *)pvPortMalloc(sizeof(bm_neighbor_t));
+      bm_neighbor_t *tmp_neighbor = static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
       memset(tmp_neighbor, 0, sizeof(bm_neighbor_t));
 
       _populate_neighbor_info(tmp_neighbor, dev_info);
