@@ -53,6 +53,7 @@
 #include "util.h"
 #include "w25.h"
 #include "watchdog.h"
+#include "debug_bm_service.h"
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -355,6 +356,7 @@ static void defaultTask(void *parameters) {
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
+  debugBmServiceInit();
 
   bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);

@@ -18,6 +18,9 @@ add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
+    ${SRC_DIR}/lib/middleware/bm_service.cpp
+    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
+    ${SRC_DIR}/lib/middleware/bm_service_request.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
 
     ${BCMP_FILES}
@@ -26,6 +29,7 @@ set(BRISTLEMOUTH_FILES
 set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}

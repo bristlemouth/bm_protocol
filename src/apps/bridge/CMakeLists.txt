@@ -23,6 +23,9 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
+    ${SRC_DIR}/lib/middleware/bm_service.cpp
+    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
+    ${SRC_DIR}/lib/middleware/bm_service_request.cpp
 
     ${BCMP_FILES}
     ${BM_NCP_FILES}
@@ -31,6 +34,7 @@ set(BRISTLEMOUTH_FILES
 set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}
@@ -71,6 +75,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/debug/debug_dfu.cpp
+    ${SRC_DIR}/lib/debug/debug_bm_service.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
 

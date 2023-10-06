@@ -11,6 +11,7 @@
 #include "safe_udp.h"
 #include "semphr.h"
 #include "task_priorities.h"
+#include "bm_service.h"
 
 #define NET_QUEUE_LEN 64
 
@@ -50,6 +51,7 @@ void bm_middleware_init(struct netif* netif, uint16_t port) {
 
   _ctx.netQueue = xQueueCreate(NET_QUEUE_LEN, sizeof(netQueueItem_t));
   configASSERT(_ctx.netQueue);
+  bm_service_init();
 
   rval = xTaskCreate(
               middleware_net_task,

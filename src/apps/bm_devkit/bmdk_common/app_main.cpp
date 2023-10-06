@@ -52,6 +52,8 @@
 #include "util.h"
 #include "w25.h"
 #include "watchdog.h"
+#include "debug_bm_service.h"
+#include "echo_service.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -382,8 +384,11 @@ static void defaultTask(void *parameters) {
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
+  debugBmServiceInit();
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
+  echo_service_init();
+
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
