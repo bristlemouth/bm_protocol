@@ -13,6 +13,7 @@
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
+#include "task_priorities.h"
 
 #include "bm_l2.h"
 #include "bm_pubsub.h"
@@ -148,27 +149,14 @@ extern "C" int main(void) {
     HAL_Init();
 
     SystemClock_Config();
+    // portENABLE_INTERRUPTS(); // Debugging
+    // HAL_NVIC_EnableIRQ(TIM8_UP_IRQn); // Debugging
+    // HAL_Delay(500U); // Debugging
 
     SystemPower_Config_ext();
-    MX_GPIO_Init();
-    MX_USART3_UART_Init();
-    MX_USB_OTG_FS_PCD_Init();
-    MX_GPDMA1_Init();
-    MX_ICACHE_Init();
-    MX_IWDG_Init();
-
-    usbMspInit();
-
-    rtcInit();
 
     // Enable hardfault on divide-by-zero
     SCB->CCR |= 0x10;
-
-    // Initialize low power manager
-    lpmInit();
-
-    // Inhibit low power mode during boot process
-    lpmPeripheralActive(LPM_BOOT);
 
     BaseType_t rval = xTaskCreate(defaultTask,
                                   "Default",
@@ -177,7 +165,7 @@ extern "C" int main(void) {
                                   NULL,
                                   // Start with very high priority during boot then downgrade
                                   // once done initializing everything
-                                  2,
+                                  DEFAULT_BOOT_TASK_PRIORITY,
                                   NULL);
     configASSERT(rval == pdTRUE);
 
@@ -293,6 +281,23 @@ static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
 static void defaultTask( void *parameters ) {
     (void)parameters;
 
+    MX_GPIO_Init();
+    MX_USART3_UART_Init();
+    MX_USB_OTG_FS_PCD_Init();
+    MX_GPDMA1_Init();
+    MX_ICACHE_Init();
+    MX_IWDG_Init();
+
+    usbMspInit();
+
+    rtcInit();
+
+     // Initialize low power manager
+    lpmInit();
+
+    // Inhibit low power mode during boot process
+    lpmPeripheralActive(LPM_BOOT);
+
     startIWDGTask();
     startSerial();
     startSerialConsole(&usbCLI);
@@ -351,7 +356,7 @@ static void defaultTask( void *parameters ) {
     debug_configuration_system.getConfig("subsampleEnabled", strlen("subsampleEnabled"), subsampleEnabled);
     uint32_t bridgePowerControllerEnabled = BridgePowerController::DEFAULT_POWER_CONTROLLER_ENABLED;
     debug_configuration_system.getConfig("bridgePowerControllerEnabled", strlen("bridgePowerControllerEnabled"), bridgePowerControllerEnabled);
-    uint32_t alignmentInterval5Min = BridgePowerController::DEFAULT_ALIGNMENT_5_MIN_INTERVAL;    
+    uint32_t alignmentInterval5Min = BridgePowerController::DEFAULT_ALIGNMENT_5_MIN_INTERVAL;
     debug_configuration_system.getConfig("alignmentInterval5Min", strlen("bridgePowerControllerEnabled"), alignmentInterval5Min);
     printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
@@ -376,6 +381,10 @@ static void defaultTask( void *parameters ) {
 
     // // Re-enable low power mode
     lpmPeripheralInactive(LPM_BOOT);
+
+
+    // Drop priority now that we're done booting
+    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), DEFAULT_TASK_PRIORITY);
 
     while(1) {
         /* Do nothing */
