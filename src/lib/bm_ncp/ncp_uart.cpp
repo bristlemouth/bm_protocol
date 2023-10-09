@@ -6,6 +6,7 @@
 #include "bcmp.h"
 #include "bcmp_info.h"
 #include "bcmp_resource_discovery.h"
+#include "bcmp_topology.h"
 #include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
@@ -142,11 +143,36 @@ static void bcmp_resource_table_reply_cb(void* bcmp_resource_table_reply){
   bm_serial_send_resource_reply(resource_reply->node_id, resource_reply);
 }
 
+static void bm_serial_all_info_cb(networkTopology_t* networkTopology) {
+  configASSERT(networkTopology);
+  uint16_t num_nodes = networkTopology->length;
+  neighborTableEntry_t *cursor = NULL;
+  uint16_t counter;
+  for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
+    uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
+    if (current_node_id != getNodeId()){
+      bcmp_request_info(current_node_id, &multicast_global_addr, bcmp_info_reply_cb);
+    }
+  }
+}
+
+static void bm_serial_all_resources_cb(networkTopology_t* networkTopology) {
+  configASSERT(networkTopology);
+  uint16_t num_nodes = networkTopology->length;
+  neighborTableEntry_t *cursor = NULL;
+  uint16_t counter;
+  for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
+    uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
+    if (current_node_id != getNodeId()){
+      bcmp_resource_discovery::bcmp_resource_discovery_send_request(current_node_id, bcmp_resource_table_reply_cb);
+    }
+  }
+}
+
 static bool bcmp_info_request_cb(uint64_t node_id) {
 
-  if (node_id ==  getNodeId()) {
+  if (node_id ==  getNodeId() || node_id == 0) {
     // send back our info!
-    printf("received info request for ourself\n");
     char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
     configASSERT(ver_str);
     memset(ver_str, 0, VER_STR_MAX_LEN);
@@ -187,17 +213,19 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     bm_serial_send_info_reply(getNodeId(), dev_info);
     vPortFree(ver_str);
     vPortFree(dev_info_buff);
+    if (node_id == 0) {
+      // send out a broadcast
+      bcmp_topology_start(bm_serial_all_info_cb);
+    }
   } else {
-    printf("received info request for node %" PRIx64 "\n", node_id);
     // send back the info for the node_id
     bcmp_request_info(node_id, &multicast_global_addr, bcmp_info_reply_cb);
   }
-
   return true;
 }
 
 static bool bcmp_resource_request_cb(uint64_t node_id) {
-  if (node_id ==  getNodeId()) {
+  if (node_id ==  getNodeId() || node_id == 0) {
     // send back our resource info!
     printf("received resource request for ourself\n");
     bcmp_resource_table_reply_t* local_resources = bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
@@ -205,13 +233,14 @@ static bool bcmp_resource_request_cb(uint64_t node_id) {
     bm_serial_send_resource_reply(getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
     // getting the local resources allocates them, we need to free them after sending them out
     vPortFree(local_resources);
-
+    if (node_id == 0) {
+      bcmp_topology_start(bm_serial_all_resources_cb);
+    }
   } else {
     printf("received resource request for node %" PRIx64 "\n", node_id);
     // send back the resource info for the node_id
     bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
   }
-
   return true;
 }
 
