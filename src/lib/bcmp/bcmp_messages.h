@@ -202,8 +202,11 @@ typedef struct {
   // Number of subscribed topics
   uint16_t num_subs;
 
-  // List of structures containing information for all resource interests known about in this node. 
-  // List of bcmp_resource_t structured as num_pub published resources, then num_sub, subscribed resources.
+  // List containing information for all resource interests known about this node.
+  // The list is comprised of bcmp_reosurce_t structures that are ordered such that
+  // the published resources are listed first, followed by the subscribed resources.
+  // The list can be traversed using 0 to (num_pubs - 1) to access the published resources,
+  // and num_pubs to (num_pubs + num_subs - 1) to access the subscribed resources.
   uint8_t resource_list[0];
 } __attribute__((packed)) bcmp_resource_table_reply_t;
 
