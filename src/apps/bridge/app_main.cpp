@@ -149,6 +149,7 @@ extern "C" int main(void) {
     HAL_Init();
 
     SystemClock_Config();
+    SystemPower_Config_ext();
 
     // If you NEED to have an interrupt based timer, or other interrupts running before the
     // scheduler starts, you can enable them here. The reason for this is that FreeRTOS will
@@ -162,8 +163,6 @@ extern "C" int main(void) {
     // default task. See https://www.freertos.org/FreeRTOS_Support_Forum_Archive/March_2017/freertos_What_is_normal_method_for_running_initialization_code_in_FreerTOS_92042073j.html
     // for more details.
     // portENABLE_INTERRUPTS();
-
-    SystemPower_Config_ext();
 
     // Enable hardfault on divide-by-zero
     SCB->CCR |= 0x10;
