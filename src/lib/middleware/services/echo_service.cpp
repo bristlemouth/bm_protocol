@@ -13,7 +13,7 @@ static bool echo_service_handler (size_t service_strlen,
                           const char * service, 
                           size_t req_data_len, 
                           uint8_t * req_data,
-                          size_t &reply_len,
+                          size_t &buffer_len,
                           uint8_t * reply_data);
 
 /*!
@@ -34,15 +34,15 @@ static bool echo_service_handler (size_t service_strlen,
                           const char * service, 
                           size_t req_data_len, 
                           uint8_t * req_data,
-                          size_t &reply_len,
+                          size_t &buffer_len,
                           uint8_t * reply_data) {
   bool rval = true;
   printf("Data received on service: %.*s\n", service_strlen, service);
-  if(reply_len <= MAX_BM_SERVICE_DATA_SIZE){
-    reply_len = req_data_len;
+  if(buffer_len <= MAX_BM_SERVICE_DATA_SIZE){
+    buffer_len = req_data_len;
     memcpy(reply_data, req_data, req_data_len);
   } else {
-    reply_len = 0;
+    buffer_len = 0;
     rval = false;
   }
   return rval;

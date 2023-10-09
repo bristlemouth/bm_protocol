@@ -20,6 +20,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/middleware/bm_service.cpp
     ${SRC_DIR}/lib/middleware/services/echo_service.cpp
+    ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
 

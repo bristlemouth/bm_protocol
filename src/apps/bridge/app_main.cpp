@@ -56,6 +56,7 @@
 #include "bcmp_neighbors.h"
 #include "bridgeLog.h"
 #include "debug_bm_service.h"
+#include "sys_info_service.h"
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
 #endif
@@ -361,7 +362,7 @@ static void defaultTask( void *parameters ) {
     topology_sampler_init(&bridge_power_controller, &debug_configuration_hardware, &debug_configuration_system);
     debug_ncp_init();
     debugBmServiceInit();
-
+    sys_info_service_init(debug_configuration_system);
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
 

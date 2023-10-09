@@ -53,6 +53,7 @@
 #include "w25.h"
 #include "watchdog.h"
 #include "debug_bm_service.h"
+#include "sys_info_service.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -376,6 +377,7 @@ static void defaultTask(void *parameters) {
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
   debugBmServiceInit();
+  sys_info_service_init(debug_configuration_system);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
   // Turn of the bristleback leds

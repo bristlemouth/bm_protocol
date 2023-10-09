@@ -66,7 +66,9 @@ void bm_service_request_init(void) {
 bool bm_service_request(size_t service_strlen, const char * service, size_t data_len, const uint8_t * data, bm_service_reply_cb reply_cb, uint32_t timeout_s) {
     bool rval = false;
     configASSERT(service);
-    configASSERT(data);
+    if(data_len){
+        configASSERT(data);
+    }
     bm_service_request_node_t * node = NULL;
     do {
         if(data_len > MAX_BM_SERVICE_DATA_SIZE) {

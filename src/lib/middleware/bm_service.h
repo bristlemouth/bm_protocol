@@ -14,7 +14,7 @@
  * @param[in] service The service string.
  * @param[in] req_data_len The length of the request data.
  * @param[in] req_data The request data.
- * @param[in,out] reply_len Passed in, this param is the size of the data buffer.  On return, this param is the length of the reply data.
+ * @param[in,out] buffer_len Passed in, this param is the size of the data buffer. On return, this param is the length of the reply data.
  * @param[out] reply_data The reply data buffer to be filled in.
  * @return True if the request was handled, false otherwise.
  */
@@ -22,7 +22,7 @@ typedef bool (*bm_service_handler)(size_t service_strlen,
                                     const char * service, 
                                     size_t req_data_len, 
                                     uint8_t * req_data,
-                                    size_t &reply_len,
+                                    size_t &buffer_len,
                                     uint8_t * reply_data);
 
 void bm_service_init(void);
