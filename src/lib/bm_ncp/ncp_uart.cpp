@@ -227,7 +227,6 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
 static bool bcmp_resource_request_cb(uint64_t node_id) {
   if (node_id ==  getNodeId() || node_id == 0) {
     // send back our resource info!
-    printf("received resource request for ourself\n");
     bcmp_resource_table_reply_t* local_resources = bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
     // Sending via serial will make a copy of the resources so we can free them after sending
     bm_serial_send_resource_reply(getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
@@ -237,7 +236,6 @@ static bool bcmp_resource_request_cb(uint64_t node_id) {
       bcmp_topology_start(bm_serial_all_resources_cb);
     }
   } else {
-    printf("received resource request for node %" PRIx64 "\n", node_id);
     // send back the resource info for the node_id
     bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
   }
