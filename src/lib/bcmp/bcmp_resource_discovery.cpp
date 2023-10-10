@@ -24,7 +24,7 @@ typedef struct bcmp_resource_list_t {
 static bcmp_resource_list_t _pub_list;
 static bcmp_resource_list_t _sub_list;
 
-static BCMP_Linked_List_Generic _callback_list;
+static BCMP_Linked_List_Generic _resource_request_list;
 
 static bool _bcmp_resource_discovery_find_resource(const char * resource, const uint16_t resource_len, resource_type_e type);
 static bool _bcmp_resource_compute_list_size(resource_type_e type, size_t &msg_len);
@@ -128,7 +128,7 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
         if(repl->node_id != src_node_id){
             break;
         }
-        bcmp_ll_element_t *element = _callback_list.find(src_node_id);
+        bcmp_ll_element_t *element = _resource_request_list.find(src_node_id);
         if ((element != NULL) && (element->fp != NULL)) {
             element->fp(repl);
         } else {
@@ -152,7 +152,7 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
             }
         }
         if (element != NULL) {
-            _callback_list.remove(element);
+            _resource_request_list.remove(element);
         }
     } while(0);
 }
@@ -280,7 +280,7 @@ bool bcmp_resource_discovery::bcmp_resource_discovery_send_request(uint64_t targ
             printf("Failed to send bcmp resource table request\n");
             break;
         }
-        _callback_list.add(target_node_id, fp);
+        _resource_request_list.add(target_node_id, fp);
         rval = true;
     } while(0);
     return rval;
