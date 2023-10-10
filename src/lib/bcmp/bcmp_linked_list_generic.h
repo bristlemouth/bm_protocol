@@ -14,6 +14,7 @@ typedef struct bcmp_ll_node_s {
 class BCMP_Linked_List_Generic {
   public:
 
+    // Constriuctors/destructors ***********************************************
     BCMP_Linked_List_Generic();
     ~BCMP_Linked_List_Generic();
 
@@ -34,5 +35,4 @@ class BCMP_Linked_List_Generic {
     bcmp_ll_node_t *tail;
     int size;
     SemaphoreHandle_t mutex;
-    StaticSemaphore_t mutexBuffer;
 };
