@@ -129,11 +129,8 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
             break;
         }
         bcmp_ll_node_t *node = _callback_list.find(src_node_id);
-        if (node != NULL) {
-            if (node->fp != NULL) {
-                node->fp(repl);
-            }
-            _callback_list.remove(node);
+        if ((node != NULL) && (node->fp != NULL)) {
+            node->fp(repl);
         } else {
             printf("Node Id %" PRIx64 " resource table:\n", src_node_id);
             uint16_t num_pubs = repl->num_pubs;
@@ -153,6 +150,9 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
                 offset += (sizeof(bcmp_resource_t) + cur_resource->resource_len);
                 num_subs--;
             }
+        }
+        if (node != NAME_MAX) {
+            _callback_list.remove(node);
         }
     } while(0);
 }
