@@ -19,6 +19,7 @@ extern "C" {
 
 #define VBUS_SENSE_CH ADC_CHANNEL_3
 
+void mxInit(void);
 void bspInit();
 
 // Pin definitions

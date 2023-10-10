@@ -17,6 +17,7 @@ extern "C" {
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
+void mxInit(void);
 void bspInit();
 
 // Pin definitions

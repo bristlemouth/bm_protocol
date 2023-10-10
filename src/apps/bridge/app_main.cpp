@@ -290,12 +290,7 @@ static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
 static void defaultTask( void *parameters ) {
     (void)parameters;
 
-    MX_GPIO_Init();
-    MX_USART3_UART_Init();
-    MX_USB_OTG_FS_PCD_Init();
-    MX_GPDMA1_Init();
-    MX_ICACHE_Init();
-    MX_IWDG_Init();
+    mxInit();
 
     usbMspInit();
 

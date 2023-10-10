@@ -8,6 +8,13 @@
 #include "pca9535.h"
 #include "spi.h"
 #include "stm32_io.h"
+// Peripheral includes for MX_ init functions
+#include "gpdma.h"
+#include "gpio.h"
+#include "icache.h"
+#include "iwdg.h"
+#include "usart.h"
+#include "usb_otg.h"
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;
@@ -98,4 +105,13 @@ bool usb_is_connected() {
   IORead(&VUSB_DETECT, &vusb);
 
   return (bool)vusb;
+}
+
+void mxInit(void) {
+  MX_GPIO_Init();
+  MX_USART3_UART_Init();
+  MX_USB_OTG_FS_PCD_Init();
+  MX_GPDMA1_Init();
+  MX_ICACHE_Init();
+  MX_IWDG_Init();
 }
