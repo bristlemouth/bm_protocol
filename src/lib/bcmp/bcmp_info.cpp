@@ -167,9 +167,9 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
 err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
   configASSERT(dev_info);
 
-  bcmp_ll_node_t *node = _callback_list.find(dev_info->info.node_id);
-  if ((node != NULL) && (node->fp != NULL)) {
-      node->fp(dev_info);
+  bcmp_ll_element_t *element = _callback_list.find(dev_info->info.node_id);
+  if ((element != NULL) && (element->fp != NULL)) {
+      element->fp(dev_info);
   } else {
     //
     // Find neighbor and add info to table if present
@@ -193,8 +193,8 @@ err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
       configASSERT(bcmp_free_neighbor(tmp_neighbor));
     }
   }
-  if (node != NULL) {
-    _callback_list.remove(node);
+  if (element != NULL) {
+    _callback_list.remove(element);
   }
 
   return ERR_OK;

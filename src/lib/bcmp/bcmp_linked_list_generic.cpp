@@ -11,39 +11,39 @@ BCMP_Linked_List_Generic::BCMP_Linked_List_Generic() {
 
 // free the linked list
 BCMP_Linked_List_Generic::~BCMP_Linked_List_Generic() {
-  bcmp_ll_node_t *node = head;
-  while (node != NULL) {
-    bcmp_ll_node_t *next = node->next;
-    freeNode(&node);
-    node = next;
+  bcmp_ll_element_t *element = head;
+  while (element != NULL) {
+    bcmp_ll_element_t *next = element->next;
+    freeElement(&element);
+    element = next;
   }
 }
 
-// create a new node
-bcmp_ll_node_t* BCMP_Linked_List_Generic::newNode(uint64_t node_id, void (*fp)(void*)) {
-  bcmp_ll_node_t *node = (bcmp_ll_node_t *)pvPortMalloc(sizeof(bcmp_ll_node_t));
-  configASSERT(node != NULL);
-  node->node_id = node_id;
-  node->fp = fp;
-  node->next = NULL;
-  node->prev = NULL;
-  return node;
+// create a new element
+bcmp_ll_element_t* BCMP_Linked_List_Generic::newElement(uint64_t node_id, void (*fp)(void*)) {
+  bcmp_ll_element_t *element = static_cast<bcmp_ll_element_t *>(pvPortMalloc(sizeof(bcmp_ll_element_t)));
+  configASSERT(element != NULL);
+  element->node_id = node_id;
+  element->fp = fp;
+  element->next = NULL;
+  element->prev = NULL;
+  return element;
 }
 
-// free the node
-void BCMP_Linked_List_Generic::freeNode(bcmp_ll_node_t **node_pointer) {
-  if (node_pointer != NULL && *node_pointer != NULL) {
-    vPortFree(*node_pointer);
-    *node_pointer = NULL;
+// free the element
+void BCMP_Linked_List_Generic::freeElement(bcmp_ll_element_t **element_pointer) {
+  if (element_pointer != NULL && *element_pointer != NULL) {
+    vPortFree(*element_pointer);
+    *element_pointer = NULL;
   }
 }
 
 // Linked List Operations ***************************************************
 int BCMP_Linked_List_Generic::getSize() {
   if (xSemaphoreTake(mutex, portMAX_DELAY) == pdPASS) {
-    int size = size;
+    int size_rval = size;
     xSemaphoreGive(mutex);
-    return size;
+    return size_rval;
   } else {
     return -1;
   }
@@ -52,13 +52,13 @@ int BCMP_Linked_List_Generic::getSize() {
 bool BCMP_Linked_List_Generic::add(uint64_t node_id, void (*fp)(void*)) {
   bool rval = false;
   if (xSemaphoreTake(mutex, portMAX_DELAY) == pdPASS) {
-    bcmp_ll_node_t *node = newNode(node_id, fp);
+    bcmp_ll_element_t *element = newElement(node_id, fp);
     if (head == NULL && tail == NULL) {
-      head = node;
-      tail = node;
+      head = element;
+      tail = element;
     } else {
-      tail->next = node;
-      tail = node;
+      tail->next = element;
+      tail = element;
     }
     size++;
     xSemaphoreGive(mutex);
@@ -67,22 +67,22 @@ bool BCMP_Linked_List_Generic::add(uint64_t node_id, void (*fp)(void*)) {
   return rval;
 }
 
-bool BCMP_Linked_List_Generic::remove(bcmp_ll_node_t *node){
+bool BCMP_Linked_List_Generic::remove(bcmp_ll_element_t *element){
   bool rval = false;
   if (xSemaphoreTake(mutex, portMAX_DELAY) == pdPASS) {
-    if (node == head) {
-      head = node->next;
+    if (element == head) {
+      head = element->next;
     }
-    if (node == tail) {
-      tail = node->prev;
+    if (element == tail) {
+      tail = element->prev;
     }
-    if (node->prev != NULL) {
-      node->prev->next = node->next;
+    if (element->prev != NULL) {
+      element->prev->next = element->next;
     }
-    if (node->next != NULL) {
-      node->next->prev = node->prev;
+    if (element->next != NULL) {
+      element->next->prev = element->prev;
     }
-    freeNode(&node);
+    freeElement(&element);
     size--;
     xSemaphoreGive(mutex);
     rval = true;
@@ -90,18 +90,18 @@ bool BCMP_Linked_List_Generic::remove(bcmp_ll_node_t *node){
   return rval;
 }
 
-bcmp_ll_node_t* BCMP_Linked_List_Generic::find(uint64_t node_id) {
-  bcmp_ll_node_t *returned_node = NULL;
+bcmp_ll_element_t* BCMP_Linked_List_Generic::find(uint64_t node_id) {
+  bcmp_ll_element_t *returned_element = NULL;
   if (xSemaphoreTake(mutex, portMAX_DELAY) == pdPASS) {
-    bcmp_ll_node_t *node = head;
-    while (node != NULL) {
-      if (node->node_id == node_id) {
-        returned_node = node;
+    bcmp_ll_element_t *element = head;
+    while (element != NULL) {
+      if (element->node_id == node_id) {
+        returned_element = element;
         break;
       }
-      node = node->next;
+      element = element->next;
     }
     xSemaphoreGive(mutex);
   }
-  return returned_node;
+  return returned_element;
 }

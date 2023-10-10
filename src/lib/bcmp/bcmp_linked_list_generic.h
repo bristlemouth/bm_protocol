@@ -4,12 +4,12 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-typedef struct bcmp_ll_node_s {
+typedef struct bcmp_ll_element_s {
   uint64_t node_id;
   void (*fp)(void*);
-  bcmp_ll_node_s *next;
-  bcmp_ll_node_s *prev;
-} bcmp_ll_node_t;
+  bcmp_ll_element_s *next;
+  bcmp_ll_element_s *prev;
+} bcmp_ll_element_t;
 
 class BCMP_Linked_List_Generic {
   public:
@@ -23,16 +23,16 @@ class BCMP_Linked_List_Generic {
 
     // Manipulation procedures *************************************************
     bool add(uint64_t node_id, void (*fp)(void*));
-    bool remove(bcmp_ll_node_t *node);
-    bcmp_ll_node_t* find(uint64_t node_id);
+    bool remove(bcmp_ll_element_t *element);
+    bcmp_ll_element_t* find(uint64_t node_id);
 
   private:
 
-    bcmp_ll_node_t* newNode(uint64_t node_id, void (*fp)(void*));
-    void freeNode(bcmp_ll_node_t **node_pointer);
+    bcmp_ll_element_t* newElement(uint64_t node_id, void (*fp)(void*));
+    void freeElement(bcmp_ll_element_t **element_pointer);
 
-    bcmp_ll_node_t *head;
-    bcmp_ll_node_t *tail;
+    bcmp_ll_element_t *head;
+    bcmp_ll_element_t *tail;
     int size;
     SemaphoreHandle_t mutex;
 };

@@ -128,9 +128,9 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
         if(repl->node_id != src_node_id){
             break;
         }
-        bcmp_ll_node_t *node = _callback_list.find(src_node_id);
-        if ((node != NULL) && (node->fp != NULL)) {
-            node->fp(repl);
+        bcmp_ll_element_t *element = _callback_list.find(src_node_id);
+        if ((element != NULL) && (element->fp != NULL)) {
+            element->fp(repl);
         } else {
             printf("Node Id %" PRIx64 " resource table:\n", src_node_id);
             uint16_t num_pubs = repl->num_pubs;
@@ -151,8 +151,8 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
                 num_subs--;
             }
         }
-        if (node != NULL) {
-            _callback_list.remove(node);
+        if (element != NULL) {
+            _callback_list.remove(element);
         }
     } while(0);
 }
