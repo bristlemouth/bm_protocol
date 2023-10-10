@@ -168,13 +168,9 @@ err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
   configASSERT(dev_info);
 
   bcmp_ll_node_t *node = _callback_list.find(dev_info->info.node_id);
-  if (node != NULL) {
-    if (node->fp != NULL) {
+  if ((node != NULL) && (node->fp != NULL)) {
       node->fp(dev_info);
-    }
-    _callback_list.remove(node);
   } else {
-
     //
     // Find neighbor and add info to table if present
     // Only add neighbor info when received to link local multicast address
@@ -196,6 +192,9 @@ err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
       // Clean up
       configASSERT(bcmp_free_neighbor(tmp_neighbor));
     }
+  }
+  if (node != NULL) {
+    _callback_list.remove(node);
   }
 
   return ERR_OK;
