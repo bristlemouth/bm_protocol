@@ -151,7 +151,7 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
                 num_subs--;
             }
         }
-        if (node != NAME_MAX) {
+        if (node != NULL) {
             _callback_list.remove(node);
         }
     } while(0);
