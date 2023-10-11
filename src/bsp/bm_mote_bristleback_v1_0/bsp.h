@@ -21,6 +21,7 @@ extern "C" {
 #define BB_LED_ON (1)
 #define BB_LED_OFF (0)
 
+void mxInit(void);
 void bspInit();
 
 // Pin definitions

@@ -10,7 +10,7 @@
 
 class BridgePowerController {
 public:
-  BridgePowerController(
+  explicit BridgePowerController(
       IOPinHandle_t &BusPowerPin,
       uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S,
       uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S,

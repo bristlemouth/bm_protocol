@@ -3,6 +3,10 @@
 #include "task.h"
 #include "queue.h"
 
+#include "bcmp.h"
+#include "bcmp_info.h"
+#include "bcmp_resource_discovery.h"
+#include "bcmp_topology.h"
 #include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
@@ -126,6 +130,118 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
   return (rtcSet(&rtc_time) == pdPASS);
 }
 
+// TODO - redefine, or define in a spot where this is only needed once!
+#define VER_STR_MAX_LEN 255
+
+static void bcmp_info_reply_cb(void* bcmp_info_reply){
+  bm_serial_device_info_reply_t *info_reply = reinterpret_cast<bm_serial_device_info_reply_t *>(bcmp_info_reply);
+  bm_serial_send_info_reply(info_reply->info.node_id, info_reply);
+}
+
+static void bcmp_resource_table_reply_cb(void* bcmp_resource_table_reply){
+  bm_serial_resource_table_reply_t *resource_reply = reinterpret_cast<bm_serial_resource_table_reply_t *>(bcmp_resource_table_reply);
+  bm_serial_send_resource_reply(resource_reply->node_id, resource_reply);
+}
+
+static void bm_serial_all_info_cb(networkTopology_t* networkTopology) {
+  configASSERT(networkTopology);
+  uint16_t num_nodes = networkTopology->length;
+  neighborTableEntry_t *cursor = NULL;
+  uint16_t counter;
+  for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
+    uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
+    if (current_node_id != getNodeId()){
+      bcmp_request_info(current_node_id, &multicast_global_addr, bcmp_info_reply_cb);
+    }
+  }
+}
+
+static void bm_serial_all_resources_cb(networkTopology_t* networkTopology) {
+  configASSERT(networkTopology);
+  uint16_t num_nodes = networkTopology->length;
+  neighborTableEntry_t *cursor = NULL;
+  uint16_t counter;
+  for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
+    uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
+    if (current_node_id != getNodeId()){
+      bcmp_resource_discovery::bcmp_resource_discovery_send_request(current_node_id, bcmp_resource_table_reply_cb);
+    }
+  }
+}
+
+static bool bcmp_info_request_cb(uint64_t node_id) {
+
+  if (node_id ==  getNodeId() || node_id == 0) {
+    // send back our info!
+    char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
+    configASSERT(ver_str);
+    memset(ver_str, 0, VER_STR_MAX_LEN);
+
+    uint8_t ver_str_len = snprintf(ver_str, VER_STR_MAX_LEN, "%s@%s", APP_NAME, getFWVersionStr());
+
+    // TODO - use device name instead of UID str
+    uint8_t dev_name_len = strlen(getUIDStr());
+
+    uint16_t info_len = sizeof(bm_serial_device_info_reply_t) +
+                          ver_str_len +
+                          dev_name_len;
+
+    uint8_t *dev_info_buff = static_cast<uint8_t *>(pvPortMalloc(info_len));
+    configASSERT(info_len);
+
+    memset(dev_info_buff, 0, info_len);
+
+    bm_serial_device_info_reply_t *dev_info = reinterpret_cast<bm_serial_device_info_reply_t *>(dev_info_buff);
+    dev_info->info.node_id = getNodeId();
+
+    // TODO - fill these with actual values
+    dev_info->info.vendor_id = 0;
+    dev_info->info.product_id = 0;
+    memset(dev_info->info.serial_num, '0', sizeof(dev_info->info.serial_num));
+
+    dev_info->info.git_sha = getGitSHA();
+    getFWVersion(&dev_info->info.ver_major, &dev_info->info.ver_minor, &dev_info->info.ver_rev);
+
+    // TODO - get actual hardware version
+    dev_info->info.ver_hw = 0;
+
+    dev_info->ver_str_len = ver_str_len;
+    dev_info->dev_name_len = dev_name_len;
+
+    memcpy(&dev_info->strings[0], ver_str, ver_str_len);
+    memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
+    bm_serial_send_info_reply(getNodeId(), dev_info);
+    vPortFree(ver_str);
+    vPortFree(dev_info_buff);
+    if (node_id == 0) {
+      // send out a broadcast
+      bcmp_topology_start(bm_serial_all_info_cb);
+    }
+  } else {
+    // send back the info for the node_id
+    bcmp_request_info(node_id, &multicast_global_addr, bcmp_info_reply_cb);
+  }
+  return true;
+}
+
+static bool bcmp_resource_request_cb(uint64_t node_id) {
+  if (node_id ==  getNodeId() || node_id == 0) {
+    // send back our resource info!
+    bcmp_resource_table_reply_t* local_resources = bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
+    // Sending via serial will make a copy of the resources so we can free them after sending
+    bm_serial_send_resource_reply(getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
+    // getting the local resources allocates them, we need to free them after sending them out
+    vPortFree(local_resources);
+    if (node_id == 0) {
+      bcmp_topology_start(bm_serial_all_resources_cb);
+    }
+  } else {
+    // send back the resource info for the node_id
+    bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
+  }
+  return true;
+}
+
 // Used by spotter to request a self test
 static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   (void)node_id;
@@ -221,6 +337,10 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
   bm_serial_callbacks.reboot_info_fn = NULL;
   bm_serial_callbacks.network_info_fn = NULL;
+  bm_serial_callbacks.bcmp_info_request_fn = bcmp_info_request_cb;
+  bm_serial_callbacks.bcmp_info_response_fn = NULL;
+  bm_serial_callbacks.bcmp_resource_request_fn = bcmp_resource_request_cb;
+  bm_serial_callbacks.bcmp_resource_response_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 

@@ -13,6 +13,7 @@
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
+#include "task_priorities.h"
 
 #include "bm_l2.h"
 #include "bm_pubsub.h"
@@ -149,27 +150,23 @@ extern "C" int main(void) {
     HAL_Init();
 
     SystemClock_Config();
-
     SystemPower_Config_ext();
-    MX_GPIO_Init();
-    MX_USART3_UART_Init();
-    MX_USB_OTG_FS_PCD_Init();
-    MX_GPDMA1_Init();
-    MX_ICACHE_Init();
-    MX_IWDG_Init();
 
-    usbMspInit();
-
-    rtcInit();
+    // If you NEED to have an interrupt based timer, or other interrupts running before the
+    // scheduler starts, you can enable them here. The reason for this is that FreeRTOS will
+    // disable interrupts when calling FreeRTOS API functions before the scheduler starts.
+    // In our case, this is done in some class constructors that utilize pvPortMalloc,
+    // or other FreeRTOS API calls. This means that when __libc_init_array is called,
+    // interrupts are disabled, and the timer interrupt will no longer be available until
+    // the scheduler starts. This is a problem if you are initializing a peripheral that
+    // includes a delay, see MX_USB_OTG_FS_PCD_Init() for an example where HAL_Delay()
+    // is called. It is highly recommended to avoid this by initializing everything in the
+    // default task. See https://www.freertos.org/FreeRTOS_Support_Forum_Archive/March_2017/freertos_What_is_normal_method_for_running_initialization_code_in_FreerTOS_92042073j.html
+    // for more details.
+    // portENABLE_INTERRUPTS();
 
     // Enable hardfault on divide-by-zero
     SCB->CCR |= 0x10;
-
-    // Initialize low power manager
-    lpmInit();
-
-    // Inhibit low power mode during boot process
-    lpmPeripheralActive(LPM_BOOT);
 
     BaseType_t rval = xTaskCreate(defaultTask,
                                   "Default",
@@ -178,7 +175,7 @@ extern "C" int main(void) {
                                   NULL,
                                   // Start with very high priority during boot then downgrade
                                   // once done initializing everything
-                                  2,
+                                  DEFAULT_BOOT_TASK_PRIORITY,
                                   NULL);
     configASSERT(rval == pdTRUE);
 
@@ -294,6 +291,18 @@ static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
 static void defaultTask( void *parameters ) {
     (void)parameters;
 
+    mxInit();
+
+    usbMspInit();
+
+    rtcInit();
+
+     // Initialize low power manager
+    lpmInit();
+
+    // Inhibit low power mode during boot process
+    lpmPeripheralActive(LPM_BOOT);
+
     startIWDGTask();
     startSerial();
     startSerialConsole(&usbCLI);
@@ -352,7 +361,7 @@ static void defaultTask( void *parameters ) {
     debug_configuration_system.getConfig("subsampleEnabled", strlen("subsampleEnabled"), subsampleEnabled);
     uint32_t bridgePowerControllerEnabled = BridgePowerController::DEFAULT_POWER_CONTROLLER_ENABLED;
     debug_configuration_system.getConfig("bridgePowerControllerEnabled", strlen("bridgePowerControllerEnabled"), bridgePowerControllerEnabled);
-    uint32_t alignmentInterval5Min = BridgePowerController::DEFAULT_ALIGNMENT_5_MIN_INTERVAL;    
+    uint32_t alignmentInterval5Min = BridgePowerController::DEFAULT_ALIGNMENT_5_MIN_INTERVAL;
     debug_configuration_system.getConfig("alignmentInterval5Min", strlen("bridgePowerControllerEnabled"), alignmentInterval5Min);
     printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
@@ -377,6 +386,10 @@ static void defaultTask( void *parameters ) {
 
     // // Re-enable low power mode
     lpmPeripheralInactive(LPM_BOOT);
+
+
+    // Drop priority now that we're done booting
+    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), DEFAULT_TASK_PRIORITY);
 
     while(1) {
         /* Do nothing */

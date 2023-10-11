@@ -3,10 +3,13 @@
 #include "task.h"
 
 #include "bcmp.h"
+#include "bcmp_linked_list_generic.h"
 #include "bcmp_neighbors.h"
 #include "device_info.h"
 
 static uint64_t _info_expect_node_id;
+
+static BCMP_Linked_List_Generic _info_request_list;
 
 /*!
   Set node id to expect information from. Will print out the information
@@ -27,7 +30,9 @@ void bcmp_expect_info_from_node_id(uint64_t node_id) {
   \param *addr - ip address to send request to
   \return ERR_OK if successful
 */
-err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr) {
+err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr, void (*cb)(void*)) {
+  _info_request_list.add(target_node_id, cb);
+
   bcmp_device_info_request_t info_req = {
     .target_node_id=target_node_id
   };
@@ -45,7 +50,7 @@ err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr) {
 */
 static err_t bcmp_send_info(const ip_addr_t *dst) {
 
-  char *ver_str = (char *)pvPortMalloc(VER_STR_MAX_LEN);
+  char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
   configASSERT(ver_str);
   memset(ver_str, 0, VER_STR_MAX_LEN);
 
@@ -58,12 +63,12 @@ static err_t bcmp_send_info(const ip_addr_t *dst) {
                         ver_str_len +
                         dev_name_len;
 
-  uint8_t *dev_info_buff = (uint8_t *)pvPortMalloc(info_len);
+  uint8_t *dev_info_buff = static_cast<uint8_t *>(pvPortMalloc(info_len));
   configASSERT(info_len);
 
   memset(dev_info_buff, 0, info_len);
 
-  bcmp_device_info_reply_t *dev_info = (bcmp_device_info_reply_t *)dev_info_buff;
+  bcmp_device_info_reply_t *dev_info = reinterpret_cast<bcmp_device_info_reply_t *>(dev_info_buff);
   dev_info->info.node_id = getNodeId();
 
   // TODO - fill these with actual values
@@ -83,7 +88,7 @@ static err_t bcmp_send_info(const ip_addr_t *dst) {
   memcpy(&dev_info->strings[0], ver_str, ver_str_len);
   memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
 
-  err_t rval = bcmp_tx(dst, BCMP_DEVICE_INFO_REPLY, (uint8_t *)dev_info, info_len);
+  err_t rval = bcmp_tx(dst, BCMP_DEVICE_INFO_REPLY, dev_info_buff, info_len);
 
   vPortFree(dev_info_buff);
   vPortFree(ver_str);
@@ -131,7 +136,7 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
       if(neighbor->version_str != NULL) {
         vPortFree(neighbor->version_str);
       }
-      neighbor->version_str = (char *)pvPortMalloc(dev_info->ver_str_len + 1);
+      neighbor->version_str = static_cast<char *>(pvPortMalloc(dev_info->ver_str_len + 1));
       configASSERT(neighbor->version_str);
       memcpy(neighbor->version_str, &dev_info->strings[0], dev_info->ver_str_len);
       neighbor->version_str[dev_info->ver_str_len] = 0; // null terminate string
@@ -142,7 +147,7 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
       if(neighbor->device_name != NULL) {
         vPortFree(neighbor->device_name);
       }
-      neighbor->device_name = (char *)pvPortMalloc(dev_info->dev_name_len + 1);
+      neighbor->device_name = static_cast<char *>(pvPortMalloc(dev_info->dev_name_len + 1));
       configASSERT(neighbor->device_name);
       memcpy(neighbor->device_name, &dev_info->strings[dev_info->ver_str_len], dev_info->dev_name_len);
       neighbor->device_name[dev_info->dev_name_len] = 0; // null terminate string
@@ -162,26 +167,34 @@ static bool _populate_neighbor_info(bm_neighbor_t *neighbor, bcmp_device_info_re
 err_t bcmp_process_info_reply(bcmp_device_info_reply_t *dev_info) {
   configASSERT(dev_info);
 
-  //
-  // Find neighbor and add info to table if present
-  // Only add neighbor info when received to link local multicast address
-  //
-  bm_neighbor_t *neighbor = bcmp_find_neighbor(dev_info->info.node_id);
-  if(neighbor) {
-    // Update neighbor info
-    _populate_neighbor_info(neighbor, dev_info);
-  } else if (_info_expect_node_id && (dev_info->info.node_id == _info_expect_node_id)) {
-    _info_expect_node_id = 0;
+  bcmp_ll_element_t *element = _info_request_list.find(dev_info->info.node_id);
+  if ((element != NULL) && (element->fp != NULL)) {
+      element->fp(dev_info);
+  } else {
+    //
+    // Find neighbor and add info to table if present
+    // Only add neighbor info when received to link local multicast address
+    //
+    bm_neighbor_t *neighbor = bcmp_find_neighbor(dev_info->info.node_id);
+    if(neighbor) {
+      // Update neighbor info
+      _populate_neighbor_info(neighbor, dev_info);
+    } else if (_info_expect_node_id && (dev_info->info.node_id == _info_expect_node_id)) {
+      _info_expect_node_id = 0;
 
-    // Create temporary neighbor struct that is used by the print function
-    bm_neighbor_t *tmp_neighbor = (bm_neighbor_t *)pvPortMalloc(sizeof(bm_neighbor_t));
-    memset(tmp_neighbor, 0, sizeof(bm_neighbor_t));
+      // Create temporary neighbor struct that is used by the print function
+      bm_neighbor_t *tmp_neighbor = static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
+      memset(tmp_neighbor, 0, sizeof(bm_neighbor_t));
 
-    _populate_neighbor_info(tmp_neighbor, dev_info);
-    bcmp_print_neighbor_info(tmp_neighbor);
+      _populate_neighbor_info(tmp_neighbor, dev_info);
+      bcmp_print_neighbor_info(tmp_neighbor);
 
-    // Clean up
-    configASSERT(bcmp_free_neighbor(tmp_neighbor));
+      // Clean up
+      configASSERT(bcmp_free_neighbor(tmp_neighbor));
+    }
+  }
+  if (element != NULL) {
+    _info_request_list.remove(element);
   }
 
   return ERR_OK;

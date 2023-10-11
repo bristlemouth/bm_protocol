@@ -10,6 +10,7 @@ set(BCMP_FILES
     ${BCMP_DIR}/bcmp_time.cpp
     ${BCMP_DIR}/bcmp_heartbeat.cpp
     ${BCMP_DIR}/bcmp_info.cpp
+    ${BCMP_DIR}/bcmp_linked_list_generic.cpp
     ${BCMP_DIR}/bcmp_neighbors.cpp
     ${BCMP_DIR}/bcmp_ping.cpp
     ${BCMP_DIR}/dfu/bm_dfu_client.cpp
