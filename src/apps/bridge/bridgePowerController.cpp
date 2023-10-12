@@ -201,7 +201,7 @@ void BridgePowerController::_update(
         }
       } else {
         BRIDGE_LOG_PRINT("Bridge State Sampling Off\n");
-        uint32_t nextSampleEpochS = (_alignmentS) ? alignEpoch(_sampleIntervalStartS + _sampleIntervalS) : _sampleIntervalStartS + _sampleIntervalS;
+        uint32_t nextSampleEpochS = alignEpoch(_sampleIntervalStartS + _sampleIntervalS);
         _sampleIntervalStartS = nextSampleEpochS;
         _subSampleIntervalStartS = nextSampleEpochS;
         time_to_sleep_ms =
@@ -282,7 +282,7 @@ uint32_t BridgePowerController::getEpochS() {
 uint32_t BridgePowerController::alignEpoch(uint32_t epochS) {
   uint32_t alignedEpoch = epochS;
   uint32_t alignmentDeltaS = 0;
-  if(epochS % _alignmentS != 0){
+  if(_alignmentS && epochS % _alignmentS != 0){
     alignmentDeltaS = (_alignmentS - (epochS % _alignmentS));
     alignedEpoch = epochS + alignmentDeltaS;
   }
