@@ -75,6 +75,7 @@ private:
   bool _rtcSet;
   bool _initDone;
   bool _subSamplingEnabled;
+  bool _configError;
   adin2111_DeviceHandle_t _adin_handle;
   EventGroupHandle_t _busPowerEventGroup;
   TaskHandle_t _task_handle;
