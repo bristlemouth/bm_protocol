@@ -25,6 +25,14 @@ extern "C" {
 #define APP_PUB_SUB_BM_BRIDGE_PRINTF_TYPE        1
 #define APP_PUB_SUB_BM_BRIDGE_PRINTF_VERSION     1
 
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TOPIC       "bridge/sensor_ind"
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_VERSION     1
+
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TOPIC       "bridge/sensor_agg"
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_VERSION     1
+
 #ifdef __cplusplus
 }
 #endif
