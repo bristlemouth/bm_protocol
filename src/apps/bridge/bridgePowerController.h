@@ -45,12 +45,12 @@ public:
   static constexpr uint32_t DEFAULT_SUBSAMPLE_ENABLED = 0;
   static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_S = (60);
   static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_S = (30);
-  static constexpr uint32_t MIN_SAMPLE_DURATION_S = (1);
-  static constexpr uint32_t MIN_SAMPLE_INTERVAL_S = (1);
+  static constexpr uint32_t MIN_SAMPLE_DURATION_S = (6); 
+  static constexpr uint32_t MIN_SAMPLE_INTERVAL_S = (6); // Set to 6s to allow for enough time for devices to broadcast for the topology.
   static constexpr uint32_t MAX_SAMPLE_INTERVAL_S = (24 * 60 * 60);
   static constexpr uint32_t MAX_SAMPLE_DURATION_S = (24 * 60 * 60);
-  static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_S = (1);
-  static constexpr uint32_t MIN_SUBSAMPLE_DURATION_S = (1);
+  static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_S = (6);
+  static constexpr uint32_t MIN_SUBSAMPLE_DURATION_S = (6);
   static constexpr uint32_t MAX_SUBSAMPLE_INTERVAL_S = (60 * 60);
   static constexpr uint32_t MAX_SUBSAMPLE_DURATION_S = (60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_S = (5 * 60);
