@@ -46,8 +46,7 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
     printf("INVALID SUBSAMPLE DURATION, using default.\n");
     _subsampleDurationS = DEFAULT_SUBSAMPLE_DURATION_S;
   }
-  if(_alignmentS > MAX_ALIGNMENT_S ||
-    _alignmentS < MIN_ALIGNMENT_S) {
+  if(_alignmentS > MAX_ALIGNMENT_S) {
     printf("INVALID ALIGNMENT, using default.\n");
     _alignmentS = DEFAULT_ALIGNMENT_S;
   }
@@ -202,7 +201,7 @@ void BridgePowerController::_update(
         }
       } else {
         BRIDGE_LOG_PRINT("Bridge State Sampling Off\n");
-        uint32_t nextSampleEpochS = alignEpoch(_sampleIntervalStartS + _sampleIntervalS);
+        uint32_t nextSampleEpochS = (_alignmentS) ? alignEpoch(_sampleIntervalStartS + _sampleIntervalS) : _sampleIntervalStartS + _sampleIntervalS;
         _sampleIntervalStartS = nextSampleEpochS;
         _subSampleIntervalStartS = nextSampleEpochS;
         time_to_sleep_ms =

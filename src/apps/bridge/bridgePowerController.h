@@ -12,10 +12,10 @@ class BridgePowerController {
 public:
   explicit BridgePowerController(
       IOPinHandle_t &BusPowerPin,
-      uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S,
-      uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S,
-      uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S,
-      uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S,
+      uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000,
+      uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S * 1000,
       bool subSamplingEnabled = false, bool powerControllerEnabled = false,
       uint32_t alignmentS = DEFAULT_ALIGNMENT_S);
   void powerControlEnable(bool enable);
@@ -45,16 +45,15 @@ public:
   static constexpr uint32_t DEFAULT_SUBSAMPLE_ENABLED = 0;
   static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_S = (60);
   static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_S = (30);
-  static constexpr uint32_t MIN_SAMPLE_INTERVAL_S = (5 * 60);
-  static constexpr uint32_t MIN_SAMPLE_DURATION_S = (60);
+  static constexpr uint32_t MIN_SAMPLE_DURATION_S = (1);
+  static constexpr uint32_t MIN_SAMPLE_INTERVAL_S = (1);
   static constexpr uint32_t MAX_SAMPLE_INTERVAL_S = (24 * 60 * 60);
   static constexpr uint32_t MAX_SAMPLE_DURATION_S = (24 * 60 * 60);
-  static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_S = (12);
-  static constexpr uint32_t MIN_SUBSAMPLE_DURATION_S = (6);
+  static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_S = (1);
+  static constexpr uint32_t MIN_SUBSAMPLE_DURATION_S = (1);
   static constexpr uint32_t MAX_SUBSAMPLE_INTERVAL_S = (60 * 60);
   static constexpr uint32_t MAX_SUBSAMPLE_DURATION_S = (60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_S = (5 * 60);
-  static constexpr uint32_t MIN_ALIGNMENT_S = (5 * 60);
   static constexpr uint32_t MAX_ALIGNMENT_S = (24 * 60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_5_MIN_INTERVAL = (1);
 
