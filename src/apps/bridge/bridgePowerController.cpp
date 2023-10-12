@@ -25,30 +25,34 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
       _subsampleIntervalS(subsampleIntervalMs/1000),
       _subsampleDurationS(subsampleDurationMs/1000), _sampleIntervalStartS(0),
       _subSampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
-      _subSamplingEnabled(subSamplingEnabled), _adin_handle(NULL) {
+      _subSamplingEnabled(subSamplingEnabled), _configError(false), _adin_handle(NULL) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S ||
       _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
+    _configError = true;
     _sampleIntervalS = DEFAULT_SAMPLE_INTERVAL_S;
   }
   if (_sampleDurationS > MAX_SAMPLE_DURATION_S ||
       _sampleDurationS < MIN_SAMPLE_DURATION_S) {
     printf("INVALID SAMPLE DURATION, using default.\n");
+    _configError = true;
     _sampleDurationS = DEFAULT_SAMPLE_DURATION_S;
   }
   if (_subsampleIntervalS > MAX_SUBSAMPLE_INTERVAL_S ||
       _subsampleIntervalS < MIN_SUBSAMPLE_INTERVAL_S) {
     printf("INVALID SUBSAMPLE INTERVAL, using default.\n");
+    _configError = true;
     _subsampleIntervalS = DEFAULT_SUBSAMPLE_INTERVAL_S;
   }
   if (_subsampleDurationS > MAX_SUBSAMPLE_DURATION_S ||
       _subsampleDurationS < MIN_SUBSAMPLE_DURATION_S) {
     printf("INVALID SUBSAMPLE DURATION, using default.\n");
+    _configError = true;
     _subsampleDurationS = DEFAULT_SUBSAMPLE_DURATION_S;
   }
-  if(_alignmentS > MAX_ALIGNMENT_S ||
-    _alignmentS < MIN_ALIGNMENT_S) {
+  if(_alignmentS > MAX_ALIGNMENT_S) {
     printf("INVALID ALIGNMENT, using default.\n");
+    _configError = true;
     _alignmentS = DEFAULT_ALIGNMENT_S;
   }
   _busPowerEventGroup = xEventGroupCreate();
@@ -150,6 +154,9 @@ void BridgePowerController::_update(
           false); // We start Bus on, no need to signal an eth up / power up event to l2 & adin
       vTaskDelay(
           INIT_POWER_ON_TIMEOUT_MS); // Set bus on for two minutes for init.
+      if(_configError) {
+        BRIDGE_LOG_PRINT("Bridge configuration error! Please check configs, using default.\n");
+      }
       static constexpr size_t printBufSize = 200;
       char *printbuf = static_cast<char *>(pvPortMalloc(printBufSize));
       configASSERT(printbuf);
@@ -283,7 +290,7 @@ uint32_t BridgePowerController::getEpochS() {
 uint32_t BridgePowerController::alignEpoch(uint32_t epochS) {
   uint32_t alignedEpoch = epochS;
   uint32_t alignmentDeltaS = 0;
-  if(epochS % _alignmentS != 0){
+  if(_alignmentS && epochS % _alignmentS != 0){
     alignmentDeltaS = (_alignmentS - (epochS % _alignmentS));
     alignedEpoch = epochS + alignmentDeltaS;
   }
