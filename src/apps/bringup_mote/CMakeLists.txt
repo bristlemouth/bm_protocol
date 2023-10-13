@@ -57,6 +57,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
+    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
