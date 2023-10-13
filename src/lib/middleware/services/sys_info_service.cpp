@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "sys_info_svc_reply_msg.h"
 
 using namespace cfg;
 
@@ -62,8 +63,6 @@ static bool sys_info_service_handler(size_t service_strlen, const char *service,
                                    uint8_t *reply_data) {
   (void)(req_data);
   bool rval = false;
-  size_t max_data_len = buffer_len;
-  buffer_len = 0;
   printf("Data received on service: %.*s\n", service_strlen, service);
   do {
     if (req_data_len != 0) {
@@ -73,23 +72,18 @@ static bool sys_info_service_handler(size_t service_strlen, const char *service,
 #ifndef APP_NAME
 #error "APP_NAME must be defined"
 #endif // APP_NAME
-    size_t app_name_strlen = strlen(APP_NAME);
-    const char *app_name = APP_NAME;
-    size_t data_len = sizeof(sys_info_service_data_s) + app_name_strlen;
-    if (data_len > max_data_len) {
-      printf("Data length too large\n");
+    SysInfoSvcReplyMsg::Data d;
+    d.app_name = const_cast<char *>(APP_NAME);
+    d.app_name_strlen = strlen(APP_NAME);
+    d.git_sha = getGitSHA();
+    d.node_id = getNodeId();
+    d.sys_config_crc = _sys_config->getCRC32();
+    size_t encoded_len;
+    if(SysInfoSvcReplyMsg::encode(d, reply_data, buffer_len, &encoded_len) != CborNoError) {
+      printf("Failed to encode sys info service reply\n");
       break;
     }
-    buffer_len = data_len;
-    sys_info_service_data_s *sys_info_service_data =
-        reinterpret_cast<sys_info_service_data_s *>(reply_data);
-    sys_info_service_data->node_id = getNodeId();
-    sys_info_service_data->gitSHA = getGitSHA();
-    sys_info_service_data->sys_config_crc = _sys_config->getCRC32();
-    sys_info_service_data->app_name_strlen = app_name_strlen;
-    if (app_name_strlen > 0) {
-      memcpy(sys_info_service_data->app_name, app_name, app_name_strlen);
-    }
+    buffer_len = encoded_len; // Pass back the encoded length
     rval = true;
   } while (0);
 
