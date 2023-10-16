@@ -54,7 +54,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, 
                          size_t reply_len, uint8_t *reply_data) {
   bool rval = false;
   printf("Msg id: %" PRIu32 "\n", msg_id);
-  SysInfoSvcReplyMsg::Data reply;
+  SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
   do {
     if (ack) {
       if(SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
