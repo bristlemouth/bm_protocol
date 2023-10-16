@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "sys_info_svc_reply_msg.h"
 
 static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
                                const char *commandString);
@@ -51,19 +52,30 @@ static bool reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, const cha
 
 static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, const char *service,
                          size_t reply_len, uint8_t *reply_data) {
+  bool rval = false;
   printf("Msg id: %" PRIu32 "\n", msg_id);
-  if (ack && reply_len >= sizeof(sys_info_service_data_s)) {
-    printf("Service: %.*s\n", service_strlen, service);
-    printf("Reply: \n");
-    sys_info_service_data_s *reply = (sys_info_service_data_s *)reply_data;
-    printf(" * Node id: %" PRIx64 "\n", reply->node_id);
-    printf(" * Git SHA: 0x%08" PRIx32 "\n", reply->gitSHA);
-    printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply->sys_config_crc);
-    printf(" * App name: %.*s\n", reply->app_name_strlen, reply->app_name);
-  } else {
-    printf("NACK\n");
+  SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  do {
+    if (ack) {
+      if(SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+        printf("Failed to decode sys info reply\n");
+        break;
+      }
+      printf("Service: %.*s\n", service_strlen, service);
+      printf("Reply: \n");
+      printf(" * Node id: %" PRIx64 "\n", reply.node_id);
+      printf(" * Git SHA: 0x%08" PRIx32 "\n", reply.git_sha);
+      printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply.sys_config_crc);
+      printf(" * App name: %.*s\n", reply.app_name_strlen, reply.app_name);
+    } else {
+      printf("NACK\n");
+    }
+    rval = true;
+  } while(0);
+  if(reply.app_name) {
+    vPortFree(reply.app_name);
   }
-  return true;
+  return rval;
 }
 
 static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
