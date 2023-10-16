@@ -352,10 +352,10 @@ static void defaultTask( void *parameters ) {
 
     printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
-    power_config pwrcfg = getPowerConfigs(debug_configuration_system);
+    power_config_s pwrcfg = getPowerConfigs(debug_configuration_system);
     BridgePowerController bridge_power_controller(
         VBUS_SW_EN, pwrcfg.sampleIntervalMs, pwrcfg.sampleDurationMs,
-        pwrcfg.subSampleIntervalMs, pwrcfg.subsampleDurationMs,
+        pwrcfg.subsampleIntervalMs, pwrcfg.subsampleDurationMs,
         static_cast<bool>(pwrcfg.subsampleEnabled),
         static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
         (pwrcfg.alignmentInterval5Min * BridgePowerController::DEFAULT_ALIGNMENT_S));

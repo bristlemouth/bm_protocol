@@ -14,9 +14,9 @@ constexpr const char *ALIGNMENT_INTERVAL_5MIN = "alignmentInterval5Min";
 
 } // namespace AppConfig
 
-struct power_config {
-  uint32_t sampleIntervalMs, sampleDurationMs, subSampleIntervalMs, subsampleDurationMs,
+struct power_config_s {
+  uint32_t sampleIntervalMs, sampleDurationMs, subsampleIntervalMs, subsampleDurationMs,
       subsampleEnabled, bridgePowerControllerEnabled, alignmentInterval5Min;
 };
 
-power_config getPowerConfigs(cfg::Configuration &syscfg);
+power_config_s getPowerConfigs(cfg::Configuration &syscfg);

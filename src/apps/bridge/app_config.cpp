@@ -1,8 +1,8 @@
 #include "app_config.h"
 #include "bridgePowerController.h"
 
-power_config getPowerConfigs(cfg::Configuration &syscfg) {
-  power_config pwrcfg;
+power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
+  power_config_s pwrcfg;
 
   pwrcfg.sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000;
   syscfg.getConfig(AppConfig::SAMPLE_DURATION_MS, strlen(AppConfig::SAMPLE_DURATION_MS),
@@ -12,9 +12,9 @@ power_config getPowerConfigs(cfg::Configuration &syscfg) {
   syscfg.getConfig(AppConfig::SAMPLE_DURATION_MS, strlen(AppConfig::SAMPLE_DURATION_MS),
                    pwrcfg.sampleDurationMs);
 
-  pwrcfg.subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000;
+  pwrcfg.subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000;
   syscfg.getConfig(AppConfig::SUBSAMPLE_INTERVAL_MS, strlen(AppConfig::SUBSAMPLE_INTERVAL_MS),
-                   pwrcfg.subSampleIntervalMs);
+                   pwrcfg.subsampleIntervalMs);
 
   pwrcfg.subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000;
   syscfg.getConfig(AppConfig::SUBSAMPLE_DURATION_MS, strlen(AppConfig::SUBSAMPLE_DURATION_MS),
