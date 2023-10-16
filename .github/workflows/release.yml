@@ -25,6 +25,9 @@ jobs:
       run:
         shell: bash -l {0}
 
+    permissions:
+      contents: write # Allows the action to create a release
+
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
