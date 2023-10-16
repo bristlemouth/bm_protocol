@@ -79,6 +79,7 @@ static bool sys_info_service_handler(size_t service_strlen, const char *service,
     d.node_id = getNodeId();
     d.sys_config_crc = _sys_config->getCRC32();
     size_t encoded_len;
+    // Will return CborErrorOutOfMemory if buffer_len is too small
     if(SysInfoSvcReplyMsg::encode(d, reply_data, buffer_len, &encoded_len) != CborNoError) {
       printf("Failed to encode sys info service reply\n");
       break;
