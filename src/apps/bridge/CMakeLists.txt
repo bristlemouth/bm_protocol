@@ -237,6 +237,7 @@ set(APP_LIBS
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/app_config.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp

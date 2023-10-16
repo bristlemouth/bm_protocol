@@ -15,6 +15,7 @@
 #include "task.h"
 #include "task_priorities.h"
 
+#include "app_config.h"
 #include "bm_l2.h"
 #include "bm_pubsub.h"
 #include "bristlemouth.h"
@@ -349,24 +350,16 @@ static void defaultTask( void *parameters ) {
     debugDfuInit(&dfu_partition);
     bcl_init(&dfu_partition,&debug_configuration_user, &debug_configuration_system);
 
-    uint32_t sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000;
-    debug_configuration_system.getConfig("sampleIntervalMs", strlen("sampleIntervalMs"),sampleIntervalMs);
-    uint32_t sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000;
-    debug_configuration_system.getConfig("sampleDurationMs",strlen("sampleDurationMs"),sampleDurationMs);
-    uint32_t subSampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000;
-    debug_configuration_system.getConfig("subSampleIntervalMs",strlen("subSampleIntervalMs"),subSampleIntervalMs);
-    uint32_t subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000;
-    debug_configuration_system.getConfig("subsampleDurationMs",strlen("subsampleDurationMs"),subsampleDurationMs);
-    uint32_t subsampleEnabled = BridgePowerController::DEFAULT_SUBSAMPLE_ENABLED;
-    debug_configuration_system.getConfig("subsampleEnabled", strlen("subsampleEnabled"), subsampleEnabled);
-    uint32_t bridgePowerControllerEnabled = BridgePowerController::DEFAULT_POWER_CONTROLLER_ENABLED;
-    debug_configuration_system.getConfig("bridgePowerControllerEnabled", strlen("bridgePowerControllerEnabled"), bridgePowerControllerEnabled);
-    uint32_t alignmentInterval5Min = BridgePowerController::DEFAULT_ALIGNMENT_5_MIN_INTERVAL;
-    debug_configuration_system.getConfig("alignmentInterval5Min", strlen("bridgePowerControllerEnabled"), alignmentInterval5Min);
     printf("Using bridge power controller.\n");
     IOWrite(&BOOST_EN, 1);
-    BridgePowerController bridge_power_controller(VBUS_SW_EN, sampleIntervalMs,
-        sampleDurationMs, subSampleIntervalMs, subsampleDurationMs, static_cast<bool>(subsampleEnabled), static_cast<bool>(bridgePowerControllerEnabled), (alignmentInterval5Min * BridgePowerController::DEFAULT_ALIGNMENT_S));
+    power_config pwrcfg = getPowerConfigs(debug_configuration_system);
+    BridgePowerController bridge_power_controller(
+        VBUS_SW_EN, pwrcfg.sampleIntervalMs, pwrcfg.sampleDurationMs,
+        pwrcfg.subSampleIntervalMs, pwrcfg.subsampleDurationMs,
+        static_cast<bool>(pwrcfg.subsampleEnabled),
+        static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
+        (pwrcfg.alignmentInterval5Min * BridgePowerController::DEFAULT_ALIGNMENT_S));
+
     ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user, &debug_configuration_system, &debug_configuration_hardware);
     topology_sampler_init(&bridge_power_controller, &debug_configuration_hardware, &debug_configuration_system);
     debug_ncp_init();
