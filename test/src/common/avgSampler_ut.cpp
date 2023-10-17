@@ -205,6 +205,10 @@ TEST_F(AvgSamplerTest, circ) {
     // Use sample+1 as timestamp for now
     EXPECT_TRUE(sampler.addSampleTimestamped(degToRad(samplesDeg[sample]), (sample + 1)));
   }
+  // Tested against custom python impl:
+  // The wave std (in radians) is:
+  // np.sqrt(2 - 2 * np.sqrt(a1 ** 2 + b1 ** 2)
+  // where a1 is the mean of the cosine of the angles, and b1 is the mean of the sine of the angles.
   EXPECT_NEAR(sampler.getCircularStd(),  0.8125, 0.0001);
   EXPECT_NEAR(sampler.getCircularMean(), 1.0493, 0.0001); // Tested vs https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.circmean.html
 }
