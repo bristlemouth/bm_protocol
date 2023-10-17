@@ -228,3 +228,76 @@ double AveragingSampler::getVariance(double mean, bool useKahan) {
   }
   return var;
 }
+
+/*!
+  Compute sin or cos sum of all the samples
+
+  \param[in] type - sin or cos
+  \return trigonometric sum of all the samples
+ */
+double AveragingSampler::getTrigSum(TrigMeanType_e type) {
+  configASSERT(_samples != NULL);
+  double total = 0.0;
+  uint32_t numSamples = getNumSamples();
+  for (uint32_t i = 0; i < numSamples; i++) {
+    if(type == TRIG_MEAN_TYPE_SIN){
+      total += sin(_samples[i]);
+    }
+    else if(type == TRIG_MEAN_TYPE_COS){
+      total += cos(_samples[i]);
+    }
+    else {
+      configASSERT(false);
+    }
+  }
+  return total;
+}
+
+/*!
+  Compute sin or cos mean of all the samples
+
+  \param[in] type - sin or cos
+  \return trigonometric mean of all the samples (NaN if no samples available
+*/
+double AveragingSampler::getTrigMean(TrigMeanType_e type) {
+  configASSERT(_samples != NULL);
+  double mean = 0.0;
+
+  uint32_t numSamples = getNumSamples();
+  double total = getTrigSum(type);
+  // Don't divide by zero!
+  if (numSamples) {
+    mean = total / numSamples;
+  } else {
+    mean = NAN;
+  }
+
+  return mean;
+}
+
+/*!
+  Compute circular mean of all the samples
+  https://en.wikipedia.org/wiki/Circular_mean
+
+  \return circular mean of all the samples
+*/
+double AveragingSampler::getCircularMean() {
+  configASSERT(_samples != NULL);
+  double sin_sum = getTrigSum(TRIG_MEAN_TYPE_SIN);
+  double cos_sum = getTrigSum(TRIG_MEAN_TYPE_COS);
+  return atan2(sin_sum, cos_sum);
+}
+
+/*!
+  Compute circular standard deviation of all the samples
+
+  \return circular standard deviation of all the samples
+ */
+double AveragingSampler::getCircularStd() {
+  double a1 = getTrigMean(TRIG_MEAN_TYPE_COS);
+  double b1 = getTrigMean(TRIG_MEAN_TYPE_SIN);
+  if(a1 == NAN || b1 == NAN){
+    return NAN;
+  }
+  return sqrt(2 - 2 * sqrt(pow(a1, 2) + pow(b1,2)));
+}
