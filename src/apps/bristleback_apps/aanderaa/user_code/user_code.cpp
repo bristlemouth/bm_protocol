@@ -113,9 +113,14 @@ currentData_t aggregateStats(AveragingSampler &sampler) {
 
 static bool aanderaaSensorWatchdogHandler(void *arg) {
   (void)(arg);
-  IOWrite(&BB_PL_BUCK_EN, 1);
-  vTaskDelay(pdMS_TO_TICKS(AANDERAA_RESET_TIME_MS));
-  IOWrite(&BB_PL_BUCK_EN, 0);
+  SensorWatchdog::sensor_watchdog_t * watchdog = reinterpret_cast<SensorWatchdog::sensor_watchdog_t *>(arg);
+  if(watchdog->_triggerCount < watchdog->_max_triggers) {
+    IOWrite(&BB_PL_BUCK_EN, 1);
+    vTaskDelay(pdMS_TO_TICKS(AANDERAA_RESET_TIME_MS));
+    IOWrite(&BB_PL_BUCK_EN, 0);
+  } else {
+    IOWrite(&BB_PL_BUCK_EN, 1);
+  }
   return true;
 }
 

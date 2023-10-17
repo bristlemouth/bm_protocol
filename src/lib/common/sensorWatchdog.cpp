@@ -8,17 +8,6 @@ namespace SensorWatchdog {
 
 #define WATCHDOG_PET_TIMEOUT_MS (10)
 
-typedef struct sensor_watchdog {
-    const char * _id;
-    uint32_t _timeoutMs;
-    sensor_watchdog_handler _handler;
-    const char * _logHandle;
-    TimerHandle_t _timerHandle;
-    sensor_watchdog * _next;
-    uint32_t _max_triggers;
-    uint32_t _triggerCount;
-} sensor_watchdog_t;
-
 static sensor_watchdog_t * _sensor_watchdog_list = NULL;
 static SemaphoreHandle_t _sensor_watchdog_list_mutex = NULL;
 
