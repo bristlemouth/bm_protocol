@@ -54,6 +54,7 @@
 #include "watchdog.h"
 #include "debug_bm_service.h"
 #include "sys_info_service.h"
+#include "sensorWatchdog.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -387,6 +388,7 @@ static void defaultTask(void *parameters) {
   sensorsInit();
   debugBmServiceInit();
   sys_info_service_init(debug_configuration_system);
+  SensorWatchdog::SensorWatchdogInit();
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
   // Turn of the bristleback leds
