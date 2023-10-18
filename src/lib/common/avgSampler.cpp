@@ -290,6 +290,7 @@ double AveragingSampler::getCircularMean() {
 
 /*!
   Compute circular standard deviation of all the samples
+Per Kuik et al 1988: https://doi.org/10.1175/1520-0485(1988)018%3C1020:AMFTRA%3E2.0.CO;2
 
   \return circular standard deviation of all the samples
  */
