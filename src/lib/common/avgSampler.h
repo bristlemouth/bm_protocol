@@ -8,6 +8,11 @@
 
 class AveragingSampler {
 public:
+  typedef enum TrigMeanType {
+    TRIG_MEAN_TYPE_SIN,
+    TRIG_MEAN_TYPE_COS,
+  } TrigMeanType_e;
+
   AveragingSampler();
   ~AveragingSampler();
   bool addSample(double sample);
@@ -18,6 +23,10 @@ public:
   double kahanSum(double total, double input, double &c);
   double getMax();
   double getMin();
+  double getTrigSum(TrigMeanType_e type);
+  double getTrigMean(TrigMeanType_e type);
+  double getCircularMean();
+  double getCircularStd();
   void initBuffer(uint32_t maxSamples);
   void clear();
   uint32_t getNumSamples();

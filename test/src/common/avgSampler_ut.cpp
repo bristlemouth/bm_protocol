@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "avgSampler.h"
+#include "util.h"
 
 // The fixture for testing class Foo.
 class AvgSamplerTest : public ::testing::Test {
@@ -191,4 +192,23 @@ TEST_F(AvgSamplerTest, timestamp_test) {
   EXPECT_TRUE(sampler.addSampleTimestamped(4.0));
 
   EXPECT_EQ(sampler.getNumSamples(), 3);
+}
+
+
+TEST_F(AvgSamplerTest, circ) {
+  AveragingSampler sampler;
+  sampler.initBuffer(4);
+  double samplesDeg[] = {90, 120, 33, 355};
+  const uint32_t num_samples = sizeof(samplesDeg) / sizeof(double);
+
+  for (uint16_t sample = 0; sample < num_samples; sample++) {
+    // Use sample+1 as timestamp for now
+    EXPECT_TRUE(sampler.addSampleTimestamped(degToRad(samplesDeg[sample]), (sample + 1)));
+  }
+  // Tested against custom python impl:
+  // The wave std (in radians) is:
+  // np.sqrt(2 - 2 * np.sqrt(a1 ** 2 + b1 ** 2)
+  // where a1 is the mean of the cosine of the angles, and b1 is the mean of the sine of the angles.
+  EXPECT_NEAR(sampler.getCircularStd(),  0.8125, 0.0001);
+  EXPECT_NEAR(sampler.getCircularMean(), 1.0493, 0.0001); // Tested vs https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.circmean.html
 }

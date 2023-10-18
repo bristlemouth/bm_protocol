@@ -283,6 +283,9 @@ target_sources(avgSampler
     # File we're testing
     ${SRC_DIR}/lib/common/avgSampler.cpp
 
+    # Support files 
+    ${SRC_DIR}/lib/common/util.c
+
     # Unit test wrapper for test
     avgSampler_ut.cpp
 )

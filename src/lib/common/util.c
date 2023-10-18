@@ -295,3 +295,13 @@ char *duplicateStr(const char *inStr) {
   }
   return true;
 }
+
+/*!
+  Convert degrees to radians
+
+  \param[in] deg - degrees
+  \return radians
+*/
+double degToRad(double deg) {
+  return deg * (M_PI / 180.0);
+}

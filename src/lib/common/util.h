@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "FreeRTOS.h"
 #include "timers.h"
+#include "math.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +27,7 @@ uint32_t timeRemainingGeneric(uint32_t startTime, uint32_t currentTime, uint32_t
 
 char *duplicateStr(const char *inStr);
 bool isASCIIString(const char *str);
+double degToRad(double deg);
 
 #define timeRemainingTicks(startTicks, timeoutTicks) timeRemainingGeneric(startTicks, xTaskGetTickCount(), timeoutTicks)
 #define timeRemainingTicksFromISR(startTicks, timeoutTicks) timeRemainingGeneric(startTicks, xTaskGetTickCountFromISR(), timeoutTicks)
