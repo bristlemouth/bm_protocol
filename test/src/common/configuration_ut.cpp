@@ -296,3 +296,68 @@ TEST_F(ConfigurationTest, BadCborGetSet){
     key_list = config.getStoredKeys(num_keys);
     EXPECT_EQ(num_keys,1);
 }
+
+TEST_F(ConfigurationTest, AsCborMap) {
+  uint8_t buffer[100];
+  size_t buffer_size = sizeof(buffer);
+
+  const ext_flash_partition_t test_configuration = {
+      .fa_off = 4096,
+      .fa_size = 10000,
+  };
+  NvmPartition testPartition(_storage, test_configuration);
+  Configuration config(testPartition, ram_hardware_configuration,
+                       RAM_HARDWARE_CONFIG_SIZE_BYTES);
+
+  uint32_t foo = 42;
+  config.setConfig("foo", strlen("foo"), foo);
+
+  int32_t bar = -1000;
+  config.setConfig("bar", strlen("bar"), bar);
+
+  float baz = 3.14159;
+  config.setConfig("baz", strlen("baz"), baz);
+
+  const char *silly = "The quick brown fox jumps over the lazy dog";
+  config.setConfig("silly", strlen("silly"), silly, strlen(silly));
+
+  uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef, 0x5a, 0xad, 0xda, 0xad, 0xb0, 0xdd};
+  config.setConfig("bytes", strlen("bytes"), bytes, sizeof(bytes));
+
+  EXPECT_EQ(config.asCborMap(buffer, buffer_size), true);
+
+  /*
+  From https://cbor.me/
+  A5                                    # map(5)
+   63                                   # text(3)
+      666F6F                            # "foo"
+   18 2A                                # unsigned(42)
+   63                                   # text(3)
+      626172                            # "bar"
+   39 03E7                              # negative(999)
+   63                                   # text(3)
+      62617A                            # "baz"
+   FA 40490FD0                          # primitive(1078530000)
+   65                                   # text(5)
+      73696C6C79                        # "silly"
+   78 2B                                # text(43)
+      54686520717569636B2062726F776E20666F78206A756D7073206F76657220746865206C617A7920646F67 # "The quick brown fox jumps over the lazy dog"
+   65                                   # text(5)
+      6279746573                        # "bytes"
+   4A                                   # bytes(10)
+      DEADBEEF5AADDAADB0DD              # "ޭ\xBE\xEFZ\xADڭ\xB0\xDD"
+  */
+  EXPECT_EQ(buffer_size, 91);
+  EXPECT_EQ(buffer[0], 0xa5);
+  EXPECT_EQ(buffer[1], 0x63);
+  EXPECT_EQ(buffer[2], 0x66);
+  EXPECT_EQ(buffer[3], 0x6f);
+  EXPECT_EQ(buffer[4], 0x6f);
+  EXPECT_EQ(buffer[5], 0x18);
+  EXPECT_EQ(buffer[18], 0xfa);
+  EXPECT_EQ(buffer[23], 0x65);
+  EXPECT_EQ(buffer[29], 0x78);
+  EXPECT_EQ(buffer[30], 0x2b);
+  EXPECT_EQ(buffer[74], 0x65);
+  EXPECT_EQ(buffer[80], 0x4a);
+}

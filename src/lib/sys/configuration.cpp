@@ -245,6 +245,106 @@ bool Configuration::getConfigCbor(const char * key, size_t key_len, uint8_t *val
     return rval;
 }
 
+/*! \brief Encode the entire config partition as a CBOR map.
+    \param[out] buffer The destination for the encoded CBOR bytes.
+    \param[in,out] buffer_len in: The length in bytes of the given buffer.
+                              out: The length in bytes of the encoded CBOR.
+    \return True on success, false on failure.
+ */
+bool Configuration::asCborMap(uint8_t *buffer, size_t &buffer_len) {
+  configASSERT(buffer);
+  bool success = false;
+  size_t original_len = buffer_len;
+
+  uint32_t tmpU;
+  int32_t tmpI;
+  float tmpF;
+
+  char tmpS[MAX_STR_LEN_BYTES];
+  size_t tmpSSize = MAX_STR_LEN_BYTES;
+
+  uint8_t tmpB[MAX_STR_LEN_BYTES];
+  size_t tmpBSize = MAX_STR_LEN_BYTES;
+
+  CborEncoder encoder;
+  CborEncoder map;
+  CborError err;
+  cbor_encoder_init(&encoder, buffer, buffer_len, 0);
+
+  do {
+    err = cbor_encoder_create_map(&encoder, &map, _ram_partition->header.numKeys);
+    if (err != CborNoError && err != CborErrorOutOfMemory) {
+      break;
+    }
+
+    for (size_t i = 0; i < _ram_partition->header.numKeys; i++) {
+      ConfigKey_t key = _ram_partition->keys[i];
+      err = cbor_encode_text_stringz(&map, key.keyBuffer);
+      if (err != CborNoError && err != CborErrorOutOfMemory) {
+        break;
+      }
+
+      bool internalSuccess = true;
+      switch (key.valueType) {
+      case UINT32:
+        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpU);
+        if (internalSuccess) {
+          err = cbor_encode_uint(&map, tmpU);
+        }
+        break;
+      case INT32:
+        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpI);
+        if (internalSuccess) {
+          err = cbor_encode_int(&map, tmpI);
+        }
+        break;
+      case FLOAT:
+        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpF);
+        if (internalSuccess) {
+          err = cbor_encode_float(&map, tmpF);
+        }
+        break;
+      case STR:
+        tmpSSize = MAX_STR_LEN_BYTES;
+        memset(tmpS, 0, MAX_STR_LEN_BYTES);
+        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpS, tmpSSize);
+        if (internalSuccess) {
+          err = cbor_encode_text_string(&map, tmpS, tmpSSize);
+        }
+        break;
+      case BYTES:
+        tmpBSize = MAX_STR_LEN_BYTES;
+        memset(tmpB, 0, MAX_STR_LEN_BYTES);
+        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpB, tmpBSize);
+        if (internalSuccess) {
+          err = cbor_encode_byte_string(&map, tmpB, tmpBSize);
+        }
+        break;
+      }
+
+      if (!internalSuccess || (err != CborNoError && err != CborErrorOutOfMemory)) {
+        break; // out of for loop
+      }
+    }
+
+    if (err == CborNoError || err == CborErrorOutOfMemory) {
+      err = cbor_encoder_close_container(&encoder, &map);
+    }
+
+    if (err == CborErrorOutOfMemory) {
+      size_t needed = cbor_encoder_get_extra_bytes_needed(&encoder);
+      printf("Encoding failed, buffer too small. Need %zu more bytes than the %zu originally "
+             "given, or %zu total.\n",
+             needed, original_len, original_len + needed);
+    } else if (err == CborNoError) {
+      buffer_len = cbor_encoder_get_buffer_size(&encoder, buffer);
+      success = true;
+    }
+  } while (0);
+
+  return success;
+}
+
 bool Configuration::prepareCborEncoder(const char * key, size_t key_len, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists) {
     configASSERT(key);
     bool rval = false;
