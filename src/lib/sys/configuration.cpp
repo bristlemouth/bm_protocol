@@ -31,8 +31,14 @@ bool Configuration::loadAndVerifyNvmConfig(void) {
         if(!_flash_partition.read(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
             break;
         }
-        uint32_t computed_crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
-        if(_ram_partition->header.crc32 != computed_crc32) {
+        size_t buffer_len = sizeof(ConfigPartition_t);
+        uint8_t buffer[buffer_len];
+        bool encodeSuccess = asCborMap(buffer, buffer_len);
+        if (!encodeSuccess) {
+            break;
+        }
+        uint32_t computed_crc32 = crc32_ieee(buffer, buffer_len);
+        if (_ram_partition->header.crc32 != computed_crc32) {
             break;
         }
         rval = true;
@@ -671,8 +677,16 @@ const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
 bool Configuration::saveConfig(bool restart) {
     bool rval = false;
     do {
-        _ram_partition->header.crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
-        if(!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
+        size_t buffer_len = sizeof(ConfigPartition_t);
+        uint8_t buffer[buffer_len];
+        bool encodeSuccess = asCborMap(buffer, buffer_len);
+        if (!encodeSuccess) {
+            break;
+        }
+        _ram_partition->header.crc32 = crc32_ieee(buffer, buffer_len);
+        if (!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES,
+                                    reinterpret_cast<uint8_t *>(_ram_partition),
+                                    sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)) {
             break;
         }
         if (restart) {
