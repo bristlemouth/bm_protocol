@@ -1,10 +1,12 @@
 #include "gtest/gtest.h"
 
-#include "nvmPartition.h"
-#include "mock_storage_driver.h"
-#include "ram_partitions.h"
 #include "configuration.h"
 #include "fff.h"
+#include "mock_storage_driver.h"
+#include "nvmPartition.h"
+#include "ram_partitions.h"
+
+#include "FreeRTOS.h"
 
 DEFINE_FFF_GLOBALS;
 
@@ -298,9 +300,6 @@ TEST_F(ConfigurationTest, BadCborGetSet){
 }
 
 TEST_F(ConfigurationTest, AsCborMap) {
-  uint8_t buffer[100];
-  size_t buffer_size = sizeof(buffer);
-
   const ext_flash_partition_t test_configuration = {
       .fa_off = 4096,
       .fa_size = 10000,
@@ -324,7 +323,9 @@ TEST_F(ConfigurationTest, AsCborMap) {
   uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef, 0x5a, 0xad, 0xda, 0xad, 0xb0, 0xdd};
   config.setConfig("bytes", strlen("bytes"), bytes, sizeof(bytes));
 
-  EXPECT_EQ(config.asCborMap(buffer, buffer_size), true);
+  size_t buffer_size = 0;
+  uint8_t *buffer = config.asCborMap(buffer_size);
+  EXPECT_NE(buffer, nullptr);
 
   /*
   From https://cbor.me/
@@ -360,4 +361,5 @@ TEST_F(ConfigurationTest, AsCborMap) {
   EXPECT_EQ(buffer[30], 0x2b);
   EXPECT_EQ(buffer[74], 0x65);
   EXPECT_EQ(buffer[80], 0x4a);
+  vPortFree(buffer);
 }

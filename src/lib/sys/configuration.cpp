@@ -31,8 +31,14 @@ bool Configuration::loadAndVerifyNvmConfig(void) {
         if(!_flash_partition.read(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
             break;
         }
-        uint32_t computed_crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
-        if(_ram_partition->header.crc32 != computed_crc32) {
+        size_t buffer_size = 0;
+        uint8_t *buffer = asCborMap(buffer_size);
+        if (!buffer) {
+            break;
+        }
+        uint32_t computed_crc32 = crc32_ieee(buffer, buffer_size);
+        vPortFree(buffer);
+        if (_ram_partition->header.crc32 != computed_crc32) {
             break;
         }
         rval = true;
@@ -246,15 +252,17 @@ bool Configuration::getConfigCbor(const char * key, size_t key_len, uint8_t *val
 }
 
 /*! \brief Encode the entire config partition as a CBOR map.
-    \param[out] buffer The destination for the encoded CBOR bytes.
-    \param[in,out] buffer_len in: The length in bytes of the given buffer.
-                              out: The length in bytes of the encoded CBOR.
-    \return True on success, false on failure.
+    \param buffer_size[out] The size in bytes of the encoded map.
+    \return Pointer to a heap buffer containing the encoded map, or NULL on failure.
+    \warning The caller is responsible for freeing the returned buffer!
  */
-bool Configuration::asCborMap(uint8_t *buffer, size_t &buffer_len) {
-  configASSERT(buffer);
-  bool success = false;
-  size_t original_len = buffer_len;
+uint8_t *Configuration::asCborMap(size_t &buffer_size) {
+  buffer_size = 0;
+  size_t allocated_size = 512;
+  uint8_t *buffer = static_cast<uint8_t *>(pvPortMalloc(allocated_size));
+  if (!buffer) {
+    return NULL;
+  }
 
   uint32_t tmpU;
   int32_t tmpI;
@@ -269,9 +277,11 @@ bool Configuration::asCborMap(uint8_t *buffer, size_t &buffer_len) {
   CborEncoder encoder;
   CborEncoder map;
   CborError err;
-  cbor_encoder_init(&encoder, buffer, buffer_len, 0);
+  bool shouldRetry;
 
   do {
+    shouldRetry = false;
+    cbor_encoder_init(&encoder, buffer, allocated_size, 0);
     err = cbor_encoder_create_map(&encoder, &map, _ram_partition->header.numKeys);
     if (err != CborNoError && err != CborErrorOutOfMemory) {
       break;
@@ -333,16 +343,26 @@ bool Configuration::asCborMap(uint8_t *buffer, size_t &buffer_len) {
 
     if (err == CborErrorOutOfMemory) {
       size_t needed = cbor_encoder_get_extra_bytes_needed(&encoder);
-      printf("Encoding failed, buffer too small. Need %zu more bytes than the %zu originally "
-             "given, or %zu total.\n",
-             needed, original_len, original_len + needed);
+      printf("Encoding failed, buffer too small. Will retry. "
+             "Need %zu more bytes than the %zu originally given, or %zu total.\n",
+             needed, allocated_size, allocated_size + needed);
+      vPortFree(buffer);
+      allocated_size += needed;
+      buffer = static_cast<uint8_t *>(pvPortMalloc(allocated_size));
+      if (!buffer) {
+        break;
+      }
+      shouldRetry = true;
     } else if (err == CborNoError) {
-      buffer_len = cbor_encoder_get_buffer_size(&encoder, buffer);
-      success = true;
+      buffer_size = cbor_encoder_get_buffer_size(&encoder, buffer);
+    } else {
+      printf("Failed to encode config as cbor map, err=%" PRIu32 "\n", err);
+      vPortFree(buffer);
+      buffer = NULL;
     }
-  } while (0);
+  } while (shouldRetry);
 
-  return success;
+  return buffer;
 }
 
 bool Configuration::prepareCborEncoder(const char * key, size_t key_len, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists) {
@@ -671,8 +691,16 @@ const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
 bool Configuration::saveConfig(bool restart) {
     bool rval = false;
     do {
-        _ram_partition->header.crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
-        if(!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
+        size_t buffer_size = 0;
+        uint8_t *buffer = asCborMap(buffer_size);
+        if (!buffer) {
+            break;
+        }
+        _ram_partition->header.crc32 = crc32_ieee(buffer, buffer_size);
+        vPortFree(buffer);
+        if (!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES,
+                                    reinterpret_cast<uint8_t *>(_ram_partition),
+                                    sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)) {
             break;
         }
         if (restart) {
