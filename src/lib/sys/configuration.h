@@ -57,7 +57,7 @@ public:
     const ConfigKey_t* getStoredKeys(uint8_t &num_stored_keys);
     bool setConfigCbor(const char * key, size_t key_len, uint8_t *value, size_t value_len);
     bool removeKey(const char * key, size_t key_len);
-    bool asCborMap(uint8_t *buffer, size_t &buffer_len);
+    uint8_t *asCborMap(size_t &buffer_size);
     static const char* dataTypeEnumToStr(ConfigDataTypes_e type);
     bool saveConfig(bool restart=true);
     bool getValueSize(const char * key, size_t key_len, size_t &size);
