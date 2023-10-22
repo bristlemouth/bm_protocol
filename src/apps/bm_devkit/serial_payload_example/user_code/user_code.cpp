@@ -16,21 +16,40 @@
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
+#define DEFAULT_BAUD_RATE 9600
+#define DEFAULT_LINE_TERM 10 // FL / '\n', 0x0A
+#define BYTES_CLUSTER_MS 50
+
+// app_main passes a handle to the user config partition in NVM.
+extern cfg::Configuration *userConfigurationPartition;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
+static u_int32_t baud_rate_config = DEFAULT_BAUD_RATE;
+static u_int32_t line_term_config = DEFAULT_LINE_TERM;
 
 // A buffer for our data from the payload uart
 char payload_buffer[2048];
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
+  // Retrieve user-set config values out of NVM.
+  userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
+                                        baud_rate_config);
+  userConfigurationPartition->getConfig("plUartLineTerm", strlen("plUartLineTerm"),
+                                        line_term_config);
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
-  PLUART::setBaud(9600);
+  PLUART::setBaud(baud_rate_config);
+  // Enable passing raw bytes to user app.
+  PLUART::setUseByteStreamBuffer(true);
+  // Enable parsing lines and passing to user app.
+  /// Warning: PLUART only stores a single line at a time. If your attached payload sends lines
+  /// faster than the app reads them, they will be overwritten and data will be lost.
+  PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
-  PLUART::setTerminationCharacter('\n');
+  PLUART::setTerminationCharacter((char)line_term_config);
   // Turn on the UART.
   PLUART::enable();
   // Enable the input to the Vout power supply.
@@ -81,8 +100,40 @@ void loop(void) {
     led1State = false;
   }
 
+  // Read a cluster of bytes if available
+  // -- A timer is used to try to keep clusters of bytes (say from lines) in the same output.
+  static int64_t readingBytesTimer = -1;
+  // Note - PLUART::setUseByteStreamBuffer must be set true in setup to enable bytes.
+  if (readingBytesTimer == -1 && PLUART::byteAvailable()) {
+    // Get the RTC if available
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    char rtcTimeBuffer[32];
+    rtcPrint(rtcTimeBuffer, &time_and_date);
+    printf("[payload-bytes] | tick: %llu, rtc: %s, bytes:", uptimeGetMs(),
+           rtcTimeBuffer);
+    // not very readable, but it's a compact trick to overload our timer variable with a -1 flag
+    readingBytesTimer = (int64_t)((u_int32_t)uptimeGetMs());
+  }
+  while (PLUART::byteAvailable()) {
+    readingBytesTimer = (int64_t)((u_int32_t)uptimeGetMs());
+    uint8_t byte_read = PLUART::readByte();
+    printf("%02X ", byte_read);
+  }
+  if (readingBytesTimer > -1 &&
+      (u_int32_t)uptimeGetMs() - (u_int32_t)readingBytesTimer >= BYTES_CLUSTER_MS) {
+    printf("\n");
+    readingBytesTimer = -1;
+  }
+
   // Read a line if it is available
+  // Note - PLUART::setUseLineBuffer must be set true in setup to enable lines.
   if (PLUART::lineAvailable()) {
+    // Shortcut the raw bytes cluster completion so the parsed line will be on a new console line
+    if (readingBytesTimer > -1) {
+      printf("\n");
+      readingBytesTimer = -1;
+    }
     uint16_t read_len =
         PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
@@ -97,7 +148,7 @@ void loop(void) {
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
     bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
-    printf("[payload] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
+    printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
            rtcTimeBuffer, read_len, payload_buffer);
 
     ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
