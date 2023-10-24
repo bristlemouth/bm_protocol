@@ -336,6 +336,10 @@ void loop(void) {
     d.max_tilt_deg = parser.getValue(MAX_TILT).data.double_val;
     d.std_tilt_deg = parser.getValue(STD_TILT).data.double_val;
     d.temperature_deg_c = parser.getValue(TEMP).data.double_val;
+    RTCTimeAndDate_t datetime;
+    if(rtcGet(&datetime) == pdPASS){
+      d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
+    }
 
     if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
                                 &encoded_len) == CborNoError) {
