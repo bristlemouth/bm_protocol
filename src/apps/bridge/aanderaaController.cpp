@@ -91,7 +91,9 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
       size_t log_buflen =
           snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                    "%" PRIx64 "," // Node Id
-                   "%" PRIu64 "," // Uptime
+                   "%" PRIu64 "," // reading_uptime_millis
+                   "%" PRIu64 "," // reading_time_utc_s
+                   "%" PRIu64 "," // sensor_reading_time_s
                    "%.3f," // abs_speed_cm_s
                    "%.3f," // abs_tilt_deg
                    "%.3f," // direction_deg_m
@@ -103,7 +105,7 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
                    "%.3f," // std_tilt_deg
                    "%.3f," // temperature_deg_c
                    "%.3f\n", // north_cm_s
-                   node_id, d.header.reading_uptime_millis, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
+                   node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_s, d.header.sensor_reading_time_s, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
                    d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.standard_ping_std_cm_s,
                    d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
       if (log_buflen > 0) {
