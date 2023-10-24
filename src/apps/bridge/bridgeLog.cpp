@@ -12,12 +12,13 @@ void bridgeLogPrintf(const char *str, size_t len) {
 
 void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t len) {
     if(len > 0){
-        printf("[%s] %.*s", (type == AANDERAA_IND) ? "AANDERAA_IND" : "AANDERAA_AGG", len, str);
         switch(type) {
             case AANDERAA_IND:
+                printf("[%s] %.*s", "AANDERAA_IND", len, str);
                 bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_AANDERAA_IND_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_AANDERAA_IND_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_AANDERAA_IND_TYPE, APP_PUB_SUB_BM_BRIDGE_AANDERAA_IND_VERSION);
                 break;
             case AANDERAA_AGG:
+                printf("[%s] %.*s", "AANDERAA_AGG", len, str);
                 bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TYPE, APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_VERSION);
                 break;
             default:
