@@ -366,7 +366,7 @@ static void defaultTask( void *parameters ) {
     debug_ncp_init();
     debugBmServiceInit();
     sys_info_service_init(debug_configuration_system);
-    aanderaControllerInit(&bridge_power_controller);
+    aanderaControllerInit(&bridge_power_controller, &debug_configuration_user);
     IOWrite(&ALARM_OUT, 1);
     IOWrite(&LED_BLUE, LED_OFF);
 
