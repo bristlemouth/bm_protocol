@@ -15,7 +15,7 @@ static constexpr uint32_t DEFAULT_SERVICE_REQUEST_TIMEOUT_MS = 100;
 static constexpr uint32_t EXPIRY_TIMER_PERIOD_MS = 500;
 
 typedef struct bm_service_request_node {
-    const char * service;
+    char * service;
     size_t service_strlen;
     bm_service_reply_cb reply_cb;
     uint32_t timeout_ms;
@@ -72,23 +72,30 @@ bool bm_service_request(size_t service_strlen, const char * service, size_t data
     bm_service_request_node_t * node = NULL;
     do {
         if(data_len > MAX_BM_SERVICE_DATA_SIZE) {
+            printf("Data too large\n");
             break;
         }
         bm_service_request_node_t * node = _create_node(service_strlen, service, reply_cb, (timeout_s * 1000));
         configASSERT(node);
         if(!_request_list_add_request(node)) {
+            printf("add request failed\n");
             break;
         }
         if(!_service_request_sub_to_reply_topic(service, service_strlen)) {
+            printf("sub to reply topic failed\n");
             break;
         }
         if(!_service_request_send_request(node->id, service, service_strlen, data_len, data)) {
+            printf("send request failed\n");
             break;
         }
         rval = true;
     } while(0);
     if(!rval) {
         if(node){
+            if(node->service) {
+                vPortFree(node->service);
+            }
             vPortFree(node);
         }
     }
@@ -108,8 +115,8 @@ static bool _request_list_add_request(bm_service_request_node_t * node) {
             }
             current->next = node;
         }
-        xSemaphoreGive(_bm_service_request_context.lock);
         rval = true;
+        xSemaphoreGive(_bm_service_request_context.lock);
     } 
     return rval;
 }
@@ -132,6 +139,9 @@ static bool _request_list_remove_request(bm_service_request_node_t * node) {
         }
     }
     if(node_to_delete){
+        if(node_to_delete->service) {
+            vPortFree(node_to_delete->service);
+        }
         vPortFree(node_to_delete);
         rval = true;
     }
@@ -141,7 +151,9 @@ static bool _request_list_remove_request(bm_service_request_node_t * node) {
 static bm_service_request_node_t * _create_node(size_t service_strlen, const char * service, bm_service_reply_cb reply_cb, uint32_t timeout_ms) {
     bm_service_request_node_t * node = static_cast<bm_service_request_node_t*>(pvPortMalloc(sizeof(bm_service_request_node_t)));
     configASSERT(node);
-    node->service = service;
+    node->service = static_cast<char*>(pvPortMalloc(service_strlen));
+    configASSERT(node->service);
+    memcpy(node->service, service, service_strlen);
     node->service_strlen = service_strlen;
     node->reply_cb = reply_cb;
     node->timeout_ms = timeout_ms;
