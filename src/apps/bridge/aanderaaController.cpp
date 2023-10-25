@@ -145,7 +145,7 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
         aanderaa->direction_circ_mean_rad.clear();
         aanderaa->direction_circ_std_rad.clear();
         aanderaa->temp_mean_deg_c.clear();
-        aanderaa->sample_start_time_ms = pdMS_TO_TICKS(xTaskGetTickCount());
+        aanderaa->sample_start_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
       }
       vPortFree(log_buf);
     }
@@ -214,7 +214,7 @@ static void createAanderaaSub(uint64_t node_id) {
   new_sub->node_id = node_id;
   new_sub->next = NULL;
   new_sub->current_agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
-  new_sub->sample_start_time_ms = pdMS_TO_TICKS(xTaskGetTickCount());
+  new_sub->sample_start_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
   uint32_t agg_period_min;
   if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
                                agg_period_min)) {
