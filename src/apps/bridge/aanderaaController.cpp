@@ -14,11 +14,16 @@
 typedef struct Aanderaa {
   uint64_t node_id;
   Aanderaa *next;
+  uint32_t current_agg_period_ms;
+  uint32_t sample_start_time_ms;
   AveragingSampler abs_speed_mean_cm_s;
   AveragingSampler abs_speed_std_cm_s;
   AveragingSampler direction_circ_mean_rad;
   AveragingSampler direction_circ_std_rad;
   AveragingSampler temp_mean_deg_c;
+
+  static constexpr uint32_t N_SAMPLES_PAD =
+      10; // Extra sample padding to account for timing slop.
 
 public:
   bool subscribe();
@@ -40,14 +45,16 @@ typedef struct aanderaaControllerCtx {
   bool _initialized;
   TimerHandle_t _sample_timer;
   BridgePowerController *_bridge_power_controller;
+  cfg::Configuration *_usr_cfg;
 } aanderaaControllerCtx_t;
 
 static aanderaaControllerCtx_t _ctx;
 
+static constexpr uint32_t DEFAULT_CURRENT_AGG_PERIOD_MIN = 3;
+static constexpr uint32_t CURRENT_SAMPLE_PERIOD_MS = 2000; // Aanderaa "interval" config setting
 static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
-static constexpr uint8_t AANDERAA_AVERAGER_MAX_SAMPLES = 10;
 
 static void createAanderaaSub(uint64_t node_id);
 static void runController(void *param);
@@ -88,39 +95,41 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
       aanderaa->direction_circ_mean_rad.addSample(degToRad(d.direction_deg_m));
       aanderaa->direction_circ_std_rad.addSample(degToRad(d.direction_deg_m));
       aanderaa->temp_mean_deg_c.addSample(d.temperature_deg_c);
-      size_t log_buflen =
-          snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                   "%" PRIx64 "," // Node Id
-                   "%" PRIu64 "," // Uptime
-                   "%.3f," // abs_speed_cm_s
-                   "%.3f," // abs_tilt_deg
-                   "%.3f," // direction_deg_m
-                   "%.3f," // east_cm_s
-                   "%.3f," // heading_deg_m
-                   "%.3f," // max_tilt_deg
-                   "%.3f," // ping_count
-                   "%.3f," // standard_ping_std_cm_s
-                   "%.3f," // std_tilt_deg
-                   "%.3f," // temperature_deg_c
-                   "%.3f\n", // north_cm_s
-                   node_id, d.header.reading_uptime_millis, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
-                   d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.standard_ping_std_cm_s,
-                   d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
+      size_t log_buflen = snprintf(
+          log_buf, SENSOR_LOG_BUF_SIZE,
+          "%" PRIx64 "," // Node Id
+          "%" PRIu64 "," // reading_uptime_millis
+          "%" PRIu64 "," // reading_time_utc_s
+          "%" PRIu64 "," // sensor_reading_time_s
+          "%.3f,"        // abs_speed_cm_s
+          "%.3f,"        // abs_tilt_deg
+          "%.3f,"        // direction_deg_m
+          "%.3f,"        // east_cm_s
+          "%.3f,"        // heading_deg_m
+          "%.3f,"        // max_tilt_deg
+          "%.3f,"        // ping_count
+          "%.3f,"        // standard_ping_std_cm_s
+          "%.3f,"        // std_tilt_deg
+          "%.3f,"        // temperature_deg_c
+          "%.3f\n",      // north_cm_s
+          node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_s,
+          d.header.sensor_reading_time_s, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m,
+          d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.standard_ping_std_cm_s,
+          d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
       if (log_buflen > 0) {
         BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
       } else {
         printf("ERROR: Failed to print Aanderaa data\n");
       }
-      if (aanderaa->abs_speed_mean_cm_s.getNumSamples() == AANDERAA_AVERAGER_MAX_SAMPLES) {
+      if (!timeRemainingMs(aanderaa->sample_start_time_ms, aanderaa->current_agg_period_ms)) {
         log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                               "%" PRIx64 "," // Node Id
-                              "%.3f," // abs_speed_mean_cm_s
-                              "%.3f," // abs_speed_std_cm_s
-                              "%.3f," // direction_circ_mean_rad
-                              "%.3f," // direction_circ_std_rad
-                              "%.3f\n", // temp_mean_deg_c
-                              node_id,
-                              aanderaa->abs_speed_mean_cm_s.getMean(),
+                              "%.3f,"        // abs_speed_mean_cm_s
+                              "%.3f,"        // abs_speed_std_cm_s
+                              "%.3f,"        // direction_circ_mean_rad
+                              "%.3f,"        // direction_circ_std_rad
+                              "%.3f\n",      // temp_mean_deg_c
+                              node_id, aanderaa->abs_speed_mean_cm_s.getMean(),
                               aanderaa->abs_speed_std_cm_s.getStd(),
                               aanderaa->direction_circ_mean_rad.getCircularMean(),
                               aanderaa->direction_circ_std_rad.getCircularStd(),
@@ -136,6 +145,7 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
         aanderaa->direction_circ_mean_rad.clear();
         aanderaa->direction_circ_std_rad.clear();
         aanderaa->temp_mean_deg_c.clear();
+        aanderaa->sample_start_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
       }
       vPortFree(log_buf);
     }
@@ -147,9 +157,12 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
  * This controller is responsible for detecting Aanderaa nodes and subscribing to them.
  * It will also aggregate the data from the Aanderaa nodes and transmit it over the spotter_tx service.
  */
-void aanderaControllerInit(BridgePowerController *power_controller) {
+void aanderaControllerInit(BridgePowerController *power_controller,
+                           cfg::Configuration *usr_cfg) {
   configASSERT(power_controller);
+  configASSERT(usr_cfg);
   _ctx._bridge_power_controller = power_controller;
+  _ctx._usr_cfg = usr_cfg;
   BaseType_t rval = xTaskCreate(runController, "Aandera Controller", 128 * 4, NULL,
                                 AANDERAA_CONTROLLER_TASK_PRIORITY, &_ctx._task_handle);
   configASSERT(rval == pdTRUE);
@@ -200,11 +213,21 @@ static void createAanderaaSub(uint64_t node_id) {
   configASSERT(new_sub);
   new_sub->node_id = node_id;
   new_sub->next = NULL;
-  new_sub->abs_speed_mean_cm_s.initBuffer(AANDERAA_AVERAGER_MAX_SAMPLES);
-  new_sub->abs_speed_std_cm_s.initBuffer(AANDERAA_AVERAGER_MAX_SAMPLES);
-  new_sub->direction_circ_mean_rad.initBuffer(AANDERAA_AVERAGER_MAX_SAMPLES);
-  new_sub->direction_circ_std_rad.initBuffer(AANDERAA_AVERAGER_MAX_SAMPLES);
-  new_sub->temp_mean_deg_c.initBuffer(AANDERAA_AVERAGER_MAX_SAMPLES);
+  new_sub->current_agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
+  new_sub->sample_start_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
+  uint32_t agg_period_min;
+  if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
+                               agg_period_min)) {
+    new_sub->current_agg_period_ms = (agg_period_min * 60 * 1000);
+  }
+  uint32_t AVERAGER_MAX_SAMPLES =
+      (new_sub->current_agg_period_ms / CURRENT_SAMPLE_PERIOD_MS) + Aanderaa_t::N_SAMPLES_PAD;
+  new_sub->abs_speed_mean_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->abs_speed_std_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->direction_circ_mean_rad.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->direction_circ_std_rad.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->temp_mean_deg_c.initBuffer(AVERAGER_MAX_SAMPLES);
+
   if (_ctx._subbed_aanderaas == NULL) {
     _ctx._subbed_aanderaas = new_sub;
   } else {
