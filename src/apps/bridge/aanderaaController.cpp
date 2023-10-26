@@ -232,11 +232,11 @@ static void runController(void *param) {
             // If not send NaNs for all the values.
             // TODO - verify that we can assume if one sampler is below the min then all of them are.
             if(curr->abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
-              agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);;
-              agg.abs_speed_std_cm_s = curr->abs_speed_cm_s.getStd(true);;
-              agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();;
+              agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getRunningKahanMean();
+              agg.abs_speed_std_cm_s = sqrt(curr->abs_speed_cm_s.getRunningWelfordVariance());
+              agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();
               agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
-              agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);;
+              agg.temp_mean_deg_c = curr->temp_deg_c.getRunningKahanMean();
             }
             log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                               "%" PRIx64 "," // Node Id

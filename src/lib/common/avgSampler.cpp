@@ -6,6 +6,15 @@ AveragingSampler::AveragingSampler() {
   _fullBuffer = false;
   _maxSamples = 0;
   _samples = NULL;
+  _runningMean = 0.0;
+  _runningVarianceSum = 0.0;
+  _kahanC = 0.0;
+  _runningCosSum = 0.0;
+  _kahanCosC = 0.0;
+  _runningSinSum = 0.0;
+  _kahanSinC = 0.0;
+  _sampleCount = 0;
+
 }
 
 AveragingSampler::~AveragingSampler() {
@@ -60,6 +69,21 @@ bool AveragingSampler::addSampleTimestamped(double sample, uint32_t timestamp) {
     if (++_sampleIdx == _maxSamples) {
       _fullBuffer = true;
       _sampleIdx = 0;
+    }
+
+    if(_sampleCount++ == 0) {
+      _runningMean = sample;
+      _runningCosSum = cos(sample);
+      _runningSinSum = sin(sample);
+      _runningVarianceSum = 0.0;
+    } else {
+      double oldMean = _runningMean;
+      double oldVariance = _runningVarianceSum;
+      double averagedNewData = (sample - oldMean) / _sampleCount;
+      _runningMean = kahanSum(oldMean, averagedNewData, _kahanC);
+      _runningCosSum = kahanSum(_runningCosSum, cos(sample), _kahanCosC);
+      _runningSinSum = kahanSum(_runningSinSum, sin(sample), _kahanSinC);
+      _runningVarianceSum = oldVariance + (sample - oldMean) * (sample - _runningMean);
     }
     rval = true;
   }
@@ -230,75 +254,42 @@ double AveragingSampler::getVariance(double mean, bool useKahan) {
 }
 
 /*!
-  Compute sin or cos sum of all the samples
-
-  \param[in] type - sin or cos
-  \return trigonometric sum of all the samples
- */
-double AveragingSampler::getTrigSum(TrigMeanType_e type) {
-  configASSERT(_samples != NULL);
-  double total = 0.0;
-  uint32_t numSamples = getNumSamples();
-  for (uint32_t i = 0; i < numSamples; i++) {
-    if(type == TRIG_MEAN_TYPE_SIN){
-      total += sin(_samples[i]);
-    }
-    else if(type == TRIG_MEAN_TYPE_COS){
-      total += cos(_samples[i]);
-    }
-    else {
-      configASSERT(false);
-    }
-  }
-  return total;
-}
-
-/*!
-  Compute sin or cos mean of all the samples
-
-  \param[in] type - sin or cos
-  \return trigonometric mean of all the samples (NaN if no samples available
-*/
-double AveragingSampler::getTrigMean(TrigMeanType_e type) {
-  configASSERT(_samples != NULL);
-  double mean = 0.0;
-
-  uint32_t numSamples = getNumSamples();
-  double total = getTrigSum(type);
-  // Don't divide by zero!
-  if (numSamples) {
-    mean = total / numSamples;
-  } else {
-    mean = NAN;
-  }
-
-  return mean;
-}
-
-/*!
   Compute circular mean of all the samples
   https://en.wikipedia.org/wiki/Circular_mean
 
   \return circular mean of all the samples
 */
 double AveragingSampler::getCircularMean() {
-  configASSERT(_samples != NULL);
-  double sin_sum = getTrigSum(TRIG_MEAN_TYPE_SIN);
-  double cos_sum = getTrigSum(TRIG_MEAN_TYPE_COS);
-  return atan2(sin_sum, cos_sum);
+  return atan2(_runningSinSum, _runningCosSum);
 }
 
 /*!
-  Compute circular standard deviation of all the samples
-Per Kuik et al 1988: https://doi.org/10.1175/1520-0485(1988)018%3C1020:AMFTRA%3E2.0.CO;2
+  Compute circular standard deviation
 
-  \return circular standard deviation of all the samples
+  \return circular standard deviation
  */
-double AveragingSampler::getCircularStd() {
-  double a1 = getTrigMean(TRIG_MEAN_TYPE_COS);
-  double b1 = getTrigMean(TRIG_MEAN_TYPE_SIN);
+double AveragingSampler::getCircularStd(void) {
+  double a1 = _runningCosSum / _sampleCount;
+  double b1 = _runningSinSum / _sampleCount;
   if(a1 == NAN || b1 == NAN){
     return NAN;
   }
+
   return sqrt(2 - 2 * sqrt(pow(a1, 2) + pow(b1,2)));
+}
+
+/*!
+ * @brief Get the running mean (Kahan summation)
+ * @return The running mean
+ */
+double AveragingSampler::getRunningKahanMean(void) {
+  return _runningMean;
+}
+
+/*!
+ * @brief Get the running variance (Welford's algorithm)
+ * @return The running variance
+ */
+double AveragingSampler::getRunningWelfordVariance(void) {
+  return (_sampleCount > 1) ? (_runningVarianceSum / (_sampleCount - 1)) : 0;
 }
