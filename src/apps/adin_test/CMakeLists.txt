@@ -22,6 +22,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_service.cpp
     ${SRC_DIR}/lib/middleware/services/echo_service.cpp
     ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
+    ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
 
@@ -82,6 +83,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
