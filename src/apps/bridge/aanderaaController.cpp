@@ -1,5 +1,6 @@
 #include "aanderaaController.h"
 #include "aanderaa_data_msg.h"
+#include "app_config.h"
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_pubsub.h"
@@ -46,6 +47,7 @@ typedef struct aanderaaControllerCtx {
   TimerHandle_t _sample_timer;
   BridgePowerController *_bridge_power_controller;
   cfg::Configuration *_usr_cfg;
+  uint32_t _transmit_aggregations;
 } aanderaaControllerCtx_t;
 
 static aanderaaControllerCtx_t _ctx;
@@ -139,7 +141,10 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
         } else {
           printf("ERROR: Failed to print Aanderaa data\n");
         }
-        // TODO transmit data to spotter once we define it.
+        if (_ctx._transmit_aggregations) {
+          // TODO transmit data to spotter once we define it.
+          printf("Transmit Aanderaa data here\n");
+        }
         aanderaa->abs_speed_mean_cm_s.clear();
         aanderaa->abs_speed_std_cm_s.clear();
         aanderaa->direction_circ_mean_rad.clear();
@@ -158,11 +163,17 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
  * It will also aggregate the data from the Aanderaa nodes and transmit it over the spotter_tx service.
  */
 void aanderaControllerInit(BridgePowerController *power_controller,
-                           cfg::Configuration *usr_cfg) {
+                           cfg::Configuration *usr_cfg,
+                           cfg::Configuration *sys_cfg) {
   configASSERT(power_controller);
   configASSERT(usr_cfg);
+  configASSERT(sys_cfg);
   _ctx._bridge_power_controller = power_controller;
   _ctx._usr_cfg = usr_cfg;
+  _ctx._transmit_aggregations = DEFAULT_TRANSMIT_AGGREGATIONS;
+  sys_cfg->getConfig(AppConfig::TRANSMIT_AGGREGATIONS,
+                   strlen(AppConfig::TRANSMIT_AGGREGATIONS),
+                   _ctx._transmit_aggregations);
   BaseType_t rval = xTaskCreate(runController, "Aandera Controller", 128 * 4, NULL,
                                 AANDERAA_CONTROLLER_TASK_PRIORITY, &_ctx._task_handle);
   configASSERT(rval == pdTRUE);
