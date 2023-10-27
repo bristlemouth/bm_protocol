@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #define DEFAULT_TRANSMIT_AGGREGATIONS 1
+#define DEFAULT_SAMPLES_PER_REPORT 2
 
 void aanderaControllerInit(BridgePowerController *power_controller,
                            cfg::Configuration *usr_cfg,
