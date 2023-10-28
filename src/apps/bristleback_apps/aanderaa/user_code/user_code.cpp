@@ -47,6 +47,11 @@ static uint8_t readings_skipped = 0;
 #define DEFAULT_CURRENT_READING_INTERVAL_MS (60*1000)
 static uint32_t reading_interval_ms = DEFAULT_CURRENT_READING_INTERVAL_MS;
 
+// Baud rate for the Payload UART interface
+// - Currently, must take care to manually set Aanderaa and this setting to the same values.
+#define DEFAULT_BAUD_RATE 9600
+static uint32_t baud_rate = DEFAULT_BAUD_RATE;
+
 // Extra sample padding to account for timing slop. Not currently configurable.
 #define N_SAMPLES_PAD 10
 
@@ -190,6 +195,8 @@ void setup(void) {
                                         reading_interval_ms);
   userConfigurationPartition->getConfig("payloadWdToS", strlen("payloadWdToS"),
                                         payload_wd_to_s);
+  userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
+                                        baud_rate);
 
   max_readings_in_agg = (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
 
@@ -204,12 +211,8 @@ void setup(void) {
   parser.init();
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
-  // Baud set per expected baud rate of the sensor.
-#ifdef AANDERAA_BLUE
-  PLUART::setBaud(115200);
-#else
-  PLUART::setBaud(9600);
-#endif
+  // Baud set per configuration.
+  PLUART::setBaud(baud_rate);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter('\n');
   // Turn on the UART.
