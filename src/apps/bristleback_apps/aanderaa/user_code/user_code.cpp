@@ -80,8 +80,8 @@ typedef struct {
 // create a working instance here, we'll allocate memory for values later.
 static AveragingSampler current_data[NUM_PARAMS_TO_AGG];
 static char *stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
-static RTCTimeAndDate_t statsStartRtc =
-    {}; // Timestampt that tracks the start of aggregation periods.
+static RTCTimeAndDate_t statsEndRtc =
+    {}; // Timestamp that tracks the end of aggregation periods.
 
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
@@ -221,7 +221,6 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(1500));
   // enable Vout, 12V by default.
   IOWrite(&BB_PL_BUCK_EN, 0);
-  rtcGet(&statsStartRtc);
 
   printf("App configs:\n");
   printf("\tcurrent_agg_period_min: %f\n", current_agg_period_min);
@@ -244,6 +243,9 @@ void loop(void) {
   if (CURRENT_AGG_PERIOD_MS > 0 &&
       (uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    statsEndRtc = time_and_date;
     // create additional buffers for convenience, we won't allocate values arrays.
 #ifdef AANDERAA_BLUE
     currentData_t current_tx_data[NUM_PARAMS_TO_AGG] = {{}, {}, {}, {}, {}, {},
@@ -258,10 +260,10 @@ void loop(void) {
     }
 
     char rtcTimeBuffer[32] = {};
-    rtcPrint(rtcTimeBuffer, &statsStartRtc);
+    rtcPrint(rtcTimeBuffer, &statsEndRtc);
     uint32_t statsEndTick = uptimeGetMs();
     int buffer_offset =
-        sprintf(stats_print_buffer, "rtc_start: %s, tick_start: %u, tick_end: %u | ",
+        sprintf(stats_print_buffer, "rtc_end: %s, tick_start: %u, tick_end: %u | ",
                 rtcTimeBuffer, statsStartTick, statsEndTick);
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       buffer_offset +=
@@ -276,9 +278,6 @@ void loop(void) {
     printf("[aanderaa-agg] | %s\n", stats_print_buffer);
     // Update variables tracking start time of agg period in ticks and RTC.
     statsStartTick = statsEndTick;
-    RTCTimeAndDate_t time_and_date = {};
-    rtcGet(&time_and_date);
-    statsStartRtc = time_and_date;
 
     /// Remote Tx using spotter/transmit-data
     // Setup raw bytes for Remote Tx data buffer.
