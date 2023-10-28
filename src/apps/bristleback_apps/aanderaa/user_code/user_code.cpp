@@ -241,7 +241,8 @@ void loop(void) {
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
-  if ((uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
+  if (CURRENT_AGG_PERIOD_MS > 0 &&
+      (uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
     // create additional buffers for convenience, we won't allocate values arrays.
 #ifdef AANDERAA_BLUE
