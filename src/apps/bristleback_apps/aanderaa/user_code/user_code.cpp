@@ -1,5 +1,6 @@
 #include "user_code.h"
 #include "OrderedKVPLineParser.h"
+#include "aanderaa_data_msg.h"
 #include "array_utils.h"
 #include "avgSampler.h"
 #include "bm_network.h"
@@ -7,6 +8,7 @@
 #include "bm_pubsub.h"
 #include "bsp.h"
 #include "debug.h"
+#include "device_info.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
 #include "sensorWatchdog.h"
@@ -29,19 +31,18 @@
 /// For Turning Text Into Numbers
 #ifdef AANDERAA_BLUE
 #define NUM_PARAMS_TO_AGG                                                                      \
-  10 // Need to manually adjust current_data, valueTypes and keys when changing
+  13 // Need to manually adjust current_data, valueTypes and keys when changing
 #else
 #define NUM_PARAMS_TO_AGG                                                                      \
-  9 // Need to manually adjust current_data, valueTypes and keys when changing
+  12 // Need to manually adjust current_data, valueTypes and keys when changing
 #endif
 // Skip the first couple of readings for now. It takes time for stuff to init,
 // and we're not parsing the "*" characters to infer errors yet.
 #define N_SKIP_SAMPLES 2
-uint8_t samples_skipped = 0;
-bool ready_to_send = true; // Flip this off after sending to make it a one-shot.
+static uint8_t samples_skipped = 0;
 #define DEFAULT_CURRENT_AGG_PERIOD_MIN (3.0) // Aggregate after 3 minutes.
 // Global variable to store configuration setting. We'll retrieve it in setup().
-float current_agg_period_min = DEFAULT_CURRENT_AGG_PERIOD_MIN;
+static float current_agg_period_min = DEFAULT_CURRENT_AGG_PERIOD_MIN;
 #define CURRENT_SAMPLE_PERIOD_MS 2000 // Aanderaa "interval" config setting.
 #define CURRENT_AGG_PERIOD_MS ((double)current_agg_period_min * 60 * 1000)
 #define N_SAMPLES_PAD 10 // Extra sample padding to account for timing slop.
@@ -55,13 +56,10 @@ typedef struct {
   float stdev;
 } __attribute__((__packed__)) currentData_t;
 // create a working instance here, we'll allocate memory for values later.
-#ifdef AANDERAA_BLUE
-AveragingSampler current_data[10];
-#else
-AveragingSampler current_data[9];
-#endif
-char *stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
-RTCTimeAndDate_t statsStartRtc = {}; // Timestampt that tracks the start of aggregation periods.
+static AveragingSampler current_data[NUM_PARAMS_TO_AGG];
+static char *stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
+static RTCTimeAndDate_t statsStartRtc =
+    {}; // Timestampt that tracks the start of aggregation periods.
 
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
@@ -70,34 +68,61 @@ extern cfg::Configuration *userConfigurationPartition;
  * Setup a LineParser to turn the ASCII serial data from the Aanderaa into numbers
  * Lines from the Aanderaa sensor look like:
  *    TODO - detail */
-const char lineHeader[] = "MEASUREMENT";
+static const char lineHeader[] = "MEASUREMENT";
 // Let's use 64 bit doubles for everything.
 //   We've got luxurious amounts of RAM on this chip, and it's much easier to avoid roll-overs and precision issues
 //   by using it vs. troubleshooting them because we prematurely optimized things.
-ValueType valueTypes[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
-                          TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
+static ValueType valueTypes[NUM_PARAMS_TO_AGG] = {
+    TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
+    TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
 #ifdef AANDERAA_BLUE
-                          TYPE_DOUBLE
+    TYPE_DOUBLE
 #endif
 };
-const char *keys[] = {"Abs Speed[cm/s]",   "Direction[Deg.M]", "North[cm/s]",
-                      "East[cm/s]",        "Heading[Deg.M]",   "Tilt X[Deg]",
-                      "Tilt Y[Deg]",       "Ping Count",       "Abs Tilt[Deg]",
+static const char *keys[] = {"Abs Speed[cm/s]",
+                             "Direction[Deg.M]",
+                             "North[cm/s]",
+                             "East[cm/s]",
+                             "Heading[Deg.M]",
+                             "Tilt X[Deg]",
+                             "Tilt Y[Deg]",
+                             "Ping Count",
+                             "Abs Tilt[Deg]",
+                             "Max Tilt[Deg]",
+                             "Std Tilt[Deg]",
+                             "Temperature[DegC]"
 #ifdef AANDERAA_BLUE
-                      "Memory Used[Bytes]"
+                             "Memory Used[Bytes]"
 #endif
 };
 
-char payload_buffer[2048];
+typedef enum AadneraaKeysIdx {
+  ABS_SPEED,
+  DIRECTION,
+  NORTH,
+  EAST,
+  HEADING,
+  TILT_X,
+  TILT_Y,
+  PING_COUNT,
+  ABS_TILT,
+  MAX_TILT,
+  STD_TILT,
+  TEMP,
+} AadneraaKeysIdx_e;
+
+static char payload_buffer[2048];
+static char aanderaaTopic[BM_TOPIC_MAX_LEN];
+static int aanderaaTopicStrLen;
 
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
-OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, lineHeader);
+static OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, lineHeader);
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
 
-currentData_t aggregateStats(AveragingSampler &sampler) {
+static currentData_t aggregateStats(AveragingSampler &sampler) {
   currentData_t ret_stats = {};
   if (sampler.getNumSamples() > 0) {
     ret_stats.mean = sampler.getMean();
@@ -113,8 +138,9 @@ currentData_t aggregateStats(AveragingSampler &sampler) {
 
 static bool aanderaaSensorWatchdogHandler(void *arg) {
   (void)(arg);
-  SensorWatchdog::sensor_watchdog_t * watchdog = reinterpret_cast<SensorWatchdog::sensor_watchdog_t *>(arg);
-  if(watchdog->_triggerCount < watchdog->_max_triggers) {
+  SensorWatchdog::sensor_watchdog_t *watchdog =
+      reinterpret_cast<SensorWatchdog::sensor_watchdog_t *>(arg);
+  if (watchdog->_triggerCount < watchdog->_max_triggers) {
     IOWrite(&BB_PL_BUCK_EN, 1);
     vTaskDelay(pdMS_TO_TICKS(AANDERAA_RESET_TIME_MS));
     IOWrite(&BB_PL_BUCK_EN, 0);
@@ -124,12 +150,20 @@ static bool aanderaaSensorWatchdogHandler(void *arg) {
   return true;
 }
 
+static int createAanderaaDataTopic(void) {
+  int topiclen = snprintf(aanderaaTopic, BM_TOPIC_MAX_LEN, "%" PRIx64 "/aanderaa", getNodeId());
+  configASSERT(topiclen > 0);
+  return topiclen;
+}
+
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
+  configASSERT(userConfigurationPartition);
   userConfigurationPartition->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
                                         current_agg_period_min);
 
+  aanderaaTopicStrLen = createAanderaaDataTopic();
   // Allocate memory for pressure data buffer.
   for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
     current_data[i].initBuffer(MAX_CURRENT_SAMPLES);
@@ -167,15 +201,15 @@ void loop(void) {
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
-  if (ready_to_send && (uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
-    /// set ready_to_send false when sending to setup as a 2 minute one-shot to save data costs.
-    ready_to_send = false;
+  if ((uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
     // create additional buffers for convenience, we won't allocate values arrays.
 #ifdef AANDERAA_BLUE
-    currentData_t current_tx_data[10] = {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
+    currentData_t current_tx_data[NUM_PARAMS_TO_AGG] = {{}, {}, {}, {}, {}, {},
+                                                        {}, {}, {}, {}, {}, {}.{}};
 #else
-    currentData_t current_tx_data[9] = {{}, {}, {}, {}, {}, {}, {}, {}, {}};
+    currentData_t current_tx_data[NUM_PARAMS_TO_AGG] = {{}, {}, {}, {}, {}, {},
+                                                        {}, {}, {}, {}, {}, {}};
 #endif
 
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
@@ -282,6 +316,39 @@ void loop(void) {
       printf("Skipping samples during init.\n");
       return;
     }
+
+    // Publish individual reading.
+    static AanderaaDataMsg::Data d;
+    size_t bufsize =
+        sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
+    size_t encoded_len = 0;
+    d.header.version = AanderaaDataMsg::VERSION;
+    d.header.reading_uptime_millis = uptimeGetMs();
+    d.abs_speed_cm_s = parser.getValue(ABS_SPEED).data.double_val;
+    d.abs_tilt_deg = parser.getValue(ABS_TILT).data.double_val;
+    d.direction_deg_m = parser.getValue(DIRECTION).data.double_val;
+    d.east_cm_s = parser.getValue(EAST).data.double_val;
+    d.heading_deg_m = parser.getValue(HEADING).data.double_val;
+    d.north_cm_s = parser.getValue(NORTH).data.double_val;
+    d.ping_count = parser.getValue(PING_COUNT).data.double_val;
+    d.tilt_x_deg = parser.getValue(TILT_X).data.double_val;
+    d.tilt_y_deg = parser.getValue(TILT_Y).data.double_val;
+    d.max_tilt_deg = parser.getValue(MAX_TILT).data.double_val;
+    d.std_tilt_deg = parser.getValue(STD_TILT).data.double_val;
+    d.temperature_deg_c = parser.getValue(TEMP).data.double_val;
+    RTCTimeAndDate_t datetime;
+    if(rtcGet(&datetime) == pdPASS){
+      d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
+    }
+
+    if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
+                                &encoded_len) == CborNoError) {
+      bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
+                encoded_len, 0);
+    } else {
+      printf("Failed to encode Aanderaa data message\n");
+    }
+
     // Now let's aggregate those values into statistics
     if (current_data[0].getNumSamples() >= MAX_CURRENT_SAMPLES) {
       printf("ERR - No more room in current reading buffer, already have %d readings!\n",

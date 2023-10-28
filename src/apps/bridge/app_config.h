@@ -11,6 +11,7 @@ constexpr const char *SUBSAMPLE_DURATION_MS = "subsampleDurationMs";
 constexpr const char *SUBSAMPLE_ENABLED = "subsampleEnabled";
 constexpr const char *BRIDGE_POWER_CONTROLLER_ENABLED = "bridgePowerControllerEnabled";
 constexpr const char *ALIGNMENT_INTERVAL_5MIN = "alignmentInterval5Min";
+constexpr const char *TRANSMIT_AGGREGATIONS = "transmitAggregations";
 
 } // namespace AppConfig
 

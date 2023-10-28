@@ -5,6 +5,7 @@
 #include "timers.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
+#include "semphr.h"
 
 #include "bm_l2.h"
 #include "bcmp.h"
@@ -27,12 +28,19 @@
 
 #define BUS_POWER_ON_DELAY 5000
 
+typedef struct node_list {
+  uint64_t nodes[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  uint16_t num_nodes;
+  SemaphoreHandle_t node_list_mutex;
+} node_list_s; 
+
 static BridgePowerController *_bridge_power_controller;
 static cfg::Configuration* _hw_cfg;
 static cfg::Configuration* _sys_cfg;
 static TimerHandle_t topology_timer;
 static bool _sampling_enabled;
 static bool _send_on_boot;
+static node_list_s _node_list;
 
 static void topology_timer_handler(TimerHandle_t tmr);
 static void topology_sampler_task(void *parameters);
@@ -40,7 +48,7 @@ static void topology_sampler_task(void *parameters);
 static void topology_sample_cb(networkTopology_t* networkTopology) {
 
   bm_common_network_info_t* network_info = NULL;
-
+  xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
     if (!networkTopology){
       printf("networkTopology NULL, task must be busy\n");
@@ -55,16 +63,18 @@ static void topology_sample_cb(networkTopology_t* networkTopology) {
     uint32_t network_crc32_calc = 0;
 
     // compile all additional info here
-    uint16_t num_nodes = networkTopology->length;
+    _node_list.num_nodes = networkTopology->length;
+    configASSERT(sizeof(_node_list.nodes) >= _node_list.num_nodes * sizeof(uint64_t)); // if we hit this, expand the node list size
 
-    network_crc32_calc = crc32_ieee_update(network_crc32_calc, reinterpret_cast<uint8_t *>(&num_nodes), sizeof(num_nodes));
+    network_crc32_calc = crc32_ieee_update(network_crc32_calc, reinterpret_cast<uint8_t *>(&_node_list.num_nodes), sizeof(_node_list.num_nodes));
 
-    uint64_t node_id_list[num_nodes] = { 0 };
+    memset(_node_list.nodes, 0, sizeof(_node_list.nodes));
+
     neighborTableEntry_t *cursor = NULL;
     uint16_t counter;
-    for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
-      node_id_list[counter] = cursor->neighbor_table_reply->node_id;
-      network_crc32_calc = crc32_ieee_update(network_crc32_calc, reinterpret_cast<uint8_t *>(&node_id_list[counter]), sizeof(uint64_t));
+    for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < _node_list.num_nodes); cursor = cursor->nextNode, counter++) {
+      _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
+      network_crc32_calc = crc32_ieee_update(network_crc32_calc, reinterpret_cast<uint8_t *>(&_node_list.nodes[counter]), sizeof(uint64_t));
     }
 
     bm_common_config_crc_t config_crc = {
@@ -100,12 +110,13 @@ static void topology_sample_cb(networkTopology_t* networkTopology) {
           printf("Failed to save crc!\n");
         }
       }
-      bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info, num_nodes, node_id_list);
+      bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info, _node_list.num_nodes, _node_list.nodes);
       if (_send_on_boot) {
         _send_on_boot = false;
       }
     }
   } while (0);
+  xSemaphoreGive(_node_list.node_list_mutex);
 
   if (network_info) {
     vPortFree(network_info);
@@ -152,6 +163,8 @@ void topology_sampler_init(BridgePowerController *power_controller, cfg::Configu
   _sampling_enabled = false;
   _send_on_boot = true;
   int tmr_id = 2;
+  _node_list.node_list_mutex = xSemaphoreCreateMutex();
+  configASSERT(_node_list.node_list_mutex);
   topology_timer = xTimerCreate("Topology timer", (TOPOLOGY_TIMEOUT_MS / portTICK_RATE_MS),
                                   pdTRUE, (void *) &tmr_id, topology_timer_handler);
   configASSERT(topology_timer);
@@ -221,4 +234,32 @@ void topology_sampler_task(void *parameters) {
       configASSERT(xTimerStop(topology_timer, 10));
     }
   }
+}
+
+/*!
+  * @brief Get the node list from the topology sampler
+  * @param[out] node_list The node list to populate
+  * @param[in,out] node_list_size The size of the node list in bytes. Will be updated with the size of the node list in bytes.
+  * @param[out] num_nodes The number of nodes in the node list.
+  * @param[in] timeout_ms The timeout in milliseconds.
+ */
+bool topology_sampler_get_node_list(uint64_t *node_list, size_t &node_list_size, uint32_t &num_nodes, uint32_t timeout_ms) {
+  configASSERT(node_list);
+  bool rval = false;
+  if(xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(timeout_ms))) {
+    do {
+      if (!_node_list.num_nodes) {
+        break;
+      }
+      if (node_list_size < _node_list.num_nodes * sizeof(uint64_t)) {
+        break;
+      }
+      num_nodes = _node_list.num_nodes;
+      node_list_size = _node_list.num_nodes * sizeof(uint64_t);
+      memcpy(node_list, _node_list.nodes, node_list_size);
+      rval = true;
+    } while (0);
+    xSemaphoreGive(_node_list.node_list_mutex);
+  }
+  return rval;
 }

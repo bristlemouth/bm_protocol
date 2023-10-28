@@ -45,6 +45,7 @@ set(BRISTLEMOUTH_INCLUDES
 
 set(LIB_FILES
     ${SRC_DIR}/lib/cli/cli.c
+    ${SRC_DIR}/lib/common/avgSampler.cpp
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
     ${SRC_DIR}/lib/common/enumToStr.c
@@ -66,6 +67,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/aanderaa_data_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/sensor_header_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
@@ -240,6 +243,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_config.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/aanderaaController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
