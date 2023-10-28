@@ -232,6 +232,7 @@ void setup(void) {
   printf("\treading_interval_ms: %u\n", reading_interval_ms);
   printf("\tmax_readings_in_agg: %llu\n", max_readings_in_agg);
   printf("\tpayload_wd_to_s: %u\n", payload_wd_to_s);
+  printf("\tbaud_rate: %u\n", baud_rate);
 
   SensorWatchdog::SensorWatchdogAdd(AANDERAA_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     aanderaaSensorWatchdogHandler,
