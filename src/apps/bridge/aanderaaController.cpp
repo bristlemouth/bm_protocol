@@ -17,11 +17,9 @@ typedef struct Aanderaa {
   Aanderaa *next;
   uint32_t current_agg_period_ms;
   uint32_t sample_start_time_ms;
-  AveragingSampler abs_speed_mean_cm_s;
-  AveragingSampler abs_speed_std_cm_s;
-  AveragingSampler direction_circ_mean_rad;
-  AveragingSampler direction_circ_std_rad;
-  AveragingSampler temp_mean_deg_c;
+  AveragingSampler abs_speed_cm_s;
+  AveragingSampler direction_rad;
+  AveragingSampler temp_deg_c;
 
   static constexpr uint32_t N_SAMPLES_PAD =
       10; // Extra sample padding to account for timing slop.
@@ -80,8 +78,6 @@ bool Aanderaa::subscribe() {
 void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                   const uint8_t *data, uint16_t data_len, uint8_t type,
                                   uint8_t version) {
-  (void)data;
-  (void)data_len;
   (void)type;
   (void)version;
   printf("Aanderaa data received from node %" PRIx64 " On topic: %.*s\n", node_id, topic_len,
@@ -92,11 +88,9 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
     if (AanderaaDataMsg::decode(d, data, data_len) == CborNoError) {
       char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
       configASSERT(log_buf);
-      aanderaa->abs_speed_mean_cm_s.addSample(d.abs_speed_cm_s);
-      aanderaa->abs_speed_std_cm_s.addSample(d.abs_speed_cm_s);
-      aanderaa->direction_circ_mean_rad.addSample(degToRad(d.direction_deg_m));
-      aanderaa->direction_circ_std_rad.addSample(degToRad(d.direction_deg_m));
-      aanderaa->temp_mean_deg_c.addSample(d.temperature_deg_c);
+      aanderaa->abs_speed_cm_s.addSample(d.abs_speed_cm_s);
+      aanderaa->direction_rad.addSample(degToRad(d.direction_deg_m));
+      aanderaa->temp_deg_c.addSample(d.temperature_deg_c);
       size_t log_buflen = snprintf(
           log_buf, SENSOR_LOG_BUF_SIZE,
           "%" PRIx64 "," // Node Id
@@ -131,11 +125,11 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
                               "%.3f,"        // direction_circ_mean_rad
                               "%.3f,"        // direction_circ_std_rad
                               "%.3f\n",      // temp_mean_deg_c
-                              node_id, aanderaa->abs_speed_mean_cm_s.getMean(),
-                              aanderaa->abs_speed_std_cm_s.getStd(),
-                              aanderaa->direction_circ_mean_rad.getCircularMean(),
-                              aanderaa->direction_circ_std_rad.getCircularStd(),
-                              aanderaa->temp_mean_deg_c.getMean());
+                              node_id, aanderaa->abs_speed_cm_s.getMean(true),
+                              aanderaa->abs_speed_cm_s.getStd(true),
+                              aanderaa->direction_rad.getCircularMean(),
+                              aanderaa->direction_rad.getCircularStd(),
+                              aanderaa->temp_deg_c.getMean(true));
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
         } else {
@@ -145,11 +139,9 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
           // TODO transmit data to spotter once we define it.
           printf("Transmit Aanderaa data here\n");
         }
-        aanderaa->abs_speed_mean_cm_s.clear();
-        aanderaa->abs_speed_std_cm_s.clear();
-        aanderaa->direction_circ_mean_rad.clear();
-        aanderaa->direction_circ_std_rad.clear();
-        aanderaa->temp_mean_deg_c.clear();
+        aanderaa->abs_speed_cm_s.clear();
+        aanderaa->direction_rad.clear();
+        aanderaa->temp_deg_c.clear();
         aanderaa->sample_start_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
       }
       vPortFree(log_buf);
@@ -233,11 +225,9 @@ static void createAanderaaSub(uint64_t node_id) {
   }
   uint32_t AVERAGER_MAX_SAMPLES =
       (new_sub->current_agg_period_ms / CURRENT_SAMPLE_PERIOD_MS) + Aanderaa_t::N_SAMPLES_PAD;
-  new_sub->abs_speed_mean_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
-  new_sub->abs_speed_std_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
-  new_sub->direction_circ_mean_rad.initBuffer(AVERAGER_MAX_SAMPLES);
-  new_sub->direction_circ_std_rad.initBuffer(AVERAGER_MAX_SAMPLES);
-  new_sub->temp_mean_deg_c.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->abs_speed_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->direction_rad.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->temp_deg_c.initBuffer(AVERAGER_MAX_SAMPLES);
 
   if (_ctx._subbed_aanderaas == NULL) {
     _ctx._subbed_aanderaas = new_sub;
