@@ -106,7 +106,7 @@ static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen
             break;
           }
           printf("%02x ", reply.cbor_data[i]);
-          if(i%16 == 15) {
+          if(i%16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
             printf("\n");
           }
         }
