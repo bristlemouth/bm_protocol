@@ -55,6 +55,7 @@
 #include "debug_bm_service.h"
 #include "echo_service.h"
 #include "sys_info_service.h"
+#include "config_cbor_map_service.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -399,7 +400,8 @@ static void defaultTask(void *parameters) {
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
   echo_service_init();
   sys_info_service_init(debug_configuration_system);
-
+  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
+                               debug_configuration_user);
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
