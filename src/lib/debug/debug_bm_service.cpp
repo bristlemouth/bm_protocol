@@ -13,6 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sys_info_svc_reply_msg.h"
+#include "config_cbor_map_service.h"
+#include "config_cbor_map_srv_reply_msg.h"
+#include "config_cbor_map_srv_request_msg.h"
 
 static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
                                const char *commandString);
@@ -23,7 +26,8 @@ static const CLI_Command_Definition_t cmdBmService = {
     // Help string
     "bmsrv:\n"
     " * bmsrv req <service> <data> <timeout s>\n"
-    " * bmsrv req sysinfo <node id> <timeout s>\n",
+    " * bmsrv req sysinfo <node id> <timeout s>\n"
+    " * bmsrv req cfgmap <node id> <1(hw)/2(sys)/3(usr)> <timeout s>\n",
     // Command function
     bmServiceCmd,
     // Number of parameters (variable)
@@ -78,6 +82,47 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, 
   return rval;
 }
 
+static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen, const char *service,
+                         size_t reply_len, uint8_t *reply_data) {
+  bool rval = false;
+  printf("Msg id: %" PRIu32 "\n", msg_id);
+  ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  do {
+    if (ack) {
+      if(ConfigCborMapSrvReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+        printf("Failed to decode sys info reply\n");
+        break;
+      }
+      printf("Service: %.*s\n", service_strlen, service);
+      printf("Reply: \n");
+      printf(" * Node id: %" PRIx64 "\n", reply.node_id);
+      printf(" * Partition: %" PRIu32 "\n", reply.partition_id);
+      printf(" * Success: %d\n", reply.success);
+      printf(" * CBOR encoded map len: %" PRIu32 "\n", reply.cbor_encoded_map_len);
+      if(reply.success) {
+        for(uint32_t i = 0; i<reply.cbor_encoded_map_len; i++) {
+          if(!reply.cbor_data) {
+            printf("NULL map\n");
+            break;
+          }
+          printf("%02x ", reply.cbor_data[i]);
+          if(i%16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
+            printf("\n");
+          }
+        }
+      }
+      printf("\n");
+    } else {
+      printf("NACK\n");
+    }
+    rval = true;
+  } while(0);
+  if(reply.cbor_data) {
+    vPortFree(reply.cbor_data);
+  }
+  return rval;
+}
+
 static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
                                const char *commandString) {
   // Remove unused argument warnings
@@ -126,6 +171,43 @@ static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
         }
         uint32_t timeout_s = strtoul(timeoutStr, NULL, 10);
         if (sys_info_service_request(nodeId, sys_info_reply_cb, timeout_s)) {
+          printf("OK\n");
+        } else {
+          printf("ERR\n");
+        }
+        break;
+      }  else if (strncmp("cfgmap", serviceStr, serviceStrLen) == 0) {
+        BaseType_t nodeStrLen;
+        const char *nodeStr = FreeRTOS_CLIGetParameter(commandString,
+                                                       3, // Get the third parameter (node id)
+                                                       &nodeStrLen);
+        if (nodeStr == NULL) {
+          printf("ERR Invalid paramters\n");
+          break;
+        }
+        uint64_t nodeId = strtoull(nodeStr, NULL, 16);
+
+        BaseType_t partitionStrLen;
+        const char *partitionStr = FreeRTOS_CLIGetParameter(commandString,
+                                                       4, // Get the third parameter (node id)
+                                                       &partitionStrLen);
+        if (partitionStr == NULL) {
+          printf("ERR Invalid paramters\n");
+          break;
+        }
+        uint32_t partitionId = strtoul(partitionStr, NULL, 10);
+
+        BaseType_t timeoutStrLen;
+        const char *timeoutStr =
+            FreeRTOS_CLIGetParameter(commandString,
+                                     5, // Get the fourth parameter (timeout)
+                                     &timeoutStrLen);
+        if (timeoutStr == NULL) {
+          printf("ERR Invalid paramters\n");
+          break;
+        }
+        uint32_t timeout_s = strtoul(timeoutStr, NULL, 10);
+        if (config_cbor_map_service_request(nodeId, partitionId, config_map_callback, timeout_s)) {
           printf("OK\n");
         } else {
           printf("ERR\n");

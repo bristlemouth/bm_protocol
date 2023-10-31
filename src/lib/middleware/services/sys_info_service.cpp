@@ -77,7 +77,7 @@ static bool sys_info_service_handler(size_t service_strlen, const char *service,
     d.app_name_strlen = strlen(APP_NAME);
     d.git_sha = getGitSHA();
     d.node_id = getNodeId();
-    d.sys_config_crc = _sys_config->getCRC32();
+    d.sys_config_crc = _sys_config->getCborEncodedConfigurationCrc32();
     size_t encoded_len;
     // Will return CborErrorOutOfMemory if buffer_len is too small
     if(SysInfoSvcReplyMsg::encode(d, reply_data, buffer_len, &encoded_len) != CborNoError) {

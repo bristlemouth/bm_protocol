@@ -158,22 +158,23 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
                 uint8_t * reply_data = static_cast<uint8_t*>(pvPortMalloc(MAX_BM_SERVICE_DATA_SIZE));
                 bm_service_reply_data_header_s * reply_header = (bm_service_reply_data_header_s*) reply_data;
                 memset(reply_data,0, MAX_BM_SERVICE_DATA_SIZE);
-                current->service_handler(current->service_strlen, current->service, request_header->data_size, request_header->data, reply_len, reply_header->data);
-                reply_header->target_node_id = node_id;
-                reply_header->id = request_header->id;
-                reply_header->data_size = reply_len; // On return from the handler, reply_len is now the actual size of the reply data
-                
-                // Publish the reply
-                size_t pub_topic_len = current->service_strlen + strlen(BM_SERVICE_REP_STR);
-                char * pub_topic = static_cast<char*>(pvPortMalloc(pub_topic_len));
-                configASSERT(pub_topic);
-                memcpy(pub_topic, current->service, current->service_strlen);
-                memcpy(pub_topic + current->service_strlen, BM_SERVICE_REP_STR, strlen(BM_SERVICE_REP_STR));
-                bm_pub_wl(pub_topic, pub_topic_len, reply_data, reply_len + sizeof(bm_service_reply_data_header_s), 0);
+                if(current->service_handler(current->service_strlen, current->service, request_header->data_size, request_header->data, reply_len, reply_header->data)){
+                    reply_header->target_node_id = node_id;
+                    reply_header->id = request_header->id;
+                    reply_header->data_size = reply_len; // On return from the handler, reply_len is now the actual size of the reply data
+                    
+                    // Publish the reply
+                    size_t pub_topic_len = current->service_strlen + strlen(BM_SERVICE_REP_STR);
+                    char * pub_topic = static_cast<char*>(pvPortMalloc(pub_topic_len));
+                    configASSERT(pub_topic);
+                    memcpy(pub_topic, current->service, current->service_strlen);
+                    memcpy(pub_topic + current->service_strlen, BM_SERVICE_REP_STR, strlen(BM_SERVICE_REP_STR));
+                    bm_pub_wl(pub_topic, pub_topic_len, reply_data, reply_len + sizeof(bm_service_reply_data_header_s), 0);
+                    vPortFree(pub_topic);
+                }
 
                 // Free the allocated memory
                 vPortFree(reply_data);
-                vPortFree(pub_topic);
                 break;
             }
             current = current->next;
