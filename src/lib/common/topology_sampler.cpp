@@ -132,6 +132,9 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       encoding_success = true;
     } while (0);
 
+    if (!encoding_success) {
+      break;
+    }
     if (cbor_buffer) {
       // TODO: Printing the buffer for now, but we should send this to spotter before freeing. 
       for(uint32_t i = 0; i < cbor_bufsize; i++) {
@@ -142,9 +145,6 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       }
       printf("\n");
       vPortFree(cbor_buffer);
-    }
-    if (!encoding_success) {
-      break;
     }
 
     uint32_t network_crc32_stored = 0;
@@ -361,7 +361,7 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
                           NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_MS)) {
           // Now encode the cbor configuration map reply.
           if (!encode_cbor_configuration(sub_array_encoder, cbor_map_reply)) {
-            printf("Failed to encode network info\n");
+            printf("Failed to encode config info\n");
             break;
           }
           // Now we're finished with this node, close the sub-array.
@@ -459,11 +459,161 @@ static bool encode_sys_info(CborEncoder &array_encoder,
  */
 static bool encode_cbor_configuration(CborEncoder &array_encoder,
                                       ConfigCborMapSrvReplyMsg::Data &cbor_map_reply) {
-  CborError err = cbor_encode_byte_string(&array_encoder, cbor_map_reply.cbor_data,
-                                  cbor_map_reply.cbor_encoded_map_len);
+  CborEncoder map_encoder;
+  CborParser parser;
+  CborValue map,it;
+  CborError err;
+  char * key = NULL;
+  char * tmp = NULL;
+  do {
+    err = cbor_parser_init(cbor_map_reply.cbor_data, cbor_map_reply.cbor_encoded_map_len, 0, &parser, &map);
+    if(err != CborNoError) {
+      break;
+    }
+    err = cbor_value_validate_basic(&map);
+    if (err != CborNoError) {
+      break;
+    }
+    if(!cbor_value_is_map(&map)){
+      err = CborErrorIllegalType;
+      break;
+    }
+    size_t num_fields;
+    err = cbor_value_get_map_length(&map, &num_fields);
+    if (err != CborNoError) {
+      break;
+    }
+    err = cbor_encoder_create_map(&array_encoder, &map_encoder, NUM_CONFIG_FIELDS_PER_NODE);
+    if(err != CborNoError) {
+      break;
+    }
+    err = cbor_value_enter_container(&map, &it);
+    if(err != CborNoError) {
+      break;
+    }
+    size_t key_len;
+    key = static_cast<char *>(pvPortMalloc(cfg::MAX_STR_LEN_BYTES));
+    tmp = static_cast<char *>(pvPortMalloc(cfg::MAX_STR_LEN_BYTES));
+    configASSERT(key);
+    configASSERT(tmp);
+    for(size_t i = 0; i < num_fields; i++){
+      if (!cbor_value_is_text_string(&it)) {
+        err = CborErrorIllegalType;
+        printf("expected string key but got something else\n");
+        break;
+      }
+      err = cbor_value_get_string_length(&it, &key_len);
+      if(err != CborNoError) {
+        break;
+      }
+      err = cbor_value_copy_text_string(&it, key, &key_len, NULL);
+      if(err != CborNoError) {
+        break;
+      }
+      err = cbor_encode_text_string(&map_encoder, key, key_len);
+      if(err != CborNoError) {
+        break;
+      }
+      err = cbor_value_advance(&it);
+      if (err != CborNoError) {
+        break;
+      }
+      switch(cbor_value_get_type(&it)){
+        case CborIntegerType:{
+          if(cbor_value_is_unsigned_integer(&it)){
+            uint64_t tmp;
+            err = cbor_encode_uint(&map_encoder, cbor_value_get_uint64(&it, &tmp));
+          } else {
+            int64_t tmp;
+            err = cbor_encode_int(&map_encoder, cbor_value_get_int64(&it, &tmp));
+          }
+          break;
+        }
+        case CborDoubleType:{
+          double tmp;
+          err = cbor_encode_double(&map_encoder, cbor_value_get_double(&it, &tmp));
+          break;
+        }
+        case CborBooleanType:{
+          bool tmp;
+          err = cbor_encode_boolean(&map_encoder, cbor_value_get_boolean(&it, &tmp));
+          break;
+        }
+        case CborFloatType:{
+          float tmp;
+          err = cbor_encode_float(&map_encoder, cbor_value_get_float(&it, &tmp));
+          break;
+        }
+        case CborTextStringType:{
+          size_t str_len;
+          err = cbor_value_get_string_length(&it, &str_len);
+          if (err != CborNoError) {
+            break;
+          }
+          err = cbor_value_copy_text_string(&it, tmp, &str_len, NULL);
+          if(err != CborNoError) {
+            break;
+          }
+          err = cbor_encode_text_string(&map_encoder, tmp, str_len);
+          if(err != CborNoError) {
+            break;
+          }
+          break;
+        }
+        case CborByteStringType:{
+          size_t byte_str_len;
+          err = cbor_value_get_string_length(&it, &byte_str_len);
+          if (err != CborNoError) {
+            break;
+          }
+          err = cbor_value_copy_byte_string(&it, reinterpret_cast<uint8_t*>(tmp), &byte_str_len, NULL);
+          if(err != CborNoError) {
+            break;
+          }
+          err = cbor_encode_byte_string(&map_encoder, reinterpret_cast<uint8_t*>(tmp), byte_str_len);
+          if(err != CborNoError) {
+            break;
+          }
+          break;
+        }
+        default:{
+          err = CborErrorIllegalType;
+          break;
+        }
+      }
+      if(err != CborNoError) {
+        break;
+      }
+      err = cbor_value_advance(&it);
+      if (err != CborNoError) {
+        break;
+      }
+    }
+    if(err != CborNoError) {
+      break;
+    }
+
+    err = cbor_encoder_close_container(&array_encoder, &map_encoder);
+    if(err != CborNoError) {
+      break;
+    }
+
+    err = cbor_value_leave_container(&map, &it);
+    if (err != CborNoError) {
+      break;
+    }
+  
+  } while(0);
+  if(key) {
+    vPortFree(key);
+  }
+  if(tmp) {
+    vPortFree(tmp);
+  }
   if(cbor_map_reply.cbor_data) {
     vPortFree(cbor_map_reply.cbor_data);
   }
+  printf("encode_cbor_configuration: %d\n", err);
   return err == CborNoError;
 }
 
