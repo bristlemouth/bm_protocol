@@ -483,7 +483,7 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
     if (err != CborNoError) {
       break;
     }
-    err = cbor_encoder_create_map(&array_encoder, &map_encoder, NUM_CONFIG_FIELDS_PER_NODE);
+    err = cbor_encoder_create_map(&array_encoder, &map_encoder, num_fields);
     if(err != CborNoError) {
       break;
     }
