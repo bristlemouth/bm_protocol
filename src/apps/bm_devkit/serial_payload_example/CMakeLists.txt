@@ -73,6 +73,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
+    ${SRC_DIR}/lib/debug/debug_pluart_cli.cpp
     ${SRC_DIR}/lib/debug/debug_tca9546a.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
@@ -108,6 +109,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/common/LineParser.cpp
+    ${SRC_DIR}/lib/common/OrderedSeparatorLineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c

@@ -30,6 +30,7 @@
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
+#include "debug_pluart_cli.h"
 #include "debug_w25.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
@@ -387,6 +388,7 @@ static void defaultTask(void *parameters) {
   debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
                          &debug_configuration_system);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
+  debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
