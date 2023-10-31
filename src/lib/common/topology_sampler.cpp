@@ -79,7 +79,7 @@ static void topology_sample_cb(networkTopology_t* networkTopology) {
 
     bm_common_config_crc_t config_crc = {
       .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
-      .crc32 = _sys_cfg->getCRC32(),
+      .crc32 = _sys_cfg->getCborEncodedConfigurationCrc32(),
     };
 
     network_crc32_calc = crc32_ieee_update(network_crc32_calc, reinterpret_cast<uint8_t *>(&config_crc), sizeof(bm_common_config_crc_t));

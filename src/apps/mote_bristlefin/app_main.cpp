@@ -55,6 +55,7 @@
 #include "watchdog.h"
 #include "debug_bm_service.h"
 #include "sys_info_service.h"
+#include "config_cbor_map_service.h"
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -368,7 +369,8 @@ static void defaultTask(void *parameters) {
   sensorsInit();
   debugBmServiceInit();
   sys_info_service_init(debug_configuration_system);
-
+  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
+                               debug_configuration_user);
   bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
 
