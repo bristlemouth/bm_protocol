@@ -357,6 +357,8 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
     }
     // Handle & count each reply coming back.
     uint32_t node_crc_rx_count = 0;
+    SysInfoSvcReplyMsg::Data info_reply = {0, 0, 0, 0, NULL};
+    ConfigCborMapSrvReplyMsg::Data cbor_map_reply = {0, 0, 0, 0, NULL};
     while (node_crc_rx_count < _node_list.num_nodes) {
       // For each node, create a sub-array.
       CborEncoder sub_array_encoder;
@@ -366,7 +368,6 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
         printf("cbor_encoder_create_array failed: %d\n", err);
         break;
       }
-      SysInfoSvcReplyMsg::Data info_reply = {0, 0, 0, 0, NULL};
       // Update the network crc with all of the node crcs
       if (xQueueReceive(_sys_info_queue, &info_reply,
                         pdMS_TO_TICKS(NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS))) {
@@ -383,7 +384,6 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
           break;
         }
         // Wait for the Cbor Map reply to arrive.
-        ConfigCborMapSrvReplyMsg::Data cbor_map_reply = {0, 0, 0, 0, NULL};
         if (xQueueReceive(_config_cbor_map_queue, &cbor_map_reply,
                           NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_MS)) {
           // Now encode the cbor configuration map reply.
@@ -407,7 +407,22 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
         printf("Failed to receive node sys info\n");
         break;
       }
+      // Free the memory allocated in the decode functions every loop.
+      if(info_reply.app_name) {
+        vPortFree(info_reply.app_name);
+      }
+      if(cbor_map_reply.cbor_data) {
+        vPortFree(cbor_map_reply.cbor_data);
+      }
     }
+    // Free the memory allocated in the decode functions in case we broke out of the loop.
+    if(info_reply.app_name) {
+      vPortFree(info_reply.app_name);
+    }
+    if(cbor_map_reply.cbor_data) {
+      vPortFree(cbor_map_reply.cbor_data);
+    }
+
     // Check if we've processed all expected nodes.
     if (node_crc_rx_count != _node_list.num_nodes) {
       printf("Failed to receive all info\n");
@@ -471,9 +486,6 @@ static bool encode_sys_info(CborEncoder &array_encoder,
       break;
     }
   } while (0);
-  if(sys_info.app_name) {
-    vPortFree(sys_info.app_name);
-  }
   return (err == CborNoError);
 }
 
@@ -633,9 +645,6 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
   } while(0);
   if(tmp_buf) {
     vPortFree(tmp_buf);
-  }
-  if(cbor_map_reply.cbor_data) {
-    vPortFree(cbor_map_reply.cbor_data);
   }
   printf("encode_cbor_configuration: %d\n", err);
   return err == CborNoError;
