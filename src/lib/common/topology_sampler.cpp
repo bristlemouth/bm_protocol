@@ -410,9 +410,11 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
       // Free the memory allocated in the decode functions every loop.
       if(info_reply.app_name) {
         vPortFree(info_reply.app_name);
+        info_reply.app_name = NULL;
       }
       if(cbor_map_reply.cbor_data) {
         vPortFree(cbor_map_reply.cbor_data);
+        cbor_map_reply.cbor_data = NULL;
       }
     }
     // Free the memory allocated in the decode functions in case we broke out of the loop.
