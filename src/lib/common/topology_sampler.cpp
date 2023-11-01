@@ -34,11 +34,11 @@
 
 #define BUS_POWER_ON_DELAY 5000
 #define NODE_SYS_INFO_REQUEST_TIMEOUT_S (3)
-#define NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS (NODE_SYS_INFO_REQUEST_TIMEOUT_S * 1000)
+#define NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS (NODE_SYS_INFO_REQUEST_TIMEOUT_S * 1000)
 #define NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_S (3)
 #define NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_MS (NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_S * 1000)
-#define NODE_CONFIG_PADDING                                                                    \
-  (512) // Accounts for name of app + cbor config map + encoding inefficiencies
+ // Accounts for name of app + cbor config map + encoding inefficiencies
+#define NODE_CONFIG_PADDING (512)
 #define NUM_CONFIG_FIELDS_PER_NODE (5)
 
 typedef struct node_list {
@@ -370,7 +370,7 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
       }
       // Update the network crc with all of the node crcs
       if (xQueueReceive(_sys_info_queue, &info_reply,
-                        pdMS_TO_TICKS(NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS))) {
+                        pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS))) {
         // If we have a sys info reply coming back, request the cbor map
         if (!config_cbor_map_service_request(info_reply.node_id, CONFIG_CBOR_MAP_PARTITION_ID_SYS,
                                            cbor_config_map_reply_cb,
