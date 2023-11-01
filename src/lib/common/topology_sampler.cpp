@@ -69,8 +69,9 @@ static bool encode_sys_info(CborEncoder &array_encoder,
 static bool encode_cbor_configuration(CborEncoder &array_encoder,
                                       ConfigCborMapSrvReplyMsg::Data &cbor_map_reply);
 static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bufsize);
-static void topology_sample_cb(networkTopology_t *networkTopology) {
 
+static void topology_sample_cb(networkTopology_t *networkTopology) {
+  uint8_t *cbor_buffer = NULL;
   bm_common_network_info_t *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
@@ -120,7 +121,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     size_t cbor_bufsize =
         _node_list.num_nodes * (sizeof(SysInfoSvcReplyMsg::Data) +
                                 sizeof(ConfigCborMapSrvReplyMsg::Data) + NODE_CONFIG_PADDING);
-    uint8_t *cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
+    cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
     configASSERT(cbor_buffer);
     bool encoding_success = false;
     do {
@@ -135,6 +136,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     if (!encoding_success) {
       break;
     }
+
     if (cbor_buffer) {
       // TODO: Printing the buffer for now, but we should send this to spotter before freeing. 
       for(uint32_t i = 0; i < cbor_bufsize; i++) {
@@ -144,7 +146,6 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         }
       }
       printf("\n");
-      vPortFree(cbor_buffer);
     }
 
     uint32_t network_crc32_stored = 0;
@@ -191,6 +192,9 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);
 
+  if(cbor_buffer){
+    vPortFree(cbor_buffer);
+  }
   if (network_info) {
     vPortFree(network_info);
   }
@@ -237,25 +241,35 @@ static void topology_timer_handler(TimerHandle_t tmr) {
  */
 static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                               const char *service, size_t reply_len, uint8_t *reply_data) {
-  if (ack) {
-    SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
-    if (SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
-      printf("Failed to decode sys info reply\n");
-      return false;
+  bool rval = false;
+  SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  printf("Service: %.*s\n", service_strlen, service);
+  printf("Reply: %" PRIu32 "\n", msg_id);
+  do {
+    if (ack) {
+      // Memory is 
+      if (SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+        printf("Failed to decode sys info reply\n");
+        break;
+      }
+      printf(" * Node id: %" PRIx64 "\n", reply.node_id);
+      printf(" * Git SHA: 0x%08" PRIx32 "\n", reply.git_sha);
+      printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply.sys_config_crc);
+      printf(" * App name: %.*s\n", reply.app_name_strlen, reply.app_name);
+      if (xQueueSend(_sys_info_queue, &reply, 0) != pdTRUE) {
+        printf("Failed to send sys info\n");
+        break;
+      }
+    } else {
+      printf("NACK\n");
     }
-    printf("Service: %.*s\n", service_strlen, service);
-    printf("Reply: %" PRIu32 "\n", msg_id);
-    printf(" * Node id: %" PRIx64 "\n", reply.node_id);
-    printf(" * Git SHA: 0x%08" PRIx32 "\n", reply.git_sha);
-    printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply.sys_config_crc);
-    printf(" * App name: %.*s\n", reply.app_name_strlen, reply.app_name);
-    if (xQueueSend(_sys_info_queue, &reply, 0) != pdTRUE) {
-      printf("Failed to send sys info\n");
-    }
-  } else {
-    printf("NACK\n");
+    rval = true;
+  } while(0);
+
+  if(!rval && reply.app_name){
+    vPortFree(reply.app_name);
   }
-  return true;
+  return rval;
 }
 
 /*!
@@ -272,38 +286,48 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                      const char *service, size_t reply_len,
                                      uint8_t *reply_data) {
-  if (ack) {
-    ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
-    if (ConfigCborMapSrvReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
-      printf("Failed to decode cbor map reply\n");
-      return false;
-    }
-    printf("Service: %.*s\n", service_strlen, service);
-    printf("Reply: %" PRIu32 "\n", msg_id);
-    printf(" * Node id: %" PRIx64 "\n", reply.node_id);
-    printf(" * Partition: %" PRId32 "\n", reply.partition_id);
-    printf(" * Cbor map len: %" PRIu32 "\n", reply.cbor_encoded_map_len);
-    printf(" * Success: %" PRId32 "\n", reply.success);
-    if (reply.success) {
-      for (uint32_t i = 0; i < reply.cbor_encoded_map_len; i++) {
-        if (!reply.cbor_data) {
-          printf("NULL map\n");
-          break;
-        }
-        printf("%02x ", reply.cbor_data[i]);
-        if (i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
-          printf("\n");
+  bool rval = false;
+  ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};           
+  printf("Service: %.*s\n", service_strlen, service);
+  printf("Reply: %" PRIu32 "\n", msg_id);
+  do {
+    if (ack) {
+      if (ConfigCborMapSrvReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+        printf("Failed to decode cbor map reply\n");
+        break;
+      }
+      printf(" * Node id: %" PRIx64 "\n", reply.node_id);
+      printf(" * Partition: %" PRId32 "\n", reply.partition_id);
+      printf(" * Cbor map len: %" PRIu32 "\n", reply.cbor_encoded_map_len);
+      printf(" * Success: %" PRId32 "\n", reply.success);
+      if (reply.success) {
+        for (uint32_t i = 0; i < reply.cbor_encoded_map_len; i++) {
+          if (!reply.cbor_data) {
+            printf("NULL map\n");
+            break;
+          }
+          printf("%02x ", reply.cbor_data[i]);
+          if (i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
+            printf("\n");
+          }
         }
       }
+      printf("\n");
+      if (!xQueueSend(_config_cbor_map_queue, &reply, 0)) {
+        printf("Failed to send cbor map\n");
+        break;
+      }
+    } else {
+      printf("NACK\n");
     }
-    printf("\n");
-    if (!xQueueSend(_config_cbor_map_queue, &reply, 0)) {
-      printf("Failed to send cbor map\n");
-    }
-  } else {
-    printf("NACK\n");
+    rval = true;
+  } while(0);
+
+  if(!rval && reply.cbor_data) {
+    vPortFree(reply.cbor_data);
   }
-  return true;
+
+  return rval;
 }
 
 /*!
@@ -547,32 +571,30 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
           break;
         }
         case CborTextStringType:{
-          size_t str_len;
-          err = cbor_value_get_string_length(&it, &str_len);
+          err = cbor_value_get_string_length(&it, &tmp_len);
           if (err != CborNoError) {
             break;
           }
-          err = cbor_value_copy_text_string(&it, tmp_buf, &str_len, NULL);
+          err = cbor_value_copy_text_string(&it, tmp_buf, &tmp_len, NULL);
           if(err != CborNoError) {
             break;
           }
-          err = cbor_encode_text_string(&map_encoder, tmp_buf, str_len);
+          err = cbor_encode_text_string(&map_encoder, tmp_buf, tmp_len);
           if(err != CborNoError) {
             break;
           }
           break;
         }
         case CborByteStringType:{
-          size_t byte_str_len;
-          err = cbor_value_get_string_length(&it, &byte_str_len);
+          err = cbor_value_get_string_length(&it, &tmp_len);
           if (err != CborNoError) {
             break;
           }
-          err = cbor_value_copy_byte_string(&it, reinterpret_cast<uint8_t*>(tmp_buf), &byte_str_len, NULL);
+          err = cbor_value_copy_byte_string(&it, reinterpret_cast<uint8_t*>(tmp_buf), &tmp_len, NULL);
           if(err != CborNoError) {
             break;
           }
-          err = cbor_encode_byte_string(&map_encoder, reinterpret_cast<uint8_t*>(tmp_buf), byte_str_len);
+          err = cbor_encode_byte_string(&map_encoder, reinterpret_cast<uint8_t*>(tmp_buf), tmp_len);
           if(err != CborNoError) {
             break;
           }
