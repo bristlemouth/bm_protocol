@@ -104,40 +104,45 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
          topic);
   Aanderaa_t *aanderaa = findAanderaaById(node_id);
   if (aanderaa) {
-    static AanderaaDataMsg::Data d;
-    if (AanderaaDataMsg::decode(d, data, data_len) == CborNoError) {
-      char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
-      configASSERT(log_buf);
-      aanderaa->abs_speed_cm_s.addSample(d.abs_speed_cm_s);
-      aanderaa->direction_rad.addSample(degToRad(d.direction_deg_m));
-      aanderaa->temp_deg_c.addSample(d.temperature_deg_c);
-      size_t log_buflen = snprintf(
-          log_buf, SENSOR_LOG_BUF_SIZE,
-          "%" PRIx64 "," // Node Id
-          "%" PRIu64 "," // reading_uptime_millis
-          "%" PRIu64 "," // reading_time_utc_s
-          "%" PRIu64 "," // sensor_reading_time_s
-          "%.3f,"        // abs_speed_cm_s
-          "%.3f,"        // abs_tilt_deg
-          "%.3f,"        // direction_deg_m
-          "%.3f,"        // east_cm_s
-          "%.3f,"        // heading_deg_m
-          "%.3f,"        // max_tilt_deg
-          "%.3f,"        // ping_count
-          "%.3f,"        // standard_ping_std_cm_s
-          "%.3f,"        // std_tilt_deg
-          "%.3f,"        // temperature_deg_c
-          "%.3f\n",      // north_cm_s
-          node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_s,
-          d.header.sensor_reading_time_s, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m,
-          d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.standard_ping_std_cm_s,
-          d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
-      if (log_buflen > 0) {
-        BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
-      } else {
-        printf("ERROR: Failed to print Aanderaa data\n");
+    if (xSemaphoreTake(aanderaa->_mutex, portMAX_DELAY)) {
+      static AanderaaDataMsg::Data d;
+      if (AanderaaDataMsg::decode(d, data, data_len) == CborNoError) {
+        char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
+        configASSERT(log_buf);
+        aanderaa->abs_speed_cm_s.addSample(d.abs_speed_cm_s);
+        aanderaa->direction_rad.addSample(degToRad(d.direction_deg_m));
+        aanderaa->temp_deg_c.addSample(d.temperature_deg_c);
+        size_t log_buflen = snprintf(
+            log_buf, SENSOR_LOG_BUF_SIZE,
+            "%" PRIx64 "," // Node Id
+            "%" PRIu64 "," // reading_uptime_millis
+            "%" PRIu64 "," // reading_time_utc_s
+            "%" PRIu64 "," // sensor_reading_time_s
+            "%.3f,"        // abs_speed_cm_s
+            "%.3f,"        // abs_tilt_deg
+            "%.3f,"        // direction_deg_m
+            "%.3f,"        // east_cm_s
+            "%.3f,"        // heading_deg_m
+            "%.3f,"        // max_tilt_deg
+            "%.3f,"        // ping_count
+            "%.3f,"        // standard_ping_std_cm_s
+            "%.3f,"        // std_tilt_deg
+            "%.3f,"        // temperature_deg_c
+            "%.3f\n",      // north_cm_s
+            node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_s,
+            d.header.sensor_reading_time_s, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m,
+            d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.standard_ping_std_cm_s,
+            d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
+        if (log_buflen > 0) {
+          BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
+        } else {
+          printf("ERROR: Failed to print Aanderaa data\n");
+        }
+        vPortFree(log_buf);
+        xSemaphoreGive(aanderaa->_mutex);
       }
-      vPortFree(log_buf);
+    } else {
+      printf("Failed to get the subbed Aanderaa mutex after getting a new reading\n");
     }
   }
 }
@@ -274,6 +279,8 @@ static void runController(void *param) {
             curr->direction_rad.clear();
             curr->temp_deg_c.clear();
             xSemaphoreGive(curr->_mutex);
+          } else {
+            printf("Failed to get the subbed Aanderaa mutex while trying to aggregate\n");
           }
           curr = curr->next;
         }
