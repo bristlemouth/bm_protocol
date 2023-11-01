@@ -247,7 +247,8 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
     if (ack) {
-      // Memory is 
+      // Memory is allocated in the decode function, if we fail to decode, we need to free it.
+      // Otherwise, we'll free it in the topology sampler task.
       if (SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode sys info reply\n");
         break;
@@ -292,6 +293,8 @@ static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_s
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
     if (ack) {
+      // Memory is allocated in the decode function, if we fail to decode, we need to free it.
+      // Otherwise, we'll free it in the topology sampler task.
       if (ConfigCborMapSrvReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode cbor map reply\n");
         break;
