@@ -22,7 +22,6 @@ typedef struct Aanderaa {
   uint64_t node_id;
   Aanderaa *next;
   uint32_t current_agg_period_ms;
-  uint32_t sample_start_time_ms;
   AveragingSampler abs_speed_cm_s;
   AveragingSampler direction_rad;
   AveragingSampler temp_deg_c;
@@ -126,33 +125,6 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
       } else {
         printf("ERROR: Failed to print Aanderaa data\n");
       }
-      if (!timeRemainingMs(aanderaa->sample_start_time_ms, aanderaa->current_agg_period_ms)) {
-        log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                              "%" PRIx64 "," // Node Id
-                              "%.3f,"        // abs_speed_mean_cm_s
-                              "%.3f,"        // abs_speed_std_cm_s
-                              "%.3f,"        // direction_circ_mean_rad
-                              "%.3f,"        // direction_circ_std_rad
-                              "%.3f\n",      // temp_mean_deg_c
-                              node_id, aanderaa->abs_speed_cm_s.getMean(true),
-                              aanderaa->abs_speed_cm_s.getStd(true),
-                              aanderaa->direction_rad.getCircularMean(),
-                              aanderaa->direction_rad.getCircularStd(),
-                              aanderaa->temp_deg_c.getMean(true));
-        if (log_buflen > 0) {
-          BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
-        } else {
-          printf("ERROR: Failed to print Aanderaa data\n");
-        }
-        if (_ctx._transmit_aggregations) {
-          // TODO transmit data to spotter once we define it.
-          printf("Transmit Aanderaa data here\n");
-        }
-        aanderaa->abs_speed_cm_s.clear();
-        aanderaa->direction_rad.clear();
-        aanderaa->temp_deg_c.clear();
-        aanderaa->sample_start_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
-      }
       vPortFree(log_buf);
     }
   }
@@ -241,35 +213,30 @@ static void runController(void *param) {
         while (curr->next != NULL) {
           if (xSemaphoreTake(curr->_mutex, portMAX_DELAY)) {
             size_t log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                                "%" PRIx64 "," // Node Id
-                                "%.3f,"        // abs_speed_mean_cm_s
-                                "%.3f,"        // abs_speed_std_cm_s
-                                "%.3f,"        // direction_circ_mean_rad
-                                "%.3f,"        // direction_circ_std_rad
-                                "%.3f\n",      // temp_mean_deg_c
-                                node_id, aanderaa->abs_speed_mean_cm_s.getMean(),
-                                aanderaa->abs_speed_std_cm_s.getStd(),
-                                aanderaa->direction_circ_mean_rad.getCircularMean(),
-                                aanderaa->direction_circ_std_rad.getCircularStd(),
-                                aanderaa->temp_mean_deg_c.getMean());
+                              "%" PRIx64 "," // Node Id
+                              "%.3f,"        // abs_speed_mean_cm_s
+                              "%.3f,"        // abs_speed_std_cm_s
+                              "%.3f,"        // direction_circ_mean_rad
+                              "%.3f,"        // direction_circ_std_rad
+                              "%.3f\n",      // temp_mean_deg_c
+                              node_id, aanderaa->abs_speed_cm_s.getMean(true),
+                              aanderaa->abs_speed_cm_s.getStd(true),
+                              aanderaa->direction_rad.getCircularMean(),
+                              aanderaa->direction_rad.getCircularStd(),
+                              aanderaa->temp_deg_c.getMean(true));
             if (log_buflen > 0) {
               BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
             } else {
               printf("ERROR: Failed to print Aanderaa data\n");
             }
-
             // TODO - send data to a "report builder" task that will
             // combine all the data from all the sensors and send it to the spotter
-
             memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
-            // Clear the buffer
-            aanderaa->abs_speed_mean_cm_s.clear();
-            aanderaa->abs_speed_std_cm_s.clear();
-            aanderaa->direction_circ_mean_rad.clear();
-            aanderaa->direction_circ_std_rad.clear();
-            aanderaa->temp_mean_deg_c.clear();
+            // Clear the buffers
+            aanderaa->abs_speed_cm_s.clear();
+            aanderaa->direction_rad.clear();
+            aanderaa->temp_deg_c.clear();
             xSemaphoreGive(curr->_mutex);
-
           }
           curr = curr->next;
         }
