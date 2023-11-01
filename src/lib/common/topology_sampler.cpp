@@ -123,17 +123,11 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
                                 sizeof(ConfigCborMapSrvReplyMsg::Data) + NODE_CONFIG_PADDING);
     cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
     configASSERT(cbor_buffer);
-    bool encoding_success = false;
-    do {
-      if (!create_network_info_cbor_array(cbor_buffer, cbor_bufsize)) {
-        printf("Failed to create network info cbor map\n");
-        break;
-      }
-      network_crc32_calc = crc32_ieee(cbor_buffer, cbor_bufsize);
-      encoding_success = true;
-    } while (0);
 
-    if (!encoding_success) {
+    if (create_network_info_cbor_array(cbor_buffer, cbor_bufsize)) {
+      network_crc32_calc = crc32_ieee(cbor_buffer, cbor_bufsize);
+    } else {
+      printf("Failed to create network info cbor array\n");
       break;
     }
 
