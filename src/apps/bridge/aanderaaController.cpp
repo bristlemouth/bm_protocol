@@ -219,11 +219,12 @@ static void runController(void *param) {
                               "%.3f,"        // direction_circ_mean_rad
                               "%.3f,"        // direction_circ_std_rad
                               "%.3f\n",      // temp_mean_deg_c
-                              node_id, aanderaa->abs_speed_cm_s.getMean(true),
-                              aanderaa->abs_speed_cm_s.getStd(true),
-                              aanderaa->direction_rad.getCircularMean(),
-                              aanderaa->direction_rad.getCircularStd(),
-                              aanderaa->temp_deg_c.getMean(true));
+                              curr->node_id,
+                              curr->abs_speed_cm_s.getMean(true),
+                              curr->abs_speed_cm_s.getStd(true),
+                              curr->direction_rad.getCircularMean(),
+                              curr->direction_rad.getCircularStd(),
+                              curr->temp_deg_c.getMean(true));
             if (log_buflen > 0) {
               BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
             } else {
@@ -233,9 +234,9 @@ static void runController(void *param) {
             // combine all the data from all the sensors and send it to the spotter
             memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
             // Clear the buffers
-            aanderaa->abs_speed_cm_s.clear();
-            aanderaa->direction_rad.clear();
-            aanderaa->temp_deg_c.clear();
+            curr->abs_speed_cm_s.clear();
+            curr->direction_rad.clear();
+            curr->temp_deg_c.clear();
             xSemaphoreGive(curr->_mutex);
           }
           curr = curr->next;
