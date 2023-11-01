@@ -463,9 +463,9 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
   CborParser parser;
   CborValue map,it;
   CborError err;
-  char * key = NULL;
-  char * tmp = NULL;
+  char * tmp_buf = NULL;
   do {
+    // Open and validate the received cbor map.
     err = cbor_parser_init(cbor_map_reply.cbor_data, cbor_map_reply.cbor_encoded_map_len, 0, &parser, &map);
     if(err != CborNoError) {
       break;
@@ -483,6 +483,7 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
     if (err != CborNoError) {
       break;
     }
+    // Create a map in the subarray to encode to.
     err = cbor_encoder_create_map(&array_encoder, &map_encoder, num_fields);
     if(err != CborNoError) {
       break;
@@ -491,26 +492,26 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
     if(err != CborNoError) {
       break;
     }
-    size_t key_len;
-    key = static_cast<char *>(pvPortMalloc(cfg::MAX_STR_LEN_BYTES));
-    tmp = static_cast<char *>(pvPortMalloc(cfg::MAX_STR_LEN_BYTES));
-    configASSERT(key);
-    configASSERT(tmp);
+    size_t tmp_len;
+    tmp_buf = static_cast<char *>(pvPortMalloc(cfg::MAX_CONFIG_BUFFER_SIZE_BYTES));
+    configASSERT(tmp_buf);
+    // Loop through all the key-value pairs in the cbor map and encode them to the subarray.
     for(size_t i = 0; i < num_fields; i++){
+      // Get & encode key
       if (!cbor_value_is_text_string(&it)) {
         err = CborErrorIllegalType;
         printf("expected string key but got something else\n");
         break;
       }
-      err = cbor_value_get_string_length(&it, &key_len);
+      err = cbor_value_get_string_length(&it, &tmp_len);
       if(err != CborNoError) {
         break;
       }
-      err = cbor_value_copy_text_string(&it, key, &key_len, NULL);
+      err = cbor_value_copy_text_string(&it, tmp_buf, &tmp_len, NULL);
       if(err != CborNoError) {
         break;
       }
-      err = cbor_encode_text_string(&map_encoder, key, key_len);
+      err = cbor_encode_text_string(&map_encoder, tmp_buf, tmp_len);
       if(err != CborNoError) {
         break;
       }
@@ -518,6 +519,7 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
       if (err != CborNoError) {
         break;
       }
+      // Get & encode value
       switch(cbor_value_get_type(&it)){
         case CborIntegerType:{
           if(cbor_value_is_unsigned_integer(&it)){
@@ -550,11 +552,11 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
           if (err != CborNoError) {
             break;
           }
-          err = cbor_value_copy_text_string(&it, tmp, &str_len, NULL);
+          err = cbor_value_copy_text_string(&it, tmp_buf, &str_len, NULL);
           if(err != CborNoError) {
             break;
           }
-          err = cbor_encode_text_string(&map_encoder, tmp, str_len);
+          err = cbor_encode_text_string(&map_encoder, tmp_buf, str_len);
           if(err != CborNoError) {
             break;
           }
@@ -566,11 +568,11 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
           if (err != CborNoError) {
             break;
           }
-          err = cbor_value_copy_byte_string(&it, reinterpret_cast<uint8_t*>(tmp), &byte_str_len, NULL);
+          err = cbor_value_copy_byte_string(&it, reinterpret_cast<uint8_t*>(tmp_buf), &byte_str_len, NULL);
           if(err != CborNoError) {
             break;
           }
-          err = cbor_encode_byte_string(&map_encoder, reinterpret_cast<uint8_t*>(tmp), byte_str_len);
+          err = cbor_encode_byte_string(&map_encoder, reinterpret_cast<uint8_t*>(tmp_buf), byte_str_len);
           if(err != CborNoError) {
             break;
           }
@@ -604,11 +606,8 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
     }
   
   } while(0);
-  if(key) {
-    vPortFree(key);
-  }
-  if(tmp) {
-    vPortFree(tmp);
+  if(tmp_buf) {
+    vPortFree(tmp_buf);
   }
   if(cbor_map_reply.cbor_data) {
     vPortFree(cbor_map_reply.cbor_data);
