@@ -19,7 +19,7 @@ static constexpr uint8_t networkTopicType = 1;
 bool spotter_tx_data(const void* data, uint16_t data_len, bm_serial_network_type_e type) {
     bool rval = false;
     size_t msg_len = sizeof(bm_serial_network_data_header_t) + data_len;
-    uint8_t * data_buf = reinterpret_cast<uint8_t*>(pvPortMalloc(msg_len));
+    uint8_t * data_buf = static_cast<uint8_t*>(pvPortMalloc(msg_len));
     configASSERT(data_buf);
     bm_serial_network_data_header_t * header = reinterpret_cast<bm_serial_network_data_header_t *>(data_buf);
     header->type = type;
