@@ -16,15 +16,6 @@
 // TODO - make this a configurable value?
 #define MIN_READINGS_FOR_AGGREGATION 3
 
-typedef struct aanderaa_aggregations_s {
-  uint64_t node_id;
-  double abs_speed_mean_cm_s;
-  double abs_speed_std_cm_s;
-  double direction_circ_mean_rad;
-  double direction_circ_std_rad;
-  double temp_mean_deg_c;
-} aanderaa_aggregations_t;
-
 typedef enum {
   SAMPLER_TIMER_BITS = 0x01,
   AGGREGATION_TIMER_BITS = 0x02,
