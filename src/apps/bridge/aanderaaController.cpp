@@ -214,11 +214,12 @@ static void runController(void *param) {
       }
     }
     if (task_notify_bits & AGGREGATION_TIMER_BITS) {
+      printf("Aggregation period done!\n");
       if (_ctx._subbed_aanderaas != NULL) {
         Aanderaa_t *curr = _ctx._subbed_aanderaas;
         char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
-        while (curr->next != NULL) {
+        while (curr != NULL) {
           if (xSemaphoreTake(curr->_mutex, portMAX_DELAY)) {
             size_t log_buflen = 0;
             aanderaa_aggregations_t agg = {.node_id = 0,
@@ -276,6 +277,8 @@ static void runController(void *param) {
           curr = curr->next;
         }
         vPortFree(log_buf);
+      } else {
+        printf("No Aanderaa nodes to aggregate\n");
       }
     }
   }
