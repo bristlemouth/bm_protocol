@@ -52,14 +52,14 @@ TEST(SMConfigCRCListTests, AddOneItem) {
   MockConfiguration mock_cfg;
   ON_CALL(mock_cfg,
           getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(Invoke(
-          [&buf, &buf_size](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
-            (void)key;
-            (void)key_len;
-            value_len = buf_size;
-            memcpy(value, buf, value_len);
-            return true;
-          }));
+      .WillByDefault(Invoke([&buf, &buf_size](const char *key, size_t key_len, uint8_t *value,
+                                              size_t &value_len) {
+        (void)key;
+        (void)key_len;
+        value_len = buf_size;
+        memcpy(value, buf, value_len);
+        return true;
+      }));
   EXPECT_CALL(mock_cfg,
               setConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
       .WillOnce(Invoke(
@@ -79,4 +79,51 @@ TEST(SMConfigCRCListTests, AddOneItem) {
   sm_config_crc_list.add(0x87654321);
   EXPECT_TRUE(sm_config_crc_list.contains(0x87654321));
   EXPECT_TRUE(sm_config_crc_list.contains(0x12345678));
+}
+
+TEST(SMConfigCRCListTests, AddMoreItemsThanListMax) {
+  uint8_t buf[SMConfigCRCList::MAX_BUFFER_SIZE] = {0x80};
+  size_t buf_size = 1;
+
+  MockConfiguration mock_cfg;
+  ON_CALL(mock_cfg,
+          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
+      .WillByDefault(Invoke([&buf, &buf_size](const char *key, size_t key_len, uint8_t *value,
+                                              size_t &value_len) {
+        (void)key;
+        (void)key_len;
+        value_len = buf_size;
+        memcpy(value, buf, value_len);
+        return true;
+      }));
+  ON_CALL(mock_cfg,
+          setConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
+      .WillByDefault(Invoke(
+          [&buf, &buf_size](const char *key, size_t key_len, uint8_t *value, size_t value_len) {
+            (void)key;
+            (void)key_len;
+            buf_size = value_len;
+            memcpy(buf, value, value_len);
+            return true;
+          }));
+
+  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+
+  // Fill the list and check that they are all there
+  constexpr uint32_t crc_start = 0xF0000001;
+  constexpr uint32_t crc_endcap = crc_start + SMConfigCRCList::MAX_LIST_SIZE;
+  uint32_t crc;
+  for (crc = crc_start; crc < crc_endcap; crc++) {
+    sm_config_crc_list.add(crc);
+  }
+  for (crc = crc_start; crc < crc_endcap; crc++) {
+    EXPECT_TRUE(sm_config_crc_list.contains(crc));
+  }
+
+  // Add one more and check that the first one is gone
+  sm_config_crc_list.add(crc_endcap);
+  EXPECT_FALSE(sm_config_crc_list.contains(crc_start));
+  for (crc = crc_start + 1; crc <= crc_endcap; crc++) {
+    EXPECT_TRUE(sm_config_crc_list.contains(crc));
+  }
 }
