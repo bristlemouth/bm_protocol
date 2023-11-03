@@ -127,3 +127,30 @@ TEST(SMConfigCRCListTests, AddMoreItemsThanListMax) {
     EXPECT_TRUE(sm_config_crc_list.contains(crc));
   }
 }
+
+TEST(SMConfigCRCListTests, Clear) {
+  MockConfiguration mock_cfg;
+  ON_CALL(mock_cfg,
+          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
+      .WillByDefault(
+          Invoke([](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
+            (void)key;
+            (void)key_len;
+            uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
+            value_len = sizeof(buf);
+            memcpy(value, buf, value_len);
+            return true;
+          }));
+  EXPECT_CALL(mock_cfg,
+              setConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
+      .WillOnce(Invoke([](const char *key, size_t key_len, uint8_t *value, size_t value_len) {
+        (void)key;
+        (void)key_len;
+        EXPECT_EQ(value_len, 1);
+        EXPECT_EQ(value[0], 0x80);
+        return true;
+      }));
+
+  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  sm_config_crc_list.clear();
+}

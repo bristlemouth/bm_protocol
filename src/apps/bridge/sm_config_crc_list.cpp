@@ -34,6 +34,11 @@ void SMConfigCRCList::add(uint32_t crc) {
   encode();
 }
 
+void SMConfigCRCList::clear() {
+  _num_crcs = 0;
+  encode();
+}
+
 // ---------------------------- PRIVATE ----------------------------
 
 void SMConfigCRCList::decode() {
@@ -96,7 +101,7 @@ void SMConfigCRCList::decode() {
   } while (0);
 
   if (should_clear) {
-    // TODO reset the stored cbor value to any empty array
+    clear();
   }
 }
 
