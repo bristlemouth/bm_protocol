@@ -21,12 +21,50 @@
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
-#define AANDERAA_WATCHDOG_TIMEOUT_MS (5 * 1000)
+
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 #define AANDERAA_WATCHDOG_ID "Aanderaa"
 #define AANDERAA_RAW_LOG "aanderaa_raw.log"
 #define AANDERAA_RESET_TIME_MS                                                                 \
   (500) // https://www.aanderaa.com/media/pdfs/td266-zpulse-dcs-4420-4830-4520-4930.pdf P.90
+
+/// Default mote configurations and local variables
+// How many minutes to collect readings for before shipping an aggregation.
+#define DEFAULT_CURRENT_AGG_PERIOD_MIN (10.0)
+static float current_agg_period_min = DEFAULT_CURRENT_AGG_PERIOD_MIN;
+// inline helper to turn this into milliseconds
+#define CURRENT_AGG_PERIOD_MS ((double)current_agg_period_min * 60 * 1000)
+
+// How many samples to leave out of aggregation during sensor initialization.
+// - If using reading intervals <5 seconds, recommend 2, otherwise 0.
+// It takes time for some internal Aanderaa init, and we're not parsing the "*" characters to infer errors yet.
+#define DEFAULT_N_SKIP_READINGS (0)
+static uint32_t n_skip_readings = DEFAULT_N_SKIP_READINGS;
+static uint8_t readings_skipped = 0;
+
+// The reading interval in ms the Aanderaa is configured for.
+// - Currently, must take care to manually set Aanderaa and this setting to the same values.
+#define DEFAULT_CURRENT_READING_INTERVAL_MS (60*1000)
+static uint32_t reading_interval_ms = DEFAULT_CURRENT_READING_INTERVAL_MS;
+
+// Baud rate for the Payload UART interface
+// - Currently, must take care to manually set Aanderaa and this setting to the same values.
+#define DEFAULT_BAUD_RATE 9600
+static uint32_t baud_rate = DEFAULT_BAUD_RATE;
+
+// Extra sample padding to account for timing slop. Not currently configurable.
+#define N_SAMPLES_PAD 10
+
+// Set timeout in seconds after which a power cycle will be attempted to recover the attached payload
+// -- Intent is to recover from FTL (Failure To Launch) errors.
+// -- This needs to be set with consideration of the configured Aanderaa reading interval.
+#define DEFAULT_PAYLOAD_WATCHDOG_TIMEOUT_S (70)
+static uint32_t payload_wd_to_s = DEFAULT_PAYLOAD_WATCHDOG_TIMEOUT_S;
+// inline helper to turn this into milliseconds
+#define PAYLOAD_WATCHDOG_TIMEOUT_MS (payload_wd_to_s * 1000)
+
+// Initialized in Setup after configs are set from PROM.
+static uint64_t max_readings_in_agg = 0;
 
 /// For Turning Text Into Numbers
 #ifdef AANDERAA_BLUE
@@ -36,18 +74,7 @@
 #define NUM_PARAMS_TO_AGG                                                                      \
   12 // Need to manually adjust current_data, valueTypes and keys when changing
 #endif
-// Skip the first couple of readings for now. It takes time for stuff to init,
-// and we're not parsing the "*" characters to infer errors yet.
-#define N_SKIP_SAMPLES 2
-static uint8_t samples_skipped = 0;
-#define DEFAULT_CURRENT_AGG_PERIOD_MIN (3.0) // Aggregate after 3 minutes.
-// Global variable to store configuration setting. We'll retrieve it in setup().
-static float current_agg_period_min = DEFAULT_CURRENT_AGG_PERIOD_MIN;
-#define CURRENT_SAMPLE_PERIOD_MS 2000 // Aanderaa "interval" config setting.
-#define CURRENT_AGG_PERIOD_MS ((double)current_agg_period_min * 60 * 1000)
-#define N_SAMPLES_PAD 10 // Extra sample padding to account for timing slop.
-#define MAX_CURRENT_SAMPLES                                                                    \
-  (((uint64_t)CURRENT_AGG_PERIOD_MS / CURRENT_SAMPLE_PERIOD_MS) + N_SAMPLES_PAD)
+
 typedef struct {
   uint16_t sample_count;
   float min;
@@ -58,11 +85,11 @@ typedef struct {
 // create a working instance here, we'll allocate memory for values later.
 static AveragingSampler current_data[NUM_PARAMS_TO_AGG];
 static char *stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
-static RTCTimeAndDate_t statsStartRtc =
-    {}; // Timestampt that tracks the start of aggregation periods.
+static RTCTimeAndDate_t statsEndRtc =
+    {}; // Timestamp that tracks the end of aggregation periods.
 
 // app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *userConfigurationPartition;
+extern cfg::Configuration *systemConfigurationPartition;
 
 /*
  * Setup a LineParser to turn the ASCII serial data from the Aanderaa into numbers
@@ -159,14 +186,24 @@ static int createAanderaaDataTopic(void) {
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
-  configASSERT(userConfigurationPartition);
-  userConfigurationPartition->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
+  configASSERT(systemConfigurationPartition);
+  systemConfigurationPartition->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
                                         current_agg_period_min);
+  systemConfigurationPartition->getConfig("nSkipReadings", strlen("nSkipReadings"),
+                                        n_skip_readings);
+  systemConfigurationPartition->getConfig("readingIntervalMs", strlen("readingIntervalMs"),
+                                        reading_interval_ms);
+  systemConfigurationPartition->getConfig("payloadWdToS", strlen("payloadWdToS"),
+                                        payload_wd_to_s);
+  systemConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
+                                        baud_rate);
+
+  max_readings_in_agg = (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
 
   aanderaaTopicStrLen = createAanderaaDataTopic();
   // Allocate memory for pressure data buffer.
   for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
-    current_data[i].initBuffer(MAX_CURRENT_SAMPLES);
+    current_data[i].initBuffer(max_readings_in_agg);
   }
   stats_print_buffer = static_cast<char *>(
       pvPortMalloc(sizeof(char) * 1500)); // Trial and error, should be plenty of space
@@ -174,24 +211,30 @@ void setup(void) {
   parser.init();
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
-  // Baud set per expected baud rate of the sensor.
-#ifdef AANDERAA_BLUE
-  PLUART::setBaud(115200);
-#else
-  PLUART::setBaud(9600);
-#endif
+  // Baud set per configuration.
+  PLUART::setBaud(baud_rate);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter('\n');
   // Turn on the UART.
   PLUART::enable();
-  // Enable the input to the Vout power supply.
+  // Enable the input to the Vout power supply and ensure PL buck is disabled.
   IOWrite(&BB_VBUS_EN, 0);
-  // ensure Vbus stable before enable Vout with a 5ms delay.
-  vTaskDelay(pdMS_TO_TICKS(5));
+  IOWrite(&BB_PL_BUCK_EN, 1);
+  // ensure Aanderaa is off for sufficient time to fully reset.
+  vTaskDelay(pdMS_TO_TICKS(AANDERAA_RESET_TIME_MS));
   // enable Vout, 12V by default.
   IOWrite(&BB_PL_BUCK_EN, 0);
-  rtcGet(&statsStartRtc);
-  SensorWatchdog::SensorWatchdogAdd(AANDERAA_WATCHDOG_ID, AANDERAA_WATCHDOG_TIMEOUT_MS,
+
+  printf("App configs:\n");
+  printf("\tcurrent_agg_period_min: %f\n", current_agg_period_min);
+  printf("\tCURRENT_AGG_PERIOD_MS: %f\n", CURRENT_AGG_PERIOD_MS);
+  printf("\tn_skip_readings: %u\n", n_skip_readings);
+  printf("\treading_interval_ms: %u\n", reading_interval_ms);
+  printf("\tmax_readings_in_agg: %llu\n", max_readings_in_agg);
+  printf("\tpayload_wd_to_s: %u\n", payload_wd_to_s);
+  printf("\tbaud_rate: %u\n", baud_rate);
+
+  SensorWatchdog::SensorWatchdogAdd(AANDERAA_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     aanderaaSensorWatchdogHandler,
                                     AANDERAA_WATCHDOG_MAX_TRIGGERS, AANDERAA_RAW_LOG);
 }
@@ -201,8 +244,12 @@ void loop(void) {
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
-  if ((uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
+  if (CURRENT_AGG_PERIOD_MS > 0 &&
+      (uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    statsEndRtc = time_and_date;
     // create additional buffers for convenience, we won't allocate values arrays.
 #ifdef AANDERAA_BLUE
     currentData_t current_tx_data[NUM_PARAMS_TO_AGG] = {{}, {}, {}, {}, {}, {},
@@ -217,10 +264,10 @@ void loop(void) {
     }
 
     char rtcTimeBuffer[32] = {};
-    rtcPrint(rtcTimeBuffer, &statsStartRtc);
+    rtcPrint(rtcTimeBuffer, &statsEndRtc);
     uint32_t statsEndTick = uptimeGetMs();
     int buffer_offset =
-        sprintf(stats_print_buffer, "rtc_start: %s, tick_start: %u, tick_end: %u | ",
+        sprintf(stats_print_buffer, "rtc_end: %s, tick_start: %u, tick_end: %u | ",
                 rtcTimeBuffer, statsStartTick, statsEndTick);
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       buffer_offset +=
@@ -235,9 +282,6 @@ void loop(void) {
     printf("[aanderaa-agg] | %s\n", stats_print_buffer);
     // Update variables tracking start time of agg period in ticks and RTC.
     statsStartTick = statsEndTick;
-    RTCTimeAndDate_t time_and_date = {};
-    rtcGet(&time_and_date);
-    statsStartRtc = time_and_date;
 
     /// Remote Tx using spotter/transmit-data
     // Setup raw bytes for Remote Tx data buffer.
@@ -311,10 +355,10 @@ void loop(void) {
       printf("Error parsing line!\n");
       return;
     }
-    if (samples_skipped < N_SKIP_SAMPLES) {
-      samples_skipped++;
-      printf("Skipping samples during init.\n");
-      return;
+    if (readings_skipped < n_skip_readings) {
+      readings_skipped++;
+      printf("Skipping reading during init.\n");
+      return; // TODO - putting a sneaky early return here is really brittle
     }
 
     // Publish individual reading.
@@ -350,9 +394,9 @@ void loop(void) {
     }
 
     // Now let's aggregate those values into statistics
-    if (current_data[0].getNumSamples() >= MAX_CURRENT_SAMPLES) {
+    if (current_data[0].getNumSamples() >= max_readings_in_agg) {
       printf("ERR - No more room in current reading buffer, already have %d readings!\n",
-             MAX_CURRENT_SAMPLES);
+             max_readings_in_agg);
       return;
     }
 
@@ -360,8 +404,8 @@ void loop(void) {
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       double param_reading = parser.getValue(i).data.double_val;
       current_data[i].addSample(param_reading);
-      printf("\t%s | value: %f, count: %u/%d, min: %f, max: %f\n", keys[i], param_reading,
-             current_data[i].getNumSamples(), MAX_CURRENT_SAMPLES - N_SAMPLES_PAD,
+      printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[i], param_reading,
+             current_data[i].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
              current_data[i].getMin(), current_data[i].getMax());
     }
   }
