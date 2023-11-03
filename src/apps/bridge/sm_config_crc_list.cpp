@@ -2,12 +2,42 @@
 #include "FreeRTOS.h"
 #include "cbor.h"
 
-SMConfigCRCList::SMConfigCRCList(cfg::AbstractConfiguration *cfg) : _cfg(cfg) {
+SMConfigCRCList::SMConfigCRCList(cfg::AbstractConfiguration *cfg)
+    : _cfg(cfg), _crc_list{0}, _num_crcs(0) {
   configASSERT(_cfg != nullptr);
 }
 
 bool SMConfigCRCList::contains(uint32_t crc) {
-  bool found = false;
+  decode();
+  for (size_t i = 0; i < _num_crcs; i++) {
+    if (_crc_list[i] == crc) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void SMConfigCRCList::add(uint32_t crc) {
+  if (contains(crc)) {
+    return;
+  }
+
+  for (size_t i = MAX_LIST_SIZE - 1; i > 0; i--) {
+    _crc_list[i] = _crc_list[i - 1];
+  }
+
+  _crc_list[0] = crc;
+  if (_num_crcs < MAX_LIST_SIZE) {
+    _num_crcs++;
+  }
+
+  encode();
+}
+
+// ---------------------------- PRIVATE ----------------------------
+
+void SMConfigCRCList::decode() {
+  _num_crcs = 0;
   bool should_clear = false;
 
   do {
@@ -50,19 +80,12 @@ bool SMConfigCRCList::contains(uint32_t crc) {
     }
 
     while (!cbor_value_at_end(&value)) {
-      if (!cbor_value_is_unsigned_integer(&value)) {
-        // TODO should remove this value
-      }
-
-      uint64_t retrieved_crc;
-      err = cbor_value_get_uint64(&value, &retrieved_crc);
-      if (err != CborNoError) {
-        // TODO should remove this value
-      }
-
-      if (retrieved_crc == crc) {
-        found = true;
-        break;
+      if (cbor_value_is_unsigned_integer(&value)) {
+        uint64_t retrieved_crc;
+        err = cbor_value_get_uint64(&value, &retrieved_crc);
+        if (err == CborNoError) {
+          _crc_list[_num_crcs++] = retrieved_crc;
+        }
       }
 
       err = cbor_value_advance(&value);
@@ -75,6 +98,32 @@ bool SMConfigCRCList::contains(uint32_t crc) {
   if (should_clear) {
     // TODO reset the stored cbor value to any empty array
   }
+}
 
-  return found;
+void SMConfigCRCList::encode() {
+  CborEncoder encoder;
+  uint8_t buffer[MAX_BUFFER_SIZE];
+  cbor_encoder_init(&encoder, buffer, MAX_BUFFER_SIZE, 0);
+
+  CborError err;
+  CborEncoder array_encoder;
+  err = cbor_encoder_create_array(&encoder, &array_encoder, _num_crcs);
+  if (err != CborNoError) {
+    // TODO
+  }
+
+  for (size_t i = 0; i < _num_crcs; i++) {
+    err = cbor_encode_uint(&array_encoder, _crc_list[i]);
+    if (err != CborNoError) {
+      // TODO
+    }
+  }
+
+  err = cbor_encoder_close_container(&encoder, &array_encoder);
+  if (err != CborNoError) {
+    // TODO
+  }
+
+  size_t buffer_size = cbor_encoder_get_buffer_size(&encoder, buffer);
+  _cfg->setConfigCbor(KEY, KEY_LEN, buffer, buffer_size);
 }
