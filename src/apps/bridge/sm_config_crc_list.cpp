@@ -7,6 +7,16 @@ SMConfigCRCList::SMConfigCRCList(cfg::AbstractConfiguration *cfg)
   configASSERT(_cfg != nullptr);
 }
 
+/*!
+  \brief Check whether the list contains the given CRC.
+
+  This function reads the list from the configuration.
+  It will not write to the configuration unless the retrieved data is invalid,
+  in which case it will clear the list, writing an empty array to the configuration.
+
+  \param crc[in] The CRC to search for.
+  \return True if the list contains the given CRC, false otherwise.
+*/
 bool SMConfigCRCList::contains(uint32_t crc) {
   decode();
   for (size_t i = 0; i < _num_crcs; i++) {
@@ -17,6 +27,21 @@ bool SMConfigCRCList::contains(uint32_t crc) {
   return false;
 }
 
+/*!
+  \brief Add the given CRC to the list.
+
+  This function reads the list from the configuration.
+  If the CRC is already in the list, it will not be added again,
+  and nothing will be written to the configuration.
+
+  Otherwise, the CRC will be added to the front of the list,
+  possibly pushing the oldest CRC off the end of the list
+  if it already contains the maximum number of items.
+
+  The list will then be written to the configuration.
+
+  \param crc[in] The CRC to add.
+*/
 void SMConfigCRCList::add(uint32_t crc) {
   if (contains(crc)) {
     return;
@@ -34,6 +59,11 @@ void SMConfigCRCList::add(uint32_t crc) {
   encode();
 }
 
+/*!
+  \brief Clear the list.
+
+  This function clears the list and writes an empty array to the configuration.
+*/
 void SMConfigCRCList::clear() {
   _num_crcs = 0;
   encode();
@@ -41,6 +71,13 @@ void SMConfigCRCList::clear() {
 
 // ---------------------------- PRIVATE ----------------------------
 
+/*!
+  \brief Read the list from the configuration.
+
+  This function reads the list from the configuration.
+  If the retrieved data is invalid, it will clear the list,
+  writing an empty array to the configuration.
+*/
 void SMConfigCRCList::decode() {
   _num_crcs = 0;
   bool should_clear = false;
@@ -105,6 +142,11 @@ void SMConfigCRCList::decode() {
   }
 }
 
+/*!
+  \brief Write the list to the configuration.
+
+  This function writes the list to the configuration.
+*/
 void SMConfigCRCList::encode() {
   CborEncoder encoder;
   uint8_t buffer[MAX_BUFFER_SIZE];
