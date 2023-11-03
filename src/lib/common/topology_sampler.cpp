@@ -22,6 +22,7 @@
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
+#include "sm_config_crc_list.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "topology_sampler.h"
@@ -142,21 +143,14 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       printf("\n");
     }
 
-    uint32_t network_crc32_stored = 0;
-    _hw_cfg->getConfig(
-        "smConfigurationCrc", strlen("smConfigurationCrc"),
-        network_crc32_stored); // TODO - make this name consistent across the message type + config value
-
-    // check the calculated crc with the one that is in the hw partition
-    if (network_crc32_calc != network_crc32_stored || _send_on_boot) {
-      if (network_crc32_calc != network_crc32_stored) {
-        printf("The smConfigurationCrc and calculated one do not match! calc: 0x%" PRIx32
-               " stored: 0x%" PRIx32 "\n",
-               network_crc32_calc, network_crc32_stored);
-        if (!_hw_cfg->setConfig("smConfigurationCrc", strlen("smConfigurationCrc"),
-                                network_crc32_calc)) {
-          printf("Failed to set crc in hwcfg\n");
-        }
+    SMConfigCRCList sm_config_crc_list(_hw_cfg);
+    bool known = sm_config_crc_list.contains(network_crc32_calc);
+    if (!known || _send_on_boot) {
+      if (!known) {
+        printf("The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
+               " Adding it.\n",
+               network_crc32_calc);
+        sm_config_crc_list.add(network_crc32_calc);
         if (!_hw_cfg->saveConfig(false)) {
           printf("Failed to save crc!\n");
         }
