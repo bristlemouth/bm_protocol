@@ -132,6 +132,7 @@ SerialHandle_t usbPcap = {
 };
 
 cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *systemConfigurationPartition = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
@@ -369,6 +370,7 @@ static void defaultTask(void *parameters) {
                                        strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
+  systemConfigurationPartition = &debug_configuration_system;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugConfigurationInit(&debug_configuration_user,

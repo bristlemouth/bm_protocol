@@ -89,7 +89,7 @@ static RTCTimeAndDate_t statsEndRtc =
     {}; // Timestamp that tracks the end of aggregation periods.
 
 // app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *userConfigurationPartition;
+extern cfg::Configuration *systemConfigurationPartition;
 
 /*
  * Setup a LineParser to turn the ASCII serial data from the Aanderaa into numbers
@@ -186,16 +186,16 @@ static int createAanderaaDataTopic(void) {
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
-  configASSERT(userConfigurationPartition);
-  userConfigurationPartition->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
+  configASSERT(systemConfigurationPartition);
+  systemConfigurationPartition->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
                                         current_agg_period_min);
-  userConfigurationPartition->getConfig("nSkipReadings", strlen("nSkipReadings"),
+  systemConfigurationPartition->getConfig("nSkipReadings", strlen("nSkipReadings"),
                                         n_skip_readings);
-  userConfigurationPartition->getConfig("readingIntervalMs", strlen("readingIntervalMs"),
+  systemConfigurationPartition->getConfig("readingIntervalMs", strlen("readingIntervalMs"),
                                         reading_interval_ms);
-  userConfigurationPartition->getConfig("payloadWdToS", strlen("payloadWdToS"),
+  systemConfigurationPartition->getConfig("payloadWdToS", strlen("payloadWdToS"),
                                         payload_wd_to_s);
-  userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
+  systemConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
                                         baud_rate);
 
   max_readings_in_agg = (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
@@ -220,8 +220,8 @@ void setup(void) {
   // Enable the input to the Vout power supply and ensure PL buck is disabled.
   IOWrite(&BB_VBUS_EN, 0);
   IOWrite(&BB_PL_BUCK_EN, 1);
-  // ensure Vbus stable before enable Vout with a 1.5s delay.
-  vTaskDelay(pdMS_TO_TICKS(1500));
+  // ensure Aanderaa is off for sufficient time to fully reset.
+  vTaskDelay(pdMS_TO_TICKS(AANDERAA_RESET_TIME_MS));
   // enable Vout, 12V by default.
   IOWrite(&BB_PL_BUCK_EN, 0);
 
