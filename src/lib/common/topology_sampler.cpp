@@ -522,10 +522,12 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
       break;
     }
     size_t tmp_len;
+    bool already_advanced;
     tmp_buf = static_cast<char *>(pvPortMalloc(cfg::MAX_CONFIG_BUFFER_SIZE_BYTES));
     configASSERT(tmp_buf);
     // Loop through all the key-value pairs in the cbor map and encode them to the subarray.
     for(size_t i = 0; i < num_fields; i++){
+      already_advanced = false;
       // Get & encode key
       if (!cbor_value_is_text_string(&it)) {
         err = CborErrorIllegalType;
@@ -605,6 +607,23 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
           }
           break;
         }
+        case CborArrayType: {
+          // To determine how many bytes long the cbor array is,
+          // we need to advance the iterator past the end of the array.
+          // Once we know the encoded byte length, we can simply memcpy.
+          // We then need to skip the cbor_value_advance call at the end of the loop,
+          // since we will have already advanced the iterator.
+          const uint8_t *array_start = it.source.ptr;
+          already_advanced = true;
+          err = cbor_value_advance(&it);
+          if (err != CborNoError) {
+            break;
+          }
+          size_t encoded_array_byte_len = it.source.ptr - array_start;
+          memcpy(map_encoder.data.ptr, array_start, encoded_array_byte_len);
+          map_encoder.data.ptr += encoded_array_byte_len;
+          break;
+        }
         default:{
           err = CborErrorIllegalType;
           break;
@@ -613,9 +632,11 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
       if(err != CborNoError) {
         break;
       }
-      err = cbor_value_advance(&it);
-      if (err != CborNoError) {
-        break;
+      if (!already_advanced) {
+        err = cbor_value_advance(&it);
+        if (err != CborNoError) {
+          break;
+        }
       }
     }
     if(err != CborNoError) {
