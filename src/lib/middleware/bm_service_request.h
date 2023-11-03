@@ -5,6 +5,7 @@
 
 /*!
  * @brief Callback function for bm_service_request
+ * @note Should not call bm_service_request from within this callback.
  * @param[in] ack True if the request was acknowledged, false if it was rejected.
  * @param[in] msg_id The message id of the request.
  * @param[in] service_strlen The length of the service string.

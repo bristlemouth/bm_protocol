@@ -72,6 +72,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
+    ${SRC_DIR}/lib/debug/debug_pluart_cli.cpp
     ${SRC_DIR}/lib/debug/debug_tca9546a.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp

@@ -83,10 +83,13 @@ static bool config_map_service_handler(size_t service_strlen, const char *servic
             printf("Invalid partition id\n");
         }
         size_t buffer_size;
+        if(config) {
+            cbor_map = config->asCborMap(buffer_size);
+        }
         ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
         reply.node_id = getNodeId();
         reply.partition_id = req.partition_id;
-        reply.cbor_data = (config) ? config->asCborMap(buffer_size) : NULL;
+        reply.cbor_data = cbor_map;
         reply.cbor_encoded_map_len = (reply.cbor_data) ? buffer_size : 0;
         reply.success = (reply.cbor_data) ? true : false;
         size_t encoded_len;

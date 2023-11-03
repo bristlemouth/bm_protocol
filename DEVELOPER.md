@@ -4,6 +4,10 @@ This document (hopefully) details the where/why/how of bristlemouth firmware. Fo
 
 If you're developing on the Bristlemouth Development Kit, see the [BMDK_README.md](./src/apps/bm_devkit/BMDK_README.md).
 
+# Running Tests
+### Build Tests
+To run build tests locally, run `python3 tools/scripts/test/did_i_break_something.py tools/scripts/test/configs`.  This script will verify all apps compile successfully.
+
 # Directory Structure
 Where is everything?!
 
