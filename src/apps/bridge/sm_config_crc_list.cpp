@@ -95,7 +95,7 @@ void SMConfigCRCList::decode() {
 
       err = cbor_value_advance(&value);
       if (err != CborNoError) {
-        // TODO ???
+        break;
       }
     }
   } while (0);
@@ -113,22 +113,24 @@ void SMConfigCRCList::encode() {
   CborError err;
   CborEncoder array_encoder;
   err = cbor_encoder_create_array(&encoder, &array_encoder, _num_crcs);
-  if (err != CborNoError) {
-    // TODO
-  }
-
-  for (size_t i = 0; i < _num_crcs; i++) {
-    err = cbor_encode_uint(&array_encoder, _crc_list[i]);
+  do {
     if (err != CborNoError) {
-      // TODO
+      break;
     }
-  }
 
-  err = cbor_encoder_close_container(&encoder, &array_encoder);
-  if (err != CborNoError) {
-    // TODO
-  }
+    for (size_t i = 0; i < _num_crcs; i++) {
+      err = cbor_encode_uint(&array_encoder, _crc_list[i]);
+      if (err != CborNoError) {
+        break;
+      }
+    }
 
-  size_t buffer_size = cbor_encoder_get_buffer_size(&encoder, buffer);
-  _cfg->setConfigCbor(KEY, KEY_LEN, buffer, buffer_size);
+    err = cbor_encoder_close_container(&encoder, &array_encoder);
+    if (err != CborNoError) {
+      break;
+    }
+
+    size_t buffer_size = cbor_encoder_get_buffer_size(&encoder, buffer);
+    _cfg->setConfigCbor(KEY, KEY_LEN, buffer, buffer_size);
+  } while (0);
 }
