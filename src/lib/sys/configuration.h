@@ -1,4 +1,5 @@
 #pragma once
+#include "abstract_configuration.h"
 #include "nvmPartition.h"
 #include "cbor.h"
 
@@ -16,6 +17,7 @@ typedef enum ConfigDataTypes{
     FLOAT,
     STR,
     BYTES,
+    ARRAY,
 } ConfigDataTypes_e;
 
 typedef struct ConfigPartitionHeader {
@@ -40,7 +42,7 @@ typedef struct ConfigPartition {
     ConfigValue_t values[MAX_NUM_KV];
 }__attribute__((packed, aligned(1))) ConfigPartition_t;
 
-class Configuration {
+class Configuration : public AbstractConfiguration {
 public:
     Configuration(NvmPartition &flash_partition, uint8_t *ram_partition, size_t ram_partition_size);
     bool getConfig(const char * key, size_t key_len, uint32_t &value);

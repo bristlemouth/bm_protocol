@@ -1,8 +1,8 @@
-#include "configuration.h"
+#include "abstract_configuration.h"
 
 class SMConfigCRCList {
 public:
-  SMConfigCRCList(cfg::Configuration *cfg);
+  SMConfigCRCList(cfg::AbstractConfiguration *cfg);
 
   static constexpr char KEY[] = "smConfigurationCrc";
   static constexpr size_t KEY_LEN = sizeof(KEY) - 1;
@@ -13,5 +13,5 @@ public:
   bool contains(uint32_t crc);
 
 private:
-  cfg::Configuration *_cfg;
+  cfg::AbstractConfiguration *_cfg;
 };

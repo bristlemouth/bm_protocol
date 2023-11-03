@@ -1,6 +1,10 @@
 #include "sm_config_crc_list.h"
+#include "FreeRTOS.h"
+#include "cbor.h"
 
-SMConfigCRCList::SMConfigCRCList(cfg::Configuration *cfg) : _cfg(cfg) {}
+SMConfigCRCList::SMConfigCRCList(cfg::AbstractConfiguration *cfg) : _cfg(cfg) {
+  configASSERT(_cfg != nullptr);
+}
 
 bool SMConfigCRCList::contains(uint32_t crc) {
   bool found = false;
