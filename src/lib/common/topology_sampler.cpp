@@ -22,6 +22,7 @@
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
+#include "sm_config_crc_list.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "topology_sampler.h"
@@ -142,21 +143,14 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       printf("\n");
     }
 
-    uint32_t network_crc32_stored = 0;
-    _hw_cfg->getConfig(
-        "smConfigurationCrc", strlen("smConfigurationCrc"),
-        network_crc32_stored); // TODO - make this name consistent across the message type + config value
-
-    // check the calculated crc with the one that is in the hw partition
-    if (network_crc32_calc != network_crc32_stored || _send_on_boot) {
-      if (network_crc32_calc != network_crc32_stored) {
-        printf("The smConfigurationCrc and calculated one do not match! calc: 0x%" PRIx32
-               " stored: 0x%" PRIx32 "\n",
-               network_crc32_calc, network_crc32_stored);
-        if (!_hw_cfg->setConfig("smConfigurationCrc", strlen("smConfigurationCrc"),
-                                network_crc32_calc)) {
-          printf("Failed to set crc in hwcfg\n");
-        }
+    SMConfigCRCList sm_config_crc_list(_hw_cfg);
+    bool known = sm_config_crc_list.contains(network_crc32_calc);
+    if (!known || _send_on_boot) {
+      if (!known) {
+        printf("The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
+               " Adding it.\n",
+               network_crc32_calc);
+        sm_config_crc_list.add(network_crc32_calc);
         if (!_hw_cfg->saveConfig(false)) {
           printf("Failed to save crc!\n");
         }
@@ -528,10 +522,12 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
       break;
     }
     size_t tmp_len;
+    bool already_advanced;
     tmp_buf = static_cast<char *>(pvPortMalloc(cfg::MAX_CONFIG_BUFFER_SIZE_BYTES));
     configASSERT(tmp_buf);
     // Loop through all the key-value pairs in the cbor map and encode them to the subarray.
     for(size_t i = 0; i < num_fields; i++){
+      already_advanced = false;
       // Get & encode key
       if (!cbor_value_is_text_string(&it)) {
         err = CborErrorIllegalType;
@@ -611,6 +607,23 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
           }
           break;
         }
+        case CborArrayType: {
+          // To determine how many bytes long the cbor array is,
+          // we need to advance the iterator past the end of the array.
+          // Once we know the encoded byte length, we can simply memcpy.
+          // We then need to skip the cbor_value_advance call at the end of the loop,
+          // since we will have already advanced the iterator.
+          const uint8_t *array_start = it.source.ptr;
+          already_advanced = true;
+          err = cbor_value_advance(&it);
+          if (err != CborNoError) {
+            break;
+          }
+          size_t encoded_array_byte_len = it.source.ptr - array_start;
+          memcpy(map_encoder.data.ptr, array_start, encoded_array_byte_len);
+          map_encoder.data.ptr += encoded_array_byte_len;
+          break;
+        }
         default:{
           err = CborErrorIllegalType;
           break;
@@ -619,9 +632,11 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
       if(err != CborNoError) {
         break;
       }
-      err = cbor_value_advance(&it);
-      if (err != CborNoError) {
-        break;
+      if (!already_advanced) {
+        err = cbor_value_advance(&it);
+        if (err != CborNoError) {
+          break;
+        }
       }
     }
     if(err != CborNoError) {

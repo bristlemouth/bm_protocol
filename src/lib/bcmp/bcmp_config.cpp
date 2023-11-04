@@ -305,6 +305,21 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 vPortFree(buffer);
                 break;
             }
+            case cfg::ConfigDataTypes_e::ARRAY: {
+                printf("Node Id: %" PRIx64 " Value: Array\n", msg->header.source_node_id);
+                size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
+                uint8_t *buffer = static_cast<uint8_t *>(pvPortMalloc(buffer_len));
+                configASSERT(buffer);
+                for (size_t i = 0; i < buffer_len; i++) {
+                    printf(" %02x", buffer[i]);
+                    if (i % 16 == 15) {
+                        printf("\n");
+                    }
+                }
+                printf("\n");
+                vPortFree(buffer);
+                break;
+            }
         }
     } while(0);
 }

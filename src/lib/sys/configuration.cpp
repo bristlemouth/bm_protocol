@@ -337,6 +337,15 @@ uint8_t *Configuration::asCborMap(size_t &buffer_size) {
           err = cbor_encode_byte_string(&map, tmpB, tmpBSize);
         }
         break;
+      case ARRAY:
+        tmpBSize = MAX_STR_LEN_BYTES;
+        memset(tmpB, 0, MAX_STR_LEN_BYTES);
+        internalSuccess = getConfigCbor(key.keyBuffer, key.keyLen, tmpB, tmpBSize);
+        if (internalSuccess) {
+            memcpy(map.data.ptr, tmpB, tmpBSize);
+            map.data.ptr += tmpBSize;
+        }
+        break;
       }
 
       if (!internalSuccess || (err != CborNoError && err != CborErrorOutOfMemory)) {
@@ -626,6 +635,9 @@ bool Configuration::cborTypeToConfigType(const CborValue *value, ConfigDataTypes
         } else if (cbor_value_is_float(value)){
             configType = FLOAT;
             break;
+        } else if (cbor_value_is_array(value)){
+            configType = ARRAY;
+            break;
         }
         rval = false;
     } while(0);
@@ -691,6 +703,8 @@ const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
             return "str";
         case BYTES:
             return "bytes";
+        case ARRAY:
+            return "array";
     }
     configASSERT(false); // NOT_REACHED
 }
@@ -741,6 +755,13 @@ bool Configuration::saveConfig(bool restart) {
                 if(cbor_value_get_string_length(&it,&size) != CborNoError){
                     return false;
                 }
+                break;
+            }
+            case ARRAY: {
+              if (cbor_value_get_array_length(&it, &size) != CborNoError) {
+                return false;
+              }
+              break;
             }
         }
         rval = true;
