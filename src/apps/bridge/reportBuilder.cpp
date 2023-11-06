@@ -11,12 +11,15 @@
 #include "reportBuilder.h"
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
+#define TOPO_TIMEOUT_MS (1000)
+
+class ReportBuilderLinkedList;
 
 typedef struct {
   uint32_t _sample_counter;
   uint32_t _samplesPerReport;
   uint32_t _transmitAggregations;
-  // TODO add a linked list of samples from nodes
+  ReportBuilderLinkedList *_reportBuilderLinkedList;
 } ReportBuilderContext_t;
 
 static ReportBuilderContext_t _ctx;
@@ -32,15 +35,20 @@ typedef struct report_builder_element_s {
   report_builder_element_s *prev;
 } report_builder_element_t;
 
+static report_builder_element_t NAN_AGG = {.abs_speed_mean_cm_s = NAN,
+                                           .abs_speed_std_cm_s = NAN,
+                                           .direction_circ_mean_rad = NAN,
+                                           .direction_circ_std_rad = NAN,
+                                           .temp_mean_deg_c = NAN};
+
 class ReportBuilderLinkedList {
   private:
 
-
     report_builder_element_t* newElement(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
     void freeElement(report_builder_element_s **element_pointer);
+    void append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
 
     report_builder_element_t *head;
-    report_builder_element_t *tail; // TODO - is this needed?
     size_t size;
 
   public:
@@ -49,15 +57,14 @@ class ReportBuilderLinkedList {
     ~ReportBuilderLinkedList();
 
     bool removeElement(report_builder_element_t *element);
-    void insertAfter(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
-    void insertBefore(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
+    bool addSample(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
+    report_builder_element_t* findElement(uint64_t node_id);
     void clear();
     size_t getSize();
 };
 
 ReportBuilderLinkedList::ReportBuilderLinkedList() {
   head = NULL;
-  tail = NULL;
   size = 0;
 }
 
@@ -79,18 +86,13 @@ report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, 
   element->sensor_data = static_cast<aanderaa_aggregations_t *>(pvPortMalloc(samples_per_report * sizeof(aanderaa_aggregations_t)));
   configASSERT(element->sensor_data != NULL);
 
-  aanderaa_aggregations_t nan_agg = {.abs_speed_mean_cm_s = NAN,
-                                     .abs_speed_std_cm_s = NAN,
-                                     .direction_circ_mean_rad = NAN,
-                                     .direction_circ_std_rad = NAN,
-                                     .temp_mean_deg_c = NAN};
   // Back fill the sensor_data with NANs if we are not on sample_count 0.
   uint32_t i;
   for (i = 0; i < sample_counter; i++) {
-    memcpy(&element->sensor_data[i], &nan_agg, sizeof(aanderaa_aggregations_t));
+    memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
   }
   // Copy the sensor data into the elements array in the correct location within the buffer
-  memcpy(&element->sensor_data[i], &sensor_data, sizeof(aanderaa_aggregations_t));
+  memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
   element->next = NULL;
   element->prev = NULL;
   return element;
@@ -114,8 +116,6 @@ bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
     }
     if (element->next != NULL) {
       element->next->prev = element->prev;
-    } else {
-      tail = element->prev;
     }
     freeElement(&element);
     size--;
@@ -124,40 +124,58 @@ bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
   return rval;
 }
 
-void ReportBuilderLinkedList::insertAfter(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
-   report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data);
+bool ReportBuilderLinkedList::addSample(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter) {
+  bool rval = false;
+  report_builder_element_t *element = findElement(node_id);
+  if (element != NULL) {
+    // Back fill the sensor_data with NANs if we are not on the right sample count
+    uint32_t i;
+    for (i = 0; i < sample_counter; i++) {
+      memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+    }
+    // Copy the sensor data into the elements array in the correct location within the buffer
+    memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
+  } else {
+    if (head == NULL && size == 0) {
+      append(NULL, node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
+      rval = true;
+    } else {
+      report_builder_element_t *element = head;
+      while (element->next != NULL) {
+        element = element->next;
+      }
+      append(element, node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
+    }
+  }
+  return rval;
+}
+
+void ReportBuilderLinkedList::append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter) {
+   report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
   if (curr != NULL) {
     element->next = curr->next;
     element->prev = curr;
     if (curr->next != NULL) {
       curr->next->prev = element;
-    } else {
-      tail = element;
     }
     curr->next = element;
     size++;
   } else {
     head = element;
-    tail = element;
   }
 }
 
-void ReportBuilderLinkedList::insertBefore(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
-  report_builder_element_t *element = newElement(node_id, sensor_type, sensor_data);
-  if (curr != NULL) {
-    element->next = curr;
-    element->prev = curr->prev;
-    if (curr->prev != NULL) {
-      curr->prev->next = element;
-    } else {
-      head = element;
+report_builder_element_t* ReportBuilderLinkedList::findElement(uint64_t node_id) {
+  bool rval = NULL;
+  report_builder_element_t *element = head;
+  while (element != NULL) {
+    if (element->node_id == node_id) {
+      rval = true;
+      break;
     }
-    curr->prev = element;
-    size++;
-  } else {
-    head = element;
-    tail = element;
+    element = element->next;
   }
+  return element;
 }
 
 void ReportBuilderLinkedList::clear() {
@@ -168,8 +186,11 @@ void ReportBuilderLinkedList::clear() {
     element = next;
   }
   head = NULL;
-  tail = NULL;
   size = 0;
+}
+
+size_t ReportBuilderLinkedList::getSize() {
+  return size;
 }
 
 // Task init
@@ -199,22 +220,22 @@ static void report_builder_task(void *parameters) {
       switch (item.message_type) {
         case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT:
           _ctx._sample_counter++;
-          if (_ctx._sample_counter >= _ctx._samplesPerReport && _ctx._samplesPerReport > 0) {
-            if (_ctx._transmitAggregations) {
-              // TODO - compile report into Cbor and send it to spotter
-            } else {
-              // TODO - is there something we should do with the report if we don't want to send it?
-              // like just log it?
-            }
-            // empty the linked list - I think that this will be easiest and leave us in a clean state instead of
-            // having to deal with a linked list that has a bunch of old nodes in it.
-          } else {
+          if (_ctx._sample_counter >= _ctx._samplesPerReport && _ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
+
+            // TODO - compile report into Cbor and send it to spotter
+            // here we will get the topology, look it up in the report builder linked list and copy the sensor_data
+            // into cbor to tx it.
+            _ctx._sample_counter = 0;
+            _ctx._reportBuilderLinkedList->clear();
+          } else if {
             // TODO - is there something we should do with the report if we don't want to send it?
-            // like just log it? Is there a way to combine these two nested if else statements?
+            // like just log it?
           }
           break;
         case REPORT_BUILDER_SAMPLE_MESSAGE:
-          // TODO - add sample to the linked list
+          if (_ctx._samplesPerReport > 0) {
+            _ctx._reportBuilderLinkedList->addSample(item.node_id, item.sensor_type, item.sensor_data, _ctx._samplesPerReport, _ctx._sample_counter);
+          }
           break;
       }
     }
