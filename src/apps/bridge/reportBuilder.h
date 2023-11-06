@@ -13,7 +13,8 @@ typedef struct {
   report_builder_message_e message_type;
   uint64_t node_id;
   uint8_t sensor_type;
-  uint8_t *sensor_data;
+  aanderaa_aggregations_t *sensor_data;
 } report_builder_queue_item_t;
 
 void reportBuilderInit(cfg::Configuration* sys_cfg);
+void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, report_builder_message_e msg_type);

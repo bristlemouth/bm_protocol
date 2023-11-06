@@ -6,6 +6,7 @@
 #include "bm_pubsub.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "reportBuilder.h"
 #include "semphr.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
@@ -261,6 +262,7 @@ static void runController(void *param) {
             } else {
               printf("ERROR: Failed to print Aanderaa data\n");
             }
+            reportBuilderAddToQueue(curr->node_id, 0, &agg, REPORT_BUILDER_SAMPLE_MESSAGE);
             // TODO - send aggregated data to a "report builder" task that will
             // combine all the data from all the sensors and send it to the spotter
             memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
@@ -275,6 +277,7 @@ static void runController(void *param) {
           curr = curr->next;
         }
         vPortFree(log_buf);
+        reportBuilderAddToQueue(0, 0, NULL, REPORT_BUILDER_INCREMENT_SAMPLE_COUNT);
       } else {
         printf("No Aanderaa nodes to aggregate\n");
       }
