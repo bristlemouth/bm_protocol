@@ -5,7 +5,7 @@
 #include "configuration.h"
 
 typedef enum {
-  REPORT_BUILDER_INCREMENT_SAMPLE_COUNT
+  REPORT_BUILDER_INCREMENT_SAMPLE_COUNT,
   REPORT_BUILDER_SAMPLE_MESSAGE,
 } report_builder_message_e;
 

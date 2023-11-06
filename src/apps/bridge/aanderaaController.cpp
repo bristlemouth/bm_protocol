@@ -222,13 +222,11 @@ static void runController(void *param) {
         while (curr != NULL) {
           if (xSemaphoreTake(curr->_mutex, portMAX_DELAY)) {
             size_t log_buflen = 0;
-            aanderaa_aggregations_t agg = {.node_id = 0,
-                                           .abs_speed_mean_cm_s = 0.0,
+            aanderaa_aggregations_t agg = {.abs_speed_mean_cm_s = 0.0,
                                            .abs_speed_std_cm_s = 0.0,
                                            .direction_circ_mean_rad = 0.0,
                                            .direction_circ_std_rad = 0.0,
                                            .temp_mean_deg_c = 0.0};
-            agg.node_id = curr->node_id;
             // Check to make sure we have enough sensor readings for a valid aggregation.
             // If not send NaNs for all the values.
             // TODO - verify that we can assume if one sampler is below the min then all of them are.
@@ -252,7 +250,7 @@ static void runController(void *param) {
                               "%.3f,"        // direction_circ_mean_rad
                               "%.3f,"        // direction_circ_std_rad
                               "%.3f\n",      // temp_mean_deg_c
-                              agg.node_id,
+                              curr->node_id,
                               agg.abs_speed_mean_cm_s,
                               agg.abs_speed_std_cm_s,
                               agg.direction_circ_mean_rad,

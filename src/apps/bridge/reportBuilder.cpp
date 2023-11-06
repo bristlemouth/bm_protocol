@@ -7,6 +7,7 @@
 #include "timers.h"
 #include <string.h>
 #include "app_config.h"
+#include "aanderaaController.h"
 #include "reportBuilder.h"
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
@@ -23,38 +24,36 @@ static QueueHandle_t _report_builder_queue = NULL;
 
 static void report_builder_task(void *parameters);
 
-// TODO - Build the linked list with insertion so we can "sort" it based on the topology
+typedef struct report_builder_element_s {
+  uint64_t node_id;
+  uint8_t sensor_type; // TODO - actually use it, it's ignored for now
+  aanderaa_aggregations_t *sensor_data; // TODO - make generic
+  report_builder_element_s *next;
+  report_builder_element_s *prev;
+} report_builder_element_t;
+
 class ReportBuilderLinkedList {
   private:
 
-    struct report_builder_element_s {
-      uint64_t node_id;
-      uint8_t sensor_type;
-      uint8_t *sensor_data;
-      report_builder_element_s *next;
-      report_builder_element_s *prev;
-    };
 
-
-    report_builder_element_s* newElement(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
+    report_builder_element_t* newElement(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
     void freeElement(report_builder_element_s **element_pointer);
 
-    report_builder_element_s *head;
-    report_builder_element_s *tail; // TODO - is this needed?
+    report_builder_element_t *head;
+    report_builder_element_t *tail; // TODO - is this needed?
     size_t size;
 
   public:
 
-    ReportBuilderLInkedLIst();
-    ~ReportBuilderLInkedLIst();
+    ReportBuilderLinkedList();
+    ~ReportBuilderLinkedList();
 
-    bool removeElement(report_builder_element_s *element);
-    void insertAfter(report_builder_element_s *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
-    void insertBefore(report_builder_element_s *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
+    bool removeElement(report_builder_element_t *element);
+    void insertAfter(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
+    void insertBefore(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data);
     void clear();
     size_t getSize();
-
-}
+};
 
 ReportBuilderLinkedList::ReportBuilderLinkedList() {
   head = NULL;
@@ -63,26 +62,41 @@ ReportBuilderLinkedList::ReportBuilderLinkedList() {
 }
 
 ReportBuilderLinkedList::~ReportBuilderLinkedList() {
-  report_builder_element_s *element = head;
+  report_builder_element_t *element = head;
   while (element != NULL) {
-    report_builder_element_s *next = element->next;
+    report_builder_element_t *next = element->next;
     freeElement(&element);
     element = next;
   }
 }
 
-report_builder_element_s* ReportBuilderLinkedList::newElement(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
-  report_builder_element_s *element = static_cast<report_builder_element_s *>(pvPortMalloc(sizeof(report_builder_element_s)));
+report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter) {
+  report_builder_element_t *element = static_cast<report_builder_element_t *>(pvPortMalloc(sizeof(report_builder_element_t)));
   configASSERT(element != NULL);
   element->node_id = node_id;
-  element->sensor_type = sensor_type;
-  element->sensor_data = sensor_data;
+  element->sensor_type = sensor_type; // Ignored for now
+  // TODO - use the sensor type to determine the size of the sensor data
+  element->sensor_data = static_cast<aanderaa_aggregations_t *>(pvPortMalloc(samples_per_report * sizeof(aanderaa_aggregations_t)));
+  configASSERT(element->sensor_data != NULL);
+
+  aanderaa_aggregations_t nan_agg = {.abs_speed_mean_cm_s = NAN,
+                                     .abs_speed_std_cm_s = NAN,
+                                     .direction_circ_mean_rad = NAN,
+                                     .direction_circ_std_rad = NAN,
+                                     .temp_mean_deg_c = NAN};
+  // Back fill the sensor_data with NANs if we are not on sample_count 0.
+  uint32_t i;
+  for (i = 0; i < sample_counter; i++) {
+    memcpy(&element->sensor_data[i], &nan_agg, sizeof(aanderaa_aggregations_t));
+  }
+  // Copy the sensor data into the elements array in the correct location within the buffer
+  memcpy(&element->sensor_data[i], &sensor_data, sizeof(aanderaa_aggregations_t));
   element->next = NULL;
   element->prev = NULL;
   return element;
 }
 
-void ReportBuilderLinkedList::freeElement(report_builder_element_s **element_pointer) {
+void ReportBuilderLinkedList::freeElement(report_builder_element_t **element_pointer) {
   if (element_pointer != NULL && *element_pointer != NULL) {
     vPortFree((*element_pointer)->sensor_data); // Free the data first
     vPortFree(*element_pointer);
@@ -90,7 +104,7 @@ void ReportBuilderLinkedList::freeElement(report_builder_element_s **element_poi
   }
 }
 
-bool ReportBuilderLinkedList::removeElement(report_builder_element_s *element) {
+bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
   bool rval = false;
   if (element != NULL) {
     if (element->prev != NULL) {
@@ -110,9 +124,9 @@ bool ReportBuilderLinkedList::removeElement(report_builder_element_s *element) {
   return rval;
 }
 
-void ReportBuilderLinkedList::insertAfter(report_builder_element_s *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
+void ReportBuilderLinkedList::insertAfter(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
+   report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data);
   if (curr != NULL) {
-    report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data);
     element->next = curr->next;
     element->prev = curr;
     if (curr->next != NULL) {
@@ -128,9 +142,9 @@ void ReportBuilderLinkedList::insertAfter(report_builder_element_s *curr, uint64
   }
 }
 
-void ReportBuilderLinkedList::insertBefore(report_builder_element_s *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
+void ReportBuilderLinkedList::insertBefore(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, uint8_t *sensor_data) {
+  report_builder_element_t *element = newElement(node_id, sensor_type, sensor_data);
   if (curr != NULL) {
-    report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data);
     element->next = curr;
     element->prev = curr->prev;
     if (curr->prev != NULL) {
@@ -146,6 +160,19 @@ void ReportBuilderLinkedList::insertBefore(report_builder_element_s *curr, uint6
   }
 }
 
+void ReportBuilderLinkedList::clear() {
+  report_builder_element_t *element = head;
+  while (element != NULL) {
+    report_builder_element_t *next = element->next;
+    freeElement(&element);
+    element = next;
+  }
+  head = NULL;
+  tail = NULL;
+  size = 0;
+}
+
+// Task init
 void reportBuilderInit(cfg::Configuration* sys_cfg) {
   configASSERT(sys_cfg);
   _ctx._samplesPerReport = 0;
@@ -160,8 +187,9 @@ void reportBuilderInit(cfg::Configuration* sys_cfg) {
   configASSERT(rval == pdPASS);
 }
 
+// Task
 static void report_builder_task(void *parameters) {
-  void (parameters);
+  (void) parameters;
 
   report_builder_queue_item_t item;
 
@@ -190,4 +218,5 @@ static void report_builder_task(void *parameters) {
           break;
       }
     }
+  }
 }
