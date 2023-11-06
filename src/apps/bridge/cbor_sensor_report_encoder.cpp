@@ -31,6 +31,12 @@ bool make_a_sensor_report(void){
     sensor_report_encoder_close_report(context);
     size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
     // Send cbor_buffer to the other side.
+    bm_serial_pub(getNodeId(),APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC,
+        sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC),
+        cbor_buffer,
+        cbor_buffer_len,
+        APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
+        APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
 }
 */
 
@@ -99,8 +105,8 @@ CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &con
  * @return Cbor error code.
  */
 CborError sensor_report_encoder_add_reading(sensor_report_encoder_context_t &context,
-                                           sample_encoder_cb sample_encoder_cb,
-                                           void *sensor_data) {
+                                            sample_encoder_cb sample_encoder_cb,
+                                            void *sensor_data) {
   return sample_encoder_cb(context.sample_array, sensor_data);
 }
 
