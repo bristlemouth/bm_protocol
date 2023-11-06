@@ -19,15 +19,15 @@ CborError sensor_report_encoder_open_report(uint8_t *cbor_buffer, size_t cbor_bu
 CborError sensor_report_encoder_close_report(sensor_report_encoder_context_t &context);
 
 CborError sensor_report_encoder_open_sensor(sensor_report_encoder_context_t &context,
-                                            size_t num_sensors);
+                                            size_t num_samples);
 
 CborError sensor_report_encoder_close_sensor(sensor_report_encoder_context_t &context);
 
 CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &context,
-                                            size_t num_samples);
+                                            size_t num_readings);
 
-CborError sensor_report_encoder_add_sample(sensor_report_encoder_context_t &context,
-                                           sample_encoder_cb sample_encoder_cb,
+CborError sensor_report_encoder_add_reading(sensor_report_encoder_context_t &context,
+                                           sample_encoder_cb reading_encoder_cb,
                                            void *sensor_data);
 
 CborError sensor_report_encoder_close_sample(sensor_report_encoder_context_t &context);

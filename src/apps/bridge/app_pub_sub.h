@@ -33,6 +33,10 @@ extern "C" {
 #define APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TYPE        1
 #define APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_VERSION     1
 
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC       "bridge/sensor_report"
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION     1
+
 #ifdef __cplusplus
 }
 #endif
