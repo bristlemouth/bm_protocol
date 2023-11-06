@@ -133,7 +133,6 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     }
 
     if (cbor_buffer) {
-      // TODO: Printing the buffer for now, but we should send this to spotter before freeing. 
       for(uint32_t i = 0; i < cbor_bufsize; i++) {
         printf("%02x ", cbor_buffer[i]);
         if(i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
@@ -172,7 +171,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       fw_info.gitSHA = getGitSHA();
 
       bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
-                                  _node_list.num_nodes, _node_list.nodes);
+                                  _node_list.num_nodes, _node_list.nodes, cbor_bufsize, cbor_buffer);
       if (_send_on_boot) {
         _send_on_boot = false;
       }
