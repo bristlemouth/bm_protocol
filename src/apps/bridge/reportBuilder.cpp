@@ -255,18 +255,20 @@ static void report_builder_task(void *parameters) {
               uint32_t num_nodes = 0;
               // TODO - here we need to also pull the Last Full Configuration
               // and make sure we are only adding sensors that are present in
-              // the LFC and in the topology.
+              // the LFC
               if (topology_sampler_get_node_list(_ctx._node_list, size_list, num_nodes,
                                                 TOPO_TIMEOUT_MS)) {
                 printf("Got node list, size: %d\n", num_nodes);
+                uint32_t num_sensors = num_nodes - 1; // Minus one since topo includes the bridge
                 sensor_report_encoder_context_t context;
                 uint8_t cbor_buffer[1024]; // TODO - make this dynamic?
-                sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_nodes, context);
-                for (size_t i = 0; i < num_nodes; i++) {
+                sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context);
+                // Start at index 1 to skip the bridge
+                for (size_t i = 1; i < num_nodes; i++) {
                   report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._node_list[i]);
                   sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport);
                   for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
-                    sensor_report_encoder_open_sample(context, 5); // 5 is the number of sample_members for an aanderaa sample
+                    sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS);
 
                     sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].abs_speed_mean_cm_s);
                     sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].abs_speed_std_cm_s);
@@ -280,13 +282,20 @@ static void report_builder_task(void *parameters) {
                 }
                 sensor_report_encoder_close_report(context);
                 size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
+                uint8_t *message_buff = static_cast<uint8_t *>(pvPortMalloc(sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len));
+                configASSERT(message_buff != NULL);
+                uint32_t crc = 0x12345; // TODO - actually calculate the crc
+                memcpy(message_buff, &crc, sizeof(uint32_t)); // this is where we will put the crc
+                memcpy(message_buff + sizeof(uint32_t), &cbor_buffer_len, sizeof(size_t));
+                memcpy(message_buff + sizeof(uint32_t) + sizeof(size_t), cbor_buffer, cbor_buffer_len);
                 // Send cbor_buffer to the other side.
                 bm_serial_pub(getNodeId(),APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC,
                     sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC),
-                    cbor_buffer,
-                    cbor_buffer_len,
+                    message_buff,
+                    sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len,
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
+                vPortFree(message_buff);
               } else {
                 printf("Failed to get node list\n");
               }
