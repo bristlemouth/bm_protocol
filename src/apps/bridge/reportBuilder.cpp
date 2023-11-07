@@ -6,8 +6,12 @@
 #include "timer_callback_handler.h"
 #include "timers.h"
 #include <string.h>
-#include "app_config.h"
 #include "aanderaaController.h"
+#include "app_config.h"
+#include "app_pub_sub.h"
+#include "bm_serial.h"
+#include "cbor_sensor_report_encoder.h"
+#include "device_info.h"
 #include "reportBuilder.h"
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
@@ -54,6 +58,7 @@ typedef struct ReportBuilderContext_s {
   uint32_t _samplesPerReport;
   uint32_t _transmitAggregations;
   ReportBuilderLinkedList _reportBuilderLinkedList;
+  uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
 } ReportBuilderContext_t;
 
 static ReportBuilderContext_t _ctx;
@@ -190,6 +195,13 @@ size_t ReportBuilderLinkedList::getSize() {
   return size;
 }
 
+CborError encode_double_sample_member(CborEncoder &sample_array, void* sample_member){
+  double local_sample_member = *(double*)sample_member;
+  CborError err = CborNoError;
+  err = cbor_encode_double(&sample_array, local_sample_member);
+  return err;
+}
+
 void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, report_builder_message_e msg_type) {
   report_builder_queue_item_t item;
   item.message_type = msg_type;
@@ -236,23 +248,58 @@ static void report_builder_task(void *parameters) {
       switch (item.message_type) {
         case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT:
           _ctx._sample_counter++;
-          printf("INCREMENTING sample counter to %d\n", _ctx._sample_counter);
+          printf("Incrementing sample counter to %d\n", _ctx._sample_counter);
           if (_ctx._sample_counter >= _ctx._samplesPerReport) {
             if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
-              // TODO - compile report into Cbor and send it to spotter
-              // here we will get the topology, look it up in the report builder linked list and copy the sensor_data
-              // into cbor to tx it.
-              printf("HERE we would tx it!\n");
-              printf("CLEARING the list\n");
+              size_t size_list = sizeof(_ctx._node_list);
+              uint32_t num_nodes = 0;
+              // TODO - here we need to also pull the Last Full Configuration
+              // and make sure we are only adding sensors that are present in
+              // the LFC and in the topology.
+              if (topology_sampler_get_node_list(_ctx._node_list, size_list, num_nodes,
+                                                TOPO_TIMEOUT_MS)) {
+                printf("Got node list, size: %d\n", num_nodes);
+                sensor_report_encoder_context_t context;
+                uint8_t cbor_buffer[1024]; // TODO - make this dynamic?
+                sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_nodes, context);
+                for (size_t i = 0; i < num_nodes; i++) {
+                  report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._node_list[i]);
+                  sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport);
+                  for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
+                    sensor_report_encoder_open_sample(context, 5); // 5 is the number of sample_members for an aanderaa sample
+
+                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].abs_speed_mean_cm_s);
+                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].abs_speed_std_cm_s);
+                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].direction_circ_mean_rad);
+                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].direction_circ_std_rad);
+                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].temp_mean_deg_c);
+
+                    sensor_report_encoder_close_sample(context);
+                  }
+                  sensor_report_encoder_close_sensor(context);
+                }
+                sensor_report_encoder_close_report(context);
+                size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
+                // Send cbor_buffer to the other side.
+                bm_serial_pub(getNodeId(),APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC,
+                    sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC),
+                    cbor_buffer,
+                    cbor_buffer_len,
+                    APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
+                    APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
+              } else {
+                printf("Failed to get node list\n");
+              }
+              printf("Clearing the list\n");
               _ctx._reportBuilderLinkedList.clear();
             }
-            printf("CLEARING the sample counter\n");
+            printf("Clearing the sample counter\n");
             _ctx._sample_counter = 0;
           }
           break;
         case REPORT_BUILDER_SAMPLE_MESSAGE:
           if (_ctx._samplesPerReport > 0) {
-            printf("ADDING sample for %" PRIx64 " to list\n", item.node_id);
+            printf("Adding sample for %" PRIx64 " to list\n", item.node_id);
             _ctx._reportBuilderLinkedList.addSample(item.node_id, item.sensor_type, item.sensor_data, _ctx._samplesPerReport, _ctx._sample_counter);
           } else {
             printf("samplesPerReport is 0, not adding sample to list\n");
