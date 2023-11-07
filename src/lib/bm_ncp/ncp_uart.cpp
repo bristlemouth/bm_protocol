@@ -23,7 +23,6 @@
 #include "reset_reason.h"
 #include "memfault/core/reboot_tracking.h"
 #include "gpio.h"
-#include "topology_sampler.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
