@@ -259,7 +259,11 @@ static void handle_subscriptions(uint64_t node_id, const char* topic, uint16_t t
             printf("Unrecognized version: %u and type: %u\n", version, type);
         }
     } else if(strncmp(APP_PUB_SUB_LAST_NET_CFG_TOPIC, topic, topic_len) == 0) {
-        bm_topology_last_network_info_cb();
+        if(type == APP_PUB_SUB_LAST_NET_CFG_TYPE && version == APP_PUB_SUB_LAST_NET_CFG_VERSION){
+            bm_topology_last_network_info_cb();
+        } else {
+            printf("Unrecognized version: %u and type: %u\n", version, type);
+        }
     } else {
         printf("Topic: %.*s\n", topic_len, topic);
         printf("Data: %.*s\n", data_len, data);
