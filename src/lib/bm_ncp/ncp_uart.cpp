@@ -23,6 +23,7 @@
 #include "reset_reason.h"
 #include "memfault/core/reboot_tracking.h"
 #include "gpio.h"
+#include "topology_sampler.h"
 
 #define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
 #define NCP_NOTIFY (1 << 1)
@@ -336,7 +337,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   bm_serial_callbacks.cfg_key_del_request_fn = ncp_cfg_key_del_request_cb;
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
   bm_serial_callbacks.reboot_info_fn = NULL;
-  bm_serial_callbacks.network_info_fn = NULL;
+  bm_serial_callbacks.network_info_fn = bm_topology_last_network_info_cb;
   bm_serial_callbacks.bcmp_info_request_fn = bcmp_info_request_cb;
   bm_serial_callbacks.bcmp_info_response_fn = NULL;
   bm_serial_callbacks.bcmp_resource_request_fn = bcmp_resource_request_cb;
