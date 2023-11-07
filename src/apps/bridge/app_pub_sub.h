@@ -33,6 +33,16 @@ extern "C" {
 #define APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TYPE        1
 #define APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_VERSION     1
 
+typedef struct app_pub_sub_bm_bridge_sensor_report_data {
+    uint32_t bm_config_crc32;
+    size_t cbor_buffer_len;
+    uint8_t cbor_buffer[0];
+} __attribute__((packed)) app_pub_sub_bm_bridge_sensor_report_data_t;
+
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC       "bridge/sensor_report"
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION     1
+
 #ifdef __cplusplus
 }
 #endif
