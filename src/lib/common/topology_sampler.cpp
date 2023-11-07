@@ -29,6 +29,7 @@
 #include "util.h"
 
 #define TOPOLOGY_TIMEOUT_MS 60000
+#define NETWORK_CONFIG_TIMEOUT_MS 1000
 
 #define TOPOLOGY_LOADING_TIMEOUT_MS 60000
 #define TOPOLOGY_BEGIN_TIMEOUT_MS 30
@@ -42,10 +43,17 @@
 #define NODE_CONFIG_PADDING (512)
 #define NUM_CONFIG_FIELDS_PER_NODE (5)
 
+typedef struct network_configuration_info {
+  uint32_t network_crc32;
+  size_t cbor_config_map_size;
+  uint8_t *cbor_config_map;
+} network_configuration_info_s;
+
 typedef struct node_list {
   uint64_t nodes[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   uint16_t num_nodes;
   SemaphoreHandle_t node_list_mutex;
+  network_configuration_info_s last_network_configuration_info;
 } node_list_s;
 
 static BridgePowerController *_bridge_power_controller;
@@ -138,6 +146,17 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         if(i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
           printf("\n");
         }
+      }
+      if(_node_list.last_network_configuration_info.network_crc32 != network_crc32_calc) {
+        if(_node_list.last_network_configuration_info.cbor_config_map) {
+          vPortFree(_node_list.last_network_configuration_info.cbor_config_map);
+          _node_list.last_network_configuration_info.cbor_config_map = NULL;
+        }
+        _node_list.last_network_configuration_info.network_crc32 = network_crc32_calc;
+        _node_list.last_network_configuration_info.cbor_config_map_size = cbor_bufsize;
+        _node_list.last_network_configuration_info.cbor_config_map = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
+        configASSERT(_node_list.last_network_configuration_info.cbor_config_map);
+        memcpy(_node_list.last_network_configuration_info.cbor_config_map, cbor_buffer, cbor_bufsize);
       }
       printf("\n");
     }
@@ -767,6 +786,31 @@ bool topology_sampler_get_node_list(uint64_t *node_list, size_t &node_list_size,
       node_list_size = _node_list.num_nodes * sizeof(uint64_t);
       memcpy(node_list, _node_list.nodes, node_list_size);
       rval = true;
+    } while (0);
+    xSemaphoreGive(_node_list.node_list_mutex);
+  }
+  return rval;
+}
+
+/*!
+ * @brief Get the last network configuration from the topology sampler
+ * @note This function will allocate memory for the cbor config map, the caller is responsible for freeing it.
+ * @param[out] network_crc32 The network crc32
+ * @param[out] cbor_config_size The size of the cbor config map in bytes.
+ * @return The cbor config map or NULL if unable to retreive.
+ */
+uint8_t* topology_sampler_alloc_last_network_config(uint32_t &network_crc32, uint32_t &cbor_config_size) {
+  uint8_t *rval = NULL;
+  if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
+    do {
+      if (!_node_list.last_network_configuration_info.cbor_config_map) {
+        break;
+      }
+      network_crc32 = _node_list.last_network_configuration_info.network_crc32;
+      cbor_config_size = _node_list.last_network_configuration_info.cbor_config_map_size;
+      rval = static_cast<uint8_t *>(pvPortMalloc(cbor_config_size));
+      configASSERT(rval);
+      memcpy(rval, _node_list.last_network_configuration_info.cbor_config_map, cbor_config_size);
     } while (0);
     xSemaphoreGive(_node_list.node_list_mutex);
   }
