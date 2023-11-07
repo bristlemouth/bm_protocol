@@ -147,6 +147,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
           printf("\n");
         }
       }
+      // If we have a new configuration, store it. 
       if(_node_list.last_network_configuration_info.network_crc32 != network_crc32_calc) {
         if(_node_list.last_network_configuration_info.cbor_config_map) {
           vPortFree(_node_list.last_network_configuration_info.cbor_config_map);
