@@ -24,10 +24,10 @@ CborError sensor_report_encoder_open_sensor(sensor_report_encoder_context_t &con
 CborError sensor_report_encoder_close_sensor(sensor_report_encoder_context_t &context);
 
 CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &context,
-                                            size_t num_readings);
+                                            size_t num_sample_members);
 
-CborError sensor_report_encoder_add_reading(sensor_report_encoder_context_t &context,
-                                           sample_encoder_cb reading_encoder_cb,
+CborError sensor_report_encoder_add_sample_member(sensor_report_encoder_context_t &context,
+                                           sample_encoder_cb sample_member_encoder_cb,
                                            void *sensor_data);
 
 CborError sensor_report_encoder_close_sample(sensor_report_encoder_context_t &context);

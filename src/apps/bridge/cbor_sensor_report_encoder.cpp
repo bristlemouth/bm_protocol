@@ -3,7 +3,7 @@
 /*
 EXAMPLE USAGE:
 
-CborError encode_my_reading(CborEncoder &sample_array, void *sensor_data){
+CborError encode_my_sample_member(CborEncoder &sample_array, void *sensor_data){
     my_sample_t *my_sample = (my_sample_t *)sensor_data;
     CborError err = CborNoError;
     err |= cbor_encode_uint(&sample_array, my_sample->my_uint);
@@ -15,14 +15,14 @@ bool make_a_sensor_report(void){
     uint8_t cbor_buffer[1024];
     size_t num_sensors = 1;
     size_t num_samples = 1;
-    size_t num_readings = 1;
+    size_t num_sample_members = 1;
     sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context);
     for (int i = 0; i < num_sensors; i++){
         sensor_report_encoder_open_sensor(context, num_samples);
         for(int j = 0; j < num_samples; j++) {
             sensor_report_encoder_open_sample(context, 1);
-            for(int k = 0; k < num_readings; k++) {
-                sensor_report_encoder_add_reading(context, encode_my_reading, &my_reading);
+            for(int k = 0; k < num_sample_members; k++) {
+                sensor_report_encoder_add_sample_member(context, encode_my_sample_member, &my_sample_member);
             }
             sensor_report_encoder_close_sample(context);
         }
@@ -89,25 +89,25 @@ CborError sensor_report_encoder_close_sensor(sensor_report_encoder_context_t &co
 /*!
  * @brief Open a sample array for encoding.
  * @param[in] context The encoding context.
- * @param[in] num_readings The number of samples in the sensor.
+ * @param[in] num_sample_members The number of samples in the sensor.
  * @return Cbor error code.
  */
 CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &context,
-                                            size_t num_readings) {
-  return cbor_encoder_create_array(&context.sensor_array, &context.sample_array, num_readings);
+                                            size_t num_sample_members) {
+  return cbor_encoder_create_array(&context.sensor_array, &context.sample_array, num_sample_members);
 }
 
 /*!
- * @brief Add a reading to the sample array.
+ * @brief Add a sample member to the sample array.
  * @param[in] context The encoding context.
  * @param[in] sample_encoder_cb The callback to encode the sample data.
  * @param[in] sensor_data The sensor data to encode.
  * @return Cbor error code.
  */
-CborError sensor_report_encoder_add_reading(sensor_report_encoder_context_t &context,
-                                            sample_encoder_cb sample_encoder_cb,
+CborError sensor_report_encoder_add_sample_member(sensor_report_encoder_context_t &context,
+                                            sample_encoder_cb sample_member_encoder_cb,
                                             void *sensor_data) {
-  return sample_encoder_cb(context.sample_array, sensor_data);
+  return sample_member_encoder_cb(context.sample_array, sensor_data);
 }
 
 /*!
