@@ -8,6 +8,7 @@
 typedef enum {
   REPORT_BUILDER_INCREMENT_SAMPLE_COUNT,
   REPORT_BUILDER_SAMPLE_MESSAGE,
+  REPORT_BUILDER_CHECK_CRC,
 } report_builder_message_e;
 
 typedef struct {

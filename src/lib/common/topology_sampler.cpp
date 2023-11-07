@@ -22,6 +22,7 @@
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
+#include "reportBuilder.h"
 #include "sm_config_crc_list.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
@@ -147,7 +148,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
           printf("\n");
         }
       }
-      // If we have a new configuration, store it. 
+      // If we have a new configuration, store it.
       if(_node_list.last_network_configuration_info.network_crc32 != network_crc32_calc) {
         if(_node_list.last_network_configuration_info.cbor_config_map) {
           vPortFree(_node_list.last_network_configuration_info.cbor_config_map);
@@ -196,6 +197,11 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         _send_on_boot = false;
       }
     }
+
+    // TODO - send the crc to the report builder so it can pull the topo list and check if it is bigger
+    // than the last one
+    reportBuilderAddToQueue(0, 0, NULL, REPORT_BUILDER_CHECK_CRC);
+
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);
 
@@ -237,7 +243,7 @@ static void topology_timer_handler(TimerHandle_t tmr) {
 
 /*!
  * @brief Callback function for sys info reply, sends to queue for processing.
- * 
+ *
  * @param[in] ack True if the message was acknowledged, false otherwise.
  * @param[in] msg_id The message id.
  * @param[in] service_strlen The length of the service string.
@@ -282,7 +288,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 
 /*!
  * @brief Callback function for cbor map reply, sends to queue for processing.
- * 
+ *
  * @param[in] ack True if the message was acknowledged, false otherwise.
  * @param[in] msg_id The message id.
  * @param[in] service_strlen The length of the service string.
@@ -295,7 +301,7 @@ static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_s
                                      const char *service, size_t reply_len,
                                      uint8_t *reply_data) {
   bool rval = false;
-  ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};           
+  ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
   printf("Service: %.*s\n", service_strlen, service);
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
@@ -342,7 +348,7 @@ static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_s
 
 /*!
  * @brief Creates the 2D Cbor array of the network configuration
- * 
+ *
  * @param[in/out] cbor_buffer The buffer to store the cbor array in.
  * @param[in/out] cbor_bufsize The size of the buffer passed in, on out it's the encoded cbor length.
  * @return True if the cbor array was created, false otherwise.
@@ -671,7 +677,7 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
     if (err != CborNoError) {
       break;
     }
-  
+
   } while(0);
   if(tmp_buf) {
     vPortFree(tmp_buf);

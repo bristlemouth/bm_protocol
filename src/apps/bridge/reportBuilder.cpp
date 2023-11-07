@@ -58,7 +58,9 @@ typedef struct ReportBuilderContext_s {
   uint32_t _samplesPerReport;
   uint32_t _transmitAggregations;
   ReportBuilderLinkedList _reportBuilderLinkedList;
-  uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  uint64_t _report_period_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  uint32_t _report_period_num_nodes;
+  uint32_t _report_period_max_network_crc32;
 } ReportBuilderContext_t;
 
 static ReportBuilderContext_t _ctx;
@@ -138,7 +140,12 @@ bool ReportBuilderLinkedList::addSample(uint64_t node_id, uint8_t sensor_type, a
       memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
     }
     // Copy the sensor data into the elements array in the correct location within the buffer
-    memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
+    // If it is NULL then just fill it with NAN again
+    if (sensor_data != NULL) {
+      memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
+    } else {
+      memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+    }
   } else {
     if (head == NULL && size == 0) {
       append(NULL, node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
@@ -209,7 +216,7 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, aanderaa_agg
     item.node_id = node_id;
     item.sensor_type = sensor_type;
     item.sensor_data = sensor_data;
-  } else if (msg_type == REPORT_BUILDER_INCREMENT_SAMPLE_COUNT) {
+  } else if (msg_type == REPORT_BUILDER_INCREMENT_SAMPLE_COUNT || msg_type == REPORT_BUILDER_CHECK_CRC) {
     item.node_id = 0;
     item.sensor_type = 0;
     item.sensor_data = NULL;
@@ -246,26 +253,28 @@ static void report_builder_task(void *parameters) {
     if (xQueueReceive(_report_builder_queue, &item,
                       portMAX_DELAY) == pdPASS) {
       switch (item.message_type) {
-        case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT:
+        case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT: {
           _ctx._sample_counter++;
           printf("Incrementing sample counter to %d\n", _ctx._sample_counter);
           if (_ctx._sample_counter >= _ctx._samplesPerReport) {
             if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
-              size_t size_list = sizeof(_ctx._node_list);
-              uint32_t num_nodes = 0;
-              // TODO - here we need to also pull the Last Full Configuration
-              // and make sure we are only adding sensors that are present in
-              // the LFC
-              if (topology_sampler_get_node_list(_ctx._node_list, size_list, num_nodes,
-                                                TOPO_TIMEOUT_MS)) {
-                printf("Got node list, size: %d\n", num_nodes);
-                uint32_t num_sensors = num_nodes - 1; // Minus one since topo includes the bridge
+              // Need to have more than one node to report anything (1 node would be just the bridge)
+              if (_ctx._report_period_num_nodes > 1) {
+                uint32_t num_sensors = _ctx._report_period_num_nodes - 1; // Minus one since topo includes the bridge
                 sensor_report_encoder_context_t context;
-                uint8_t cbor_buffer[1024]; // TODO - make this dynamic?
+                uint8_t cbor_buffer[315];
                 sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context);
                 // Start at index 1 to skip the bridge
-                for (size_t i = 1; i < num_nodes; i++) {
-                  report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._node_list[i]);
+                for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
+                  report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
+                  if (element == NULL) {
+                    printf("No data for node %" PRIx64 " in report period, adding it to the list\n", _ctx._report_period_node_list[i]);
+                    // we have a sensor that may have been added at the end of the report period
+                    // so lets add it to the list and this wil backfill all of the data so we can still send it
+                    // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
+                    // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
+                    _ctx._reportBuilderLinkedList.addSample(_ctx._report_period_node_list[i], 0, NULL, _ctx._samplesPerReport, (_ctx._sample_counter - 1));
+                  }
                   sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport);
                   for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
                     sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS);
@@ -282,31 +291,36 @@ static void report_builder_task(void *parameters) {
                 }
                 sensor_report_encoder_close_report(context);
                 size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
-                uint8_t *message_buff = static_cast<uint8_t *>(pvPortMalloc(sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len));
+                app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = static_cast<app_pub_sub_bm_bridge_sensor_report_data_t *>(pvPortMalloc(sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len));
                 configASSERT(message_buff != NULL);
-                uint32_t crc = 0x12345; // TODO - actually calculate the crc
-                memcpy(message_buff, &crc, sizeof(uint32_t)); // this is where we will put the crc
-                memcpy(message_buff + sizeof(uint32_t), &cbor_buffer_len, sizeof(size_t));
-                memcpy(message_buff + sizeof(uint32_t) + sizeof(size_t), cbor_buffer, cbor_buffer_len);
+                message_buff->bm_config_crc32 = _ctx._report_period_max_network_crc32;
+                message_buff->cbor_buffer_len = cbor_buffer_len;
+                memcpy(&message_buff->cbor_buffer, cbor_buffer, cbor_buffer_len);
                 // Send cbor_buffer to the other side.
                 bm_serial_pub(getNodeId(),APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC,
                     sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC),
-                    message_buff,
+                    reinterpret_cast<uint8_t *>(message_buff),
                     sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len,
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
                 vPortFree(message_buff);
               } else {
-                printf("Failed to get node list\n");
+                printf("No nodes to send data for\n");
               }
               printf("Clearing the list\n");
               _ctx._reportBuilderLinkedList.clear();
             }
             printf("Clearing the sample counter\n");
             _ctx._sample_counter = 0;
+            // Clear the report periods network associated data to rebuild it for the next report period
+            _ctx._report_period_num_nodes = 0;
+            _ctx._report_period_max_network_crc32 = 0;
+            memset(_ctx._report_period_node_list, 0, sizeof(_ctx._report_period_node_list));
           }
           break;
-        case REPORT_BUILDER_SAMPLE_MESSAGE:
+        }
+
+        case REPORT_BUILDER_SAMPLE_MESSAGE: {
           if (_ctx._samplesPerReport > 0) {
             printf("Adding sample for %" PRIx64 " to list\n", item.node_id);
             _ctx._reportBuilderLinkedList.addSample(item.node_id, item.sensor_type, item.sensor_data, _ctx._samplesPerReport, _ctx._sample_counter);
@@ -314,6 +328,42 @@ static void report_builder_task(void *parameters) {
             printf("samplesPerReport is 0, not adding sample to list\n");
           }
           break;
+        }
+
+        case REPORT_BUILDER_CHECK_CRC: {
+          printf("Checking CRC in report builder!\n");
+          // Get the latest crc - if it doens't match our saved one, pull the latest topology and compare the topology
+          // to our current topology - if it doesn't match our current one (and mainly if it is bigger or the same size) then
+          // update the crc and the topology list
+          uint32_t temp_network_crc32 = 0;
+          uint32_t temp_cbor_config_size = 0;
+          uint8_t *last_network_config = topology_sampler_alloc_last_network_config(temp_network_crc32, temp_cbor_config_size);
+          if (last_network_config != NULL) {
+            printf("Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32, _ctx._report_period_max_network_crc32);
+            if (temp_network_crc32 != _ctx._report_period_max_network_crc32) {
+              printf("Updating CRC in report builder!\n");
+              uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+              size_t temp_node_list_size = sizeof(temp_node_list);
+              uint32_t temp_num_nodes;
+              if (topology_sampler_get_node_list(temp_node_list, temp_node_list_size, temp_num_nodes, TOPO_TIMEOUT_MS)) {
+                if (temp_num_nodes >= _ctx._report_period_num_nodes) {
+                  _ctx._report_period_num_nodes = temp_num_nodes;
+                  memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
+                  _ctx._report_period_max_network_crc32 = temp_network_crc32;
+                }
+              }
+            }
+            // The last network config is not used here, but in the future it can be used to determine if varying sensor types have been
+            // connected/disconnected to the network.
+            vPortFree(last_network_config);
+          }
+          break;
+        }
+
+        default: {
+          printf("Uknown message type received in report_builder_task\n");
+          break;
+        }
       }
     }
   }
