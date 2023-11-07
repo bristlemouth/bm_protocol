@@ -819,12 +819,12 @@ uint8_t* topology_sampler_alloc_last_network_config(uint32_t &network_crc32, uin
 }
 
 /*
- * @brief Callback function for network info message, sends back the most recent network info
+ * @brief Callback function for "spotter/request-last-network-config" topic.
+ * Triggers a sending of most recent network info.
  * @param[in] UNUSED
  * @return UNUSED
  */
-bool bm_topology_last_network_info_cb(bm_common_network_info_t *network_info){
-  (void) network_info;
+void bm_topology_last_network_info_cb(void){
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
     do {
 
@@ -849,5 +849,4 @@ bool bm_topology_last_network_info_cb(bm_common_network_info_t *network_info){
     } while (0);
     xSemaphoreGive(_node_list.node_list_mutex);
   }
-  return true;
 }
