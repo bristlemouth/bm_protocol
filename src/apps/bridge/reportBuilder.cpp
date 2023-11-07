@@ -83,6 +83,7 @@ report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, 
   // TODO - use the sensor type to determine the size of the sensor data
   element->sensor_data = static_cast<aanderaa_aggregations_t *>(pvPortMalloc(samples_per_report * sizeof(aanderaa_aggregations_t)));
   configASSERT(element->sensor_data != NULL);
+  memset(element->sensor_data, 0, samples_per_report * sizeof(aanderaa_aggregations_t));
 
   // Back fill the sensor_data with NANs if we are not on sample_count 0.
   uint32_t i;
