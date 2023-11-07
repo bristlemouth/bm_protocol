@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "configuration.h"
+#include "aanderaaController.h"
 
 typedef enum {
   REPORT_BUILDER_INCREMENT_SAMPLE_COUNT,

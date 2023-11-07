@@ -13,20 +13,6 @@
 #define REPORT_BUILDER_QUEUE_SIZE (16)
 #define TOPO_TIMEOUT_MS (1000)
 
-class ReportBuilderLinkedList;
-
-typedef struct {
-  uint32_t _sample_counter;
-  uint32_t _samplesPerReport;
-  uint32_t _transmitAggregations;
-  ReportBuilderLinkedList *_reportBuilderLinkedList;
-} ReportBuilderContext_t;
-
-static ReportBuilderContext_t _ctx;
-static QueueHandle_t _report_builder_queue = NULL;
-
-static void report_builder_task(void *parameters);
-
 typedef struct report_builder_element_s {
   uint64_t node_id;
   uint8_t sensor_type; // TODO - actually use it, it's ignored for now
@@ -62,6 +48,18 @@ class ReportBuilderLinkedList {
     void clear();
     size_t getSize();
 };
+
+typedef struct ReportBuilderContext_s {
+  uint32_t _sample_counter;
+  uint32_t _samplesPerReport;
+  uint32_t _transmitAggregations;
+  ReportBuilderLinkedList _reportBuilderLinkedList;
+} ReportBuilderContext_t;
+
+static ReportBuilderContext_t _ctx;
+static QueueHandle_t _report_builder_queue = NULL;
+
+static void report_builder_task(void *parameters);
 
 ReportBuilderLinkedList::ReportBuilderLinkedList() {
   head = NULL;
@@ -211,8 +209,10 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, aanderaa_agg
 // Task init
 void reportBuilderInit(cfg::Configuration* sys_cfg) {
   configASSERT(sys_cfg);
-  _ctx._samplesPerReport = 0;
+  _ctx._samplesPerReport = DEFAULT_SAMPLES_PER_REPORT;
   sys_cfg->getConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT), _ctx._samplesPerReport);
+  _ctx._transmitAggregations = DEFAULT_TRANSMIT_AGGREGATIONS;
+  sys_cfg->getConfig(AppConfig::TRANSMIT_AGGREGATIONS, strlen(AppConfig::TRANSMIT_AGGREGATIONS), _ctx._transmitAggregations);
   _ctx._sample_counter = 0;
   _report_builder_queue =
       xQueueCreate(REPORT_BUILDER_QUEUE_SIZE, sizeof(report_builder_queue_item_t));
@@ -235,23 +235,26 @@ static void report_builder_task(void *parameters) {
       switch (item.message_type) {
         case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT:
           _ctx._sample_counter++;
-          printf("incrementing sample counter to %d\n", _ctx._sample_counter);
+          printf("INCREMENTING sample counter to %d\n", _ctx._sample_counter);
           if (_ctx._sample_counter >= _ctx._samplesPerReport) {
             if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
               // TODO - compile report into Cbor and send it to spotter
               // here we will get the topology, look it up in the report builder linked list and copy the sensor_data
               // into cbor to tx it.
-              printf("Here we would tx it!\n");
+              printf("HERE we would tx it!\n");
+              printf("CLEARING the list\n");
+              _ctx._reportBuilderLinkedList.clear();
             }
-            printf("Clearing the list\n");
+            printf("CLEARING the sample counter\n");
             _ctx._sample_counter = 0;
-            _ctx._reportBuilderLinkedList->clear();
           }
           break;
         case REPORT_BUILDER_SAMPLE_MESSAGE:
           if (_ctx._samplesPerReport > 0) {
-            printf("adding sample to list\n");
-            _ctx._reportBuilderLinkedList->addSample(item.node_id, item.sensor_type, item.sensor_data, _ctx._samplesPerReport, _ctx._sample_counter);
+            printf("ADDING sample for %" PRIx64 " to list\n", item.node_id);
+            _ctx._reportBuilderLinkedList.addSample(item.node_id, item.sensor_type, item.sensor_data, _ctx._samplesPerReport, _ctx._sample_counter);
+          } else {
+            printf("samplesPerReport is 0, not adding sample to list\n");
           }
           break;
       }
