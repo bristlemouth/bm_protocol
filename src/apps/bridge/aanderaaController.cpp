@@ -256,8 +256,7 @@ static void runController(void *param) {
             } else {
               printf("ERROR: Failed to print Aanderaa data\n");
             }
-            // Zero is the "sensor type" which is not used rn
-            reportBuilderAddToQueue(curr->node_id, 0, &agg, REPORT_BUILDER_SAMPLE_MESSAGE);
+            reportBuilderAddToQueue(curr->node_id, AANDERAA_SENSOR_TYPE, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
             // TODO - send aggregated data to a "report builder" task that will
             // combine all the data from all the sensors and send it to the spotter
             memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
@@ -272,8 +271,8 @@ static void runController(void *param) {
           curr = curr->next;
         }
         vPortFree(log_buf);
-        // The first three inputs are not used by this message type
-        reportBuilderAddToQueue(0, 0, NULL, REPORT_BUILDER_INCREMENT_SAMPLE_COUNT);
+        // The first four inputs are not used by this message type
+        reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_INCREMENT_SAMPLE_COUNT);
       } else {
         printf("No Aanderaa nodes to aggregate\n");
       }

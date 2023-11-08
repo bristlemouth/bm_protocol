@@ -198,9 +198,8 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       }
     }
 
-    // TODO - send the crc to the report builder so it can pull the topo list and check if it is bigger
-    // than the last one
-    reportBuilderAddToQueue(0, 0, NULL, REPORT_BUILDER_CHECK_CRC);
+    // The first four inputs are not used by this message type
+    reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
 
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);

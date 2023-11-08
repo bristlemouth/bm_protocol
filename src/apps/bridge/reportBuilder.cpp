@@ -19,8 +19,8 @@
 
 typedef struct report_builder_element_s {
   uint64_t node_id;
-  uint8_t sensor_type; // TODO - actually use it, it's ignored for now
-  aanderaa_aggregations_t *sensor_data; // TODO - make generic
+  uint8_t sensor_type;
+  void *sensor_data;
   report_builder_element_s *next;
   report_builder_element_s *prev;
 } report_builder_element_t;
@@ -34,9 +34,10 @@ static aanderaa_aggregations_t NAN_AGG = {.abs_speed_mean_cm_s = NAN,
 class ReportBuilderLinkedList {
   private:
 
-    report_builder_element_t* newElement(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
+    report_builder_element_t* newElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
     void freeElement(report_builder_element_s **element_pointer);
-    void append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
+    void append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
+    void addSensorDataToElement(report_builder_element_t *element, uint8_t sensor_type, void *sensor_data, uint32_t sample_counter);
 
     report_builder_element_t *head;
     size_t size;
@@ -47,7 +48,7 @@ class ReportBuilderLinkedList {
     ~ReportBuilderLinkedList();
 
     bool removeElement(report_builder_element_t *element);
-    bool addSample(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter);
+    bool addSample(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
     report_builder_element_t* findElement(uint64_t node_id);
     void clear();
     size_t getSize();
@@ -82,27 +83,18 @@ ReportBuilderLinkedList::~ReportBuilderLinkedList() {
   }
 }
 
-report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter) {
+report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter) {
   report_builder_element_t *element = static_cast<report_builder_element_t *>(pvPortMalloc(sizeof(report_builder_element_t)));
   configASSERT(element != NULL);
   element->node_id = node_id;
   element->sensor_type = sensor_type; // Ignored for now
   // TODO - use the sensor type to determine the size of the sensor data
-  element->sensor_data = static_cast<aanderaa_aggregations_t *>(pvPortMalloc(samples_per_report * sizeof(aanderaa_aggregations_t)));
+  element->sensor_data = static_cast<void *>(pvPortMalloc(samples_per_report * sensor_data_size));
   configASSERT(element->sensor_data != NULL);
-  memset(element->sensor_data, 0, samples_per_report * sizeof(aanderaa_aggregations_t));
+  memset(element->sensor_data, 0, samples_per_report * sensor_data_size);
 
-  // Back fill the sensor_data with NANs if we are not on sample_count 0.
-  uint32_t i;
-  for (i = 0; i < sample_counter; i++) {
-    memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
-  }
-  // Copy the sensor data into the elements array in the correct location within the buffer
-  if (sensor_data != NULL) {
-    memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
-  } else {
-    memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
-  }
+  addSensorDataToElement(element, sensor_type, sensor_data, sample_counter);
+
   element->next = NULL;
   element->prev = NULL;
   return element;
@@ -134,39 +126,54 @@ bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
   return rval;
 }
 
-bool ReportBuilderLinkedList::addSample(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter) {
+void ReportBuilderLinkedList::addSensorDataToElement(report_builder_element_t *element, uint8_t sensor_type, void *sensor_data, uint32_t sample_counter) {
+    switch (sensor_type) {
+      case AANDERAA_SENSOR_TYPE: {
+        // Back fill the sensor_data with NANs if we are not on the right sample count
+        uint32_t i;
+        for (i = 0; i < sample_counter; i++) {
+          memcpy(&(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+        }
+        // Copy the sensor data into the elements array in the correct location within the buffer
+        // If it is NULL then just fill it with NAN again
+        if (sensor_data != NULL) {
+          memcpy(&(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], sensor_data, sizeof(aanderaa_aggregations_t));
+        } else {
+          memcpy(&(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+        }
+        break;
+      }
+      default: {
+        printf("Unknown sensor type in addSensorDataToElement\n");
+        configASSERT(0);
+        break;
+      }
+    }
+}
+
+bool ReportBuilderLinkedList::addSample(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter) {
   bool rval = false;
   report_builder_element_t *element = findElement(node_id);
   if (element != NULL) {
-    // Back fill the sensor_data with NANs if we are not on the right sample count
-    uint32_t i;
-    for (i = 0; i < sample_counter; i++) {
-      memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
-    }
-    // Copy the sensor data into the elements array in the correct location within the buffer
-    // If it is NULL then just fill it with NAN again
-    if (sensor_data != NULL) {
-      memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
-    } else {
-      memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
-    }
+    addSensorDataToElement(element, sensor_type, sensor_data, sample_counter);
+    rval = true;
   } else {
     if (head == NULL && size == 0) {
-      append(NULL, node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
+      append(NULL, node_id, sensor_type, sensor_data, sensor_data_size, samples_per_report, sample_counter);
       rval = true;
     } else {
       report_builder_element_t *element = head;
       while (element->next != NULL) {
         element = element->next;
       }
-      append(element, node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
+      append(element, node_id, sensor_type, sensor_data, sensor_data_size, samples_per_report, sample_counter);
     }
   }
   return rval;
 }
 
-void ReportBuilderLinkedList::append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, uint32_t samples_per_report, uint32_t sample_counter) {
-   report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data, samples_per_report, sample_counter);
+void ReportBuilderLinkedList::append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter) {
+   report_builder_element_s *element = newElement(node_id, sensor_type, sensor_data, sensor_data_size, samples_per_report, sample_counter);
   if (curr != NULL) {
     element->next = curr->next;
     element->prev = curr;
@@ -213,21 +220,78 @@ CborError encode_double_sample_member(CborEncoder &sample_array, void* sample_me
   return err;
 }
 
-void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, aanderaa_aggregations_t *sensor_data, report_builder_message_e msg_type) {
+/**
+ * @brief Adds a new item to the report builder queue.
+ *
+ * This function creates a new report builder queue item and adds it to the queue. The item's properties are set based on the message type.
+ *
+ * @param node_id The ID of the node for the report.
+ * @param sensor_type The type of the sensor for the report.
+ * @param sensor_data The sensor data for the report.
+ * @param msg_type The type of the message to be added to the queue.
+ *
+ * @note If the message type is REPORT_BUILDER_SAMPLE_MESSAGE, the node_id, sensor_type, and sensor_data parameters are used.
+ * If the message type is REPORT_BUILDER_INCREMENT_SAMPLE_COUNT or REPORT_BUILDER_CHECK_CRC, these parameters are ignored and default values are used instead
+ * since they are not needed for these message types.
+ */
+void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, report_builder_message_e msg_type) {
   report_builder_queue_item_t item;
   item.message_type = msg_type;
   if (msg_type == REPORT_BUILDER_SAMPLE_MESSAGE) {
     item.node_id = node_id;
     item.sensor_type = sensor_type;
-    item.sensor_data = sensor_data;
+    // This will be freed by the task after it is done using the sensor_data
+    item.sensor_data = static_cast<void *>(pvPortMalloc(sensor_data_size));
+    configASSERT(item.sensor_data != NULL);
+    memcpy(item.sensor_data, sensor_data, sensor_data_size);
+    item.sensor_data_size = sensor_data_size;
   } else if (msg_type == REPORT_BUILDER_INCREMENT_SAMPLE_COUNT || msg_type == REPORT_BUILDER_CHECK_CRC) {
     item.node_id = 0;
     item.sensor_type = 0;
     item.sensor_data = NULL;
+    item.sensor_data_size = 0;
   } else {
     configASSERT(0);
   }
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
+}
+
+void reportBuilderConstructSamples(sensor_report_encoder_context_t &context, uint8_t sensor_type, void *sensor_data, uint32_t sample_number) {
+  switch (sensor_type){
+    case AANDERAA_SENSOR_TYPE: {
+      aanderaa_aggregations_t *aanderaa_sample = &(static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_number];
+      if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS) != CborNoError) {
+        printf("Failed to open sample in reportBuilderConstructSamples\n");
+      }
+
+
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample->abs_speed_mean_cm_s) != CborNoError) {
+        printf("Failed to add sample member in reportBuilderConstructSamples\n");
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample->abs_speed_std_cm_s) != CborNoError) {
+        printf("Failed to add sample member in reportBuilderConstructSamples\n");
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample->direction_circ_mean_rad) != CborNoError) {
+        printf("Failed to add sample member in reportBuilderConstructSamples\n");
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample->direction_circ_std_rad) != CborNoError) {
+        printf("Failed to add sample member in reportBuilderConstructSamples\n");
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample->temp_mean_deg_c) != CborNoError) {
+        printf("Failed to add sample member in reportBuilderConstructSamples\n");
+      }
+
+      if (sensor_report_encoder_close_sample(context) != CborNoError) {
+        printf("Failed to close sample in reportBuilderConstructSamples\n");
+      }
+      break;
+    }
+    default: {
+      printf("Received invalid sensor type in reportBuilderConstructSamples\n");
+      break;
+    }
+  }
+
 }
 
 // Task init
@@ -277,22 +341,24 @@ static void report_builder_task(void *parameters) {
                     // so lets add it to the list and this wil backfill all of the data so we can still send it
                     // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
                     // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
-                    _ctx._reportBuilderLinkedList.addSample(_ctx._report_period_node_list[i], 0, NULL, _ctx._samplesPerReport, (_ctx._sample_counter - 1));
+                    _ctx._reportBuilderLinkedList.addSample(_ctx._report_period_node_list[i], AANDERAA_SENSOR_TYPE, NULL, sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport, (_ctx._sample_counter - 1));
                     element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
                   } else {
                     printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
                   }
                   sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport);
                   for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
-                    sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS);
+                    reportBuilderConstructSamples(context, element->sensor_type, element->sensor_data, j);
+                    // sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS);
 
-                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].abs_speed_mean_cm_s);
-                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].abs_speed_std_cm_s);
-                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].direction_circ_mean_rad);
-                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].direction_circ_std_rad);
-                    sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &element->sensor_data[j].temp_mean_deg_c);
+                    // sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[j].abs_speed_mean_cm_s);
+                    // sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[j].abs_speed_std_cm_s);
+                    // sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[j].direction_circ_mean_rad);
+                    // sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[j].direction_circ_std_rad);
+                    // sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[j].temp_mean_deg_c);
 
-                    sensor_report_encoder_close_sample(context);
+                    // sensor_report_encoder_close_sample(context);
+
                   }
                   sensor_report_encoder_close_sensor(context);
                 }
@@ -330,7 +396,7 @@ static void report_builder_task(void *parameters) {
         case REPORT_BUILDER_SAMPLE_MESSAGE: {
           if (_ctx._samplesPerReport > 0) {
             printf("Adding sample for %" PRIx64 " to list\n", item.node_id);
-            _ctx._reportBuilderLinkedList.addSample(item.node_id, item.sensor_type, item.sensor_data, _ctx._samplesPerReport, _ctx._sample_counter);
+            _ctx._reportBuilderLinkedList.addSample(item.node_id, item.sensor_type, item.sensor_data, item.sensor_data_size, _ctx._samplesPerReport, _ctx._sample_counter);
           } else {
             printf("samplesPerReport is 0, not adding sample to list\n");
           }
@@ -339,8 +405,8 @@ static void report_builder_task(void *parameters) {
 
         case REPORT_BUILDER_CHECK_CRC: {
 
-          // IMPORTANT: If the bus is constantly on, the currentAggPeriodMin must be longer than the topology sampler period
-          // otherwise the CRC will not update before the topology sampler sends its next check CRC.
+          // IMPORTANT: If the bus is constantly on, the currentAggPeriodMin(or sample period eventually) must be longer than the topology sampler period (1 min)
+          // otherwise the CRC for the report builder may not update before a message needs to be sent
 
           printf("Checking CRC in report builder!\n");
           // Get the latest crc - if it doens't match our saved one, pull the latest topology and compare the topology
@@ -383,6 +449,10 @@ static void report_builder_task(void *parameters) {
           printf("Uknown message type received in report_builder_task\n");
           break;
         }
+      }
+      // Free the sensor data if it is not NULL, it is allocated in reportBuilderAddToQueue
+      if (item.sensor_data != NULL) {
+        vPortFree(item.sensor_data);
       }
     }
   }
