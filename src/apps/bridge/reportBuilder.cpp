@@ -98,7 +98,11 @@ report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, 
     memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
   }
   // Copy the sensor data into the elements array in the correct location within the buffer
-  memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
+  if (sensor_data != NULL) {
+    memcpy(&element->sensor_data[i], sensor_data, sizeof(aanderaa_aggregations_t));
+  } else {
+    memcpy(&element->sensor_data[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+  }
   element->next = NULL;
   element->prev = NULL;
   return element;
@@ -274,6 +278,8 @@ static void report_builder_task(void *parameters) {
                     // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
                     // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
                     _ctx._reportBuilderLinkedList.addSample(_ctx._report_period_node_list[i], 0, NULL, _ctx._samplesPerReport, (_ctx._sample_counter - 1));
+                  } else {
+                    printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
                   }
                   sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport);
                   for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
@@ -331,6 +337,10 @@ static void report_builder_task(void *parameters) {
         }
 
         case REPORT_BUILDER_CHECK_CRC: {
+
+          // IMPORTANT: If the bus is constantly on, the currentAggPeriodMin must be longer than the topology sampler period
+          // otherwise the CRC will not update before the topology sampler sends its next check CRC.
+
           printf("Checking CRC in report builder!\n");
           // Get the latest crc - if it doens't match our saved one, pull the latest topology and compare the topology
           // to our current topology - if it doesn't match our current one (and mainly if it is bigger or the same size) then
@@ -341,17 +351,25 @@ static void report_builder_task(void *parameters) {
           if (last_network_config != NULL) {
             printf("Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32, _ctx._report_period_max_network_crc32);
             if (temp_network_crc32 != _ctx._report_period_max_network_crc32) {
-              printf("Updating CRC in report builder!\n");
+              printf("Getting topology in report builder!\n");
               uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
               size_t temp_node_list_size = sizeof(temp_node_list);
               uint32_t temp_num_nodes;
               if (topology_sampler_get_node_list(temp_node_list, temp_node_list_size, temp_num_nodes, TOPO_TIMEOUT_MS)) {
+                printf("Got topology in report builder!\n");
                 if (temp_num_nodes >= _ctx._report_period_num_nodes) {
+                  printf("Updating CRC and topology in report builder!\n");
                   _ctx._report_period_num_nodes = temp_num_nodes;
                   memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
                   _ctx._report_period_max_network_crc32 = temp_network_crc32;
+                } else {
+                  printf("Not updating CRC and topology in report builder, new topology is smaller than the old one!\n");
                 }
+              } else {
+                printf("Failed to get the node list in report builder!\n");
               }
+            } else {
+              printf("CRCs match, not updating\n");
             }
             // The last network config is not used here, but in the future it can be used to determine if varying sensor types have been
             // connected/disconnected to the network.
