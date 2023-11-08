@@ -278,6 +278,7 @@ static void report_builder_task(void *parameters) {
                     // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
                     // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
                     _ctx._reportBuilderLinkedList.addSample(_ctx._report_period_node_list[i], 0, NULL, _ctx._samplesPerReport, (_ctx._sample_counter - 1));
+                    element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
                   } else {
                     printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
                   }
