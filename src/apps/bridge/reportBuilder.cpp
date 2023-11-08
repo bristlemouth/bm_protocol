@@ -154,14 +154,14 @@ void ReportBuilderLinkedList::addSensorDataToElement(report_builder_element_t *e
         // Back fill the sensor_data with NANs if we are not on the right sample count
         uint32_t i;
         for (i = 0; i < sample_counter; i++) {
-          memcpy(&(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
         }
         // Copy the sensor data into the elements array in the correct location within the buffer
         // If it is NULL then just fill it with NAN again
         if (sensor_data != NULL) {
-          memcpy(&(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], sensor_data, sizeof(aanderaa_aggregations_t));
+          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], sensor_data, sizeof(aanderaa_aggregations_t));
         } else {
-          memcpy(&(reinterpret_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
         }
         break;
       }
