@@ -452,6 +452,8 @@ static void report_builder_task(void *parameters) {
               size_t temp_node_list_size = sizeof(temp_node_list);
               uint32_t temp_num_nodes;
               if (topology_sampler_get_node_list(temp_node_list, temp_node_list_size, temp_num_nodes, TOPO_TIMEOUT_MS)) {
+                // TODO - we need to use the cbor_map and build a report builder topology map that only
+                // includes aanderaa nodes
                 printf("Got topology in report builder!\n");
                 if (temp_num_nodes >= _ctx._report_period_num_nodes) {
                   printf("Updating CRC and topology in report builder!\n");
