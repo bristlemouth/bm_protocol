@@ -151,22 +151,22 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     switch (sensor_type) {
       case AANDERAA_SENSOR_TYPE: {
         if (element->sample_counter < sample_counter) {
-          // Back fill the sensor_data with NANs if we are not on the right sample count
-          uint32_t i;
-          for (i = element->sample_counter; i < sample_counter; i++) {
-            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
-            elemtent_sample_counter++;
+          // Back fill the sensor_data with NANs if we are not on the right sample counter
+          // We use the element->sample_counter to track within each element how many samples
+          // the element has received.
+          for (; element->sample_counter < sample_counter; element->sample_counter++) {
+            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter++], &NAN_AGG, sizeof(aanderaa_aggregations_t));
           }
         }
 
         // Copy the sensor data into the elements array in the correct location within the buffer
         // If it is NULL then just fill it with NAN again
         if (sensor_data != NULL) {
-          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], sensor_data, sizeof(aanderaa_aggregations_t));
+          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter], sensor_data, sizeof(aanderaa_aggregations_t));
         } else {
-          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter], &NAN_AGG, sizeof(aanderaa_aggregations_t));
         }
-        elemtent_sample_counter++;
+        element->sample_counter++;
         break;
       }
       default: {
@@ -367,7 +367,8 @@ static void report_builder_task(void *parameters) {
             if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
               // Need to have more than one node to report anything (1 node would be just the bridge)
               if (_ctx._report_period_num_nodes > 1) {
-                uint32_t num_sensors = _ctx._report_period_num_nodes - 1; // Minus one since topo includes the bridge
+                // This num_sensors is for the cbor encoder and we subtract one since the bridge is not included in the report
+                uint32_t num_sensors = _ctx._report_period_num_nodes - 1;
                 sensor_report_encoder_context_t context;
                 uint8_t *cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
                 configASSERT(cbor_buffer != NULL);
