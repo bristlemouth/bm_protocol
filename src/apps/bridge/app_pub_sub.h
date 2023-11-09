@@ -11,6 +11,11 @@ extern "C" {
 #define APP_PUB_SUB_UTC_TYPE            1
 #define APP_PUB_SUB_UTC_VERSION         1
 
+
+#define APP_PUB_SUB_LAST_NET_CFG_TOPIC          "spotter/request-last-network-config"
+#define APP_PUB_SUB_LAST_NET_CFG_TYPE            1
+#define APP_PUB_SUB_LAST_NET_CFG_VERSION         1
+
 #define APP_PUB_SUB_PRINTF_TOPIC        "printf"
 #define APP_PUB_SUB_PRINTF_TYPE         1
 #define APP_PUB_SUB_PRINTF_VERSION      1
