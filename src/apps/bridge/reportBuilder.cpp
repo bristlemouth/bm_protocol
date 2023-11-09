@@ -26,6 +26,7 @@ typedef struct report_builder_element_s {
   uint64_t node_id;
   uint8_t sensor_type;
   void *sensor_data;
+  uint32_t sample_counter;
   report_builder_element_s *next;
   report_builder_element_s *prev;
 } report_builder_element_t;
@@ -42,7 +43,7 @@ class ReportBuilderLinkedList {
     report_builder_element_t* newElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
     void freeElement(report_builder_element_s **element_pointer);
     void append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
-    void addSensorDataToElement(report_builder_element_t *element, uint8_t sensor_type, void *sensor_data, uint32_t sample_counter);
+    void addSampleToElement(report_builder_element_t *element, uint8_t sensor_type, void *sensor_data, uint32_t sample_counter);
 
     report_builder_element_t *head;
     size_t size;
@@ -52,8 +53,8 @@ class ReportBuilderLinkedList {
     ReportBuilderLinkedList();
     ~ReportBuilderLinkedList();
 
-    bool removeElement(report_builder_element_t *element);
-    bool findElementAndAddSampleToElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
+    void removeElement(report_builder_element_t *element);
+    void findElementAndAddSampleToElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter);
     report_builder_element_t* findElement(uint64_t node_id);
     void clear();
 };
@@ -79,12 +80,7 @@ ReportBuilderLinkedList::ReportBuilderLinkedList() {
 }
 
 ReportBuilderLinkedList::~ReportBuilderLinkedList() {
-  report_builder_element_t *element = head;
-  while (element != NULL) {
-    report_builder_element_t *next = element->next;
-    freeElement(&element);
-    element = next;
-  }
+  clear();
 }
 
 /**
@@ -106,11 +102,12 @@ report_builder_element_t* ReportBuilderLinkedList::newElement(uint64_t node_id, 
   configASSERT(element != NULL);
   element->node_id = node_id;
   element->sensor_type = sensor_type;
+  element->sample_counter = 0;
   element->sensor_data = static_cast<void *>(pvPortMalloc(samples_per_report * sensor_data_size));
   configASSERT(element->sensor_data != NULL);
   memset(element->sensor_data, 0, samples_per_report * sensor_data_size);
 
-  addSensorDataToElement(element, sensor_type, sensor_data, sample_counter);
+  addSampleToElement(element, sensor_type, sensor_data, sample_counter);
 
   element->next = NULL;
   element->prev = NULL;
@@ -125,8 +122,7 @@ void ReportBuilderLinkedList::freeElement(report_builder_element_t **element_poi
   }
 }
 
-bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
-  bool rval = false;
+void ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
   if (element != NULL) {
     if (element->prev != NULL) {
       element->prev->next = element->next;
@@ -138,9 +134,7 @@ bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
     }
     freeElement(&element);
     size--;
-    rval = true;
   }
-  return rval;
 }
 
 /**
@@ -153,14 +147,18 @@ bool ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
  * @param sensor_data Pointer to the sensor data for the report.
  * @param sample_counter The current sample counter, indicating the position at which to add the sensor data.
  */
-void ReportBuilderLinkedList::addSensorDataToElement(report_builder_element_t *element, uint8_t sensor_type, void *sensor_data, uint32_t sample_counter) {
+void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *element, uint8_t sensor_type, void *sensor_data, uint32_t sample_counter) {
     switch (sensor_type) {
       case AANDERAA_SENSOR_TYPE: {
-        // Back fill the sensor_data with NANs if we are not on the right sample count
-        uint32_t i;
-        for (i = 0; i < sample_counter; i++) {
-          memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+        if (element->sample_counter < sample_counter) {
+          // Back fill the sensor_data with NANs if we are not on the right sample count
+          uint32_t i;
+          for (i = element->sample_counter; i < sample_counter; i++) {
+            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+            elemtent_sample_counter++;
+          }
         }
+
         // Copy the sensor data into the elements array in the correct location within the buffer
         // If it is NULL then just fill it with NAN again
         if (sensor_data != NULL) {
@@ -168,10 +166,11 @@ void ReportBuilderLinkedList::addSensorDataToElement(report_builder_element_t *e
         } else {
           memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[i], &NAN_AGG, sizeof(aanderaa_aggregations_t));
         }
+        elemtent_sample_counter++;
         break;
       }
       default: {
-        printf("Unknown sensor type in addSensorDataToElement\n");
+        printf("Unknown sensor type in addSampleToElement\n");
         configASSERT(0);
         break;
       }
@@ -191,16 +190,13 @@ void ReportBuilderLinkedList::addSensorDataToElement(report_builder_element_t *e
  * @param sample_counter The current sample counter.
  * @return A boolean value indicating whether the operation was successful. Returns true if the sample was added successfully, false otherwise.
  */
-bool ReportBuilderLinkedList::findElementAndAddSampleToElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter) {
-  bool rval = false;
+void ReportBuilderLinkedList::findElementAndAddSampleToElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter) {
   report_builder_element_t *element = findElement(node_id);
   if (element != NULL) {
-    addSensorDataToElement(element, sensor_type, sensor_data, sample_counter);
-    rval = true;
+    addSampleToElement(element, sensor_type, sensor_data, sample_counter);
   } else {
     if (head == NULL && size == 0) {
       append(NULL, node_id, sensor_type, sensor_data, sensor_data_size, samples_per_report, sample_counter);
-      rval = true;
     } else {
       report_builder_element_t *element = head;
       while (element->next != NULL) {
@@ -209,7 +205,6 @@ bool ReportBuilderLinkedList::findElementAndAddSampleToElement(uint64_t node_id,
       append(element, node_id, sensor_type, sensor_data, sensor_data_size, samples_per_report, sample_counter);
     }
   }
-  return rval;
 }
 
 void ReportBuilderLinkedList::append(report_builder_element_t *curr, uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report, uint32_t sample_counter) {
