@@ -374,7 +374,8 @@ static void report_builder_task(void *parameters) {
               if (_ctx._report_period_num_nodes > 1) {
                 uint32_t num_sensors = _ctx._report_period_num_nodes - 1; // Minus one since topo includes the bridge
                 sensor_report_encoder_context_t context;
-                uint8_t cbor_buffer[MAX_SENSOR_REPORT_CBOR_LEN];
+                uint8_t *cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
+                configASSERT(cbor_buffer != NULL);
                 sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context);
                 // Start at index 1 to skip the bridge
                 for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
@@ -411,6 +412,7 @@ static void report_builder_task(void *parameters) {
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
                 vPortFree(message_buff);
+                vPortFree(cbor_buffer);
               } else {
                 printf("No nodes to send data for\n");
               }
