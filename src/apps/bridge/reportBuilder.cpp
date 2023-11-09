@@ -383,7 +383,7 @@ static void report_builder_task(void *parameters) {
                     BRIDGE_LOG_PRINT("Failed to open report in report_builder_task\n");
                     break;
                   }
-                  bool exit_loop_early = false;
+                  bool abort_cbor_encoding = false;
                   // Start at index 1 to skip the bridge
                   for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
                     report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
@@ -400,23 +400,23 @@ static void report_builder_task(void *parameters) {
                     }
                     if (sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport) != CborNoError) {
                       BRIDGE_LOG_PRINT("Failed to open sensor in report_builder_task\n");
-                      exit_loop_early = true;
+                      abort_cbor_encoding = true;
                       break;
                     }
                     for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
                       if (!addSamplesToReport(context, element->sensor_type, element->sensor_data, j)) {
                         BRIDGE_LOG_PRINT("Failed to add samples to report in report_builder_task\n");
-                        exit_loop_early = true;
+                        abort_cbor_encoding = true;
                         break;
                       }
                     }
-                    if (sensor_report_encoder_close_sensor(context) != CborNoError || exit_loop_early) {
+                    if (sensor_report_encoder_close_sensor(context) != CborNoError || abort_cbor_encoding) {
                       BRIDGE_LOG_PRINT("Failed to close sensor in report_builder_task\n");
-                      exit_loop_early = true;
+                      abort_cbor_encoding = true;
                       break;
                     }
                   }
-                  if (exit_loop_early) {
+                  if (abort_cbor_encoding) {
                     break;
                   }
                   if (sensor_report_encoder_close_report(context) != CborNoError) {
