@@ -822,3 +822,34 @@ uint8_t* topology_sampler_alloc_last_network_config(uint32_t &network_crc32, uin
   }
   return rval;
 }
+
+/*
+ * @brief Callback function for "spotter/request-last-network-config" topic.
+ * Triggers a sending of most recent network info.
+ */
+void bm_topology_last_network_info_cb(void){
+  if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
+    do {
+
+      bm_common_config_crc_t config_crc = {
+          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
+          .crc32 = _sys_cfg->getCborEncodedConfigurationCrc32(),
+      };
+
+      bm_common_fw_version_t fw_info = {
+          .major = 0,
+          .minor = 0,
+          .revision = 0,
+          .gitSHA = 0,
+      };
+
+      getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
+      fw_info.gitSHA = getGitSHA();
+      bm_serial_send_network_info(_node_list.last_network_configuration_info.network_crc32, &config_crc, &fw_info,
+                                  _node_list.num_nodes, _node_list.nodes,
+                                  _node_list.last_network_configuration_info.cbor_config_map_size,
+                                  _node_list.last_network_configuration_info.cbor_config_map);
+    } while (0);
+    xSemaphoreGive(_node_list.node_list_mutex);
+  }
+}
