@@ -390,7 +390,7 @@ static void report_builder_task(void *parameters) {
                   sensor_report_encoder_context_t context;
                   cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
                   configASSERT(cbor_buffer != NULL);
-                  if (sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context) != CborNoError) {
+                  if (sensor_report_encoder_open_report(cbor_buffer, MAX_SENSOR_REPORT_CBOR_LEN, num_sensors, context) != CborNoError) {
                     BRIDGE_LOG_PRINT("Failed to open report in report_builder_task\n");
                     break;
                   }
