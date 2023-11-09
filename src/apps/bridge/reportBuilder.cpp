@@ -398,7 +398,7 @@ static void report_builder_task(void *parameters) {
                 }
                 sensor_report_encoder_close_report(context);
                 size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
-                app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = static_cast<app_pub_sub_bm_bridge_sensor_report_data_t *>(pvPortMalloc(sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len));
+                app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = static_cast<app_pub_sub_bm_bridge_sensor_report_data_t *>(pvPortMalloc(sizeof(app_pub_sub_bm_bridge_sensor_report_data_t) + cbor_buffer_len));
                 configASSERT(message_buff != NULL);
                 message_buff->bm_config_crc32 = _ctx._report_period_max_network_crc32;
                 message_buff->cbor_buffer_len = cbor_buffer_len;
