@@ -254,7 +254,7 @@ double AveragingSampler::getVariance(double mean, bool useKahan) {
 }
 
 /*!
-  Compute circular mean of all the samples
+  Compute the running circular mean of all the samples
   https://en.wikipedia.org/wiki/Circular_mean
 
   \return circular mean of all the samples
@@ -264,7 +264,7 @@ double AveragingSampler::getCircularMean() {
 }
 
 /*!
-  Compute circular standard deviation
+  Compute the running circular standard deviation
 
   \return circular standard deviation
  */
