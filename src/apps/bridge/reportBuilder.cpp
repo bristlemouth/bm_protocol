@@ -366,7 +366,11 @@ static void report_builder_task(void *parameters) {
       switch (item.message_type) {
         case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT: {
           _ctx._sample_counter++;
-          printf("Incrementing sample counter to %d\n", _ctx._sample_counter);
+          constexpr size_t bufsize = 36; // 36 is the length of the string below + \0
+          static char buffer[bufsize];
+          int len =
+              snprintf(buffer, bufsize, "Incrementing sample counter to %d\n", _ctx._sample_counter);
+          BRIDGE_LOG_PRINTN(buffer, len);
           if (_ctx._sample_counter >= _ctx._samplesPerReport) {
             if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
               // Need to have more than one node to report anything (1 node would be just the bridge)
@@ -388,7 +392,11 @@ static void report_builder_task(void *parameters) {
                   for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
                     report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
                     if (element == NULL) {
-                      printf("No data for node %" PRIx64 " in report period, adding it to the list\n", _ctx._report_period_node_list[i]);
+                      constexpr size_t bufsize = 65; // 65 is the length of the string below + \0
+                      static char buffer[bufsize];
+                      int len =
+                          snprintf(buffer, bufsize, "No data for node %" PRIx64 " in report period, adding it to the list\n", _ctx._report_period_node_list[i]);
+                      BRIDGE_LOG_PRINTN(buffer, len);
                       // we have a sensor that may have been added at the end of the report period
                       // so lets add it to the list and this wil backfill all of the data so we can still send it
                       // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
@@ -396,7 +404,11 @@ static void report_builder_task(void *parameters) {
                       _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(_ctx._report_period_node_list[i], AANDERAA_SENSOR_TYPE, NULL, sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport, (_ctx._sample_counter - 1));
                       element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
                     } else {
-                      printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
+                      constexpr size_t bufsize = 53; // 53 is the length of the string below + \0
+                      static char buffer[bufsize];
+                      int len =
+                          snprintf(buffer, bufsize, "Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
+                      BRIDGE_LOG_PRINTN(buffer, len);
                     }
                     if (sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport) != CborNoError) {
                       BRIDGE_LOG_PRINT("Failed to open sensor in report_builder_task\n");
@@ -461,7 +473,11 @@ static void report_builder_task(void *parameters) {
 
         case REPORT_BUILDER_SAMPLE_MESSAGE: {
           if (_ctx._samplesPerReport > 0) {
-            printf("Adding sample for %" PRIx64 " to list\n", item.node_id);
+            constexpr size_t bufsize = 38; // 38 is the length of the string below + \0
+            static char buffer[bufsize];
+            int len =
+                snprintf(buffer, bufsize, "Adding sample for %" PRIx64 " to list\n", item.node_id);
+            BRIDGE_LOG_PRINTN(buffer, len);
             _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(item.node_id, item.sensor_type, item.sensor_data, item.sensor_data_size, _ctx._samplesPerReport, _ctx._sample_counter);
           } else {
             BRIDGE_LOG_PRINT("samplesPerReport is 0, not adding sample to list\n");
@@ -482,7 +498,11 @@ static void report_builder_task(void *parameters) {
           uint32_t temp_cbor_config_size = 0;
           uint8_t *last_network_config = topology_sampler_alloc_last_network_config(temp_network_crc32, temp_cbor_config_size);
           if (last_network_config != NULL) {
-            printf("Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32, _ctx._report_period_max_network_crc32);
+            constexpr size_t bufsize = 33; // 33 is the length of the string below + \0
+            static char buffer[bufsize];
+            int len =
+                snprintf(buffer, bufsize, "Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32, _ctx._report_period_max_network_crc32);
+            BRIDGE_LOG_PRINTN(buffer, len);
             if (temp_network_crc32 != _ctx._report_period_max_network_crc32) {
               BRIDGE_LOG_PRINT("Getting topology in report builder!\n");
               uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
