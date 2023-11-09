@@ -25,7 +25,6 @@ typedef enum {
 typedef struct Aanderaa {
   uint64_t node_id;
   Aanderaa *next;
-  uint32_t current_agg_period_ms;
   AveragingSampler abs_speed_cm_s;
   AveragingSampler direction_rad;
   AveragingSampler temp_deg_c;
@@ -62,7 +61,6 @@ typedef struct aanderaaControllerCtx {
 static aanderaaControllerCtx_t _ctx;
 
 static constexpr uint32_t DEFAULT_CURRENT_AGG_PERIOD_MIN = 3;
-static constexpr uint32_t CURRENT_SAMPLE_PERIOD_MS = 2000; // Aanderaa "interval" config setting
 static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
@@ -290,17 +288,11 @@ static void createAanderaaSub(uint64_t node_id) {
 
   new_sub->node_id = node_id;
   new_sub->next = NULL;
-  new_sub->current_agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
-  uint32_t agg_period_min;
-  if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
-                               agg_period_min)) {
-    new_sub->current_agg_period_ms = (agg_period_min * 60 * 1000);
-  }
-  uint32_t AVERAGER_MAX_SAMPLES =
-      (new_sub->current_agg_period_ms / CURRENT_SAMPLE_PERIOD_MS) + Aanderaa_t::N_SAMPLES_PAD;
-  new_sub->abs_speed_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
-  new_sub->direction_rad.initBuffer(AVERAGER_MAX_SAMPLES);
-  new_sub->temp_deg_c.initBuffer(AVERAGER_MAX_SAMPLES);
+
+  // All of these use accumulative statistics, so only need a single sample buffer.
+  new_sub->abs_speed_cm_s.initBuffer(1);
+  new_sub->direction_rad.initBuffer(1);
+  new_sub->temp_deg_c.initBuffer(1);
 
   if (_ctx._subbed_aanderaas == NULL) {
     _ctx._subbed_aanderaas = new_sub;
