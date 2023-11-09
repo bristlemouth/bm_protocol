@@ -298,7 +298,8 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
  * @param sensor_data Pointer to the sensor data for the report.
  * @param sample_index The index of the sensor data to be copied into the sensor report.
  */
-static void addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t sensor_type, void *sensor_data, uint32_t sample_index) {
+static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t sensor_type, void *sensor_data, uint32_t sample_index) {
+  bool rval = false;
   switch (sensor_type){
     case AANDERAA_SENSOR_TYPE: {
       aanderaa_aggregations_t aanderaa_sample = (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
@@ -323,6 +324,7 @@ static void addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       if (sensor_report_encoder_close_sample(context) != CborNoError) {
         printf("Failed to close sample in addSamplesToReport\n");
       }
+      rval = true;
       break;
     }
     default: {
@@ -330,6 +332,7 @@ static void addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       break;
     }
   }
+  return rval;
 
 }
 
@@ -367,48 +370,78 @@ static void report_builder_task(void *parameters) {
             if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
               // Need to have more than one node to report anything (1 node would be just the bridge)
               if (_ctx._report_period_num_nodes > 1) {
-                // This num_sensors is for the cbor encoder and we subtract one since the bridge is not included in the report
-                uint32_t num_sensors = _ctx._report_period_num_nodes - 1;
-                sensor_report_encoder_context_t context;
-                uint8_t *cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
-                configASSERT(cbor_buffer != NULL);
-                sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context);
-                // Start at index 1 to skip the bridge
-                for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
-                  report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
-                  if (element == NULL) {
-                    printf("No data for node %" PRIx64 " in report period, adding it to the list\n", _ctx._report_period_node_list[i]);
-                    // we have a sensor that may have been added at the end of the report period
-                    // so lets add it to the list and this wil backfill all of the data so we can still send it
-                    // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
-                    // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
-                    _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(_ctx._report_period_node_list[i], AANDERAA_SENSOR_TYPE, NULL, sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport, (_ctx._sample_counter - 1));
-                    element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
-                  } else {
-                    printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
+                app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = NULL;
+                uint8_t *cbor_buffer = NULL;
+                do {
+                  // This num_sensors is for the cbor encoder and we subtract one since the bridge is not included in the report
+                  uint32_t num_sensors = _ctx._report_period_num_nodes - 1;
+                  sensor_report_encoder_context_t context;
+                  cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
+                  configASSERT(cbor_buffer != NULL);
+                  if (sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context) != CborNoError) {
+                    printf("Failed to open report in report_builder_task\n");
+                    break;
                   }
-                  sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport);
-                  for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
-                    addSamplesToReport(context, element->sensor_type, element->sensor_data, j);
+                  bool exit_loop_early = false;
+                  // Start at index 1 to skip the bridge
+                  for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
+                    report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
+                    if (element == NULL) {
+                      printf("No data for node %" PRIx64 " in report period, adding it to the list\n", _ctx._report_period_node_list[i]);
+                      // we have a sensor that may have been added at the end of the report period
+                      // so lets add it to the list and this wil backfill all of the data so we can still send it
+                      // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
+                      // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
+                      _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(_ctx._report_period_node_list[i], AANDERAA_SENSOR_TYPE, NULL, sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport, (_ctx._sample_counter - 1));
+                      element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
+                    } else {
+                      printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
+                    }
+                    if (sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport) != CborNoError) {
+                      printf("Failed to open sensor in report_builder_task\n");
+                      exit_loop_early = true;
+                      break;
+                    }
+                    for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
+                      if (!addSamplesToReport(context, element->sensor_type, element->sensor_data, j)) {
+                        printf("Failed to add samples to report in report_builder_task\n");
+                        exit_loop_early = true;
+                        break;
+                      }
+                    }
+                    if (sensor_report_encoder_close_sensor(context) != CborNoError || exit_loop_early) {
+                      printf("Failed to close sensor in report_builder_task\n");
+                      exit_loop_early = true;
+                      break;
+                    }
                   }
-                  sensor_report_encoder_close_sensor(context);
+                  if (exit_loop_early) {
+                    break;
+                  }
+                  if (sensor_report_encoder_close_report(context) != CborNoError) {
+                    printf("Failed to close report in report_builder_task\n");
+                    break;
+                  }
+                  size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
+                  message_buff = static_cast<app_pub_sub_bm_bridge_sensor_report_data_t *>(pvPortMalloc(sizeof(app_pub_sub_bm_bridge_sensor_report_data_t) + cbor_buffer_len));
+                  configASSERT(message_buff != NULL);
+                  message_buff->bm_config_crc32 = _ctx._report_period_max_network_crc32;
+                  message_buff->cbor_buffer_len = cbor_buffer_len;
+                  memcpy(&message_buff->cbor_buffer, cbor_buffer, cbor_buffer_len);
+                  // Send cbor_buffer to the other side.
+                  bm_serial_pub(getNodeId(),APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC,
+                      sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC),
+                      reinterpret_cast<uint8_t *>(message_buff),
+                      sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len,
+                      APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
+                      APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
+                } while (0);
+                if (message_buff != NULL) {
+                  vPortFree(message_buff);
                 }
-                sensor_report_encoder_close_report(context);
-                size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
-                app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = static_cast<app_pub_sub_bm_bridge_sensor_report_data_t *>(pvPortMalloc(sizeof(app_pub_sub_bm_bridge_sensor_report_data_t) + cbor_buffer_len));
-                configASSERT(message_buff != NULL);
-                message_buff->bm_config_crc32 = _ctx._report_period_max_network_crc32;
-                message_buff->cbor_buffer_len = cbor_buffer_len;
-                memcpy(&message_buff->cbor_buffer, cbor_buffer, cbor_buffer_len);
-                // Send cbor_buffer to the other side.
-                bm_serial_pub(getNodeId(),APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC,
-                    sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TOPIC),
-                    reinterpret_cast<uint8_t *>(message_buff),
-                    sizeof(uint32_t) + sizeof(size_t) + cbor_buffer_len,
-                    APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE,
-                    APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION);
-                vPortFree(message_buff);
-                vPortFree(cbor_buffer);
+                if (cbor_buffer != NULL) {
+                  vPortFree(cbor_buffer);
+                }
               } else {
                 printf("No nodes to send data for\n");
               }
