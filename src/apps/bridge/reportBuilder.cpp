@@ -306,24 +306,31 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       aanderaa_aggregations_t aanderaa_sample = (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
       if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open sample in addSamplesToReport\n");
+        break;
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.abs_speed_mean_cm_s) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.abs_speed_std_cm_s) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.direction_circ_mean_rad) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.direction_circ_std_rad) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.temp_mean_deg_c) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
       }
       if (sensor_report_encoder_close_sample(context) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
+        break;
       }
       rval = true;
       break;
@@ -366,7 +373,7 @@ static void report_builder_task(void *parameters) {
       switch (item.message_type) {
         case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT: {
           _ctx._sample_counter++;
-          constexpr size_t bufsize = 36; // 36 is the length of the string below + \0
+          constexpr size_t bufsize = 50;
           static char buffer[bufsize];
           int len =
               snprintf(buffer, bufsize, "Incrementing sample counter to %d\n", _ctx._sample_counter);
@@ -392,7 +399,7 @@ static void report_builder_task(void *parameters) {
                   for (size_t i = 1; i < _ctx._report_period_num_nodes; i++) {
                     report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
                     if (element == NULL) {
-                      constexpr size_t bufsize = 65; // 65 is the length of the string below + \0
+                      constexpr size_t bufsize = 80;
                       static char buffer[bufsize];
                       int len =
                           snprintf(buffer, bufsize, "No data for node %" PRIx64 " in report period, adding it to the list\n", _ctx._report_period_node_list[i]);
@@ -404,10 +411,10 @@ static void report_builder_task(void *parameters) {
                       _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(_ctx._report_period_node_list[i], AANDERAA_SENSOR_TYPE, NULL, sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport, (_ctx._sample_counter - 1));
                       element = _ctx._reportBuilderLinkedList.findElement(_ctx._report_period_node_list[i]);
                     } else {
-                      constexpr size_t bufsize = 53; // 53 is the length of the string below + \0
+                      constexpr size_t bufsize = 70;
                       static char buffer[bufsize];
                       int len =
-                          snprintf(buffer, bufsize, "Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
+                          snprintf(buffer, bufsize, "Found data for node %" PRIx64 " adding it to the the report\n", _ctx._report_period_node_list[i]);
                       BRIDGE_LOG_PRINTN(buffer, len);
                     }
                     if (sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport) != CborNoError) {
@@ -473,7 +480,7 @@ static void report_builder_task(void *parameters) {
 
         case REPORT_BUILDER_SAMPLE_MESSAGE: {
           if (_ctx._samplesPerReport > 0) {
-            constexpr size_t bufsize = 38; // 38 is the length of the string below + \0
+            constexpr size_t bufsize = 55;
             static char buffer[bufsize];
             int len =
                 snprintf(buffer, bufsize, "Adding sample for %" PRIx64 " to list\n", item.node_id);
@@ -498,7 +505,7 @@ static void report_builder_task(void *parameters) {
           uint32_t temp_cbor_config_size = 0;
           uint8_t *last_network_config = topology_sampler_alloc_last_network_config(temp_network_crc32, temp_cbor_config_size);
           if (last_network_config != NULL) {
-            constexpr size_t bufsize = 33; // 33 is the length of the string below + \0
+            constexpr size_t bufsize = 50;
             static char buffer[bufsize];
             int len =
                 snprintf(buffer, bufsize, "Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32, _ctx._report_period_max_network_crc32);
