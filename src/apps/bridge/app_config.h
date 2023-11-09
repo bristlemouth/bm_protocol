@@ -2,6 +2,9 @@
 
 #include "configuration.h"
 
+#define DEFAULT_TRANSMIT_AGGREGATIONS 1
+#define DEFAULT_SAMPLES_PER_REPORT 2
+
 namespace AppConfig {
 
 constexpr const char *SAMPLE_INTERVAL_MS = "sampleIntervalMs";

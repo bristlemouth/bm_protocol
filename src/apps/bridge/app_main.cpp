@@ -50,6 +50,7 @@
 #include "configuration.h"
 #include "debug_configuration.h"
 #include "ram_partitions.h"
+#include "reportBuilder.h"
 #include "bridgePowerController.h"
 #include "debug_bridge_power_controller.h"
 #include "timer_callback_handler.h"
@@ -373,6 +374,7 @@ static void defaultTask( void *parameters ) {
     debug_ncp_init();
     debugBmServiceInit();
     sys_info_service_init(debug_configuration_system);
+    reportBuilderInit(&debug_configuration_system);
     aanderaControllerInit(&bridge_power_controller, &debug_configuration_user, &debug_configuration_system);
     config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);

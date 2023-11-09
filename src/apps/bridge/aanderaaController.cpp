@@ -6,6 +6,7 @@
 #include "bm_pubsub.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "reportBuilder.h"
 #include "semphr.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
@@ -222,23 +223,15 @@ static void runController(void *param) {
         while (curr != NULL) {
           if (xSemaphoreTake(curr->_mutex, portMAX_DELAY)) {
             size_t log_buflen = 0;
-            aanderaa_aggregations_t agg = {.node_id = 0,
-                                           .abs_speed_mean_cm_s = 0.0,
-                                           .abs_speed_std_cm_s = 0.0,
-                                           .direction_circ_mean_rad = 0.0,
-                                           .direction_circ_std_rad = 0.0,
-                                           .temp_mean_deg_c = 0.0};
-            agg.node_id = curr->node_id;
+            aanderaa_aggregations_t agg = {.abs_speed_mean_cm_s = NAN,
+                                           .abs_speed_std_cm_s = NAN,
+                                           .direction_circ_mean_rad = NAN,
+                                           .direction_circ_std_rad = NAN,
+                                           .temp_mean_deg_c = NAN};
             // Check to make sure we have enough sensor readings for a valid aggregation.
             // If not send NaNs for all the values.
             // TODO - verify that we can assume if one sampler is below the min then all of them are.
-            if(curr->abs_speed_cm_s.getNumSamples() < MIN_READINGS_FOR_AGGREGATION) {
-              agg.abs_speed_mean_cm_s = NAN;
-              agg.abs_speed_std_cm_s = NAN;
-              agg.direction_circ_mean_rad = NAN;
-              agg.direction_circ_std_rad = NAN;
-              agg.temp_mean_deg_c = NAN;
-            } else {
+            if(curr->abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
               agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);;
               agg.abs_speed_std_cm_s = curr->abs_speed_cm_s.getStd(true);;
               agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();;
@@ -252,7 +245,7 @@ static void runController(void *param) {
                               "%.3f,"        // direction_circ_mean_rad
                               "%.3f,"        // direction_circ_std_rad
                               "%.3f\n",      // temp_mean_deg_c
-                              agg.node_id,
+                              curr->node_id,
                               agg.abs_speed_mean_cm_s,
                               agg.abs_speed_std_cm_s,
                               agg.direction_circ_mean_rad,
@@ -263,6 +256,7 @@ static void runController(void *param) {
             } else {
               printf("ERROR: Failed to print Aanderaa data\n");
             }
+            reportBuilderAddToQueue(curr->node_id, AANDERAA_SENSOR_TYPE, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
             // TODO - send aggregated data to a "report builder" task that will
             // combine all the data from all the sensors and send it to the spotter
             memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
@@ -277,6 +271,8 @@ static void runController(void *param) {
           curr = curr->next;
         }
         vPortFree(log_buf);
+        // The first four inputs are not used by this message type
+        reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_INCREMENT_SAMPLE_COUNT);
       } else {
         printf("No Aanderaa nodes to aggregate\n");
       }
