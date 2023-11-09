@@ -10,6 +10,7 @@
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bm_serial.h"
+#include "bridgeLog.h"
 #include "cbor_sensor_report_encoder.h"
 #include "device_info.h"
 #include "reportBuilder.h"
@@ -170,7 +171,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
         break;
       }
       default: {
-        printf("Unknown sensor type in addSampleToElement\n");
+        BRIDGE_LOG_PRINT("Unknown sensor type in addSampleToElement\n");
         configASSERT(0);
         break;
       }
@@ -304,31 +305,31 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     case AANDERAA_SENSOR_TYPE: {
       aanderaa_aggregations_t aanderaa_sample = (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
       if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS) != CborNoError) {
-        printf("Failed to open sample in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to open sample in addSamplesToReport\n");
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.abs_speed_mean_cm_s) != CborNoError) {
-        printf("Failed to add sample member in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.abs_speed_std_cm_s) != CborNoError) {
-        printf("Failed to add sample member in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.direction_circ_mean_rad) != CborNoError) {
-        printf("Failed to add sample member in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.direction_circ_std_rad) != CborNoError) {
-        printf("Failed to add sample member in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.temp_mean_deg_c) != CborNoError) {
-        printf("Failed to add sample member in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
       }
       if (sensor_report_encoder_close_sample(context) != CborNoError) {
-        printf("Failed to close sample in addSamplesToReport\n");
+        BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
       }
       rval = true;
       break;
     }
     default: {
-      printf("Received invalid sensor type in addSamplesToReport\n");
+      BRIDGE_LOG_PRINT("Received invalid sensor type in addSamplesToReport\n");
       break;
     }
   }
@@ -379,7 +380,7 @@ static void report_builder_task(void *parameters) {
                   cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
                   configASSERT(cbor_buffer != NULL);
                   if (sensor_report_encoder_open_report(cbor_buffer, sizeof(cbor_buffer), num_sensors, context) != CborNoError) {
-                    printf("Failed to open report in report_builder_task\n");
+                    BRIDGE_LOG_PRINT("Failed to open report in report_builder_task\n");
                     break;
                   }
                   bool exit_loop_early = false;
@@ -398,19 +399,19 @@ static void report_builder_task(void *parameters) {
                       printf("Found data for node %" PRIx64 " adding it the the report\n", _ctx._report_period_node_list[i]);
                     }
                     if (sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport) != CborNoError) {
-                      printf("Failed to open sensor in report_builder_task\n");
+                      BRIDGE_LOG_PRINT("Failed to open sensor in report_builder_task\n");
                       exit_loop_early = true;
                       break;
                     }
                     for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
                       if (!addSamplesToReport(context, element->sensor_type, element->sensor_data, j)) {
-                        printf("Failed to add samples to report in report_builder_task\n");
+                        BRIDGE_LOG_PRINT("Failed to add samples to report in report_builder_task\n");
                         exit_loop_early = true;
                         break;
                       }
                     }
                     if (sensor_report_encoder_close_sensor(context) != CborNoError || exit_loop_early) {
-                      printf("Failed to close sensor in report_builder_task\n");
+                      BRIDGE_LOG_PRINT("Failed to close sensor in report_builder_task\n");
                       exit_loop_early = true;
                       break;
                     }
@@ -419,7 +420,7 @@ static void report_builder_task(void *parameters) {
                     break;
                   }
                   if (sensor_report_encoder_close_report(context) != CborNoError) {
-                    printf("Failed to close report in report_builder_task\n");
+                    BRIDGE_LOG_PRINT("Failed to close report in report_builder_task\n");
                     break;
                   }
                   size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
@@ -443,12 +444,12 @@ static void report_builder_task(void *parameters) {
                   vPortFree(cbor_buffer);
                 }
               } else {
-                printf("No nodes to send data for\n");
+                BRIDGE_LOG_PRINT("No nodes to send data for\n");
               }
-              printf("Clearing the list\n");
+              BRIDGE_LOG_PRINT("Clearing the list\n");
               _ctx._reportBuilderLinkedList.clear();
             }
-            printf("Clearing the sample counter\n");
+            BRIDGE_LOG_PRINT("Clearing the sample counter\n");
             _ctx._sample_counter = 0;
             // Clear the report periods network associated data to rebuild it for the next report period
             _ctx._report_period_num_nodes = 0;
@@ -463,7 +464,7 @@ static void report_builder_task(void *parameters) {
             printf("Adding sample for %" PRIx64 " to list\n", item.node_id);
             _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(item.node_id, item.sensor_type, item.sensor_data, item.sensor_data_size, _ctx._samplesPerReport, _ctx._sample_counter);
           } else {
-            printf("samplesPerReport is 0, not adding sample to list\n");
+            BRIDGE_LOG_PRINT("samplesPerReport is 0, not adding sample to list\n");
           }
           break;
         }
@@ -473,7 +474,7 @@ static void report_builder_task(void *parameters) {
           // IMPORTANT: If the bus is constantly on, the currentAggPeriodMin(or sample period eventually) must be longer than the topology sampler period (1 min)
           // otherwise the CRC for the report builder may not update before a message needs to be sent
 
-          printf("Checking CRC in report builder!\n");
+          BRIDGE_LOG_PRINT("Checking CRC in report builder!\n");
           // Get the latest crc - if it doens't match our saved one, pull the latest topology and compare the topology
           // to our current topology - if it doesn't match our current one (and mainly if it is bigger or the same size) then
           // update the crc and the topology list
@@ -483,27 +484,27 @@ static void report_builder_task(void *parameters) {
           if (last_network_config != NULL) {
             printf("Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32, _ctx._report_period_max_network_crc32);
             if (temp_network_crc32 != _ctx._report_period_max_network_crc32) {
-              printf("Getting topology in report builder!\n");
+              BRIDGE_LOG_PRINT("Getting topology in report builder!\n");
               uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
               size_t temp_node_list_size = sizeof(temp_node_list);
               uint32_t temp_num_nodes;
               if (topology_sampler_get_node_list(temp_node_list, temp_node_list_size, temp_num_nodes, TOPO_TIMEOUT_MS)) {
                 // TODO - we need to use the cbor_map and build a report builder topology map that only
                 // includes aanderaa nodes
-                printf("Got topology in report builder!\n");
+                BRIDGE_LOG_PRINT("Got topology in report builder!\n");
                 if (temp_num_nodes >= _ctx._report_period_num_nodes) {
-                  printf("Updating CRC and topology in report builder!\n");
+                  BRIDGE_LOG_PRINT("Updating CRC and topology in report builder!\n");
                   _ctx._report_period_num_nodes = temp_num_nodes;
                   memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
                   _ctx._report_period_max_network_crc32 = temp_network_crc32;
                 } else {
-                  printf("Not updating CRC and topology in report builder, new topology is smaller than the old one!\n");
+                  BRIDGE_LOG_PRINT("Not updating CRC and topology in report builder, new topology is smaller than the old one!\n");
                 }
               } else {
-                printf("Failed to get the node list in report builder!\n");
+                BRIDGE_LOG_PRINT("Failed to get the node list in report builder!\n");
               }
             } else {
-              printf("CRCs match, not updating\n");
+              BRIDGE_LOG_PRINT("CRCs match, not updating\n");
             }
             // The last network config is not used here, but in the future it can be used to determine if varying sensor types have been
             // connected/disconnected to the network.
@@ -513,7 +514,7 @@ static void report_builder_task(void *parameters) {
         }
 
         default: {
-          printf("Uknown message type received in report_builder_task\n");
+          BRIDGE_LOG_PRINT("Uknown message type received in report_builder_task\n");
           break;
         }
       }
