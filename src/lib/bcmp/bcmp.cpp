@@ -99,16 +99,17 @@ static void dfu_copy_and_process_message(struct pbuf *pbuf) {
 */
 int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
   int32_t rval = 0;
-  // uint8_t src_port;
-  uint8_t dst_port;
+  // uint8_t egress_port;
+  uint8_t ingress_port;
 
   configASSERT(pbuf);
   configASSERT(src);
 
-   // Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address
-   // as per the bristlemouth protocol spec */
-  // src_port = ((src->addr[1]) & 0xFF);
-  dst_port = ((src->addr[1] >> 8) & 0xFF);
+  // Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address.
+  // This is in conflict with the v1.0.0, June 2023 version of the Bristlemouth spec.
+  // TODO: align with spec
+  // egress_port = ((src->addr[1]) & 0xFF);
+  ingress_port = ((src->addr[1] >> 8) & 0xFF);
 
   CLEAR_PORTS(src->addr);
 
@@ -133,7 +134,7 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
     switch(header->type) {
       case BCMP_HEARTBEAT: {
         // Send out heartbeats
-        bcmp_process_heartbeat(reinterpret_cast<bcmp_heartbeat_t *>(header->payload), src, dst_port);
+        bcmp_process_heartbeat(reinterpret_cast<bcmp_heartbeat_t *>(header->payload), src, ingress_port);
         break;
       }
 
@@ -182,7 +183,12 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_CONFIG_STATUS_RESPONSE:
       case BCMP_CONFIG_DELETE_REQUEST:
       case BCMP_CONFIG_DELETE_RESPONSE: {
-        bcmp_process_config_message(static_cast<bcmp_message_type_t>(header->type), header->payload);
+        bool should_forward = bcmp_process_config_message(
+            static_cast<bcmp_message_type_t>(header->type), header->payload);
+        if (should_forward) {
+          // Forward the message to all ports other than the ingress port.
+          bcmp_ll_forward(pbuf, ingress_port);
+        }
         break;
       }
 
@@ -398,6 +404,37 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
     }
   } while(0);
 
+  return rval;
+}
+
+/*! \brief Forward the payload to all ports other than the ingress port.
+
+    See section 5.4.4.2 of the Bristlemouth spec for details.
+
+    \param[in] pbuf Packet buffer to forward.
+    \param[in] ingress_port Port on which the packet was received.
+    \return ERR_OK on success, or an error that occurred.
+*/
+err_t bcmp_ll_forward(struct pbuf *pbuf, uint8_t ingress_port) {
+  ip_addr_t port_specific_dst;
+  ip6_addr_set(&port_specific_dst, &multicast_ll_addr);
+
+  // TODO: Make more generic. This is specifically for a 2-port device.
+  uint8_t egress_port = ingress_port == 1 ? 2 : 1;
+  port_specific_dst.addr[3] = 0x1000000 | (egress_port << 8);
+
+  const ip_addr_t *src = netif_ip_addr6(_ctx.netif, 0);
+
+  // L2 will clear the egress port from the destination address,
+  // so calculate the checksum on the link-local multicast address.
+  bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
+  header->checksum = 0;
+  header->checksum = ip6_chksum_pseudo(pbuf, IP_PROTO_BCMP, pbuf->len, src, &multicast_ll_addr);
+
+  err_t rval = raw_sendto_if_src(_ctx.pcb, pbuf, &port_specific_dst, _ctx.netif, src);
+  if (rval != ERR_OK) {
+    printf("Error forwarding BMCP packet link-locally: %d\n", rval);
+  }
   return rval;
 }
 

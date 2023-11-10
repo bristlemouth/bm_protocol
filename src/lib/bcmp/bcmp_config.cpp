@@ -389,10 +389,15 @@ static void bcmp_process_del_response_message(bm_common_config_delete_key_respon
     vPortFree(keyprintbuf);
 }
 
-void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* payload) {
+/*!
+    \return true if the caller should forward the message, false if the message was handled
+*/
+bool bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t *payload) {
+    bool should_forward = false;
     do {
         bm_common_config_header_t * msg_header = reinterpret_cast<bm_common_config_header_t *>(payload);
-        if(msg_header->target_node_id != getNodeId()){
+        if (msg_header->target_node_id != getNodeId()) {
+            should_forward = true;
             break;
         }
         switch(bcmp_msg_type){
@@ -449,6 +454,8 @@ void bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t* pay
                 break;
         }
     } while(0);
+
+    return should_forward;
 }
 
 void bcmp_config_init(Configuration* user_cfg, Configuration* sys_cfg) {
