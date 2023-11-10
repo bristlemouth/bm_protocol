@@ -192,11 +192,11 @@ void BridgePowerController::_update(
             BRIDGE_LOG_PRINT("Bridge State Subsampling Off\n");
             uint32_t nextSubsampleEpochS = _subSampleIntervalStartS + _subsampleIntervalS;
             _subSampleIntervalStartS = nextSubsampleEpochS;
-            time_to_sleep_ms =
-                MAX((nextSubsampleEpochS - currentCycleS) * 1000,
-                    MIN_TASK_SLEEP_MS);
-            if (_subSampleIntervalStartS !=
-                currentCycleS) { // Prevent bus thrash
+            time_to_sleep_ms = (currentCycleS < nextSubsampleEpochS) ? 
+              MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
+              MIN_TASK_SLEEP_MS;
+            // Prevent bus thrash
+            if (nextSubsampleEpochS > currentCycleS) { 
               powerBusAndSetSignal(false);
             }
             break;
@@ -212,10 +212,11 @@ void BridgePowerController::_update(
         uint32_t nextSampleEpochS = alignEpoch(_sampleIntervalStartS + _sampleIntervalS);
         _sampleIntervalStartS = nextSampleEpochS;
         _subSampleIntervalStartS = nextSampleEpochS;
-        time_to_sleep_ms =
-            MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
-        if (_sampleIntervalStartS !=
-            currentCycleS) { // Prevent bus thrash
+        time_to_sleep_ms = (currentCycleS < nextSampleEpochS) ?
+          MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
+          MIN_TASK_SLEEP_MS;
+         // Prevent bus thrash
+        if (nextSampleEpochS > currentCycleS) {
           powerBusAndSetSignal(false);
         }
         break;
