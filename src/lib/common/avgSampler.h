@@ -18,13 +18,13 @@ public:
   bool addSample(double sample);
   bool addSampleTimestamped(double sample, uint32_t timestamp = 0);
   double getMean(bool useKahan = false);
+  double getRunningKahanMean();
   double getStd(double mean = 0.0, double variance = 0.0, bool useKahan = false);
   double getVariance(double mean = 0.0, bool useKahan = false);
+  double getRunningWelfordVariance();
   double kahanSum(double total, double input, double &c);
   double getMax();
   double getMin();
-  double getTrigSum(TrigMeanType_e type);
-  double getTrigMean(TrigMeanType_e type);
   double getCircularMean();
   double getCircularStd();
   void initBuffer(uint32_t maxSamples);
@@ -38,4 +38,12 @@ private:
   uint32_t _sampleIdx;
   bool _fullBuffer;
   double *_samples;
+  double _runningMean;
+  double _runningVarianceSum;
+  double _kahanC;
+  double _runningCosSum;
+  double _kahanCosC;
+  double _runningSinSum;
+  double _kahanSinC;
+  uint64_t _sampleCount;
 };

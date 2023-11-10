@@ -212,3 +212,26 @@ TEST_F(AvgSamplerTest, circ) {
   EXPECT_NEAR(sampler.getCircularStd(),  0.8125, 0.0001);
   EXPECT_NEAR(sampler.getCircularMean(), 1.0493, 0.0001); // Tested vs https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.circmean.html
 }
+
+TEST_F(AvgSamplerTest, running) {
+  AveragingSampler sampler;
+  sampler.initBuffer(85);
+  double samplesDeg[] = {90, 120, 33, 355, 90, 120, 33, 355,
+                         90, 120, 33, 355, 90, 120, 33, 355,
+                         32, 32, 32, 32, 32, 32, 32, 32, 31,
+                         945, 23, 43, 231, 5, 6, 7, 8, 9, 10,
+                         11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                         21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                         31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                         3235, 64, 243, 234, 234, 234, 234, 234, 234, 234,
+                         54, 54, 54, 54, 54, 54, 54, 54, 54, 54};
+  const uint32_t num_samples = sizeof(samplesDeg) / sizeof(double);
+
+  for (uint16_t sample = 0; sample < num_samples; sample++) {
+    // Use sample+1 as timestamp for now
+    EXPECT_TRUE(sampler.addSampleTimestamped(degToRad(samplesDeg[sample]), (sample + 1)));
+  }
+
+  EXPECT_NEAR(sampler.getRunningWelfordVariance(), sampler.getVariance(), 0.5);
+  EXPECT_NEAR(sampler.getRunningKahanMean(), sampler.getMean(true), 0.0001);
+}
