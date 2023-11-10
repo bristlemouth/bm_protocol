@@ -133,6 +133,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
                                 sizeof(ConfigCborMapSrvReplyMsg::Data) + NODE_CONFIG_PADDING);
     cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
     configASSERT(cbor_buffer);
+    memset(cbor_buffer, 0, cbor_bufsize);
 
     if (create_network_info_cbor_array(cbor_buffer, cbor_bufsize)) {
       network_crc32_calc = crc32_ieee(cbor_buffer, cbor_bufsize);
@@ -512,11 +513,9 @@ static bool encode_sys_info(CborEncoder &array_encoder,
  */
 static bool encode_cbor_configuration(CborEncoder &array_encoder,
                                       ConfigCborMapSrvReplyMsg::Data &cbor_map_reply) {
-  CborEncoder map_encoder;
   CborParser parser;
-  CborValue map,it;
+  CborValue map;
   CborError err;
-  char * tmp_buf = NULL;
   do {
     // Open and validate the received cbor map.
     err = cbor_parser_init(cbor_map_reply.cbor_data, cbor_map_reply.cbor_encoded_map_len, 0, &parser, &map);
@@ -531,156 +530,13 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
       err = CborErrorIllegalType;
       break;
     }
-    size_t num_fields;
-    err = cbor_value_get_map_length(&map, &num_fields);
-    if (err != CborNoError) {
-      break;
+    memcpy(array_encoder.data.ptr, cbor_map_reply.cbor_data, cbor_map_reply.cbor_encoded_map_len);
+    array_encoder.data.ptr += cbor_map_reply.cbor_encoded_map_len;
+    if (array_encoder.remaining) {
+      array_encoder.remaining--;
     }
-    // Create a map in the subarray to encode to.
-    err = cbor_encoder_create_map(&array_encoder, &map_encoder, num_fields);
-    if(err != CborNoError) {
-      break;
-    }
-    err = cbor_value_enter_container(&map, &it);
-    if(err != CborNoError) {
-      break;
-    }
-    size_t tmp_len;
-    bool already_advanced;
-    tmp_buf = static_cast<char *>(pvPortMalloc(cfg::MAX_CONFIG_BUFFER_SIZE_BYTES));
-    configASSERT(tmp_buf);
-    // Loop through all the key-value pairs in the cbor map and encode them to the subarray.
-    for(size_t i = 0; i < num_fields; i++){
-      already_advanced = false;
-      // Get & encode key
-      if (!cbor_value_is_text_string(&it)) {
-        err = CborErrorIllegalType;
-        printf("expected string key but got something else\n");
-        break;
-      }
-      err = cbor_value_get_string_length(&it, &tmp_len);
-      if(err != CborNoError) {
-        break;
-      }
-      err = cbor_value_copy_text_string(&it, tmp_buf, &tmp_len, NULL);
-      if(err != CborNoError) {
-        break;
-      }
-      err = cbor_encode_text_string(&map_encoder, tmp_buf, tmp_len);
-      if(err != CborNoError) {
-        break;
-      }
-      err = cbor_value_advance(&it);
-      if (err != CborNoError) {
-        break;
-      }
-      // Get & encode value
-      switch(cbor_value_get_type(&it)){
-        case CborIntegerType:{
-          if(cbor_value_is_unsigned_integer(&it)){
-            uint64_t tmp;
-            err = cbor_encode_uint(&map_encoder, cbor_value_get_uint64(&it, &tmp));
-          } else {
-            int64_t tmp;
-            err = cbor_encode_int(&map_encoder, cbor_value_get_int64(&it, &tmp));
-          }
-          break;
-        }
-        case CborDoubleType:{
-          double tmp;
-          err = cbor_encode_double(&map_encoder, cbor_value_get_double(&it, &tmp));
-          break;
-        }
-        case CborBooleanType:{
-          bool tmp;
-          err = cbor_encode_boolean(&map_encoder, cbor_value_get_boolean(&it, &tmp));
-          break;
-        }
-        case CborFloatType:{
-          float tmp;
-          err = cbor_encode_float(&map_encoder, cbor_value_get_float(&it, &tmp));
-          break;
-        }
-        case CborTextStringType:{
-          err = cbor_value_get_string_length(&it, &tmp_len);
-          if (err != CborNoError) {
-            break;
-          }
-          err = cbor_value_copy_text_string(&it, tmp_buf, &tmp_len, NULL);
-          if(err != CborNoError) {
-            break;
-          }
-          err = cbor_encode_text_string(&map_encoder, tmp_buf, tmp_len);
-          if(err != CborNoError) {
-            break;
-          }
-          break;
-        }
-        case CborByteStringType:{
-          err = cbor_value_get_string_length(&it, &tmp_len);
-          if (err != CborNoError) {
-            break;
-          }
-          err = cbor_value_copy_byte_string(&it, reinterpret_cast<uint8_t*>(tmp_buf), &tmp_len, NULL);
-          if(err != CborNoError) {
-            break;
-          }
-          err = cbor_encode_byte_string(&map_encoder, reinterpret_cast<uint8_t*>(tmp_buf), tmp_len);
-          if(err != CborNoError) {
-            break;
-          }
-          break;
-        }
-        case CborArrayType: {
-          // To determine how many bytes long the cbor array is,
-          // we need to advance the iterator past the end of the array.
-          // Once we know the encoded byte length, we can simply memcpy.
-          // We then need to skip the cbor_value_advance call at the end of the loop,
-          // since we will have already advanced the iterator.
-          const uint8_t *array_start = it.source.ptr;
-          already_advanced = true;
-          err = cbor_value_advance(&it);
-          if (err != CborNoError) {
-            break;
-          }
-          size_t encoded_array_byte_len = it.source.ptr - array_start;
-          memcpy(map_encoder.data.ptr, array_start, encoded_array_byte_len);
-          map_encoder.data.ptr += encoded_array_byte_len;
-          break;
-        }
-        default:{
-          err = CborErrorIllegalType;
-          break;
-        }
-      }
-      if(err != CborNoError) {
-        break;
-      }
-      if (!already_advanced) {
-        err = cbor_value_advance(&it);
-        if (err != CborNoError) {
-          break;
-        }
-      }
-    }
-    if(err != CborNoError) {
-      break;
-    }
-
-    err = cbor_encoder_close_container(&array_encoder, &map_encoder);
-    if(err != CborNoError) {
-      break;
-    }
-
-    err = cbor_value_leave_container(&map, &it);
-    if (err != CborNoError) {
-      break;
-    }
-
   } while(0);
-  if(tmp_buf) {
-    vPortFree(tmp_buf);
-  }
+
   printf("encode_cbor_configuration: %d\n", err);
   return err == CborNoError;
 }

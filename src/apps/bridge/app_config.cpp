@@ -5,7 +5,7 @@ power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
   power_config_s pwrcfg;
 
   pwrcfg.sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000;
-  syscfg.getConfig(AppConfig::SAMPLE_DURATION_MS, strlen(AppConfig::SAMPLE_DURATION_MS),
+  syscfg.getConfig(AppConfig::SAMPLE_INTERVAL_MS, strlen(AppConfig::SAMPLE_INTERVAL_MS),
                    pwrcfg.sampleIntervalMs);
 
   pwrcfg.sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000;
