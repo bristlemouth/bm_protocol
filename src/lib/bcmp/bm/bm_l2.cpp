@@ -93,8 +93,11 @@ static void bm_l2_process_tx_evt(l2_queue_element_t *tx_evt) {
     for (uint32_t idx=0; idx < BM_NETDEV_TYPE_MAX; idx++) {
         switch (bm_l2_ctx.devices[idx].type) {
             case BM_NETDEV_TYPE_ADIN2111: {
-                err_t retv = adin2111_tx((adin2111_DeviceHandle_t) bm_l2_ctx.devices[idx].device_handle, static_cast<uint8_t *>(tx_evt->pbuf->payload), tx_evt->pbuf->len,
-                                   (tx_evt->port_mask >> mask_idx) & ADIN2111_PORT_MASK, bm_l2_ctx.devices[idx].start_port_idx);
+                err_t retv =
+                    adin2111_tx((adin2111_DeviceHandle_t)bm_l2_ctx.devices[idx].device_handle,
+                                static_cast<uint8_t *>(tx_evt->pbuf->payload), tx_evt->pbuf->len,
+                                (tx_evt->port_mask >> mask_idx) & ADIN2111_PORT_MASK,
+                                bm_l2_ctx.devices[idx].start_port_idx);
                 mask_idx += bm_l2_ctx.devices[idx].num_ports;
                 if (retv != ERR_OK) {
                     printf("Failed to submit TX buffer to ADIN\n");
@@ -354,8 +357,24 @@ err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint
 err_t bm_l2_link_output(struct netif *netif, struct pbuf *pbuf) {
     (void) netif;
 
-    /* Send on all available ports (Multicast) */
-    return bm_l2_tx(pbuf, bm_l2_ctx.available_ports_mask);
+    // by default, send to all ports
+    uint8_t port_mask = bm_l2_ctx.available_ports_mask;
+
+    // if the application set an egress port, send only to that port
+    constexpr size_t bcmp_egress_port_offset_in_dest_addr = 13;
+    const size_t egress_port_idx = sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest) +
+                                   bcmp_egress_port_offset_in_dest_addr;
+    uint8_t *eth_frame = static_cast<uint8_t *>(pbuf->payload);
+    uint8_t egress_port = eth_frame[egress_port_idx];
+    constexpr uint8_t num_adin_ports = 2; // TODO generalize
+    if (egress_port > 0 && egress_port <= num_adin_ports) {
+      port_mask = 1 << (egress_port - 1);
+    }
+
+    // clear the egress port set by the application
+    eth_frame[egress_port_idx] = 0;
+
+    return bm_l2_tx(pbuf, port_mask);
 }
 
 // Netif initialization for BM devices

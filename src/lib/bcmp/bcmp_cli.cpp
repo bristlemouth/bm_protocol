@@ -385,7 +385,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
         if(!bcmp_config_status_request(node_id,partition,err)){
           printf("Failed to send status request \n");
         } else {
-          printf("Succesfull status request send\n");
+          printf("Successful status request send\n");
         }
       } else if (strncmp("del", cmd_id_str, cmd_id_str_len) == 0){
         const char *node_id_str;
