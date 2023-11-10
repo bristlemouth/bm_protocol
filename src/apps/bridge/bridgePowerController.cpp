@@ -55,6 +55,14 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
     _configError = true;
     _alignmentS = DEFAULT_ALIGNMENT_S;
   }
+  if(_sampleDurationS == _sampleIntervalS) {
+    _configError = true;
+    _powerControlEnabled = false;
+  }
+  if(_subsampleDurationS == _subsampleIntervalS) {
+    _configError = true;
+    _subSamplingEnabled = false;
+  }
   _busPowerEventGroup = xEventGroupCreate();
   configASSERT(_busPowerEventGroup);
   BaseType_t rval =
