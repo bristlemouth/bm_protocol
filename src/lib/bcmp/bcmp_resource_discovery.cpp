@@ -77,11 +77,14 @@ static bool _bcmp_resource_populate_msg_data(resource_type_e type, bcmp_resource
 
   \param in *req - request
   \param in *dst - destination IP to reply to.
-  \return - None
+  \return - true if the caller should forward the message, false if the message was handled
 */
-void bcmp_resource_discovery::bcmp_process_resource_discovery_request(bcmp_resource_table_request_t *req, const ip_addr_t *dst) {
+bool bcmp_resource_discovery::bcmp_process_resource_discovery_request(
+        bcmp_resource_table_request_t *req, const ip_addr_t *dst) {
+    bool should_forward = false;
     do {
         if(req->target_node_id != getNodeId()){
+            should_forward = true;
             break;
         }
         size_t msg_len = sizeof(bcmp_resource_table_reply_t);
@@ -114,6 +117,8 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_request(bcmp_resou
         } while(0);
         vPortFree(reply_buf);
     } while(0);
+
+    return should_forward;
 }
 
 /*!
@@ -121,11 +126,14 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_request(bcmp_resou
 
   \param in *repl - reply
   \param in src_node_id - node ID of the source.
-  \return - None
+  \return - true if the caller should forward the message, false if the message was handled
 */
-void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resource_table_reply_t *repl, uint64_t src_node_id) {
+bool bcmp_resource_discovery::bcmp_process_resource_discovery_reply(
+        bcmp_resource_table_reply_t *repl, uint64_t src_node_id) {
+    bool should_forward = false;
     do {
         if(repl->node_id != src_node_id){
+            should_forward = true;
             break;
         }
         bcmp_ll_element_t *element = _resource_request_list.find(src_node_id);
@@ -155,6 +163,8 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
             _resource_request_list.remove(element);
         }
     } while(0);
+
+    return should_forward;
 }
 
 /*!

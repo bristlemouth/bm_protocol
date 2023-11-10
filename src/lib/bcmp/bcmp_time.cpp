@@ -74,10 +74,15 @@ static void bcmp_time_process_time_set_msg(const bcmp_system_time_set_t *msg) {
     }
 }
 
-void bcmp_time_process_time_message(bcmp_message_type_t bcmp_msg_type, uint8_t* payload) {
+/*!
+    \return true if the caller should forward the message, false if the message was handled
+*/
+bool bcmp_time_process_time_message(bcmp_message_type_t bcmp_msg_type, uint8_t* payload) {
+    bool should_forward = false;
     do {
         bcmp_system_time_header_t * msg_header = reinterpret_cast<bcmp_system_time_header_t *>(payload);
-        if(msg_header->target_node_id != getNodeId() && msg_header->target_node_id != 0 ){
+        if (msg_header->target_node_id != getNodeId() && msg_header->target_node_id != 0) {
+            should_forward = true;
             break;
         }
         switch(bcmp_msg_type){
@@ -110,4 +115,6 @@ void bcmp_time_process_time_message(bcmp_message_type_t bcmp_msg_type, uint8_t* 
                 break;
         }
     } while(0);
+
+    return should_forward;
 }
