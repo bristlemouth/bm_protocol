@@ -159,23 +159,12 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       }
 
       case BCMP_RESOURCE_TABLE_REQUEST: {
-        bool should_forward = bcmp_resource_discovery::bcmp_process_resource_discovery_request(
-            reinterpret_cast<bcmp_resource_table_request_t *>(header->payload), dst);
-        if (should_forward) {
-          // Forward the message to all ports other than the ingress port.
-          bcmp_ll_forward(pbuf, ingress_port);
-        }
+        bcmp_resource_discovery::bcmp_process_resource_discovery_request(reinterpret_cast<bcmp_resource_table_request_t*>(header->payload), dst);
         break;
       }
 
       case BCMP_RESOURCE_TABLE_REPLY: {
-        bool should_forward = bcmp_resource_discovery::bcmp_process_resource_discovery_reply(
-            reinterpret_cast<bcmp_resource_table_reply_t *>(header->payload),
-            ip_to_nodeid(src));
-        if (should_forward) {
-          // Forward the message to all ports other than the ingress port.
-          bcmp_ll_forward(pbuf, ingress_port);
-        }
+        bcmp_resource_discovery::bcmp_process_resource_discovery_reply(reinterpret_cast<bcmp_resource_table_reply_t*>(header->payload), ip_to_nodeid(src));
         break;
       }
 
