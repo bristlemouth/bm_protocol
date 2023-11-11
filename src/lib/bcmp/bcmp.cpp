@@ -171,7 +171,12 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_SYSTEM_TIME_REQUEST:
       case BCMP_SYSTEM_TIME_RESPONSE:
       case BCMP_SYSTEM_TIME_SET: {
-        bcmp_time_process_time_message(static_cast<bcmp_message_type_t>(header->type), header->payload);
+        bool should_forward = bcmp_time_process_time_message(
+            static_cast<bcmp_message_type_t>(header->type), header->payload);
+        if (should_forward) {
+          // Forward the message to all ports other than the ingress port.
+          bcmp_ll_forward(pbuf, ingress_port);
+        }
         break;
       }
 
