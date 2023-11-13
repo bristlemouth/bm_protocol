@@ -28,5 +28,4 @@ extern TaskHandle_t aanderaa_controller_task_handle;
 #define AANDERAA_NUM_SAMPLE_MEMBERS 5
 
 void aanderaControllerInit(BridgePowerController *power_controller,
-                           cfg::Configuration *usr_cfg,
                            cfg::Configuration *sys_cfg);

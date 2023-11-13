@@ -55,7 +55,6 @@ typedef struct aanderaaControllerCtx {
   bool _initialized;
   TimerHandle_t _sample_timer;
   BridgePowerController *_bridge_power_controller;
-  cfg::Configuration *_usr_cfg;
   cfg::Configuration *_sys_cfg;
   uint32_t current_reading_period_ms;
 } aanderaaControllerCtx_t;
@@ -153,13 +152,10 @@ void Aanderaa::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t 
  * It will also aggregate the data from the Aanderaa nodes and transmit it over the spotter_tx service.
  */
 void aanderaControllerInit(BridgePowerController *power_controller,
-                           cfg::Configuration *usr_cfg,
                            cfg::Configuration *sys_cfg) {
   configASSERT(power_controller);
-  configASSERT(usr_cfg);
   configASSERT(sys_cfg);
   _ctx._bridge_power_controller = power_controller;
-  _ctx._usr_cfg = usr_cfg;
   _ctx._sys_cfg = sys_cfg;
 
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
