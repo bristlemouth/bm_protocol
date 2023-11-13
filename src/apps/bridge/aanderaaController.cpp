@@ -65,7 +65,6 @@ typedef struct aanderaaControllerCtx {
 static aanderaaControllerCtx_t _ctx;
 
 static constexpr uint32_t DEFAULT_CURRENT_AGG_PERIOD_MIN = 3;
-static constexpr uint32_t CURRENT_SAMPLE_PERIOD_MS = 2000; // Aanderaa "interval" config setting
 static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
