@@ -1,5 +1,6 @@
 #include "bridgePowerController.h"
 #include "FreeRTOS.h"
+#include "aanderaaController.h"
 #include "app_pub_sub.h"
 #include "bm_l2.h"
 #include "bm_serial.h"
@@ -200,11 +201,11 @@ void BridgePowerController::_update(
             BRIDGE_LOG_PRINT("Bridge State Subsampling Off\n");
             uint32_t nextSubsampleEpochS = _subSampleIntervalStartS + _subsampleIntervalS;
             _subSampleIntervalStartS = nextSubsampleEpochS;
-            time_to_sleep_ms = (currentCycleS < nextSubsampleEpochS) ? 
+            time_to_sleep_ms = (currentCycleS < nextSubsampleEpochS) ?
               MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
               MIN_TASK_SLEEP_MS;
             // Prevent bus thrash
-            if (nextSubsampleEpochS > currentCycleS) { 
+            if (nextSubsampleEpochS > currentCycleS) {
               powerBusAndSetSignal(false);
             }
             break;
@@ -227,6 +228,7 @@ void BridgePowerController::_update(
         if (nextSampleEpochS > currentCycleS) {
           powerBusAndSetSignal(false);
         }
+        xTaskNotify(aanderaa_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
         break;
       }
     } else { // Sampling Not Enabled

@@ -19,10 +19,7 @@
 #define MIN_READINGS_FOR_AGGREGATION 3
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms
 
-typedef enum {
-  SAMPLER_TIMER_BITS = 0x01,
-  AGGREGATION_TIMER_BITS = 0x02,
-} aanderaaControllerBits_t;
+TaskHandle_t aanderaa_controller_task_handle = NULL;
 
 typedef struct Aanderaa {
   uint64_t node_id;
@@ -84,7 +81,7 @@ static void createAanderaaSub(uint64_t node_id);
 static void runController(void *param);
 static Aanderaa_t *findAanderaaById(uint64_t node_id);
 static void sampleTimerCallback(TimerHandle_t timer);
-static void aggregationTimerCallback(TimerHandle_t timer);
+// static void aggregationTimerCallback(TimerHandle_t timer);
 static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                const char *service, size_t reply_len, uint8_t *reply_data);
 
@@ -167,24 +164,25 @@ void aanderaControllerInit(BridgePowerController *power_controller,
   _ctx._usr_cfg = usr_cfg;
   _ctx._sys_cfg = sys_cfg;
 
-  uint32_t agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
-  uint32_t agg_period_min;
-  if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
-                               agg_period_min)) {
-    agg_period_ms = (agg_period_min * 60 * 1000);
-  }
+  // uint32_t agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
+  // uint32_t agg_period_min;
+  // if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
+  //                              agg_period_min)) {
+  //   agg_period_ms = (agg_period_min * 60 * 1000);
+  // }
 
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
   _ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS, strlen(AppConfig::CURRENT_READING_PERIOD_MS), _ctx.current_reading_period_ms);
 
-  _ctx._aggregations_timer = xTimerCreate("AanderaaAggTim", pdMS_TO_TICKS(agg_period_ms), pdTRUE,
-                                          NULL, aggregationTimerCallback);
+  // _ctx._aggregations_timer = xTimerCreate("AanderaaAggTim", pdMS_TO_TICKS(agg_period_ms), pdTRUE,
+  //                                         NULL, aggregationTimerCallback);
 
-  configASSERT(_ctx._aggregations_timer);
-  configASSERT(xTimerStart(_ctx._aggregations_timer, 10) == pdTRUE);
+  // configASSERT(_ctx._aggregations_timer);
+  // configASSERT(xTimerStart(_ctx._aggregations_timer, 10) == pdTRUE);
 
   BaseType_t rval = xTaskCreate(runController, "Aandera Controller", 128 * 4, NULL,
                                 AANDERAA_CONTROLLER_TASK_PRIORITY, &_ctx._task_handle);
+  aanderaa_controller_task_handle = _ctx._task_handle;
   configASSERT(rval == pdTRUE);
 }
 
@@ -193,10 +191,10 @@ static void sampleTimerCallback(TimerHandle_t timer) {
   xTaskNotify(_ctx._task_handle, SAMPLER_TIMER_BITS, eSetBits);
 }
 
-static void aggregationTimerCallback(TimerHandle_t timer) {
-  (void)timer;
-  xTaskNotify(_ctx._task_handle, AGGREGATION_TIMER_BITS, eSetBits);
-}
+// static void aggregationTimerCallback(TimerHandle_t timer) {
+//   (void)timer;
+//   xTaskNotify(_ctx._task_handle, AGGREGATION_TIMER_BITS, eSetBits);
+// }
 
 static void runController(void *param) {
   (void)param;

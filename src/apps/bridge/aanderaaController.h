@@ -18,6 +18,13 @@ typedef struct aanderaa_aggregations_s {
   double temp_mean_deg_c;
 } aanderaa_aggregations_t;
 
+typedef enum {
+  SAMPLER_TIMER_BITS = 0x01,
+  AGGREGATION_TIMER_BITS = 0x02,
+} aanderaaControllerBits_t;
+
+extern TaskHandle_t aanderaa_controller_task_handle;
+
 #define AANDERAA_NUM_SAMPLE_MEMBERS 5
 
 void aanderaControllerInit(BridgePowerController *power_controller,
