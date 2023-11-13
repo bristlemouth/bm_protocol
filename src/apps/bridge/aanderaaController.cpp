@@ -16,6 +16,7 @@
 
 // TODO - make this a configurable value?
 #define MIN_READINGS_FOR_AGGREGATION 3
+#define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms
 
 typedef enum {
   SAMPLER_TIMER_BITS = 0x01,
@@ -57,6 +58,8 @@ typedef struct aanderaaControllerCtx {
   TimerHandle_t _aggregations_timer;
   BridgePowerController *_bridge_power_controller;
   cfg::Configuration *_usr_cfg;
+  cfg::Configuration *_sys_cfg;
+  uint32_t current_reading_period_ms;
 } aanderaaControllerCtx_t;
 
 static aanderaaControllerCtx_t _ctx;
@@ -152,6 +155,7 @@ void aanderaControllerInit(BridgePowerController *power_controller,
   configASSERT(sys_cfg);
   _ctx._bridge_power_controller = power_controller;
   _ctx._usr_cfg = usr_cfg;
+  _ctx._sys_cfg = sys_cfg;
 
   uint32_t agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
   uint32_t agg_period_min;
@@ -159,8 +163,13 @@ void aanderaControllerInit(BridgePowerController *power_controller,
                                agg_period_min)) {
     agg_period_ms = (agg_period_min * 60 * 1000);
   }
+
+  _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
+  _ctx._sys_cfg->getConfig("cuurentReadingPeriodMs", strlen("currentReadinPeriodMs"), _ctx.current_reading_period_ms);
+
   _ctx._aggregations_timer = xTimerCreate("AanderaaAggTim", pdMS_TO_TICKS(agg_period_ms), pdTRUE,
                                           NULL, aggregationTimerCallback);
+
   configASSERT(_ctx._aggregations_timer);
   configASSERT(xTimerStart(_ctx._aggregations_timer, 10) == pdTRUE);
 
@@ -297,7 +306,7 @@ static void createAanderaaSub(uint64_t node_id) {
     new_sub->current_agg_period_ms = (agg_period_min * 60 * 1000);
   }
   uint32_t AVERAGER_MAX_SAMPLES =
-      (new_sub->current_agg_period_ms / CURRENT_SAMPLE_PERIOD_MS) + Aanderaa_t::N_SAMPLES_PAD;
+      (new_sub->current_agg_period_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
   new_sub->abs_speed_cm_s.initBuffer(AVERAGER_MAX_SAMPLES);
   new_sub->direction_rad.initBuffer(AVERAGER_MAX_SAMPLES);
   new_sub->temp_deg_c.initBuffer(AVERAGER_MAX_SAMPLES);
