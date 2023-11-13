@@ -5,6 +5,7 @@
 #include "bm_network.h"
 #include "bm_pubsub.h"
 #include "bridgeLog.h"
+#include "bridgePowerController.h"
 #include "device_info.h"
 #include "reportBuilder.h"
 #include "semphr.h"
@@ -53,7 +54,6 @@ typedef struct aanderaaControllerCtx {
   uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   bool _initialized;
   TimerHandle_t _sample_timer;
-  TimerHandle_t _aggregations_timer;
   BridgePowerController *_bridge_power_controller;
   cfg::Configuration *_usr_cfg;
   cfg::Configuration *_sys_cfg;
@@ -62,7 +62,6 @@ typedef struct aanderaaControllerCtx {
 
 static aanderaaControllerCtx_t _ctx;
 
-static constexpr uint32_t DEFAULT_CURRENT_AGG_PERIOD_MIN = 3;
 static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
@@ -81,7 +80,6 @@ static void createAanderaaSub(uint64_t node_id);
 static void runController(void *param);
 static Aanderaa_t *findAanderaaById(uint64_t node_id);
 static void sampleTimerCallback(TimerHandle_t timer);
-// static void aggregationTimerCallback(TimerHandle_t timer);
 static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                const char *service, size_t reply_len, uint8_t *reply_data);
 
@@ -164,21 +162,8 @@ void aanderaControllerInit(BridgePowerController *power_controller,
   _ctx._usr_cfg = usr_cfg;
   _ctx._sys_cfg = sys_cfg;
 
-  // uint32_t agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
-  // uint32_t agg_period_min;
-  // if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
-  //                              agg_period_min)) {
-  //   agg_period_ms = (agg_period_min * 60 * 1000);
-  // }
-
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
   _ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS, strlen(AppConfig::CURRENT_READING_PERIOD_MS), _ctx.current_reading_period_ms);
-
-  // _ctx._aggregations_timer = xTimerCreate("AanderaaAggTim", pdMS_TO_TICKS(agg_period_ms), pdTRUE,
-  //                                         NULL, aggregationTimerCallback);
-
-  // configASSERT(_ctx._aggregations_timer);
-  // configASSERT(xTimerStart(_ctx._aggregations_timer, 10) == pdTRUE);
 
   BaseType_t rval = xTaskCreate(runController, "Aandera Controller", 128 * 4, NULL,
                                 AANDERAA_CONTROLLER_TASK_PRIORITY, &_ctx._task_handle);
@@ -190,11 +175,6 @@ static void sampleTimerCallback(TimerHandle_t timer) {
   (void)timer;
   xTaskNotify(_ctx._task_handle, SAMPLER_TIMER_BITS, eSetBits);
 }
-
-// static void aggregationTimerCallback(TimerHandle_t timer) {
-//   (void)timer;
-//   xTaskNotify(_ctx._task_handle, AGGREGATION_TIMER_BITS, eSetBits);
-// }
 
 static void runController(void *param) {
   (void)param;
@@ -330,11 +310,10 @@ static void createAanderaaSub(uint64_t node_id) {
 
   new_sub->node_id = node_id;
   new_sub->next = NULL;
-  new_sub->current_agg_period_ms = (DEFAULT_CURRENT_AGG_PERIOD_MIN * 60 * 1000);
-  uint32_t agg_period_min;
-  if (_ctx._usr_cfg->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
-                               agg_period_min)) {
-    new_sub->current_agg_period_ms = (agg_period_min * 60 * 1000);
+  new_sub->current_agg_period_ms = (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
+  if (_ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS, strlen(AppConfig::SAMPLE_DURATION_MS),
+                               new_sub->current_agg_period_ms)) {
+
   }
   uint32_t AVERAGER_MAX_SAMPLES =
       (new_sub->current_agg_period_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
