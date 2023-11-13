@@ -164,7 +164,7 @@ void aanderaControllerInit(BridgePowerController *power_controller,
   }
 
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
-  _ctx._sys_cfg->getConfig("cuurentReadingPeriodMs", strlen("currentReadinPeriodMs"), _ctx.current_reading_period_ms);
+  _ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS, strlen(AppConfig::CURRENT_READING_PERIOD_MS), _ctx.current_reading_period_ms);
 
   _ctx._aggregations_timer = xTimerCreate("AanderaaAggTim", pdMS_TO_TICKS(agg_period_ms), pdTRUE,
                                           NULL, aggregationTimerCallback);

@@ -16,6 +16,7 @@ constexpr const char *BRIDGE_POWER_CONTROLLER_ENABLED = "bridgePowerControllerEn
 constexpr const char *ALIGNMENT_INTERVAL_5MIN = "alignmentInterval5Min";
 constexpr const char *TRANSMIT_AGGREGATIONS = "transmitAggregations";
 constexpr const char *SAMPLES_PER_REPORT = "samplesPerReport";
+constexpr const char *CURRENT_READING_PERIOD_MS = "currentReadingPeriodMs";
 
 } // namespace AppConfig
 
