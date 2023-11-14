@@ -222,3 +222,41 @@ uint32_t setCALP(uint32_t calp){
   LL_RTC_EnableWriteProtection(RTC);
   return 0;
 }
+
+/*!
+  Get current time as string (RTC date if present, system ticks otherwise)
+
+  \param[out] *timeStr Buffer in which to store the string
+  \param[in] len size of string buffer
+  \param[in] epoch use unix time if RTC is present
+  \return false if string does not fit in buffer, true otherwise
+*/
+bool logRtcGetTimeStr(char *timeStr, size_t len, bool epoch) {
+  RTCTimeAndDate_t timeAndDate;
+  size_t numChars = 0;
+  if (rtcGet(&timeAndDate) == pdPASS) {
+    if(epoch) {
+      uint32_t time = utcFromDateTime(timeAndDate.year,
+                                      timeAndDate.month,
+                                      timeAndDate.day,
+                                      timeAndDate.hour,
+                                      timeAndDate.minute,
+                                      timeAndDate.second);
+
+      numChars = snprintf(timeStr, len, "%lu.%03d", time, timeAndDate.ms);
+    } else {
+      numChars = snprintf(timeStr, len, "%04d-%02d-%02dT%02d:%02d:%02d.%03uZ",
+                          timeAndDate.year,
+                          timeAndDate.month,
+                          timeAndDate.day,
+                          timeAndDate.hour,
+                          timeAndDate.minute,
+                          timeAndDate.second,
+                          timeAndDate.ms);
+    }
+  } else {
+    numChars = snprintf(timeStr, len, "%lut", xTaskGetTickCount());
+  }
+
+  return (numChars <= len);
+}
