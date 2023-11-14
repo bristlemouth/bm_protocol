@@ -70,7 +70,7 @@ static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
 
-#define PI 3.14159265358979323846
+#define PI  3.14159265358979323846
 
 static constexpr double DIRECTION_SAMPLE_MIN = 0.0;
 static constexpr double DIRECTION_SAMPLE_MAX = 2*PI;
@@ -251,19 +251,19 @@ static void runController(void *param) {
             // If not send NaNs for all the values.
             // TODO - verify that we can assume if one sampler is below the min then all of them are.
             if(curr->abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
-              if (curr->abs_speed_cm_s.getMean(true) < ABS_SPEED_SAMPLE_MIN || curr->abs_speed_cm_s.getMean(true) > ABS_SPEED_SAMPLE_MAX) {
+              if (curr->abs_speed_cm_s.getMean(true) > ABS_SPEED_SAMPLE_MIN && curr->abs_speed_cm_s.getMean(true) < ABS_SPEED_SAMPLE_MAX) {
                 agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);
               }
-              if (curr->abs_speed_cm_s.getStd(true) < ABS_SPEED_SAMPLE_MIN || curr->abs_speed_cm_s.getStd(true) > ABS_SPEED_SAMPLE_MAX) {
+              if (curr->abs_speed_cm_s.getStd(true) > ABS_SPEED_SAMPLE_MIN && curr->abs_speed_cm_s.getStd(true) < ABS_SPEED_SAMPLE_MAX) {
               agg.abs_speed_std_cm_s = curr->abs_speed_cm_s.getStd(true);
               }
-              if (curr->direction_rad.getCircularMean() < DIRECTION_SAMPLE_MIN || curr->direction_rad.getCircularMean() > DIRECTION_SAMPLE_MAX) {
+              if (curr->direction_rad.getCircularMean() > DIRECTION_SAMPLE_MIN && curr->direction_rad.getCircularMean() < DIRECTION_SAMPLE_MAX) {
                 agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();
               }
-              if (curr->direction_rad.getCircularStd() < DIRECTION_SAMPLE_MIN || curr->direction_rad.getCircularStd() > DIRECTION_SAMPLE_MAX) {
+              if (curr->direction_rad.getCircularStd() > DIRECTION_SAMPLE_MIN && curr->direction_rad.getCircularStd() < DIRECTION_SAMPLE_MAX) {
                 agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
               }
-              if (curr->temp_deg_c.getMean(true) < TEMP_SAMPLE_MIN || curr->temp_deg_c.getMean(true) > TEMP_SAMPLE_MAX) {
+              if (curr->temp_deg_c.getMean(true) > TEMP_SAMPLE_MIN && curr->temp_deg_c.getMean(true) < TEMP_SAMPLE_MAX) {
                 agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);
               }
             }
