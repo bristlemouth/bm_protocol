@@ -70,6 +70,9 @@ static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
 
+static constexpr double MIN = -1000000.0;
+staitc constexpr double MAX = 1000000.0;
+
 static void createAanderaaSub(uint64_t node_id);
 static void runController(void *param);
 static Aanderaa_t *findAanderaaById(uint64_t node_id);
@@ -241,11 +244,21 @@ static void runController(void *param) {
             // If not send NaNs for all the values.
             // TODO - verify that we can assume if one sampler is below the min then all of them are.
             if(curr->abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
-              agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);;
-              agg.abs_speed_std_cm_s = curr->abs_speed_cm_s.getStd(true);;
-              agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();;
-              agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
-              agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);;
+              if (curr->abs_speed_cm_s.getMean(true) < MIN || curr->abs_speed_cm_s.getMean(true) > MAX) {
+                agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);
+              }
+              if (curr->abs_speed_cm_s.getStd(true) < MIN || curr->abs_speed_cm_s.getStd(true) > MAX) {
+              agg.abs_speed_std_cm_s = curr->abs_speed_cm_s.getStd(true);
+              }
+              if (curr->direction_rad.getCircularMean() < MIN || curr->direction_rad.getCircularMean() > MAX) {
+                agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();
+              }
+              if (curr->direction_rad.getCircularStd() < MIN || curr->direction_rad.getCircularStd() > MAX) {
+                agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
+              }
+              if (curr->temp_deg_c.getMean(true) < MIN || curr->temp_deg_c.getMean(true) > MAX) {
+                agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);
+              }
             }
             static constexpr uint8_t TIME_STR_BUFSIZE = 50;
             static char timeStrbuf[TIME_STR_BUFSIZE];
