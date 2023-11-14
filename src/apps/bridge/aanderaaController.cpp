@@ -72,12 +72,12 @@ static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
 
 #define PI  3.14159265358979323846
 
-static constexpr double DIRECTION_SAMPLE_MIN = 0.0;
-static constexpr double DIRECTION_SAMPLE_MAX = 2*PI;
-static constexpr double ABS_SPEED_SAMPLE_MIN = 0.0;
-static constexpr double ABS_SPEED_SAMPLE_MAX = 300.0;
-static constexpr double TEMP_SAMPLE_MIN = -5.0;
-static constexpr double TEMP_SAMPLE_MAX = 40.0;
+static constexpr double DIRECTION_SAMPLE_MEMBER_MIN = 0.0;
+static constexpr double DIRECTION_SAMPLE_MEMBER_MAX = 2*PI;
+static constexpr double ABS_SPEED_SAMPLE_MEMBER_MIN = 0.0;
+static constexpr double ABS_SPEED_SAMPLE_MEMBER_MAX = 300.0;
+static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5.0;
+static constexpr double TEMP_SAMPLE_MEMBER_MAX = 40.0;
 
 
 static void createAanderaaSub(uint64_t node_id);
@@ -251,20 +251,25 @@ static void runController(void *param) {
             // If not send NaNs for all the values.
             // TODO - verify that we can assume if one sampler is below the min then all of them are.
             if(curr->abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
-              if (curr->abs_speed_cm_s.getMean(true) > ABS_SPEED_SAMPLE_MIN && curr->abs_speed_cm_s.getMean(true) < ABS_SPEED_SAMPLE_MAX) {
-                agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);
-              }
-              if (curr->abs_speed_cm_s.getStd(true) > ABS_SPEED_SAMPLE_MIN && curr->abs_speed_cm_s.getStd(true) < ABS_SPEED_SAMPLE_MAX) {
+              agg.abs_speed_mean_cm_s = curr->abs_speed_cm_s.getMean(true);
               agg.abs_speed_std_cm_s = curr->abs_speed_cm_s.getStd(true);
+              agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();
+              agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
+              agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);
+              if (agg.abs_speed_mean_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_mean_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
+                agg.abs_speed_mean_cm_s = NAN;
               }
-              if (curr->direction_rad.getCircularMean() > DIRECTION_SAMPLE_MIN && curr->direction_rad.getCircularMean() < DIRECTION_SAMPLE_MAX) {
-                agg.direction_circ_mean_rad = curr->direction_rad.getCircularMean();
+              if (agg.abs_speed_std_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_std_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
+              agg.abs_speed_std_cm_s = NAN;
               }
-              if (curr->direction_rad.getCircularStd() > DIRECTION_SAMPLE_MIN && curr->direction_rad.getCircularStd() < DIRECTION_SAMPLE_MAX) {
+              if (agg.direction_circ_mean_rad() < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
+                agg.direction_circ_mean_rad = NAN;
+              }
+              if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
                 agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
               }
-              if (curr->temp_deg_c.getMean(true) > TEMP_SAMPLE_MIN && curr->temp_deg_c.getMean(true) < TEMP_SAMPLE_MAX) {
-                agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);
+              if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN || agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
+                agg.temp_mean_deg_c = NAN;
               }
             }
             static constexpr uint8_t TIME_STR_BUFSIZE = 50;
