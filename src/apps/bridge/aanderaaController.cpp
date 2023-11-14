@@ -247,7 +247,7 @@ static void runController(void *param) {
               agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
               agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);;
             }
-            static constexpr uint8_t TIME_STR_BUFSIZE = 32;
+            static constexpr uint8_t TIME_STR_BUFSIZE = 50;
             static char timeStrbuf[TIME_STR_BUFSIZE];
             if(logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
               printf("Failed to get time string for Aanderaa aggregation\n");
