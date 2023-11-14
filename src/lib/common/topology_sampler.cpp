@@ -28,6 +28,7 @@
 #include "sys_info_svc_reply_msg.h"
 #include "topology_sampler.h"
 #include "util.h"
+#include "bridgeLog.h"
 
 #define TOPOLOGY_TIMEOUT_MS 60000
 #define NETWORK_CONFIG_TIMEOUT_MS 1000
@@ -168,9 +169,15 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     bool known = sm_config_crc_list.contains(network_crc32_calc);
     if (!known || _send_on_boot) {
       if (!known) {
-        printf("The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
+        static constexpr uint8_t LOG_MSG_SIZE = 128;
+        char * log_msg = static_cast<char *>(pvPortMalloc(LOG_MSG_SIZE));
+        int msglen = snprintf(log_msg, LOG_MSG_SIZE, "The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
                " Adding it.\n",
                network_crc32_calc);
+        if( msglen > 0 ){
+          BRIDGE_LOG_PRINTN(log_msg, msglen);
+        }
+        vPortFree(log_msg);
         sm_config_crc_list.add(network_crc32_calc);
         if (!_hw_cfg->saveConfig(false)) {
           printf("Failed to save crc!\n");
