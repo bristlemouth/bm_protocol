@@ -246,8 +246,6 @@ static void runController(void *param) {
                 double translation = floor(
                     (agg.direction_circ_mean_rad - DIRECTION_SAMPLE_MEMBER_MAX) / (2 * PI));
                 agg.direction_circ_mean_rad -= translation;
-              } else {
-                agg.direction_circ_mean_rad = NAN;
               }
 
               // Translate the circular standard deviation to be between 0 and 2π
@@ -259,8 +257,6 @@ static void runController(void *param) {
                 double translation = floor(
                     (agg.direction_circ_std_rad - DIRECTION_SAMPLE_MEMBER_MAX) / (2 * PI));
                 agg.direction_circ_std_rad -= translation;
-              } else {
-                agg.direction_circ_std_rad = NAN;
               }
 
               if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN || agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
