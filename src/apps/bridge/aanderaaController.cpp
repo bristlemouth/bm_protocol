@@ -262,7 +262,7 @@ static void runController(void *param) {
               if (agg.abs_speed_std_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_std_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
               agg.abs_speed_std_cm_s = NAN;
               }
-              if (agg.direction_circ_mean_rad() < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
+              if (agg.direction_circ_mean_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
                 agg.direction_circ_mean_rad = NAN;
               }
               if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
