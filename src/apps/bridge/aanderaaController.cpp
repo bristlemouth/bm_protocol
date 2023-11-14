@@ -249,7 +249,7 @@ static void runController(void *param) {
             }
             static constexpr uint8_t TIME_STR_BUFSIZE = 50;
             static char timeStrbuf[TIME_STR_BUFSIZE];
-            if(logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
+            if(!logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
               printf("Failed to get time string for Aanderaa aggregation\n");
               snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
             }; 
