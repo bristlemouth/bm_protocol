@@ -13,6 +13,7 @@
 #include "task_priorities.h"
 #include "util.h"
 #include <new>
+#include "stm32_rtc.h"
 
 // TODO - make this a configurable value?
 #define MIN_READINGS_FOR_AGGREGATION 3
@@ -246,13 +247,21 @@ static void runController(void *param) {
               agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
               agg.temp_mean_deg_c = curr->temp_deg_c.getMean(true);;
             }
+            static constexpr uint8_t TIME_STR_BUFSIZE = 32;
+            static char timeStrbuf[TIME_STR_BUFSIZE];
+            if(logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
+              printf("Failed to get time string for Aanderaa aggregation\n");
+              snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
+            }; 
             log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                              "%s,"
                               "%" PRIx64 "," // Node Id
                               "%.3f,"        // abs_speed_mean_cm_s
                               "%.3f,"        // abs_speed_std_cm_s
                               "%.3f,"        // direction_circ_mean_rad
                               "%.3f,"        // direction_circ_std_rad
                               "%.3f\n",      // temp_mean_deg_c
+                              timeStrbuf,
                               curr->node_id,
                               agg.abs_speed_mean_cm_s,
                               agg.abs_speed_std_cm_s,
