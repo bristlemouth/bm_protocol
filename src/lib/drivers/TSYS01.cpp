@@ -7,8 +7,6 @@
 #include "task.h"
 #include "TSYS01.h"
 #include "debug.h"
-#include "error_manager.h"
-#include "error_states/sst_error_state.h"
 
 TSYS01::TSYS01(SPIInterface_t* spiInterface, IOPinHandle_t *cspin):
 _SPIInterface(spiInterface),_CSPin(cspin)
@@ -35,18 +33,18 @@ bool TSYS01::begin( float offsetCentiDegC, uint32_t signature, uint32_t caltime 
   no_cal = false;
 
   if (!rval) {
-    errorAddToQueue(ErrorTypeIdSst, SstErrorEnum_t::INIT_ERR);
+    printf("TSYS01 init failed\n");
     calibrated = false;
   } else if (!signature && !caltime && !offsetCentiDegC) {
-    errorAddToQueue(ErrorTypeIdSst, SstWarningEnum_t::NO_CAL);
+    printf("TSYS01 no cal during init\n");
     calibrated = false;
     no_cal = true;
   } else if (signature && caltime && signature == sn) {
-    errorAddToQueue(ErrorTypeIdSst, SstWarningEnum_t::OK);
+    printf("TSYS01 init success\n");
     calibrationOffsetDegC = offsetCentiDegC / 100.0f;
     calibrated = true;
   } else {
-    errorAddToQueue(ErrorTypeIdSst, SstErrorEnum_t::INVALID_CAL_ERR);
+    printf("TSYS01 invalid calibration error during init\n");
     calibrated = false;
   }
 
@@ -75,14 +73,12 @@ bool TSYS01::getTemperature( float &temperature ) {
   if( spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX){
     temperature = temp + calibrationOffsetDegC;
     if (no_cal){
-      errorAddToQueue(ErrorTypeIdSst, SstWarningEnum_t::NO_CAL);
+      printf("TSYS01 no cal during reading\n");
     } else if (!calibrated) {
-      errorAddToQueue(ErrorTypeIdSst, SstErrorEnum_t::INVALID_CAL_ERR);
-    } else {
-      errorAddToQueue(ErrorTypeIdSst, SstWarningEnum_t::OK);
+      printf("TSYS01 invalid calibration error during reading\n");
     }
   } else {
-    errorAddToQueue(ErrorTypeIdSst, SstErrorEnum_t::READ_ERR);
+    printf("TSYS01 reading error\n");
     rval = false;
   }
 
@@ -124,9 +120,9 @@ bool TSYS01::checkPROM() {
   bool rval = validatePROM();
 
   if (!rval) {
-    errorAddToQueue(ErrorTypeIdSst, SstErrorEnum_t::READ_ERR);
+    printf("TSYS01 reading error while checking PROM\n");
   } else {
-    errorAddToQueue(ErrorTypeIdSst, SstWarningEnum_t::OK);
+    printf("TSYS01 PROM check passed\n");
   }
 
   return rval;
