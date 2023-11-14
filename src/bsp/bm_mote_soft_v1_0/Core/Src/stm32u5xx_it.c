@@ -113,6 +113,26 @@ void EXTI8_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles EXTI Line10 interrupt.
+  */
+void EXTI10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI10_IRQn 0 */
+
+  /* USER CODE END EXTI10_IRQn 0 */
+  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_10) != RESET)
+  {
+    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_10);
+    /* USER CODE BEGIN LL_EXTI_LINE_10_RISING */
+
+    /* USER CODE END LL_EXTI_LINE_10_RISING */
+  }
+  /* USER CODE BEGIN EXTI10_IRQn 1 */
+
+  /* USER CODE END EXTI10_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM8 Update interrupt.
   */
 void TIM8_UP_IRQHandler(void)

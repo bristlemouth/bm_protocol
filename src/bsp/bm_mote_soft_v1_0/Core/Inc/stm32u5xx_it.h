@@ -48,6 +48,7 @@
 /* Exported functions prototypes ---------------------------------------------*/
 void DebugMon_Handler(void);
 void EXTI8_IRQHandler(void);
+void EXTI10_IRQHandler(void);
 void TIM8_UP_IRQHandler(void);
 void SPI2_IRQHandler(void);
 void GPDMA1_Channel12_IRQHandler(void);

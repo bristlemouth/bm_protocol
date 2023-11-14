@@ -38,7 +38,6 @@
         * Output
         * EVENT_OUT
         * EXTI
-     PA6   ------> SPI1_MISO
 */
 void MX_GPIO_Init(void)
 {
@@ -53,25 +52,25 @@ void MX_GPIO_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
 
   /**/
-  LL_GPIO_ResetOutputPin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+  LL_GPIO_ResetOutputPin(GPIO2_GPIO_Port, GPIO2_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(GPIOH, GPIO1_Pin|ADIN_PWR_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOA, ADIN_RST_Pin|LED_BLUE_Pin|BB_PL_BUCK_EN_Pin|FLASH_CS_Pin
-                          |BB_3V3_EN_Pin|ADIN_CS_Pin);
+  LL_GPIO_ResetOutputPin(GPIOA, ADIN_RST_Pin|I2C_MUX_RESET_Pin|BM_CS_Pin|FLASH_CS_Pin
+                          |ADIN_CS_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOB, LED_RED_Pin|BB_VBUS_EN_Pin);
+  LL_GPIO_ResetOutputPin(VBUS_BF_EN_GPIO_Port, VBUS_BF_EN_Pin);
 
   /**/
-  GPIO_InitStruct.Pin = LED_GREEN_Pin;
+  GPIO_InitStruct.Pin = GPIO2_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(LED_GREEN_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(GPIO2_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = GPIO1_Pin|ADIN_PWR_Pin;
@@ -82,8 +81,8 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = ADIN_RST_Pin|LED_BLUE_Pin|BB_PL_BUCK_EN_Pin|FLASH_CS_Pin
-                          |BB_3V3_EN_Pin|ADIN_CS_Pin;
+  GPIO_InitStruct.Pin = ADIN_RST_Pin|I2C_MUX_RESET_Pin|BM_CS_Pin|FLASH_CS_Pin
+                          |ADIN_CS_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -91,21 +90,18 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = BM_MISO_Pin;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pin = BM_INT_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(BM_MISO_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(BM_INT_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = LED_RED_Pin|BB_VBUS_EN_Pin;
+  GPIO_InitStruct.Pin = VBUS_BF_EN_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  LL_GPIO_Init(VBUS_BF_EN_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = VUSB_DETECT_Pin;
@@ -120,7 +116,17 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(BOOT_LED_GPIO_Port, &GPIO_InitStruct);
 
   /**/
+  LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTA, LL_EXTI_EXTI_LINE10);
+
+  /**/
   LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTB, LL_EXTI_EXTI_LINE8);
+
+  /**/
+  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_10;
+  EXTI_InitStruct.LineCommand = ENABLE;
+  EXTI_InitStruct.Mode = LL_EXTI_MODE_IT;
+  EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_RISING;
+  LL_EXTI_Init(&EXTI_InitStruct);
 
   /**/
   EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_8;
@@ -130,7 +136,13 @@ void MX_GPIO_Init(void)
   LL_EXTI_Init(&EXTI_InitStruct);
 
   /**/
+  LL_GPIO_SetPinPull(IOEXP_INT_GPIO_Port, IOEXP_INT_Pin, LL_GPIO_PULL_NO);
+
+  /**/
   LL_GPIO_SetPinPull(ADIN_INT_GPIO_Port, ADIN_INT_Pin, LL_GPIO_PULL_NO);
+
+  /**/
+  LL_GPIO_SetPinMode(IOEXP_INT_GPIO_Port, IOEXP_INT_Pin, LL_GPIO_MODE_INPUT);
 
   /**/
   LL_GPIO_SetPinMode(ADIN_INT_GPIO_Port, ADIN_INT_Pin, LL_GPIO_MODE_INPUT);
@@ -138,6 +150,8 @@ void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   NVIC_SetPriority(EXTI8_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
   NVIC_EnableIRQ(EXTI8_IRQn);
+  NVIC_SetPriority(EXTI10_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
+  NVIC_EnableIRQ(EXTI10_IRQn);
 
 }
 

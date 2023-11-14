@@ -33,7 +33,6 @@ extern "C" {
 #include "stm32u5xx_ll_lpuart.h"
 #include "stm32u5xx_ll_rcc.h"
 #include "stm32u5xx_ll_rtc.h"
-#include "stm32u5xx_ll_usart.h"
 #include "stm32u5xx_ll_system.h"
 #include "stm32u5xx_ll_gpio.h"
 #include "stm32u5xx_ll_exti.h"
@@ -46,7 +45,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stm32u5xx_ll_usart.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -73,32 +72,32 @@ void SystemPower_Config_ext(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define LED_GREEN_Pin LL_GPIO_PIN_13
-#define LED_GREEN_GPIO_Port GPIOC
+#define GPIO2_Pin LL_GPIO_PIN_13
+#define GPIO2_GPIO_Port GPIOC
 #define GPIO1_Pin LL_GPIO_PIN_0
 #define GPIO1_GPIO_Port GPIOH
 #define ADIN_PWR_Pin LL_GPIO_PIN_1
 #define ADIN_PWR_GPIO_Port GPIOH
 #define ADIN_RST_Pin LL_GPIO_PIN_0
 #define ADIN_RST_GPIO_Port GPIOA
-#define LED_BLUE_Pin LL_GPIO_PIN_1
-#define LED_BLUE_GPIO_Port GPIOA
+#define I2C_MUX_RESET_Pin LL_GPIO_PIN_1
+#define I2C_MUX_RESET_GPIO_Port GPIOA
 #define PAYLOAD_TX_Pin LL_GPIO_PIN_2
 #define PAYLOAD_TX_GPIO_Port GPIOA
 #define PAYLOAD_RX_Pin LL_GPIO_PIN_3
 #define PAYLOAD_RX_GPIO_Port GPIOA
-#define BB_PL_BUCK_EN_Pin LL_GPIO_PIN_4
-#define BB_PL_BUCK_EN_GPIO_Port GPIOA
+#define BM_CS_Pin LL_GPIO_PIN_4
+#define BM_CS_GPIO_Port GPIOA
 #define BM_SCK_RX3_Pin LL_GPIO_PIN_5
 #define BM_SCK_RX3_GPIO_Port GPIOA
 #define BM_MISO_Pin LL_GPIO_PIN_6
 #define BM_MISO_GPIO_Port GPIOA
 #define BM_MOSI_TX3_Pin LL_GPIO_PIN_7
 #define BM_MOSI_TX3_GPIO_Port GPIOA
-#define LED_RED_Pin LL_GPIO_PIN_0
-#define LED_RED_GPIO_Port GPIOB
-#define BB_VBUS_EN_Pin LL_GPIO_PIN_1
-#define BB_VBUS_EN_GPIO_Port GPIOB
+#define BM_INT_Pin LL_GPIO_PIN_0
+#define BM_INT_GPIO_Port GPIOB
+#define VBUS_BF_EN_Pin LL_GPIO_PIN_1
+#define VBUS_BF_EN_GPIO_Port GPIOB
 #define FLASH_SCK_Pin LL_GPIO_PIN_13
 #define FLASH_SCK_GPIO_Port GPIOB
 #define FLASH_MISO_Pin LL_GPIO_PIN_14
@@ -109,8 +108,9 @@ void SystemPower_Config_ext(void);
 #define FLASH_CS_GPIO_Port GPIOA
 #define VUSB_DETECT_Pin LL_GPIO_PIN_9
 #define VUSB_DETECT_GPIO_Port GPIOA
-#define BB_3V3_EN_Pin LL_GPIO_PIN_10
-#define BB_3V3_EN_GPIO_Port GPIOA
+#define IOEXP_INT_Pin LL_GPIO_PIN_10
+#define IOEXP_INT_GPIO_Port GPIOA
+#define IOEXP_INT_EXTI_IRQn EXTI10_IRQn
 #define ADIN_CS_Pin LL_GPIO_PIN_15
 #define ADIN_CS_GPIO_Port GPIOA
 #define ADIN_SCK_Pin LL_GPIO_PIN_3
