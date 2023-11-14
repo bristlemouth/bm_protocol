@@ -43,8 +43,10 @@ void HAL_Delay(uint32_t Delay) {
   }
 }
 
+extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi3;
+SPIInterface_t spi1 = PROTECTED_SPI("SPI1", hspi1, MX_SPI1_Init, LPM_SPI1);
 SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init, LPM_SPI2);
 SPIInterface_t spi3 = PROTECTED_SPI("SPI3", hspi3, MX_SPI3_Init, LPM_SPI3);
 
@@ -61,6 +63,7 @@ void bspInit() {
   osStarted = true;
   HAL_SuspendTick();
 
+  spiInit(&spi1);
   spiInit(&spi2);
   spiInit(&spi3);
   i2cInit(&i2c1);

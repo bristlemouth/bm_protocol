@@ -51,6 +51,7 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "tca9546a.h"
+#include "TSYS01.h"
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
@@ -64,6 +65,8 @@
 #endif
 
 #include <stdio.h>
+
+static TSYS01 sst(&spi1, &BM_CS);
 
 static void defaultTask(void *parameters);
 #ifndef DEBUG_USE_LPUART1
@@ -371,8 +374,33 @@ static void defaultTask( void *parameters ) {
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
 
+  vTaskDelay(10000);
+
+  sst.begin();
+
+  if (sst.checkPROM()) {
+    printf("SST PROM Valid\n");
+  } else {
+    printf("SST PROM Invalid\n");
+  }
+
+  uint32_t serial_number;
+
+  if (sst.getSerialNumber(serial_number)) {
+    printf("SST Serial Number: %" PRIu32 "\n", serial_number);
+  } else {
+    printf("SST Serial Number: Get SN Failed\n");
+  }
+
+  float temperature = 0.0f;
+
   while(1) {
-    vTaskDelay(1000);
+    vTaskDelay(5000);
+    if (sst.getTemperature(temperature)) {
+      printf("SST Temperature: %f\n", temperature);
+    } else {
+      printf("SST Temperature: Get Temp Failed\n");
+    }
   }
 
 }

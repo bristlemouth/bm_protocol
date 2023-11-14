@@ -97,6 +97,7 @@ set(LIB_FILES
     # ${SRC_DIR}/lib/drivers/mic.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/tca9546a.cpp
+    ${SRC_DIR}/lib/drivers/TSYS01.cpp
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c

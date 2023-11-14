@@ -6,7 +6,7 @@
 #ifndef WS_APPS_TSYS01_H
 #define WS_APPS_TSYS01_H
 
-#include "stm32l4xx_hal.h"
+#include "stm32u5xx_hal.h"
 #include "io.h"
 #include "math.h"
 #include "protected_spi.h"
