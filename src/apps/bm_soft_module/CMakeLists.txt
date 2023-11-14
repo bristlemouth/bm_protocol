@@ -6,6 +6,7 @@ add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 # Include TinyUSB
 add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 
+
 # Include memfault
 include(${SRC_DIR}/third_party/memfault.cmake)
 
@@ -39,51 +40,47 @@ set(BRISTLEMOUTH_INCLUDES
     )
 
 set(LIB_FILES
+    ${SRC_DIR}/lib/common/avgSampler.cpp
     ${SRC_DIR}/lib/cli/cli.c
     ${SRC_DIR}/lib/common/bootloader_helper.c
     ${SRC_DIR}/lib/common/device_info.c
     ${SRC_DIR}/lib/common/enumToStr.c
     ${SRC_DIR}/lib/common/external_flash_partitions.c
-    ${SRC_DIR}/lib/common/freertos_cpp_overrides.cpp
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
+    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
+    ${SRC_DIR}/lib/common/payload_uart.cpp
     ${SRC_DIR}/lib/common/pcap.c
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
+    ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
-    ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
-    ${SRC_DIR}/lib/debug/debug_adin_raw.c
-    ${SRC_DIR}/lib/debug/debug_htu.cpp
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
-    # ${SRC_DIR}/lib/debug/debug_mic.cpp
-    ${SRC_DIR}/lib/debug/debug_i2c.c
-    ${SRC_DIR}/lib/debug/debug_ina232.cpp
-    ${SRC_DIR}/lib/debug/debug_pressure_sensor.cpp
     ${SRC_DIR}/lib/debug/debug_rtc.c
-    ${SRC_DIR}/lib/debug/debug_spi.c
     ${SRC_DIR}/lib/debug/debug_sys.cpp
-    ${SRC_DIR}/lib/debug/debug_uart.c
+    ${SRC_DIR}/lib/debug/debug_pluart_cli.cpp
     ${SRC_DIR}/lib/debug/debug_tca9546a.cpp
     ${SRC_DIR}/lib/debug/debug_w25.cpp
-    ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
+    ${SRC_DIR}/lib/debug/debug_dfu.cpp
+    ${SRC_DIR}/lib/debug/debug_bm_service.cpp
+    ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
-    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -92,27 +89,29 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
-    ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
-    # ${SRC_DIR}/lib/drivers/mic.cpp
+    ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
-    ${SRC_DIR}/lib/drivers/tca9546a.cpp
-    ${SRC_DIR}/lib/drivers/TSYS01.cpp
-    ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
-    # ${SRC_DIR}/lib/drivers/stm32_adc.c
+    ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
+    ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
+    ${SRC_DIR}/lib/drivers/tca9546a.cpp
+    ${SRC_DIR}/lib/drivers/TSYS01.cpp
     ${SRC_DIR}/lib/lwip/lwip_support.c
-    ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
+    ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
+    ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
+    ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
+    ${SRC_DIR}/lib/common/LineParser.cpp
+    ${SRC_DIR}/lib/common/OrderedSeparatorLineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
-    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/crc/crc16.c
+    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
@@ -132,30 +131,29 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
-    ${SRC_DIR}/lib/dfu/include
     ${SRC_DIR}/lib/drivers
-    ${SRC_DIR}/lib/sys
-    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
+    ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/lwip
-    ${SRC_DIR}/lib/mcuboot
+    ${SRC_DIR}/lib/bm_serial
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
-    ${SRC_DIR}/lib/bm_serial
     ${SRC_DIR}/third_party/
-    ${SRC_DIR}/third_party/aligned_malloc
+    ${SRC_DIR}/third_party/aligned_malloc/
     ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
+    ${SRC_DIR}/lib/bridge
+    ${SRC_DIR}/lib/bristlefin
+    ${SRC_DIR}/lib/sensor_sampler
+    ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/third_party/BME280_driver
-    ${SRC_DIR}/lib/bristlefin
     )
 
-if (USE_BOOTLOADER STREQUAL 1)
 #
 # MCUBoot files/includes
 #
@@ -183,7 +181,6 @@ set(MCUBOOT_FILES
 
     ${SRC_DIR}/lib/drivers/stm32_flash_u5.c
 
-    ${SRC_DIR}/lib/mcuboot/mcuboot_cli.c
     ${SRC_DIR}/lib/mcuboot/port_flash.c
     ${SRC_DIR}/lib/mcuboot/port_misc.c
     )
@@ -193,7 +190,6 @@ set(MCUBOOT_INCLUDES
     ${MCUBOOT_DIR}/boot/boot_serial/include
 
     # FreeRTOS port
-    ${SRC_DIR}/lib/mcuboot/
     ${SRC_DIR}/lib/mcuboot/include
 
     ${SRC_DIR}/lib/drivers/
@@ -228,7 +224,6 @@ set_source_files_properties(
     PROPERTIES
     COMPILE_FLAGS "-Wno-unused-parameter -Wno-format -Wno-unused-but-set-variable"
     )
-endif() # USE_BOOTLOADER = 1
 
 set(LWIP_DIR ${SRC_DIR}/third_party/lwip)
 set(LWIP_INCLUDE_DIRS
@@ -246,36 +241,91 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
-    ${LIB_FILES}
-    ${FREERTOS_FILES}
-    ${MEMFAULT_SOURCES}
-    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
     ${MCUBOOT_FILES}
-    ${TINYUSB_FILES}
+    ${FREERTOS_FILES}
+    ${LIB_FILES}
     ${BRISTLEMOUTH_FILES}
-    PARENT_SCOPE)
+    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+    ${MEMFAULT_SOURCES}
+    ${TINYUSB_FILES}
+    )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${LIB_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors
     ${FREERTOS_INCLUDES}
-    ${MEMFAULT_INCLUDES}
-    ${MCUBOOT_INCLUDES}
+    ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
-    ${TINYUSB_INCLUDES}
     ${BRISTLEMOUTH_INCLUDES}
-    PARENT_SCOPE)
+    ${MCUBOOT_INCLUDES}
+    ${MEMFAULT_INCLUDES}
+    ${TINYUSB_INCLUDES}
+    )
 
 set(APP_LIBS
     lwipcore
-    PARENT_SCOPE)
+    )
 
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
     CFG_TUSB_MCU=OPT_MCU_STM32U5
-    NO_NETWORK
+
+    # Add network stress test functions
+    STRESS_TEST_ENABLE
     )
+
+if (DFU_HOST  STREQUAL 1)
+list(APPEND APP_DEFINES "BM_DFU_HOST=1")
+message(STATUS "DFU HOST AND CLIENT")
+else()
+list(APPEND APP_DEFINES "BM_DFU_HOST=0")
+message(STATUS "DFU CLIENT ONLY")
+endif()
+
+
+if (USE_MICROPYTHON STREQUAL 1)
+include(${SRC_DIR}/lib/micropython/CMakeLists.txt)
+
+list(APPEND APP_DEFINES "USE_MICROPYTHON")
+list(APPEND APP_DEFINES "MICROPY_HEAP_SIZE=1024*64;${MICROPY_DEFINITIONS}")
+list(APPEND APP_LIBS micropython)
+# list(APPEND APP_LIBS usermod)
+list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
+list(APPEND APP_FILES
+        ${SRC_DIR}/lib/micropython/micropython_freertos.c
+        ${SRC_DIR}/lib/micropython/mphalport.c)
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/micropython/mphalport.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+set_source_files_properties(
+    ${SRC_DIR}/lib/micropython/micropython_freertos.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+endif()
+
+
+if (NOT ${USE_BOOTLOADER})
+     message(SEND_ERROR "USE_BOOTLOADER is not set.")
+endif()
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)
 set(APP_DEFINES "${APP_DEFINES}" PARENT_SCOPE)
+set(APP_LIBS "${APP_LIBS}" PARENT_SCOPE)
+set(APP_FILES "${APP_FILES}" PARENT_SCOPE)
+set(APP_INCLUDES "${APP_INCLUDES}" PARENT_SCOPE)

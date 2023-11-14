@@ -84,9 +84,8 @@ typedef struct adin_pins_s {
 	IOPinHandle_t *reset;
 } adin_pins_t;
 
-#define I2C_INA_MAIN_ADDR  (0x43)
 #define I2C_INA_PODL_ADDR  (0x41)
-#define NUM_INA232_DEV (2)
+#define NUM_INA232_DEV (1)
 
 #define TCA9546A_ADDR (0x70)
 
