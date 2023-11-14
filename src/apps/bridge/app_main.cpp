@@ -375,7 +375,7 @@ static void defaultTask( void *parameters ) {
     debugBmServiceInit();
     sys_info_service_init(debug_configuration_system);
     reportBuilderInit(&debug_configuration_system);
-    aanderaControllerInit(&bridge_power_controller, &debug_configuration_user, &debug_configuration_system);
+    aanderaControllerInit(&bridge_power_controller, &debug_configuration_system);
     config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);
     IOWrite(&ALARM_OUT, 1);

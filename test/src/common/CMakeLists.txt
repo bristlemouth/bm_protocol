@@ -229,6 +229,9 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/bcmp/bm
     ${SRC_DIR}/apps/bridge
     ${SRC_DIR}/lib/bm_common_messages
+    ${SRC_DIR}/lib/bcmp/dfu
+    ${SRC_DIR}/lib/drivers/abstract
+    ${SRC_DIR}/third_party/tinycbor/src
 )
 
 target_sources(bridge_power_controller_tests
@@ -246,6 +249,7 @@ target_sources(bridge_power_controller_tests
     ${TEST_DIR}/stubs/mock_device_info.cpp
     ${TEST_DIR}/stubs/mock_bridgeLog.cpp
     ${TEST_DIR}/stubs/mock_bm_l2.cpp
+    ${TEST_DIR}/stubs/mock_aanderaaController.cpp
 
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c
@@ -283,7 +287,7 @@ target_sources(avgSampler
     # File we're testing
     ${SRC_DIR}/lib/common/avgSampler.cpp
 
-    # Support files 
+    # Support files
     ${SRC_DIR}/lib/common/util.c
 
     # Unit test wrapper for test
