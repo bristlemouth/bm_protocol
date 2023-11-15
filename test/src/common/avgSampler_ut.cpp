@@ -212,3 +212,20 @@ TEST_F(AvgSamplerTest, circ) {
   EXPECT_NEAR(sampler.getCircularStd(),  0.8125, 0.0001);
   EXPECT_NEAR(sampler.getCircularMean(), 1.0493, 0.0001); // Tested vs https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.circmean.html
 }
+
+// See the discussion here for context on why this test was written
+// https://github.com/bristlemouth/bm_protocol/pull/42
+TEST_F(AvgSamplerTest, circ_mean_is_positive) {
+  AveragingSampler sampler;
+  sampler.initBuffer(10);
+  double samplesDeg[] = {232.203, 227.507, 317.123, 317.778, 226.359,
+                         118.473, 295.796, 241.099, 133.762, 205.290};
+  const size_t num_samples = sizeof(samplesDeg) / sizeof(double);
+
+  for (size_t sample = 0; sample < num_samples; sample++) {
+    // Use sample+1 as timestamp
+    EXPECT_TRUE(sampler.addSampleTimestamped(degToRad(samplesDeg[sample]), (sample + 1)));
+  }
+
+  EXPECT_NEAR(sampler.getCircularMean(), 4.1542, 0.0001);
+}

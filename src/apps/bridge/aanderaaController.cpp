@@ -236,29 +236,12 @@ static void runController(void *param) {
               if (agg.abs_speed_std_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_std_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
               agg.abs_speed_std_cm_s = NAN;
               }
-
-              // Translate the circular mean to be between 0 and 2π
-              if (agg.direction_circ_mean_rad < DIRECTION_SAMPLE_MEMBER_MIN) {
-                double translation = ceil(
-                    (DIRECTION_SAMPLE_MEMBER_MIN - agg.direction_circ_mean_rad) / (2 * PI));
-                agg.direction_circ_mean_rad += translation;
-              } else if (agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
-                double translation = floor(
-                    (agg.direction_circ_mean_rad - DIRECTION_SAMPLE_MEMBER_MAX) / (2 * PI));
-                agg.direction_circ_mean_rad -= translation;
+              if (agg.direction_circ_mean_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
+                agg.direction_circ_mean_rad = NAN;
               }
-
-              // Translate the circular standard deviation to be between 0 and 2π
-              if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN) {
-                double translation =
-                    ceil((DIRECTION_SAMPLE_MEMBER_MIN - agg.direction_circ_std_rad) / (2 * PI));
-                agg.direction_circ_std_rad += translation;
-              } else if (agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
-                double translation = floor(
-                    (agg.direction_circ_std_rad - DIRECTION_SAMPLE_MEMBER_MAX) / (2 * PI));
-                agg.direction_circ_std_rad -= translation;
+              if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
+                agg.direction_circ_std_rad = NAN;
               }
-
               if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN || agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
                 agg.temp_mean_deg_c = NAN;
               }

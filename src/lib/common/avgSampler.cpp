@@ -285,7 +285,11 @@ double AveragingSampler::getCircularMean() {
   configASSERT(_samples != NULL);
   double sin_sum = getTrigSum(TRIG_MEAN_TYPE_SIN);
   double cos_sum = getTrigSum(TRIG_MEAN_TYPE_COS);
-  return atan2(sin_sum, cos_sum);
+  double mean = atan2(sin_sum, cos_sum);
+  if (mean < 0.0) {
+    mean += 2 * M_PI;
+  }
+  return mean;
 }
 
 /*!
