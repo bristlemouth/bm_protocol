@@ -30,7 +30,7 @@
 
 /// Default mote configurations and local variables
 // How many minutes to collect readings for before shipping an aggregation.
-#define DEFAULT_CURRENT_AGG_PERIOD_MIN (10.0)
+#define DEFAULT_CURRENT_AGG_PERIOD_MIN (0)
 static float current_agg_period_min = DEFAULT_CURRENT_AGG_PERIOD_MIN;
 // inline helper to turn this into milliseconds
 #define CURRENT_AGG_PERIOD_MS ((double)current_agg_period_min * 60 * 1000)
