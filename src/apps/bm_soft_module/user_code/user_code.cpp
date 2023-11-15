@@ -16,32 +16,32 @@
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
 
-TSYS01 sst(&spi1, &BM_CS);
+TSYS01 soft(&spi1, &BM_CS);
 
-uint32_t sst_delay = 5000;
+uint32_t soft_delay = 5000;
 
 void setup(void) {
   // 5 second delay so we can usb-serial in and see the output
   vTaskDelay(5000);
-  sst.begin();
-  if (sst.checkPROM()) {
+  soft.begin();
+  if (soft.checkPROM()) {
     printf("SOFT PROM Valid\n");
   } else {
     printf("SOFT PROM Invalid\n");
   }
   uint32_t serial_number;
 
-  if (sst.getSerialNumber(serial_number)) {
+  if (soft.getSerialNumber(serial_number)) {
     printf("SOFT Serial Number: %" PRIu32 "\n", serial_number);
   } else {
     printf("SOFT Serial Number: Get SN Failed\n");
   }
-  uint32_t sst_delay_s = 0;
-  if (userConfigurationPartition->getConfig("softReadingPeriodS", strlen("softReadingPeriodS"), sst_delay_s)) {
-    sst_delay = sst_delay_s * 1000;
-    printf("SOFT Delay: %" PRIu32 "ms\n", sst_delay);
+  uint32_t soft_delay_s = 0;
+  if (userConfigurationPartition->getConfig("softReadingPeriodS", strlen("softReadingPeriodS"), soft_delay_s)) {
+    soft_delay = soft_delay_s * 1000;
+    printf("SOFT Delay: %" PRIu32 "ms\n", soft_delay);
   } else {
-    printf("SOFT Delay: Using default % " PRIu32 "ms\n", sst_delay);
+    printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay);
   }
 
 }
@@ -54,7 +54,7 @@ void loop(void) {
   char rtcTimeBuffer[32];
   rtcPrint(rtcTimeBuffer, &time_and_date);
 
-  if (sst.getTemperature(temperature)) {
+  if (soft.getTemperature(temperature)) {
       printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
              rtcTimeBuffer, temperature);
       bm_fprintf(0, "soft.log", "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
@@ -70,5 +70,5 @@ void loop(void) {
              rtcTimeBuffer, NAN);
   }
   // Delay between readings
-  vTaskDelay(pdMS_TO_TICKS(sst_delay));
+  vTaskDelay(pdMS_TO_TICKS(soft_delay));
 }
