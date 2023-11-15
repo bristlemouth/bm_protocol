@@ -64,11 +64,8 @@ static aanderaaControllerCtx_t _ctx;
 static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
-
-#define PI  3.14159265358979323846
-
 static constexpr double DIRECTION_SAMPLE_MEMBER_MIN = 0.0;
-static constexpr double DIRECTION_SAMPLE_MEMBER_MAX = 2*PI;
+static constexpr double DIRECTION_SAMPLE_MEMBER_MAX = M_TWOPI;
 static constexpr double ABS_SPEED_SAMPLE_MEMBER_MIN = 0.0;
 static constexpr double ABS_SPEED_SAMPLE_MEMBER_MAX = 300.0;
 static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5.0;
@@ -240,7 +237,7 @@ static void runController(void *param) {
                 agg.direction_circ_mean_rad = NAN;
               }
               if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
-                agg.direction_circ_std_rad = curr->direction_rad.getCircularStd();
+                agg.direction_circ_std_rad = NAN;
               }
               if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN || agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
                 agg.temp_mean_deg_c = NAN;
