@@ -36,9 +36,8 @@ void setup(void) {
   } else {
     printf("SOFT Serial Number: Get SN Failed\n");
   }
-  uint32_t soft_delay_s = 0;
-  if (userConfigurationPartition->getConfig("softReadingPeriodS", strlen("softReadingPeriodS"), soft_delay_s)) {
-    soft_delay = soft_delay_s * 1000;
+
+  if (userConfigurationPartition->getConfig("softReadingPeriodMs", strlen("softReadingPeriodMs"), soft_delay)) {
     printf("SOFT Delay: %" PRIu32 "ms\n", soft_delay);
   } else {
     printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay);
