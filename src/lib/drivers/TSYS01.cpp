@@ -1,6 +1,7 @@
 //
 // Created by Genton Mo on 2019-07-19.
-// Ported by Alvaro
+// Ported by Alvaro (To Spotter)
+// Ported by Victor (To bm_protocol)
 //
 
 #include "FreeRTOS.h"
