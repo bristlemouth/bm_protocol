@@ -424,6 +424,7 @@ static void spoof_aanderaa() {
   static constexpr uint32_t FAKE_STATS_PERIOD_MS = 60 * 1000;
   static uint32_t fake_stats_timer_start = uptimeGetMs();
   if (((uint32_t)uptimeGetMs() - fake_stats_timer_start >= FAKE_STATS_PERIOD_MS)) {
+    fake_stats_timer_start = uptimeGetMs();
     SensorWatchdog::SensorWatchdogPet(AANDERAA_WATCHDOG_ID);
     // Publish individual reading.
     static AanderaaDataMsg::Data d;
@@ -525,8 +526,6 @@ static void spoof_aanderaa() {
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TEMP], d.temperature_deg_c,
       current_data[TEMP].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
       current_data[TEMP].getMin(), current_data[TEMP].getMax());
-
-    fake_stats_timer_start = uptimeGetMs();
   }
 }
 #endif // FAKE_AANDERAA
