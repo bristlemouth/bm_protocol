@@ -252,6 +252,7 @@ static void runController(void *param) {
             log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                               "%s,"
                               "%" PRIx64 "," // Node Id
+                              "%" PRIu32 "," // N Readings
                               "%.3f,"        // abs_speed_mean_cm_s
                               "%.3f,"        // abs_speed_std_cm_s
                               "%.3f,"        // direction_circ_mean_rad
@@ -259,6 +260,7 @@ static void runController(void *param) {
                               "%.3f\n",      // temp_mean_deg_c
                               timeStrbuf,
                               curr->node_id,
+                              curr->abs_speed_cm_s.getNumSamples(),
                               agg.abs_speed_mean_cm_s,
                               agg.abs_speed_std_cm_s,
                               agg.direction_circ_mean_rad,
