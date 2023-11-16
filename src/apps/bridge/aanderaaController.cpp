@@ -250,7 +250,7 @@ static void runController(void *param) {
               snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
             }; 
             log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                              "%s,"
+                              "%s,"          // timestamp(ticks/UTC)
                               "%" PRIx64 "," // Node Id
                               "%" PRIu32 "," // N Readings
                               "%.3f,"        // abs_speed_mean_cm_s
