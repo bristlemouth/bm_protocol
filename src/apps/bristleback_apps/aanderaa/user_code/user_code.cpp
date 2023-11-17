@@ -431,6 +431,11 @@ static void spoof_aanderaa() {
     size_t bufsize =
         sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
     size_t encoded_len = 0;
+    RTCTimeAndDate_t datetime;
+    if(rtcGet(&datetime) == pdPASS) {
+      d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
+      srand(d.header.reading_time_utc_s & 0xFFFFFFFF);
+    }
     d.header.version = AanderaaDataMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();
     // Fill with random values in the range of 0-data from sensor log.
@@ -446,10 +451,6 @@ static void spoof_aanderaa() {
     d.max_tilt_deg = 3 + (rand() % 20);
     d.std_tilt_deg = 5 + (rand() % 30);
     d.temperature_deg_c = 20 + (rand() % 5);
-    RTCTimeAndDate_t datetime;
-    if(rtcGet(&datetime) == pdPASS) {
-      d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
-    }
 
     if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
                                 &encoded_len) == CborNoError) {
