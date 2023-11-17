@@ -25,8 +25,9 @@
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 #define AANDERAA_WATCHDOG_ID "Aanderaa"
 #define AANDERAA_RAW_LOG "aanderaa_raw.log"
-#define AANDERAA_RESET_TIME_MS                                                                 \
-  (500) // https://www.aanderaa.com/media/pdfs/td266-zpulse-dcs-4420-4830-4520-4930.pdf P.90
+// https://www.aanderaa.com/media/pdfs/td266-zpulse-dcs-4420-4830-4520-4930.pdf P.90
+// Testing 5 seconds, since 500ms was too short
+#define AANDERAA_RESET_TIME_MS (5000)
 
 /// Default mote configurations and local variables
 // How many minutes to collect readings for before shipping an aggregation.
@@ -477,7 +478,7 @@ static void spoof_aanderaa() {
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_TILT], d.abs_tilt_deg,
       current_data[ABS_TILT].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
       current_data[ABS_TILT].getMin(), current_data[ABS_TILT].getMax());
-      
+
     current_data[DIRECTION].addSample(d.direction_deg_m);
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[DIRECTION], d.direction_deg_m,
       current_data[DIRECTION].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
