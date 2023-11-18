@@ -204,6 +204,13 @@ void setup(void) {
 
   max_readings_in_agg = (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
 
+  // Protect folks from bricking units in the field.
+  // If someone sets the current agg period minutes too high,
+  // we can crash when allocating too much memory and get into a boot loop.
+  constexpr uint32_t MAX_ALLOWED_READINGS = 512;
+  max_readings_in_agg =
+      max_readings_in_agg > MAX_ALLOWED_READINGS ? MAX_ALLOWED_READINGS : max_readings_in_agg;
+
   aanderaaTopicStrLen = createAanderaaDataTopic();
   // Allocate memory for pressure data buffer.
   for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
