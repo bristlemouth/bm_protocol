@@ -409,7 +409,7 @@ void loop(void) {
     }
 
     // Now let's aggregate those values into statistics
-    if (current_data[0].getNumSamples() >= max_readings_in_agg) {
+    if (current_data[0].getNumSamples() >= max_readings_in_agg && max_readings_in_agg > N_SAMPLES_PAD) {
       printf("ERR - No more room in current reading buffer, already have %d readings!\n",
              max_readings_in_agg);
       return;
