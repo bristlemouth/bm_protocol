@@ -228,6 +228,7 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/bcmp/bm
     ${SRC_DIR}/apps/bridge
+    ${SRC_DIR}/apps/bridge/sensor_drivers
     ${SRC_DIR}/lib/bm_common_messages
     ${SRC_DIR}/lib/bcmp/dfu
     ${SRC_DIR}/lib/drivers/abstract
@@ -249,7 +250,7 @@ target_sources(bridge_power_controller_tests
     ${TEST_DIR}/stubs/mock_device_info.cpp
     ${TEST_DIR}/stubs/mock_bridgeLog.cpp
     ${TEST_DIR}/stubs/mock_bm_l2.cpp
-    ${TEST_DIR}/stubs/mock_aanderaaController.cpp
+    ${TEST_DIR}/stubs/mock_sensorController.cpp
 
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c

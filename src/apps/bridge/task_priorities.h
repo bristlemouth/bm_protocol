@@ -27,7 +27,7 @@
 // TODO - Think about this and determine what level to put it at
 #define REPORT_BUILDER_TASK_PRIORITY 4
 
-#define AANDERAA_CONTROLLER_TASK_PRIORITY 3
+#define SENSOR_CONTROLLER_TASK_PRIORITY 3
 #define USB_TASK_PRIORITY 3
 #define TOPO_SAMPLER_TASK_PRIORITY 3
 #define BCMP_TOPO_TASK_PRIORITY 3
