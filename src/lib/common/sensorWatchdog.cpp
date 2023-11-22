@@ -102,8 +102,10 @@ static void _sensorWatchdogHandler(void *arg) {
         bm_fprintf(0, curr->_logHandle, "[%s] | tick: %" PRIu64 " SensorWatchdog Expired!\n", curr->_id, uptimeGetMs());
     }
     printf("[%s] | tick: %" PRIu64 " SensorWatchdog Expired!\n", curr->_id, uptimeGetMs());
+    configASSERT(xTimerStop(curr->_timerHandle, 0) == pdTRUE);
     curr->_handler(arg);
-    if(curr->_triggerCount < curr->_max_triggers) {
+    configASSERT(xTimerReset(curr->_timerHandle, pdMS_TO_TICKS(WATCHDOG_PET_TIMEOUT_MS)) == pdTRUE);
+  if(curr->_triggerCount < curr->_max_triggers) {
         curr->_triggerCount++;
     } else {
         configASSERT(xTimerStop(curr->_timerHandle, 0) == pdTRUE);

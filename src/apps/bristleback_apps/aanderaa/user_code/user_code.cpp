@@ -25,9 +25,16 @@
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 #define AANDERAA_WATCHDOG_ID "Aanderaa"
 #define AANDERAA_RAW_LOG "aanderaa_raw.log"
-// https://www.aanderaa.com/media/pdfs/td266-zpulse-dcs-4420-4830-4520-4930.pdf P.90
-// Testing 5 seconds, since 500ms was too short
-#define AANDERAA_RESET_TIME_MS (5000)
+
+// How long to hold Aanderaa off when attempting FTL recovery.
+// -- Measured 1 second via trial & error and scope grabs: https://www.notion.so/sofarocean/FTL-recovery-works-Manually-stop-aanderaa-to-test-edb988cab3a3467caf2aab9f980fcb11
+// -- So setting 2 seconds for safety factor
+#define AANDERAA_RESET_TIME_MS (2000)
+// How long to wait after turn-off before Tx tickling
+// -- Measured 50ms via scope grabs, setting 100ms
+#define AANDERAA_TX_TICKLE_DELAY (100)
+// Use a No-op ";" command to tickle the Aanderaa
+static const char tx_tickle_data[] = ";\r\n";
 
 /// Default mote configurations and local variables
 // How many minutes to collect readings for before shipping an aggregation.
@@ -171,12 +178,25 @@ static bool aanderaaSensorWatchdogHandler(void *arg) {
   (void)(arg);
   SensorWatchdog::sensor_watchdog_t *watchdog =
       reinterpret_cast<SensorWatchdog::sensor_watchdog_t *>(arg);
+  printf("Disabling Aanderaa power\n");
   if (watchdog->_triggerCount < watchdog->_max_triggers) {
     IOWrite(&BB_PL_BUCK_EN, 1);
+    IOWrite(&BB_VBUS_EN, 1);
+    /*
+     * To ensure the Aanderaa processor resets, we send a No-op command (";") after waiting
+     * 100 ms for the 9V rail to bleed off. This wakes up the process, which drains some internal
+     * capacitance. Alternatively, set AANDERAA_RESET_TIME_MS to at least 5 minutes.
+     * See for more detail: https://www.notion.so/sofarocean/FTL-recovery-works-Manually-stop-aanderaa-to-test-edb988cab3a3467caf2aab9f980fcb11
+     */
+    vTaskDelay(pdMS_TO_TICKS(AANDERAA_TX_TICKLE_DELAY));
+    PLUART::write((uint8_t *)tx_tickle_data, strlen(tx_tickle_data));
     vTaskDelay(pdMS_TO_TICKS(AANDERAA_RESET_TIME_MS));
+    printf("Re-enabling Aanderaa power\n");
     IOWrite(&BB_PL_BUCK_EN, 0);
+    IOWrite(&BB_VBUS_EN, 0);
   } else {
     IOWrite(&BB_PL_BUCK_EN, 1);
+    IOWrite(&BB_VBUS_EN, 1);
   }
   return true;
 }
