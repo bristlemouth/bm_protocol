@@ -311,6 +311,7 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
       } else if (strncmp("low", parameter, parameterStringLength) == 0) {
         LL_USART_SetRXPinLevel((USART_TypeDef *)handle->device, LL_USART_RXPIN_LEVEL_INVERTED);
       } else {
+        LL_USART_Enable((USART_TypeDef *)handle->device);
         printf("ERR Invalid paramters\n");
         break;
       }
