@@ -340,17 +340,19 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
         printf("ERR Invalid baud\n");
         break;
       }
-      if (strncmp(handle_string, "lpuart", handle_string_len) == 0) {
-        LL_LPUART_SetBaudRate((USART_TypeDef *)handle->device,
-                        LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
-                        LL_LPUART_PRESCALER_DIV64, new_baud);
-      } else if (strncmp(handle_string, "usart1", handle_string_len) == 0) {
+      if (strncmp(handle_string, "usart1", handle_string_len) == 0)  {
         // TODO - verify prescaler and oversampling
         LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART1_CLKSOURCE),
                         LL_USART_PRESCALER_DIV1,
                         LL_USART_OVERSAMPLING_16,
                         new_baud);
+#ifdef DEBUG_USE_LPUART1
+      } else if (strncmp(handle_string, "lpuart", handle_string_len) == 0){
+        LL_LPUART_SetBaudRate((USART_TypeDef *)handle->device,
+                        LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
+                        LL_LPUART_PRESCALER_DIV64, new_baud);
+#endif
       } else if (strncmp(handle_string, "usart2", handle_string_len) == 0) {
         // TODO - verify prescaler and oversampling
         LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
