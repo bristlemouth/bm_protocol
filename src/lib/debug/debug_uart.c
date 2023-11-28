@@ -18,12 +18,10 @@
 #include "debug.h"
 #include "bsp.h"
 #include "task_priorities.h"
-// #include "log.h"
 
 static void processLineBufferedRxByte(void *serialHandle, uint8_t byte);
 static void printLine(void *serialHandle, uint8_t *line, size_t len);
 
-// Log_t *UARTLog;
 
 #ifdef DEBUG_USE_LPUART1
 #define LPUART1_LINE_BUFF_LEN 64
@@ -496,10 +494,11 @@ static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
 
     lineBuffer->idx++;
 
-    // Heavy handed way of dealing with overflow for now
-    // Later we can just purge the buffer
-    // TODO - log error and clear buffer instead
-    configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
+    if (lineBuffer->idx >= lineBuffer->len) {
+      printf("[%s] Line buffer overflowed, clearing!\n", handle->name);
+      memset(lineBuffer->buffer, 0, lineBuffer->len);
+      lineBuffer->idx = 0;
+    }
   }
 }
 
@@ -512,7 +511,6 @@ static void printLine(void *serialHandle, uint8_t *line, size_t len) {
   // Not using len right now
   (void) len;
 
-  // logPrint(UARTLog, LOG_LEVEL_DEBUG, "[%s] %s", handle->name, line);
   printf("[%s] %s", handle->name, line);
 }
 
