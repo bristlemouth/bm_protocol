@@ -173,7 +173,7 @@ static const CLI_Command_Definition_t cmdSerial = {
   " * serial list\n"
   " * serial enable <interface>\n"
   " * serial tx <interface> <message>\n"
-  " * serial baud <baudrate>\n"
+  " * serial baud <interface> <baudrate>\n"
   " * serial rxLevel <interface> <high/low>\n"
   " * serial disable <interface>\n",
   // Command function
@@ -307,9 +307,9 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
                       &parameterStringLength);
 
       if (strncmp("high", parameter, parameterStringLength) == 0) {
-        LL_USART_SetRXPinLevel((USART_TypeDef *)handle, LL_USART_RXPIN_LEVEL_STANDARD);
+        LL_USART_SetRXPinLevel((USART_TypeDef *)handle->device, LL_USART_RXPIN_LEVEL_STANDARD);
       } else if (strncmp("low", parameter, parameterStringLength) == 0) {
-        LL_USART_SetRXPinLevel((USART_TypeDef *)handle, LL_USART_RXPIN_LEVEL_INVERTED);
+        LL_USART_SetRXPinLevel((USART_TypeDef *)handle->device, LL_USART_RXPIN_LEVEL_INVERTED);
       } else {
         printf("ERR Invalid paramters\n");
         break;
@@ -339,25 +339,25 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
         break;
       }
       if (strncmp(handle_string, "lpuart", handle_string_len) == 0) {
-        LL_LPUART_SetBaudRate((USART_TypeDef *)handle,
+        LL_LPUART_SetBaudRate((USART_TypeDef *)handle->device,
                         LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
                         LL_LPUART_PRESCALER_DIV64, new_baud);
       } else if (strncmp(handle_string, "usart1", handle_string_len) == 0) {
         // TODO - verify prescaler and oversampling
-        LL_USART_SetBaudRate((USART_TypeDef *)handle,
+        LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART1_CLKSOURCE),
                         LL_USART_PRESCALER_DIV1,
                         LL_USART_OVERSAMPLING_16,
                         new_baud);
       } else if (strncmp(handle_string, "usart2", handle_string_len) == 0) {
         // TODO - verify prescaler and oversampling
-        LL_USART_SetBaudRate((USART_TypeDef *)handle,
+        LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART2_CLKSOURCE),
                         LL_USART_PRESCALER_DIV1,
                         LL_USART_OVERSAMPLING_16,
                         new_baud);
       } else if (strncmp(handle_string, "usart3", handle_string_len) == 0) {
-        LL_USART_SetBaudRate((USART_TypeDef *)handle,
+        LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART3_CLKSOURCE),
                         LL_USART_PRESCALER_DIV1,
                         LL_USART_OVERSAMPLING_16,
