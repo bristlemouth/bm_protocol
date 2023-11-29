@@ -130,8 +130,8 @@ static bool loadCellInit() {
   // Wait 3 seconds before doing the lc self cal in begin().
   vTaskDelay(pdMS_TO_TICKS(3000));
   rval = _loadCell->begin();
-  _loadCell->setCalibrationFactor(226.33);
-  _loadCell->setZeroOffset(-17678);
+  _loadCell->setCalibrationFactor(859.08);
+  _loadCell->setZeroOffset(-25971);
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
