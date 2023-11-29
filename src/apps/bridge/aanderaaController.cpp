@@ -275,8 +275,10 @@ static void runController(void *param) {
                               "%.3f,"        // abs_speed_std_cm_s
                               "%.3f,"        // direction_circ_mean_rad
                               "%.3f,"        // direction_circ_std_rad
+                              "%.3f,"        // temp_mean_deg_c
                               "%.3f,"        // abs_tilt_mean_rad
-                              "%.3f\n",      // temp_mean_deg_c
+                              "%.3f,"        // std_tilt_mean_rad
+                              "%" PRIu32 "\n", // reading_count
                               timeStrbuf,
                               curr->node_id,
                               curr->abs_speed_cm_s.getNumSamples(),
@@ -284,8 +286,10 @@ static void runController(void *param) {
                               agg.abs_speed_std_cm_s,
                               agg.direction_circ_mean_rad,
                               agg.direction_circ_std_rad,
+                              agg.temp_mean_deg_c,
                               agg.abs_tilt_mean_rad,
-                              agg.temp_mean_deg_c);
+                              agg.std_tilt_mean_rad,
+                              agg.reading_count);
             if (log_buflen > 0) {
               BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
             } else {
@@ -339,7 +343,8 @@ static void createAanderaaSub(uint64_t node_id) {
   new_sub->direction_rad.initBuffer(AVERAGER_MAX_SAMPLES);
   new_sub->temp_deg_c.initBuffer(AVERAGER_MAX_SAMPLES);
   new_sub->abs_tilt_rad.initBuffer(AVERAGER_MAX_SAMPLES);
-
+  new_sub->std_tilt_rad.initBuffer(AVERAGER_MAX_SAMPLES);
+  new_sub->reading_count = 0;
   if (_ctx._subbed_aanderaas == NULL) {
     _ctx._subbed_aanderaas = new_sub;
   } else {
