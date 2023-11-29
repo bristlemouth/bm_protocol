@@ -18,12 +18,10 @@
 #include "debug.h"
 #include "bsp.h"
 #include "task_priorities.h"
-// #include "log.h"
 
 static void processLineBufferedRxByte(void *serialHandle, uint8_t byte);
 static void printLine(void *serialHandle, uint8_t *line, size_t len);
 
-// Log_t *UARTLog;
 
 #ifdef DEBUG_USE_LPUART1
 #define LPUART1_LINE_BUFF_LEN 64
@@ -172,7 +170,10 @@ static const CLI_Command_Definition_t cmdSerial = {
   "serial:\n"
   " * serial list\n"
   " * serial enable <interface>\n"
-  " * serial tx <interface> <message>\n",
+  " * serial tx <interface> <message>\n"
+  " * serial baud <interface> <baudrate>\n"
+  " * serial rxLevel <interface> <high/low>\n"
+  " * serial disable <interface>\n",
   // Command function
   debugSerialCommand,
   // Number of parameters (variable)
@@ -285,6 +286,93 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
       // Transmit bytes
       // should have generic tx task for all interfaces?
 
+    } else if (strncmp("rxLevel", parameter, parameterStringLength) == 0) {
+
+      parameter = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      2, // Get the second parameter (serial interface)
+                      &parameterStringLength);
+      SerialHandle_t *handle = serialFindInterface(parameter, parameterStringLength);
+
+      if (handle == NULL) {
+        printf("ERR Invalid interface\n");
+        break;
+      }
+
+      parameter = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      3, // Get the rest of the parameters
+                      &parameterStringLength);
+
+      LL_USART_Disable((USART_TypeDef *)handle->device);
+
+      if (strncmp("high", parameter, parameterStringLength) == 0) {
+        LL_USART_SetRXPinLevel((USART_TypeDef *)handle->device, LL_USART_RXPIN_LEVEL_STANDARD);
+      } else if (strncmp("low", parameter, parameterStringLength) == 0) {
+        LL_USART_SetRXPinLevel((USART_TypeDef *)handle->device, LL_USART_RXPIN_LEVEL_INVERTED);
+      } else {
+        LL_USART_Enable((USART_TypeDef *)handle->device);
+        printf("ERR Invalid paramters\n");
+        break;
+      }
+
+      LL_USART_Enable((USART_TypeDef *)handle->device);
+      printf("OK\n");
+    } else if (strncmp("baud", parameter, parameterStringLength) == 0) {
+      BaseType_t handle_string_len;
+      const char* handle_string = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      2, // Get the second parameter (serial interface)
+                      &handle_string_len);
+      SerialHandle_t *handle = serialFindInterface(handle_string, handle_string_len);
+
+      if (handle == NULL) {
+        printf("ERR Invalid interface\n");
+        break;
+      }
+
+      parameter = FreeRTOS_CLIGetParameter(
+                      commandString,
+                      3, // Get the rest of the parameters
+                      &parameterStringLength);
+
+      uint32_t new_baud = atoi(parameter);
+      if (new_baud == 0) {
+        printf("ERR Invalid baud\n");
+        break;
+      }
+      if (strncmp(handle_string, "usart1", handle_string_len) == 0)  {
+        // TODO - verify prescaler and oversampling
+        LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
+                        LL_RCC_GetUSARTClockFreq(LL_RCC_USART1_CLKSOURCE),
+                        LL_USART_PRESCALER_DIV1,
+                        LL_USART_OVERSAMPLING_16,
+                        new_baud);
+#ifdef DEBUG_USE_LPUART1
+      } else if (strncmp(handle_string, "lpuart", handle_string_len) == 0){
+        LL_LPUART_SetBaudRate((USART_TypeDef *)handle->device,
+                        LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
+                        LL_LPUART_PRESCALER_DIV64, new_baud);
+#endif
+      } else if (strncmp(handle_string, "usart2", handle_string_len) == 0) {
+        // TODO - verify prescaler and oversampling
+        LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
+                        LL_RCC_GetUSARTClockFreq(LL_RCC_USART2_CLKSOURCE),
+                        LL_USART_PRESCALER_DIV1,
+                        LL_USART_OVERSAMPLING_16,
+                        new_baud);
+      } else if (strncmp(handle_string, "usart3", handle_string_len) == 0) {
+        LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
+                        LL_RCC_GetUSARTClockFreq(LL_RCC_USART3_CLKSOURCE),
+                        LL_USART_PRESCALER_DIV1,
+                        LL_USART_OVERSAMPLING_16,
+                        new_baud);
+      } else {
+        printf("ERR Invalid paramters\n");
+        break;
+      }
+
+      printf("OK\n");
     } else {
       printf("ERR Invalid paramters\n");
       break;
@@ -409,10 +497,11 @@ static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
 
     lineBuffer->idx++;
 
-    // Heavy handed way of dealing with overflow for now
-    // Later we can just purge the buffer
-    // TODO - log error and clear buffer instead
-    configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
+    if (lineBuffer->idx >= lineBuffer->len) {
+      printf("[%s] Line buffer overflowed, clearing!\n", handle->name);
+      memset(lineBuffer->buffer, 0, lineBuffer->len);
+      lineBuffer->idx = 0;
+    }
   }
 }
 
@@ -425,7 +514,6 @@ static void printLine(void *serialHandle, uint8_t *line, size_t len) {
   // Not using len right now
   (void) len;
 
-  // logPrint(UARTLog, LOG_LEVEL_DEBUG, "[%s] %s", handle->name, line);
   printf("[%s] %s", handle->name, line);
 }
 
