@@ -88,7 +88,10 @@ void AanderaaSensor::aggregate(void) {
                                 .abs_speed_std_cm_s = NAN,
                                 .direction_circ_mean_rad = NAN,
                                 .direction_circ_std_rad = NAN,
-                                .temp_mean_deg_c = NAN};
+                                .temp_mean_deg_c = NAN,
+                                .abs_tilt_mean_rad = NAN,
+                                .std_tilt_mean_rad = NAN,
+                                .reading_count = 0};
     // Check to make sure we have enough sensor readings for a valid aggregation.
     // If not send NaNs for all the values.
     // TODO - verify that we can assume if one sampler is below the min then all of them are.
@@ -98,6 +101,9 @@ void AanderaaSensor::aggregate(void) {
       agg.direction_circ_mean_rad = direction_rad.getCircularMean();
       agg.direction_circ_std_rad = direction_rad.getCircularStd();
       agg.temp_mean_deg_c = temp_deg_c.getMean(true);
+      agg.abs_tilt_mean_rad = abs_tilt_rad.getMean(true);
+      agg.std_tilt_mean_rad = std_tilt_rad.getMean(true);
+      agg.reading_count = reading_count;
       if (agg.abs_speed_mean_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_mean_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
           agg.abs_speed_mean_cm_s = NAN;
       }
@@ -112,6 +118,12 @@ void AanderaaSensor::aggregate(void) {
       }
       if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN || agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
           agg.temp_mean_deg_c = NAN;
+      }
+      if (agg.abs_tilt_mean_rad < TILT_SAMPLE_MEMBER_MIN || agg.abs_tilt_mean_rad > TILT_SAMPLE_MEMBER_MAX) {
+          agg.abs_tilt_mean_rad = NAN;
+      }
+      if (agg.std_tilt_mean_rad < TILT_SAMPLE_MEMBER_MIN || agg.std_tilt_mean_rad > TILT_SAMPLE_MEMBER_MAX) {
+          agg.std_tilt_mean_rad = NAN;
       }
     }
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
@@ -128,7 +140,10 @@ void AanderaaSensor::aggregate(void) {
                     "%.3f,"        // abs_speed_std_cm_s
                     "%.3f,"        // direction_circ_mean_rad
                     "%.3f,"        // direction_circ_std_rad
-                    "%.3f\n",      // temp_mean_deg_c
+                    "%.3f,"        // temp_mean_deg_c
+                    "%.3f,"        // abs_tilt_mean_rad
+                    "%.3f,"        // std_tilt_mean_rad
+                    "%" PRIu32 "\n", // reading_count
                     timeStrbuf,
                     node_id,
                     abs_speed_cm_s.getNumSamples(),
@@ -136,7 +151,10 @@ void AanderaaSensor::aggregate(void) {
                     agg.abs_speed_std_cm_s,
                     agg.direction_circ_mean_rad,
                     agg.direction_circ_std_rad,
-                    agg.temp_mean_deg_c);
+                    agg.temp_mean_deg_c,
+                    agg.abs_tilt_mean_rad,
+                    agg.std_tilt_mean_rad,
+                    agg.reading_count);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
     } else {
@@ -150,6 +168,9 @@ void AanderaaSensor::aggregate(void) {
     abs_speed_cm_s.clear();
     direction_rad.clear();
     temp_deg_c.clear();
+    abs_tilt_rad.clear();
+    std_tilt_rad.clear();
+    reading_count = 0;
     xSemaphoreGive(_mutex);
   } else {
       printf("Failed to get the subbed Aanderaa mutex while trying to aggregate\n");
@@ -172,5 +193,8 @@ Aanderaa_t* createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms, 
   new_sub->abs_speed_cm_s.initBuffer(averager_max_samples);
   new_sub->direction_rad.initBuffer(averager_max_samples);
   new_sub->temp_deg_c.initBuffer(averager_max_samples);
+  new_sub->abs_tilt_rad.initBuffer(averager_max_samples);
+  new_sub->std_tilt_rad.initBuffer(averager_max_samples);
+  new_sub->reading_count = 0;
   return new_sub;
 }

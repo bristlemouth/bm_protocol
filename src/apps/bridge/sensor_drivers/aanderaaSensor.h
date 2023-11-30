@@ -6,7 +6,7 @@
 #include "avgSampler.h"
 #include "sensorController.h"
 
-#define AANDERAA_NUM_SAMPLE_MEMBERS 5
+#define AANDERAA_NUM_SAMPLE_MEMBERS 8
 
 typedef struct aanderaa_aggregations_s {
   double abs_speed_mean_cm_s;
@@ -24,12 +24,17 @@ typedef struct AanderaaSensor : public AbstractSensor {
   AveragingSampler abs_speed_cm_s;
   AveragingSampler direction_rad;
   AveragingSampler temp_deg_c;
+  AveragingSampler abs_tilt_rad;
+  AveragingSampler std_tilt_rad;
+  uint32_t reading_count;
 
   static constexpr uint32_t N_SAMPLES_PAD =
       10; // Extra sample padding to account for timing slop.
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
   static constexpr double DIRECTION_SAMPLE_MEMBER_MIN = 0.0;
   static constexpr double DIRECTION_SAMPLE_MEMBER_MAX = M_TWOPI;
+  static constexpr double TILT_SAMPLE_MEMBER_MIN = 0.0;
+  static constexpr double TILT_SAMPLE_MEMBER_MAX = M_PI_2;
   static constexpr double ABS_SPEED_SAMPLE_MEMBER_MIN = 0.0;
   static constexpr double ABS_SPEED_SAMPLE_MEMBER_MAX = 300.0;
   static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5.0;
