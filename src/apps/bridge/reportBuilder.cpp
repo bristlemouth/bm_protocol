@@ -49,7 +49,10 @@ static aanderaa_aggregations_t NAN_AGG = {.abs_speed_mean_cm_s = NAN,
                                            .abs_speed_std_cm_s = NAN,
                                            .direction_circ_mean_rad = NAN,
                                            .direction_circ_std_rad = NAN,
-                                           .temp_mean_deg_c = NAN};
+                                           .temp_mean_deg_c = NAN,
+                                           .abs_tilt_mean_rad = NAN,
+                                           .std_tilt_mean_rad = NAN,
+                                           .reading_count = 0};
 
 class ReportBuilderLinkedList {
   private:
@@ -265,6 +268,13 @@ CborError encode_double_sample_member(CborEncoder &sample_array, void* sample_me
   return err;
 }
 
+CborError encode_uint_sample_member(CborEncoder &sample_array, void* sample_member){
+  uint32_t local_sample_member = *(uint32_t*)sample_member;
+  CborError err = CborNoError;
+  err = cbor_encode_uint(&sample_array, local_sample_member);
+  return err;
+}
+
 /**
  * @brief Adds a new item to the report builder queue.
  *
@@ -338,6 +348,18 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
         break;
       }
       if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.temp_mean_deg_c) != CborNoError) {
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.abs_tilt_mean_rad) != CborNoError) {
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &aanderaa_sample.std_tilt_mean_rad) != CborNoError) {
+        BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+        break;
+      }
+      if (sensor_report_encoder_add_sample_member(context, encode_uint_sample_member, &aanderaa_sample.reading_count) != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
         break;
       }
