@@ -60,7 +60,7 @@
 #include "bridgeLog.h"
 #include "debug_bm_service.h"
 #include "sys_info_service.h"
-#include "aanderaaController.h"
+#include "sensorController.h"
 #include "config_cbor_map_service.h"
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -375,7 +375,7 @@ static void defaultTask( void *parameters ) {
     debugBmServiceInit();
     sys_info_service_init(debug_configuration_system);
     reportBuilderInit(&debug_configuration_system);
-    aanderaControllerInit(&bridge_power_controller, &debug_configuration_system);
+    sensorControllerInit(&bridge_power_controller, &debug_configuration_system);
     config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);
     IOWrite(&ALARM_OUT, 1);

@@ -1,6 +1,6 @@
 #include "bridgePowerController.h"
 #include "FreeRTOS.h"
-#include "aanderaaController.h"
+#include "sensorController.h"
 #include "app_pub_sub.h"
 #include "bm_l2.h"
 #include "bm_serial.h"
@@ -228,7 +228,7 @@ void BridgePowerController::_update(
         if (nextSampleEpochS > currentCycleS) {
           powerBusAndSetSignal(false);
         }
-        xTaskNotify(aanderaa_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
+        xTaskNotify(sensor_controller_task_handle, AANDERAA_AGGREGATION_TIMER_BITS, eSetBits);
         break;
       }
     } else { // Sampling Not Enabled

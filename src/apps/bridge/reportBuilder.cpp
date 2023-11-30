@@ -6,7 +6,8 @@
 #include "timer_callback_handler.h"
 #include "timers.h"
 #include <string.h>
-#include "aanderaaController.h"
+#include "sensorController.h"
+#include "aanderaaSensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bm_serial.h"
