@@ -69,13 +69,15 @@ static bool loadCellSample() {
       _loadCell->getInternalOffsetCal();
 
       // prints to SD card file
-      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, reading: %lu\n",
+      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, reading: %" PRId32 "\n",
                  uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
       bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, weight: %f\n",
                  uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
 
       // prints to Spotter console
-      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %lu",
+      bm_printf(0, "loadcell | tick: %llu, rtc: %s, reading: %" PRId32 "\n",
+                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
+      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %f\n",
                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
       printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
       printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
@@ -130,8 +132,8 @@ static bool loadCellInit() {
   // Wait 3 seconds before doing the lc self cal in begin().
   vTaskDelay(pdMS_TO_TICKS(3000));
   rval = _loadCell->begin();
-  _loadCell->setCalibrationFactor(226.33);
-  _loadCell->setZeroOffset(-17678);
+  _loadCell->setCalibrationFactor(859.08);
+  _loadCell->setZeroOffset(-25971);
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
