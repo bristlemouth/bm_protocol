@@ -18,10 +18,23 @@
 #define REPORT_BUILDER_QUEUE_SIZE (16)
 #define TOPO_TIMEOUT_MS (1000)
 
-// This is the current max length the cbor buffer can be for the sensor report
-// The limiting factor is the max size we can send via Iridium minus the size
-// of the messages header
-#define MAX_SENSOR_REPORT_CBOR_LEN 315
+/*
+  This is the current max length the cbor buffer can be for the sensor report
+  The limiting factor is the max size we can send via Iridium minus the size
+  of the messages header. The math for this is:
+
+  340 bytes - ~25 bytes(header) = 315 bytes (bitpacked)
+
+  Each sample bitpacked is ~12 bytes so we can fit 26 samples in a message
+
+  26 * (sizeof(aanderaa_aggregations_t)) = 26 * (7 * sizeof(double) + sizeof(uint32_t)) =
+  26 * (7 * 8 + 4) = 26 * 60 = 1560 bytes
+
+  Then we need to add some overhead for the cbor array, lets just use 128 bytes.
+
+  1560 + 128 = 1688 bytes
+*/
+#define MAX_SENSOR_REPORT_CBOR_LEN 1688
 
 typedef struct report_builder_element_s {
   uint64_t node_id;
@@ -159,7 +172,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
           // We use the element->sample_counter to track within each element how many samples
           // the element has received.
           for (; element->sample_counter < sample_counter; element->sample_counter++) {
-            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter++], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter], &NAN_AGG, sizeof(aanderaa_aggregations_t));
           }
         }
 
