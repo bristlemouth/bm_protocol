@@ -27,7 +27,8 @@
 
   Each sample bitpacked is ~12 bytes so we can fit 26 samples in a message
 
-  26 * (sizeof(aanderaa_aggregations_t)) = 26 * (7 * 8 + 4) = 26 * 60 = 1560 bytes
+  26 * (sizeof(aanderaa_aggregations_t)) = 26 * (7 * sizeof(double) + sizeof(uint32_t)) =
+  26 * (7 * 8 + 4) = 26 * 60 = 1560 bytes
 
   Then we need to add some overhead for the cbor array, lets just use 128 bytes.
 
