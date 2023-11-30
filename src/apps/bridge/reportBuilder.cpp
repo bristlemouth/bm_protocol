@@ -156,7 +156,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
           // We use the element->sample_counter to track within each element how many samples
           // the element has received.
           for (; element->sample_counter < sample_counter; element->sample_counter++) {
-            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter++], &NAN_AGG, sizeof(aanderaa_aggregations_t));
+            memcpy(&(static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter], &NAN_AGG, sizeof(aanderaa_aggregations_t));
           }
         }
 
