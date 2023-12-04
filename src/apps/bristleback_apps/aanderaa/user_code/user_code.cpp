@@ -270,6 +270,14 @@ void setup(void) {
                                     AANDERAA_WATCHDOG_MAX_TRIGGERS, AANDERAA_RAW_LOG);
 }
 
+static double getDoubleOrNaN(Value value) {
+  if (value.type == TYPE_INVALID) {
+    return NAN;
+  } else {
+    return value.data.double_val;
+  }
+}
+
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
@@ -403,18 +411,19 @@ void loop(void) {
     size_t encoded_len = 0;
     d.header.version = AanderaaDataMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();
-    d.abs_speed_cm_s = parser.getValue(ABS_SPEED).data.double_val;
-    d.abs_tilt_deg = parser.getValue(ABS_TILT).data.double_val;
-    d.direction_deg_m = parser.getValue(DIRECTION).data.double_val;
-    d.east_cm_s = parser.getValue(EAST).data.double_val;
-    d.heading_deg_m = parser.getValue(HEADING).data.double_val;
-    d.north_cm_s = parser.getValue(NORTH).data.double_val;
-    d.ping_count = parser.getValue(PING_COUNT).data.double_val;
-    d.tilt_x_deg = parser.getValue(TILT_X).data.double_val;
-    d.tilt_y_deg = parser.getValue(TILT_Y).data.double_val;
-    d.max_tilt_deg = parser.getValue(MAX_TILT).data.double_val;
-    d.std_tilt_deg = parser.getValue(STD_TILT).data.double_val;
-    d.temperature_deg_c = parser.getValue(TEMP).data.double_val;
+    d.abs_speed_cm_s = getDoubleOrNaN(parser.getValue(ABS_SPEED));
+    d.abs_speed_cm_s = getDoubleOrNaN(parser.getValue(ABS_SPEED));
+    d.abs_tilt_deg = getDoubleOrNaN(parser.getValue(ABS_TILT));
+    d.direction_deg_m = getDoubleOrNaN(parser.getValue(DIRECTION));
+    d.east_cm_s = getDoubleOrNaN(parser.getValue(EAST));
+    d.heading_deg_m = getDoubleOrNaN(parser.getValue(HEADING));
+    d.north_cm_s = getDoubleOrNaN(parser.getValue(NORTH));
+    d.ping_count = getDoubleOrNaN(parser.getValue(PING_COUNT));
+    d.tilt_x_deg = getDoubleOrNaN(parser.getValue(TILT_X));
+    d.tilt_y_deg = getDoubleOrNaN(parser.getValue(TILT_Y));
+    d.max_tilt_deg = getDoubleOrNaN(parser.getValue(MAX_TILT));
+    d.std_tilt_deg = getDoubleOrNaN(parser.getValue(STD_TILT));
+    d.temperature_deg_c = getDoubleOrNaN(parser.getValue(TEMP));
     RTCTimeAndDate_t datetime;
     if(rtcGet(&datetime) == pdPASS){
       d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
