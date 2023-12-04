@@ -79,11 +79,11 @@ static void spoof_aanderaa(void);
 
 /// For Turning Text Into Numbers
 #ifdef AANDERAA_BLUE
-#define NUM_PARAMS_TO_AGG                                                                      \
-  13 // Need to manually adjust current_data, valueTypes and keys when changing
+// Need to manually adjust current_data, valueTypes and keys when changing
+#define NUM_PARAMS_TO_AGG 14
 #else
-#define NUM_PARAMS_TO_AGG                                                                      \
-  12 // Need to manually adjust current_data, valueTypes and keys when changing
+// Need to manually adjust current_data, valueTypes and keys when changing
+#define NUM_PARAMS_TO_AGG 13
 #endif
 
 typedef struct {
@@ -113,6 +113,7 @@ static const char lineHeader[] = "MEASUREMENT";
 static ValueType valueTypes[NUM_PARAMS_TO_AGG] = {
     TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
     TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
+    TYPE_DOUBLE,
 #ifdef AANDERAA_BLUE
     TYPE_DOUBLE
 #endif
@@ -124,6 +125,7 @@ static const char *keys[] = {"Abs Speed[cm/s]",
                              "Heading[Deg.M]",
                              "Tilt X[Deg]",
                              "Tilt Y[Deg]",
+                             "SP Std[cm/s]",
                              "Ping Count",
                              "Abs Tilt[Deg]",
                              "Max Tilt[Deg]",
@@ -142,6 +144,7 @@ typedef enum AadneraaKeysIdx {
   HEADING,
   TILT_X,
   TILT_Y,
+  SP_STD,
   PING_COUNT,
   ABS_TILT,
   MAX_TILT,
@@ -418,6 +421,7 @@ void loop(void) {
     d.east_cm_s = getDoubleOrNaN(parser.getValue(EAST));
     d.heading_deg_m = getDoubleOrNaN(parser.getValue(HEADING));
     d.north_cm_s = getDoubleOrNaN(parser.getValue(NORTH));
+    d.single_ping_std_cm_s = getDoubleOrNaN(parser.getValue(SP_STD));
     d.ping_count = getDoubleOrNaN(parser.getValue(PING_COUNT));
     d.tilt_x_deg = getDoubleOrNaN(parser.getValue(TILT_X));
     d.tilt_y_deg = getDoubleOrNaN(parser.getValue(TILT_Y));
