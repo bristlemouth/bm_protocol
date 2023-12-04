@@ -97,7 +97,7 @@ void AanderaaSensor::aggregate(void) {
     // TODO - verify that we can assume if one sampler is below the min then all of them are.
     if(abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       agg.abs_speed_mean_cm_s = abs_speed_cm_s.getMean(true);
-      agg.abs_speed_std_cm_s = abs_speed_cm_s.getStd(true);
+      agg.abs_speed_std_cm_s = abs_speed_cm_s.getStd(agg.abs_speed_mean_cm_s, 0.0, true);
       agg.direction_circ_mean_rad = direction_rad.getCircularMean();
       agg.direction_circ_std_rad = direction_rad.getCircularStd();
       agg.temp_mean_deg_c = temp_deg_c.getMean(true);
