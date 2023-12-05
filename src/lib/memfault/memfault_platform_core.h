@@ -3,7 +3,6 @@
 //
 
 #pragma once
-
 #include "memfault/core/platform/debug_log.h"
 #include "memfault/core/platform/device_info.h"
 #include "memfault/core/data_packetizer.h"
@@ -27,6 +26,8 @@ int memfault_platform_start(void);
 void memfault_enable_mpu();
 bool memfault_threadsafe_packetizer_get_chunk_from_source(void* chunk_buff, size_t* chunk_len, uint32_t src_mask);
 bool memfault_threadsafe_packetizer_is_data_available_from_source(uint32_t src_mask);
+uint32_t memfault_get_pc(void);
+uint32_t memfault_get_lr(void);
 #ifdef __cplusplus
 }
 #endif

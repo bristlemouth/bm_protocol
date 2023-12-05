@@ -2,12 +2,14 @@ cmake_minimum_required(VERSION 3.18)
 
 # Add sdk files as suggest here:
 # https://github.com/memfault/memfault-firmware-sdk#add-sources-to-build-system
-set(MEMFAULT_DIR ${CMAKE_SOURCE_DIR}/src)
+set(MEMFAULT_DIR ${CMAKE_SOURCE_DIR}/src/third_party/memfault-firmware-sdk)
+message(STATUS "MEMFAULT_DIR: ${MEMFAULT_DIR}")
 set(MEMFAULT_SDK_ROOT ${CMAKE_SOURCE_DIR}/src/third_party/memfault-firmware-sdk)
 list(APPEND MEMFAULT_COMPONENTS "core" "util" "panics" "metrics" "http")
 include(${MEMFAULT_SDK_ROOT}/cmake/Memfault.cmake)
 memfault_library(${MEMFAULT_SDK_ROOT} MEMFAULT_COMPONENTS
  MEMFAULT_COMPONENTS_SRCS MEMFAULT_COMPONENTS_INC_FOLDERS)
+message(STATUS "MEMFAULT_COMPONENTS_INC_FOLDERS: ${MEMFAULT_COMPONENTS_INC_FOLDERS}")
 
 set(MEMFAULT_PORT_ROOT ${MEMFAULT_SDK_ROOT}/ports)
 set(MEMFAULT_FREERTOS_PORT_ROOT ${MEMFAULT_PORT_ROOT}/freertos)
@@ -34,6 +36,7 @@ set(MEMFAULT_SOURCES
 set(MEMFAULT_INCLUDES
     ${MEMFAULT_COMPONENTS_INC_FOLDERS}
     ${MEMFAULT_DIR}/
+    ${MEMFAULT_DIR}/components/core/src
     ${MEMFAULT_FREERTOS_PORT_ROOT}/include
     ${MEMFAULT_PORT_ROOT}/include
     )
