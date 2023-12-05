@@ -57,13 +57,13 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
             "%.3f,"        // heading_deg_m
             "%.3f,"        // max_tilt_deg
             "%.3f,"        // ping_count
-            "%.3f,"        // standard_ping_std_cm_s
+            "%.3f,"        // single_ping_std_cm_s
             "%.3f,"        // std_tilt_deg
             "%.3f,"        // temperature_deg_c
             "%.3f\n",      // north_cm_s
             node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_s,
             d.header.sensor_reading_time_s, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m,
-            d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.standard_ping_std_cm_s,
+            d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.single_ping_std_cm_s,
             d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
@@ -131,7 +131,7 @@ void AanderaaSensor::aggregate(void) {
     if(!logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
       printf("Failed to get time string for Aanderaa aggregation\n");
       snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
-    }; 
+    };
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                     "%s,"          // timestamp(ticks/UTC)
                     "%" PRIx64 "," // Node Id
