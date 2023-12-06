@@ -430,7 +430,7 @@ void loop(void) {
     d.temperature_deg_c = getDoubleOrNaN(parser.getValue(TEMP));
     RTCTimeAndDate_t datetime;
     if(rtcGet(&datetime) == pdPASS){
-      d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
+      d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
     }
 
     if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
@@ -474,8 +474,8 @@ static void spoof_aanderaa() {
     size_t encoded_len = 0;
     RTCTimeAndDate_t datetime;
     if(rtcGet(&datetime) == pdPASS) {
-      d.header.reading_time_utc_s = (rtcGetMicroSeconds(&datetime) / 1e6);
-      srand(d.header.reading_time_utc_s & 0xFFFFFFFF);
+      d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
+      srand(d.header.reading_time_utc_ms & 0xFFFFFFFF);
     }
     d.header.version = AanderaaDataMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();

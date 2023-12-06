@@ -48,8 +48,8 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
             log_buf, SENSOR_LOG_BUF_SIZE,
             "%" PRIx64 "," // Node Id
             "%" PRIu64 "," // reading_uptime_millis
-            "%" PRIu64 "," // reading_time_utc_s
-            "%" PRIu64 "," // sensor_reading_time_s
+            "%.3f,"        // reading_time_utc_ms / 1000.0
+            "%.3f,"        // sensor_reading_time_ms / 1000.0
             "%.3f,"        // abs_speed_cm_s
             "%.3f,"        // abs_tilt_deg
             "%.3f,"        // direction_deg_m
@@ -61,10 +61,10 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
             "%.3f,"        // std_tilt_deg
             "%.3f,"        // temperature_deg_c
             "%.3f\n",      // north_cm_s
-            node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_s,
-            d.header.sensor_reading_time_s, d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m,
-            d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.single_ping_std_cm_s,
-            d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
+            node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_ms / 1000.0,
+            d.header.sensor_reading_time_ms / 1000.0, d.abs_speed_cm_s, d.abs_tilt_deg,
+            d.direction_deg_m, d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count,
+            d.single_ping_std_cm_s, d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
         } else {
