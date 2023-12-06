@@ -18,6 +18,7 @@
 #include "memfault/panics/platform/coredump.h"
 #include "memfault/ports/freertos.h"
 #include "memfault/ports/reboot_reason.h"
+#include "memfault_reboot_tracking_private.h"
 #include "reset_reason.h"
 #include "version.h"
 #include "FreeRTOS.h"
@@ -31,6 +32,8 @@ static uint8_t s_event_storage[1024];
 static uint8_t s_log_buf_storage[2048];
 
 static SemaphoreHandle_t s_memfault_packetizer_mutex;
+
+static sMfltResetReasonInfo memfault_reset_info;
 
 // Note: reboot tracking needs to be placed in a noinit region
 // because metadata across resets is tracked
@@ -251,6 +254,14 @@ int memfault_platform_boot(void) {
   memfault_reboot_reason_get(&reset_info);
   memfault_reboot_tracking_boot(s_reboot_tracking, &reset_info);
 
+  // capture reboot information
+  memfault_reset_info.reason = kMfltRebootReason_Unknown;
+  memfault_reset_info.coredump_saved = 0;
+  memfault_reset_info.pc = 0;
+  memfault_reset_info.lr = 0;
+  memfault_reset_info.reset_reason_reg0 = 0;
+  memfault_reboot_tracking_read_reset_info(&memfault_reset_info);
+
   evt_storage = memfault_events_storage_boot(s_event_storage, sizeof(s_event_storage));
   memfault_trace_event_boot(evt_storage);
   memfault_reboot_tracking_collect_reset_info(evt_storage);
@@ -352,4 +363,12 @@ bool memfault_platform_coredump_save_begin(void) {
   }
   watchdogFeed();
   return true;
+}
+
+uint32_t memfault_get_pc(void) {
+  return memfault_reset_info.pc;
+}
+
+uint32_t memfault_get_lr(void) {
+  return memfault_reset_info.lr;
 }

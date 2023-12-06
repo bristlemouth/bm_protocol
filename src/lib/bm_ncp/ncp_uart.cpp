@@ -21,6 +21,7 @@
 #include "ncp_dfu.h"
 #include "ncp_config.h"
 #include "reset_reason.h"
+#include "memfault_platform_core.h"
 #include "memfault/core/reboot_tracking.h"
 #include "gpio.h"
 
@@ -346,7 +347,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
 
   serialEnable(ncpSerialHandle);
   ncp_dfu_check_for_update();
-  bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(), memfault_reboot_tracking_get_crash_count());
+  bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(), memfault_reboot_tracking_get_crash_count(), memfault_get_pc(), memfault_get_lr());
 }
 
 void ncpRXTask( void *parameters) {
