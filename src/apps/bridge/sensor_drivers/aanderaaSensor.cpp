@@ -44,27 +44,38 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         aanderaa->abs_tilt_rad.addSample(degToRad(d.abs_tilt_deg));
         aanderaa->std_tilt_rad.addSample(degToRad(d.std_tilt_deg));
         aanderaa->reading_count++;
-        size_t log_buflen = snprintf(
-            log_buf, SENSOR_LOG_BUF_SIZE,
-            "%" PRIx64 "," // Node Id
-            "%" PRIu64 "," // reading_uptime_millis
-            "%.3f,"        // reading_time_utc_ms / 1000.0
-            "%.3f,"        // sensor_reading_time_ms / 1000.0
-            "%.3f,"        // abs_speed_cm_s
-            "%.3f,"        // abs_tilt_deg
-            "%.3f,"        // direction_deg_m
-            "%.3f,"        // east_cm_s
-            "%.3f,"        // heading_deg_m
-            "%.3f,"        // max_tilt_deg
-            "%.3f,"        // ping_count
-            "%.3f,"        // single_ping_std_cm_s
-            "%.3f,"        // std_tilt_deg
-            "%.3f,"        // temperature_deg_c
-            "%.3f\n",      // north_cm_s
-            node_id, d.header.reading_uptime_millis, d.header.reading_time_utc_ms / 1000.0,
-            d.header.sensor_reading_time_ms / 1000.0, d.abs_speed_cm_s, d.abs_tilt_deg,
-            d.direction_deg_m, d.east_cm_s, d.heading_deg_m, d.max_tilt_deg, d.ping_count,
-            d.single_ping_std_cm_s, d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
+
+        // Large floats get formatted in scientific notation,
+        // so we print integer seconds and millis separately.
+        uint64_t reading_time_sec = d.header.reading_time_utc_ms / 1000U;
+        uint32_t reading_time_millis = d.header.reading_time_utc_ms % 1000U;
+        uint64_t sensor_reading_time_sec = d.header.sensor_reading_time_ms / 1000U;
+        uint32_t sensor_reading_time_millis = d.header.sensor_reading_time_ms % 1000U;
+
+        size_t log_buflen =
+            snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                     "%" PRIx64 ","   // Node Id
+                     "%" PRIu64 ","   // reading_uptime_millis
+                     "%" PRIu64 "."   // reading_time_utc_ms seconds part
+                     "%03" PRIu32 "," // reading_time_utc_ms millis part
+                     "%" PRIu64 "."   // sensor_reading_time_ms seconds part
+                     "%03" PRIu32 "," // sensor_reading_time_ms millis part
+                     "%.3f,"          // abs_speed_cm_s
+                     "%.3f,"          // abs_tilt_deg
+                     "%.3f,"          // direction_deg_m
+                     "%.3f,"          // east_cm_s
+                     "%.3f,"          // heading_deg_m
+                     "%.3f,"          // max_tilt_deg
+                     "%.3f,"          // ping_count
+                     "%.3f,"          // single_ping_std_cm_s
+                     "%.3f,"          // std_tilt_deg
+                     "%.3f,"          // temperature_deg_c
+                     "%.3f\n",        // north_cm_s
+                     node_id, d.header.reading_uptime_millis, reading_time_sec,
+                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
+                     d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
+                     d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.single_ping_std_cm_s,
+                     d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
         } else {
