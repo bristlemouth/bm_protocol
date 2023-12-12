@@ -273,6 +273,7 @@ void setup(void) {
                                     AANDERAA_WATCHDOG_MAX_TRIGGERS, AANDERAA_RAW_LOG);
 }
 
+#ifndef FAKE_AANDERAA
 static double getDoubleOrNaN(Value value) {
   if (value.type == TYPE_INVALID) {
     return NAN;
@@ -280,6 +281,7 @@ static double getDoubleOrNaN(Value value) {
     return value.data.double_val;
   }
 }
+#endif
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
