@@ -85,8 +85,16 @@ class AutoBuilder:
             f'-DCMAKE_BUILD_TYPE={config["args"]["build_type"]}',
         ]
 
-        if config["name"] != "bootloader":
+        if not config["name"].startswith("bootloader"):
             cmd += ["-DUSE_BOOTLOADER=1"]
+
+        if config["args"]["bsp"] == "bm_mote_bristleback_v1_0":
+            cmd += ["-DCMAKE_APP_TYPE=bristleback"]
+        elif config["args"]["bsp"] == "bm_mote_v1.0":
+            cmd += ["-DCMAKE_APP_TYPE=BMDK"]
+
+        if config["name"].startswith("aanderaa"):
+            cmd += ["-DCMAKE_AANDERAA_TYPE=4830"]
 
         if self.sign:
             cmd += ["-DSIGN_IMAGES=1"]
@@ -177,13 +185,6 @@ class AutoBuilder:
         if self.version and len(self.version):
             cmd += [f"--version={self.version}"]
 
-        # Don't do syscfg/readme stuff for bootloader
-        if config["args"]["app"] != "bootloader":
-            app_cfg = os.path.join(
-                get_project_root(), "src/apps/", config["args"]["app"], "app_config.yml"
-            )
-            cmd += ["--syscfg", app_cfg]
-
         result = self.run_command(cmd)
 
         # Grab .elf filename and size stats
@@ -228,7 +229,6 @@ class AutoBuilder:
         os.chdir(config["path"])
 
         try:
-
             # Run cmake setup commands
             self.setup_cmake_dir(config)
 
@@ -263,7 +263,7 @@ class AutoBuilder:
         if self.encrypt and self.x25519_priv_key:
             print("Creating temporary encryption key file")
             self.x25519_priv_key_file = os.path.join(tmpdirname, "x25519_priv_key")
-            with open(x25519_priv_key_file, "w") as keyfile:
+            with open(self.x25519_priv_key_file, "w") as keyfile:
                 keyfile.write(self.x25519_priv_key)
 
         return

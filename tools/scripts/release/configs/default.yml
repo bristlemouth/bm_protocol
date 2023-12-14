@@ -2,42 +2,65 @@
 # NOTE: Bootloader must be built first so it can be included in
 # unified image for later builds
 #
-- name: bootloader
-  description: Bootloader
+- name: bootloader_signing_required
+  description: Production Bootloader - Requires Sofar Signed App Images
   type: build_fw
   args:
     app: bootloader
     bsp: bootloader
     build_type: Release
+    sign: true
 
-- name: spotter_sunflower
-  description: spotter on sunflower_v3.3 - Debug
+- name: bootloader_development
+  description: Dev Bootloader - Accepts Unsigned App Images
   type: build_fw
   args:
-    app: spotter
-    bsp: sunflower_v3.3
-    build_type: Debug
-
-- name: spotter_pluteus
-  description: spotter on pluteus_v3.1 - Debug
-  type: build_fw
-  args:
-    app: spotter
-    bsp: pluteus_v3.1
-    build_type: Debug
-
-- name: spotter_sunflower_release
-  description: spotter on sunflower_v3.3 - Release
-  type: build_fw
-  args:
-    app: spotter
-    bsp: sunflower_v3.3
+    app: bootloader
+    bsp: bootloader
     build_type: Release
+    sign: false
 
-- name: spotter_pluteus_release
-  description: spotter on pluteus_v3.1 - Release
+- name: bridge_debug
+  description: Sofar BM Bridge - Debug
   type: build_fw
   args:
-    app: spotter
-    bsp: pluteus_v3.1
+    app: bridge
+    bsp: bridge_v1_0
+    build_type: Debug
+    sign: true
+
+- name: bridge_release
+  description: Sofar BM Bridge - Release
+  type: build_fw
+  args:
+    app: bridge
+    bsp: bridge_v1_0
     build_type: Release
+    sign: true
+
+- name: aanderaa_debug
+  description: Aanderaa Current Meter - Debug
+  type: build_fw
+  args:
+    app: aanderaa
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Debug
+    sign: true
+
+- name: aanderaa_release
+  description: Aanderaa Current Meter - Release
+  type: build_fw
+  args:
+    app: aanderaa
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+    sign: true
+
+- name: hello_world_debug
+  description: Hello World - Debug
+  type: build_fw
+  args:
+    app: hello_world
+    bsp: bm_mote_v1.0
+    build_type: Debug
+    sign: false
