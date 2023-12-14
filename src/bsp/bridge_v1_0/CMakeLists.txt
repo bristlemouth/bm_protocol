@@ -8,6 +8,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/i2c.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/icache.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/iwdg.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/flash.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/rtc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/spi.c

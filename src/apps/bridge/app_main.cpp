@@ -59,6 +59,7 @@
 #include "bcmp_neighbors.h"
 #include "bridgeLog.h"
 #include "debug_bm_service.h"
+#include "reset_reason.h"
 #include "sys_info_service.h"
 #include "sensorController.h"
 #include "config_cbor_map_service.h"
@@ -156,6 +157,7 @@ extern "C" int main(void) {
     SystemClock_Config();
     SystemPower_Config_ext();
 
+    checkResetReason();
     // If you NEED to have an interrupt based timer, or other interrupts running before the
     // scheduler starts, you can enable them here. The reason for this is that FreeRTOS will
     // disable interrupts when calling FreeRTOS API functions before the scheduler starts.

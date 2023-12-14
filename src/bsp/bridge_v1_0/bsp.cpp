@@ -82,4 +82,5 @@ void mxInit(void) {
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_IWDG_Init();
+  MX_FLASH_Init();
 }

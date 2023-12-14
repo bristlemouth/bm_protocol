@@ -45,7 +45,11 @@ ResetReason_t checkResetReason() {
             cachedResetReason = resetReason;
         }
         else{
-            cachedResetReason = RESET_REASON_INVALID;
+            if (LL_RCC_IsActiveFlag_BORRST()) {
+                cachedResetReason = RESET_REASON_BROWNOUT;
+            } else {
+                cachedResetReason = RESET_REASON_INVALID;
+            }
         }
     }
     // Clear the reset reason
@@ -63,6 +67,7 @@ static const enumStrLUT_t resetReasonLUT[] = {
     {RESET_REASON_CONFIG, "Config reset"},
     {RESET_REASON_UPDATE_FAILED, "Update failed"},
     {RESET_REASON_MICROPYTHON, "micropython"},
+    {RESET_REASON_BROWNOUT, "Brownout reset"},
     {RESET_REASON_INVALID, "Invalid reset or first power on since flashing"},
     // MUST be NULL terminated list otherwise things WILL break
     {0, NULL}
