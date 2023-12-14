@@ -9,6 +9,7 @@
 // Make sure the crash info is not re-initialized on reboot
 uint32_t ulResetReasonMagic __attribute__ ((section (".noinit")));
 ResetReason_t resetReason __attribute__((section(".noinit")));
+uint32_t ulBrownoutMagic __attribute__ ((section (".noinit")));
 
 // ISR safe reset reason (no log flush)
 void resetSystemFromISR(ResetReason_t reason) {
@@ -20,12 +21,6 @@ void resetSystemFromISR(ResetReason_t reason) {
 }
 
 void resetSystem(ResetReason_t reason) {
-    // Try to flush SD logs if SD card is connected
-    // if(sdIsMounted()) {
-        // printf("Flushing log buffers.\n");
-        // logFlushAll(1000);
-    // }
-
     resetSystemFromISR(reason);
 }
 
@@ -45,7 +40,7 @@ ResetReason_t checkResetReason() {
             cachedResetReason = resetReason;
         }
         else{
-            if (LL_RCC_IsActiveFlag_BORRST()) {
+            if (LL_RCC_IsActiveFlag_BORRST() && ulBrownoutMagic == BROWNOUT_MAGIC /*!LL_RCC_IsActiveFlag_IWDGRST()&& */ /*!LL_RCC_IsActiveFlag_SFTRST()  &&*/ /*LL_RCC_IsActiveFlag_PINRST() */ /*!LL_RCC_IsActiveFlag_LPWRRST()*/) {
                 cachedResetReason = RESET_REASON_BROWNOUT;
             } else {
                 cachedResetReason = RESET_REASON_INVALID;
@@ -54,6 +49,8 @@ ResetReason_t checkResetReason() {
     }
     // Clear the reset reason
     resetReason = RESET_REASON_INVALID;
+
+    ulBrownoutMagic = BROWNOUT_MAGIC;
 
     return cachedResetReason;
 }
