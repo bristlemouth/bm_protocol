@@ -84,10 +84,10 @@ static BaseType_t debugPowerControllerCommand(char *writeBuffer,
         }
         if(strncmp("0", enableStr, parameterStringLength) == 0) {
             printf("disable bridge bus power\n");
-            _bridge_power_controller->subSampleEnable(false);
+            _bridge_power_controller->subsampleEnable(false);
         } else if (strncmp("1", enableStr, parameterStringLength) == 0){
             printf("enable bridge bus power\n");
-            _bridge_power_controller->subSampleEnable(true);
+            _bridge_power_controller->subsampleEnable(true);
         } else {
             printf("ERR Invalid paramters\n");
         }

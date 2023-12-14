@@ -100,7 +100,7 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   // Bus should still be on
   BridgePowerController._update();
   EXPECT_EQ(fake_io_write_func_fake.call_count,
-            2); // Should actually be 1, but due to mocking pass by reference, doesn't quite work properly. 
+            2); // Should actually be 1, but due to mocking pass by reference, doesn't quite work properly.
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[1], 1);
 
   // RTC gets set.
@@ -138,7 +138,7 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
             (curtime)); // We turn on for a Sample duration
 
   // Enable Subsampling
-  BridgePowerController.subSampleEnable(true);
+  BridgePowerController.subsampleEnable(true);
   // bus up
   rtcGetMicroSeconds_fake.return_val = (curtime * 1000) ;
   BridgePowerController._update();

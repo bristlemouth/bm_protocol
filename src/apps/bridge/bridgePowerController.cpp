@@ -25,7 +25,7 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
       _sampleIntervalS(sampleIntervalMs/1000), _sampleDurationS(sampleDurationMs/1000),
       _subsampleIntervalS(subsampleIntervalMs/1000),
       _subsampleDurationS(subsampleDurationMs/1000), _sampleIntervalStartS(0),
-      _subSampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
+      _subsampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
       _subSamplingEnabled(subSamplingEnabled), _configError(false), _adin_handle(NULL) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S ||
       _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
@@ -146,7 +146,7 @@ bool BridgePowerController::isBridgePowerOn(void) {
   return static_cast<bool>(val);
 }
 
-void BridgePowerController::subSampleEnable(bool enable) {
+void BridgePowerController::subsampleEnable(bool enable) {
   _subSamplingEnabled = enable;
 }
 
@@ -199,7 +199,7 @@ void BridgePowerController::_update(
             break;
           } else {
             BRIDGE_LOG_PRINT("Bridge State Subsampling Off\n");
-            uint32_t nextSubsampleEpochS = _subSampleIntervalStartS + _subsampleIntervalS;
+            uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
             _subSampleIntervalStartS = nextSubsampleEpochS;
             time_to_sleep_ms = (currentCycleS < nextSubsampleEpochS) ?
               MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
@@ -220,7 +220,7 @@ void BridgePowerController::_update(
         BRIDGE_LOG_PRINT("Bridge State Sampling Off\n");
         uint32_t nextSampleEpochS = alignEpoch(_sampleIntervalStartS + _sampleIntervalS);
         _sampleIntervalStartS = nextSampleEpochS;
-        _subSampleIntervalStartS = nextSampleEpochS;
+        _subsampleIntervalStartS = nextSampleEpochS;
         time_to_sleep_ms = (currentCycleS < nextSampleEpochS) ?
           MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
           MIN_TASK_SLEEP_MS;
@@ -287,7 +287,7 @@ void BridgePowerController::checkAndUpdateRTC() {
   if (isRTCSet() && !_rtcSet) {
     printf("Bridge Power Controller RTC is set.\n");
     _sampleIntervalStartS = getEpochS();
-    _subSampleIntervalStartS = _sampleIntervalStartS;
+    _subsampleIntervalStartS = _sampleIntervalStartS;
     _rtcSet = true;
   }
 }
