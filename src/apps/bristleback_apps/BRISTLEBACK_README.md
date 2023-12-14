@@ -16,7 +16,11 @@ For example: `cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.c
 # Applications Overview
 ### Aanderaa
 A development application for driving the Xylem Aanderaa family of single point Doppler current meters.
-Additional build flag can select between (2) currently supported types: `-DCMAKE_AANDERAA_TYPE=4830` or `-DCMAKE_AANDERAA_TYPE=BLUE`
+
+An additional build flag is required to select one of (3) currently supported types:
+- `-DCMAKE_AANDERAA_TYPE=4830` (should be default if not sure)
+- `-DCMAKE_AANDERAA_TYPE=BLUE` (was used for R&D)
+- `-DCMAKE_AANDERAA_TYPE=FAKE_AANDERAA` (for testing without a sensor, generates random data)
 
 ### Serial Payload Example
 A port of the Serial Payload Example App from the Bristlemouth Development Kit Apps.

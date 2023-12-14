@@ -16,10 +16,6 @@ def get_project_root():
     return git_repo.git.rev_parse("--show-toplevel")
 
 
-# Hacky way to include syscfg_gen functions until we modularize this nicely
-sys.path.append(os.path.join(get_project_root(), "tools/scripts/config"))
-from syscfg_gen import load_config, generate_defaults_str, find_alt_defaults
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument("executable", help="Executable name")
@@ -30,10 +26,6 @@ parser.add_argument(
         get_project_root(), "tools/scripts/release/readme_template.txt"
     ),
     help="Path to readme template file",
-)
-parser.add_argument(
-    "--syscfg",
-    help="Path to app_config.yml to auto-generate default config string generators in readme",
 )
 parser.add_argument(
     "--eng_build", action="store_true", help="Used for packaging engineering builds"
@@ -136,23 +128,11 @@ base_name = os.path.splitext(os.path.basename(files[0]))[0]
 new_base_name = f"{base_name}-{source_version['version_str']}"
 new_exec_name = args.executable.replace(base_name, new_base_name)
 
-default_configs = ""
-if args.syscfg and os.path.exists(args.syscfg):
-    config = load_config(args.syscfg)
-    alt_defaults = find_alt_defaults(config)
-
-    default_configs = "# Default Configurations\n"
-    for default in alt_defaults:
-        default_configs += f"## {default}\n"
-        cfg_str = generate_defaults_str(config, default)
-        default_configs += f"`cfg b64 {cfg_str}`\n"
-
 # Variables to replace in readme_template.txt
 template_subs = {
     "VERSION": source_version["version_str"],
     "ELF_DFU_BIN": f"{new_exec_name}.dfu.bin",
     "ELF_UNIFIED_BIN": f"{new_exec_name}.unified.bin",
-    "DEFAULT_CONFIGS": default_configs,
 }
 
 # Use temporary directory to rename and zip files
