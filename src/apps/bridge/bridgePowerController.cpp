@@ -18,7 +18,7 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
                                              uint32_t sampleDurationMs,
                                              uint32_t subsampleIntervalMs,
                                              uint32_t subsampleDurationMs,
-                                             bool subSamplingEnabled,
+                                             bool subsamplingEnabled,
                                              bool powerControllerEnabled,
                                              uint32_t alignmentS)
     : _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
@@ -26,7 +26,7 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
       _subsampleIntervalS(subsampleIntervalMs/1000),
       _subsampleDurationS(subsampleDurationMs/1000), _sampleIntervalStartS(0),
       _subsampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
-      _subSamplingEnabled(subSamplingEnabled), _configError(false), _adin_handle(NULL) {
+      _subsamplingEnabled(subsamplingEnabled), _configError(false), _adin_handle(NULL) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S ||
       _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
@@ -62,7 +62,7 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
   }
   if(_subsampleDurationS == _subsampleIntervalS) {
     _configError = true;
-    _subSamplingEnabled = false;
+    _subsamplingEnabled = false;
   }
   _busPowerEventGroup = xEventGroupCreate();
   configASSERT(_busPowerEventGroup);
@@ -82,7 +82,7 @@ void BridgePowerController::powerControlEnable(bool enable) {
   _powerControlEnabled = enable;
   if (enable) {
     _sampleIntervalStartS = getEpochS();
-    _subSampleIntervalStartS = _sampleIntervalStartS;
+    _subsampleIntervalStartS = _sampleIntervalStartS;
     printf("Bridge power controller enabled\n");
   } else {
     printf("Bridge power controller disabled\n");
@@ -147,10 +147,10 @@ bool BridgePowerController::isBridgePowerOn(void) {
 }
 
 void BridgePowerController::subsampleEnable(bool enable) {
-  _subSamplingEnabled = enable;
+  _subsamplingEnabled = enable;
 }
 
-bool BridgePowerController::isSubsampleEnabled() { return _subSamplingEnabled; }
+bool BridgePowerController::isSubsampleEnabled() { return _subsamplingEnabled; }
 
 void BridgePowerController::_update(
     void) { // FIXME: Refactor this function to libStateMachine: https://github.com/wavespotter/bristlemouth/issues/379
@@ -178,7 +178,7 @@ void BridgePowerController::_update(
                             "Subsample Interval: %" PRIu32 " s\n"
                             "Alignment Interval: %" PRIu32 " s\n",
                             _powerControlEnabled, _sampleDurationS,
-                            _sampleIntervalS, _subSamplingEnabled,
+                            _sampleIntervalS, _subsamplingEnabled,
                             _subsampleDurationS, _subsampleIntervalS,
                             _alignmentS);
       BRIDGE_LOG_PRINTN(printbuf, len);
@@ -190,8 +190,8 @@ void BridgePowerController::_update(
       uint32_t currentCycleS = getEpochS();
       uint32_t sampleTimeRemainingS = timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
       if (sampleTimeRemainingS) {
-        if (_subSamplingEnabled) { // Subsampling Enabled
-          uint32_t subsampleTimeRemainingS = timeRemainingGeneric(_subSampleIntervalStartS,currentCycleS, _subsampleDurationS);
+        if (_subsamplingEnabled) { // Subsampling Enabled
+          uint32_t subsampleTimeRemainingS = timeRemainingGeneric(_subsampleIntervalStartS,currentCycleS, _subsampleDurationS);
           if (subsampleTimeRemainingS) {
             BRIDGE_LOG_PRINT("Bridge State Subsample\n");
             powerBusAndSetSignal(true);
@@ -200,7 +200,7 @@ void BridgePowerController::_update(
           } else {
             BRIDGE_LOG_PRINT("Bridge State Subsampling Off\n");
             uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
-            _subSampleIntervalStartS = nextSubsampleEpochS;
+            _subsampleIntervalStartS = nextSubsampleEpochS;
             time_to_sleep_ms = (currentCycleS < nextSubsampleEpochS) ?
               MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
               MIN_TASK_SLEEP_MS;
