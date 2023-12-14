@@ -50,7 +50,7 @@ void MX_FLASH_Init(void)
   }
   pOBInit.OptionType = OPTIONBYTE_USER;
   pOBInit.USERType = OB_USER_BOR_LEV;
-  pOBInit.USERConfig = OB_BOR_LEVEL_1;
+  pOBInit.USERConfig = OB_BOR_LEVEL_4;
   if (HAL_FLASHEx_OBProgram(&pOBInit) != HAL_OK)
   {
     Error_Handler();
