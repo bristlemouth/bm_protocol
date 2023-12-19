@@ -41,7 +41,7 @@ You'll need to have [dfu-util](http://dfu-util.sourceforge.net/) installed.
 On MacOS just `brew install dfu-util`, on Ubuntu just `apt-get install dfu-util`
 
 Connect a USB cable from your computer to the Bristlemouth node and open a
-serial terminal using pyserial-miniterm or similar. If the device already has
+serial terminal using pyserial-miniterm or similar. If the device has
 already been flashed, you can enter the ROM bootloader by typing the
 `bootloader` command over the USB console. Otherwise, you need to hold the BOOT
 button while pressing and releasing the reset button to enter the bootloader.
