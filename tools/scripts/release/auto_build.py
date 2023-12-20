@@ -53,9 +53,9 @@ class AutoBuilder:
         self.sign = False
         self.encrypt = False
         self.version = None
-        self.ed25519_priv_key = None
+        self.ed25519_priv_key: str | None = None
         self.ed25519_priv_key_file = None
-        self.x25519_priv_key = None
+        self.x25519_priv_key: str | None = None
         self.x25519_priv_key_file = None
 
     # Get all the configs from the .yml file
@@ -184,6 +184,8 @@ class AutoBuilder:
 
         if self.version and len(self.version):
             cmd += [f"--version={self.version}"]
+
+        cmd += ["--output-name", config["name"]]
 
         result = self.run_command(cmd)
 
