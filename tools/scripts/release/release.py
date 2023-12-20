@@ -126,11 +126,13 @@ if source_version["is_eng"]:
 # First name in sorted list is imagename.elf
 base_name = os.path.splitext(os.path.basename(files[0]))[0]
 
+new_base_name = base_name
 if args.output_name:
-    base_name = args.output_name
+    new_base_name = args.output_name
 
 # Add version to basename
-new_base_name = f"{base_name}-{source_version['version_str']}"
+new_base_name += f"-{source_version['version_str']}"
+
 new_exec_name = args.executable.replace(base_name, new_base_name)
 
 # Variables to replace in readme_template.txt
