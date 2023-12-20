@@ -135,6 +135,9 @@ extern "C" void USART3_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart3);
 }
 
+uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
+uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
+
 extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
@@ -351,6 +354,12 @@ static void defaultTask(void *parameters) {
   cfg::Configuration debug_configuration_system(debug_system_partition,
                                                 ram_system_configuration,
                                                 RAM_SYSTEM_CONFIG_SIZE_BYTES);
+
+debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
+                                       sys_cfg_sensorsPollIntervalMs);
+debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
+                                       sys_cfg_sensorsCheckIntervalS);
+
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugConfigurationInit(&debug_configuration_user,
@@ -361,9 +370,8 @@ static void defaultTask(void *parameters) {
   bcl_init(&dfu_partition, &debug_configuration_user,
            &debug_configuration_system);
 
-  // TODO - get this from the nvm cfg's!
-  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = 10,
-                                 .sensorsPollIntervalMs = 1000};
+  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
