@@ -50,8 +50,6 @@ class AutoBuilder:
         self.verbose = verbose
         self.out_dir = None
         self.is_prod = False
-        self.sign = False
-        self.encrypt = False
         self.version = None
         self.ed25519_priv_key: str | None = None
         self.ed25519_priv_key_file = None
@@ -96,12 +94,12 @@ class AutoBuilder:
         if config["name"].startswith("aanderaa"):
             cmd += ["-DCMAKE_AANDERAA_TYPE=4830"]
 
-        if self.sign:
+        if config["sign"]:
             cmd += ["-DSIGN_IMAGES=1"]
             if self.ed25519_priv_key_file:
                 cmd += [f"-DED25519_KEY_FILE={self.ed25519_priv_key_file}"]
 
-        if self.encrypt:
+        if config["encrypt"]:
             cmd += ["-DENCRYPT_IMAGES=1"]
             if self.x25519_priv_key_file:
                 cmd += [f"-DX25519_KEY_FILE={self.x25519_priv_key_file}"]
@@ -113,15 +111,18 @@ class AutoBuilder:
             # TODO - check for valid version string
             cmd += [f"-DVERSION={self.version}"]
 
-        # If we built a bootloader, let's include it in the main app
-        # TODO - don't create unified image when encryption is enabled,
-        # since private key will be present on it (and unecrypted)
-        if (
-            config["name"] != "bootloader"
-            and "bootloader" in self._configs
-            and "elf_fullpath" in self._configs["bootloader"]
-        ):
-            cmd += [f'-DBOOTLOADER_PATH={self._configs["bootloader"]["elf_fullpath"]}']
+        # If we built a bootloader, let's create a unified image, unless encryption
+        # is enabled, since the private key would be present in it and unecrypted.
+        if not config["name"].startswith("bootloader") and not config["encrypt"]:
+            bootloader_cfg_key = (
+                "bootloader_signing_required"
+                if config["sign"]
+                else "bootloader_development"
+            )
+            if bootloader_cfg_key in self._configs:
+                bootloader_cfg = self._configs[bootloader_cfg_key]
+                if "elf_fullpath" in bootloader_cfg:
+                    cmd += [f'-DBOOTLOADER_PATH={bootloader_cfg["elf_fullpath"]}']
 
         result = self.run_command(cmd)
 
@@ -256,13 +257,13 @@ class AutoBuilder:
         return returncode
 
     def _setup_keys(self, tmpdirname):
-        if self.sign and self.ed25519_priv_key:
+        if self.ed25519_priv_key:
             print("Creating temporary signing key file")
             self.ed25519_priv_key_file = os.path.join(tmpdirname, "ed25519_priv_key")
             with open(self.ed25519_priv_key_file, "w") as keyfile:
                 keyfile.write(self.ed25519_priv_key)
 
-        if self.encrypt and self.x25519_priv_key:
+        if self.x25519_priv_key:
             print("Creating temporary encryption key file")
             self.x25519_priv_key_file = os.path.join(tmpdirname, "x25519_priv_key")
             with open(self.x25519_priv_key_file, "w") as keyfile:
@@ -299,19 +300,12 @@ class AutoBuilder:
                 config["path"] = os.path.join(tmpdirname, get_name_hash(name, 16))
                 os.mkdir(config["path"])
 
-                # Cache sign config value
-                old_sign = self.sign
-
-                # Don't use signature support for non-prod bootloaders so they'll
-                # accept any image
-                if self.sign and (name == "bootloader") and not self.is_prod:
-                    print("Disabling signature support for bootloader")
-                    self.sign = False
+                if "sign" not in config:
+                    config["sign"] = False
+                if "encrypt" not in config:
+                    config["encrypt"] = False
 
                 returncode = self.build(config)
-
-                # Restore old sign config
-                self.sign = old_sign
 
                 if returncode != 0:
                     print("FAIL")
@@ -343,8 +337,6 @@ parser.add_argument(
 parser.add_argument(
     "--prod", action="store_true", help="This is a production (non-eng) build"
 )
-parser.add_argument("--sign", action="store_true", help="Use signed images")
-parser.add_argument("--encrypt", action="store_true", help="Use encrypted images")
 parser.add_argument("--version", help="Version to use for release")
 parser.add_argument(
     "config",
@@ -362,8 +354,6 @@ if args.out_dir:
     builder.out_dir = args.out_dir
 
 builder.is_prod = args.prod
-builder.sign = args.sign
-builder.encrypt = args.encrypt
 builder.version = args.version
 
 # Get signing/encryption keys from env variables(optional)

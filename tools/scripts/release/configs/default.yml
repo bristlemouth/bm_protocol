@@ -9,7 +9,7 @@
     app: bootloader
     bsp: bootloader
     build_type: Release
-    sign: true
+  sign: true
 
 - name: bootloader_development
   description: Dev Bootloader - Accepts Unsigned App Images
@@ -18,7 +18,7 @@
     app: bootloader
     bsp: bootloader
     build_type: Release
-    sign: false
+  sign: false
 
 - name: bridge_debug
   description: Sofar BM Bridge - Debug
@@ -27,7 +27,7 @@
     app: bridge
     bsp: bridge_v1_0
     build_type: Debug
-    sign: true
+  sign: true
 
 - name: bridge_release
   description: Sofar BM Bridge - Release
@@ -36,7 +36,7 @@
     app: bridge
     bsp: bridge_v1_0
     build_type: Release
-    sign: true
+  sign: true
 
 - name: aanderaa_debug
   description: Aanderaa Current Meter - Debug
@@ -45,7 +45,7 @@
     app: aanderaa
     bsp: bm_mote_bristleback_v1_0
     build_type: Debug
-    sign: true
+  sign: true
 
 - name: aanderaa_release
   description: Aanderaa Current Meter - Release
@@ -54,7 +54,7 @@
     app: aanderaa
     bsp: bm_mote_bristleback_v1_0
     build_type: Release
-    sign: true
+  sign: true
 
 - name: hello_world_debug
   description: Hello World - Debug
@@ -63,4 +63,4 @@
     app: hello_world
     bsp: bm_mote_v1.0
     build_type: Debug
-    sign: false
+  sign: false
