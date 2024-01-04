@@ -152,6 +152,20 @@ void BridgePowerController::subsampleEnable(bool enable) {
 
 bool BridgePowerController::isSubsampleEnabled() { return _subsamplingEnabled; }
 
+static void stateLogPrintTarget(const char *state, uint32_t target) {
+  constexpr int printBufSize = 96;
+  char *printbuf = static_cast<char *>(pvPortMalloc(printBufSize));
+  configASSERT(printbuf);
+  int len = snprintf(printbuf, printBufSize,
+                     "Bridge State %s until %" PRIu32 " epoch seconds\n", state, target);
+  if (len < printBufSize) {
+    BRIDGE_LOG_PRINTN(printbuf, len);
+  } else {
+    BRIDGE_LOG_PRINT("stateLogPrintTarget string too long!");
+  }
+  vPortFree(printbuf);
+}
+
 void BridgePowerController::_update(
     void) { // FIXME: Refactor this function to libStateMachine: https://github.com/wavespotter/bristlemouth/issues/379
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
@@ -193,17 +207,18 @@ void BridgePowerController::_update(
         if (_subsamplingEnabled) { // Subsampling Enabled
           uint32_t subsampleTimeRemainingS = timeRemainingGeneric(_subsampleIntervalStartS,currentCycleS, _subsampleDurationS);
           if (subsampleTimeRemainingS) {
-            BRIDGE_LOG_PRINT("Bridge State Subsample\n");
+            stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
             powerBusAndSetSignal(true);
             time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
             break;
           } else {
-            BRIDGE_LOG_PRINT("Bridge State Subsampling Off\n");
             uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
             _subsampleIntervalStartS = nextSubsampleEpochS;
-            time_to_sleep_ms = (currentCycleS < nextSubsampleEpochS) ?
-              MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
-              MIN_TASK_SLEEP_MS;
+            stateLogPrintTarget("Subsampling Off", nextSubsampleEpochS);
+            time_to_sleep_ms =
+                (currentCycleS < nextSubsampleEpochS)
+                    ? MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
+                    : MIN_TASK_SLEEP_MS;
             // Prevent bus thrash
             if (nextSubsampleEpochS > currentCycleS) {
               powerBusAndSetSignal(false);
@@ -211,20 +226,22 @@ void BridgePowerController::_update(
             break;
           }
         } else { // Subsampling disabled
-          BRIDGE_LOG_PRINT("Bridge State Sample\n");
+          stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
           powerBusAndSetSignal(true);
           time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
           break;
         }
       } else {
-        BRIDGE_LOG_PRINT("Bridge State Sampling Off\n");
-        uint32_t nextSampleEpochS = alignEpoch(_sampleIntervalStartS + _sampleIntervalS);
+        uint32_t nextSampleEpochS =
+            _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
         _sampleIntervalStartS = nextSampleEpochS;
         _subsampleIntervalStartS = nextSampleEpochS;
-        time_to_sleep_ms = (currentCycleS < nextSampleEpochS) ?
-          MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS) :
-          MIN_TASK_SLEEP_MS;
-         // Prevent bus thrash
+        stateLogPrintTarget("Sampling Off", nextSampleEpochS);
+        time_to_sleep_ms =
+            (currentCycleS < nextSampleEpochS)
+                ? MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
+                : MIN_TASK_SLEEP_MS;
+        // Prevent bus thrash
         if (nextSampleEpochS > currentCycleS) {
           powerBusAndSetSignal(false);
         }
@@ -250,11 +267,20 @@ void BridgePowerController::_update(
     }
 
   } while (0);
+
+  if (time_to_sleep_ms > MIN_TASK_SLEEP_MS) {
+    constexpr size_t printBufSize = 48;
+    char *printbuf = static_cast<char *>(pvPortMalloc(printBufSize));
+    configASSERT(printbuf);
+    int len = snprintf(printbuf, printBufSize, "Controller task will wait %" PRIu32 " ms\n",
+                       time_to_sleep_ms);
+    BRIDGE_LOG_PRINTN(printbuf, len);
+    vPortFree(printbuf);
+  }
+
 #ifndef CI_TEST
   uint32_t taskNotifyValue = 0;
-
-  xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue,
-                  pdMS_TO_TICKS(time_to_sleep_ms));
+  xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, pdMS_TO_TICKS(time_to_sleep_ms));
 #else // CI_TEST
   vTaskDelay(time_to_sleep_ms); // FIXME fix this in test.
 #endif // CI_TEST
@@ -298,12 +324,48 @@ uint32_t BridgePowerController::getEpochS() {
   return static_cast<uint32_t>(rtcGetMicroSeconds(&datetime) * 1e-6);
 }
 
-uint32_t BridgePowerController::alignEpoch(uint32_t epochS) {
-  uint32_t alignedEpoch = epochS;
-  uint32_t alignmentDeltaS = 0;
-  if(_alignmentS && epochS % _alignmentS != 0){
-    alignmentDeltaS = (_alignmentS - (epochS % _alignmentS));
-    alignedEpoch = epochS + alignmentDeltaS;
+/*!
+ * \brief Get next interval start time, possibly shifted to align with UTC.
+ *
+ * Given the current epoch time, the last interval start time, and the
+ * duration of an interval, return the start time of the next interval
+ * aligned to UTC according to the alignment config value.
+ *
+ * \param[in] nowEpochS - The current time in seconds since epoch.
+ * \param[in] lastIntervalStartS - The start time of the last interval in seconds since epoch.
+ * \param[in] sampleIntervalS - The duration of a sampling interval in seconds.
+ * \return The start time of the next interval in seconds since epoch.
+ */
+uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
+                                                   uint32_t lastIntervalStartS,
+                                                   uint32_t sampleIntervalS) {
+  uint32_t alignedEpoch = lastIntervalStartS + sampleIntervalS;
+  while (alignedEpoch < nowEpochS) {
+    // If the aligned epoch is in the past, the RTC must have just jumped forward.
+    // We need to add sample intervals until we reach the future.
+    alignedEpoch += sampleIntervalS;
   }
+
+  // If an alignment is configured, we need to align sampling intervals to UTC.
+  if (_alignmentS != 0) {
+    uint32_t remainder = alignedEpoch % _alignmentS;
+    if (remainder != 0) {
+      uint32_t adjustment = _alignmentS - remainder;
+      // We only align forward because subtracting could take us into the past.
+      // It would be possible to handle that situation,
+      // but the code would get much more complicated.
+      alignedEpoch += adjustment;
+
+      constexpr size_t bufsize = 128;
+      char buffer[bufsize];
+      int len =
+          snprintf(buffer, bufsize,
+                   "Aligning next sample interval to UTC by delaying an additional %" PRIu32
+                   " seconds to %" PRIu32 "\n",
+                   adjustment, alignedEpoch);
+      BRIDGE_LOG_PRINTN(buffer, len);
+    }
+  }
+
   return alignedEpoch;
 }

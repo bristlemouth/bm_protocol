@@ -28,13 +28,16 @@ public:
 
   // Shim function for FreeRTOS compatibility, should not be called as part of the public API.
   void _update(void); // PRIVATE
+  // Public member only for testability. Not part of the public API.
+  uint32_t _alignNextInterval(uint32_t nowEpochS, uint32_t lastIntervalStartS,
+                              uint32_t sampleIntervalS);
+
 private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
   bool getAdinDevice();
   void checkAndUpdateRTC();
   uint32_t getEpochS();
-  uint32_t alignEpoch(uint32_t epochS);
 
 public:
   static constexpr uint32_t OFF = (1 << 0);
