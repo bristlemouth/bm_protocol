@@ -84,6 +84,50 @@ protected:
   IOPinHandle_t FAKE_VBUS_EN = {.driver = &fake_io_driver, .pin = NULL};
 };
 
+TEST_F(BridgePowerControllerTest, alignment) {
+  // Default alignment is 5 minutes, so return values below should all be divisible by 300
+  BridgePowerController powerController(FAKE_VBUS_EN);
+  // Starting with default interval of 20 minutes
+  uint32_t interval = 1200;
+
+  // Normal first call, last unaligned to next aligned
+  uint32_t now = 3799, lastStart = 3503;
+  uint32_t next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 4800);
+
+  // When time traveling forward, align to the next interval in the future
+  now = 3799, lastStart = 222;
+  next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 3900);
+
+  // When time traveling forward, it's ok to align to right now
+  now = 3900, lastStart = 1500;
+  next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 3900);
+
+  // A second later we have to wait for the following interval
+  now = 3901, lastStart = 1500;
+  next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 5100);
+
+  // Works with other non-default intervals as well, like an hour
+  interval = 3600;
+  now = 3799, lastStart = 3503;
+  next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 7200);
+
+  // Works even when the sampling interval is not divisible by the alignment
+  interval = 1020; // 17 minutes
+  now = 3799, lastStart = 3503;
+  next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 4800);
+
+  interval = 1380; // 23 minutes
+  now = 3799, lastStart = 3503;
+  next = powerController._alignNextInterval(now, lastStart, interval);
+  EXPECT_EQ(next, 5100);
+}
+
 TEST_F(BridgePowerControllerTest, goldenPath) {
   BridgePowerController BridgePowerController(
       FAKE_VBUS_EN, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
@@ -155,48 +199,4 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   curtime += ((BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S - BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S) * 1000);
   EXPECT_EQ(xTaskGetTickCount(),
             (curtime));
-}
-
-TEST_F(BridgePowerControllerTest, alignment) {
-  // Default alignment is 5 minutes, so return values below should all be divisible by 300
-  BridgePowerController powerController(FAKE_VBUS_EN);
-  // Starting with default interval of 20 minutes
-  uint32_t interval = 1200;
-
-  // Normal first call, last unaligned to next aligned
-  uint32_t now = 3799, lastStart = 3503;
-  uint32_t next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 4800);
-
-  // When time traveling forward, align to the next interval in the future
-  now = 3799, lastStart = 222;
-  next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 3900);
-
-  // When time traveling forward, it's ok to align to right now
-  now = 3900, lastStart = 1500;
-  next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 3900);
-
-  // A second later we have to wait for the following interval
-  now = 3901, lastStart = 1500;
-  next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 5100);
-
-  // Works with other non-default intervals as well, like an hour
-  interval = 3600;
-  now = 3799, lastStart = 3503;
-  next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 7200);
-
-  // Works even when the sampling interval is not divisible by the alignment
-  interval = 1020; // 17 minutes
-  now = 3799, lastStart = 3503;
-  next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 4800);
-
-  interval = 1380; // 23 minutes
-  now = 3799, lastStart = 3503;
-  next = powerController._alignNextInterval(now, lastStart, interval);
-  EXPECT_EQ(next, 5100);
 }
