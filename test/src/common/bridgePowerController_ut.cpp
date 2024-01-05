@@ -89,7 +89,6 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
       FAKE_VBUS_EN, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
       SAMPLE_DURATION_S * 1000, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
       BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000);
-  xTaskSetTickCount(0);
   BridgePowerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_write_func_fake.call_count, 1);
