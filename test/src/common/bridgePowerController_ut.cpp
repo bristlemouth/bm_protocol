@@ -86,7 +86,10 @@ protected:
 
 TEST_F(BridgePowerControllerTest, alignment) {
   // Default alignment is 5 minutes, so return values below should all be divisible by 300
-  BridgePowerController powerController(FAKE_VBUS_EN);
+  IODriver_t unusedDriver = {.read = NULL};
+  IOPinHandle_t unusedPin = {.driver = &unusedDriver, .pin = NULL};
+  BridgePowerController powerController(unusedPin);
+
   // Starting with default interval of 20 minutes
   uint32_t interval = 1200;
 
