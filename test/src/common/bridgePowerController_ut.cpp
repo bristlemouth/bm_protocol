@@ -86,7 +86,8 @@ protected:
 
 TEST_F(BridgePowerControllerTest, alignment) {
   // Default alignment is 5 minutes, so return values below should all be divisible by 300
-  IODriver_t unusedDriver = {.read = NULL};
+  IODriver_t unusedDriver = {
+      .write = NULL, .read = NULL, .config = NULL, .registerCallback = NULL};
   IOPinHandle_t unusedPin = {.driver = &unusedDriver, .pin = NULL};
   BridgePowerController powerController(unusedPin);
 
