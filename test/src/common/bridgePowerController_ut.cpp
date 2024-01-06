@@ -185,9 +185,11 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   BridgePowerController._update();
   EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
   EXPECT_EQ(fake_io_write_func_fake.call_count, 1);
-  EXPECT_EQ(xTaskGetTickCount(),
-            ((SAMPLE_DURATION_S * 1000))); // We turn on for a Sample duration
-  uint32_t curtime = SAMPLE_DURATION_S * 1000;
+
+  // The bus stays on until the next Sample Off time
+  uint32_t curtime =
+      (BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S + SAMPLE_DURATION_S) * 1000;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
 
   // Time for a bus down cycle
   rtcGetMicroSeconds_fake.return_val = curtime * 1000;

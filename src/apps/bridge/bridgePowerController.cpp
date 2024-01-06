@@ -81,8 +81,12 @@ BridgePowerController::BridgePowerController(IOPinHandle_t &BusPowerPin,
 void BridgePowerController::powerControlEnable(bool enable) {
   _powerControlEnabled = enable;
   if (enable) {
-    _sampleIntervalStartS = getEpochS();
-    _subsampleIntervalStartS = _sampleIntervalStartS;
+    uint32_t currentCycleS = getEpochS();
+    if (_sampleIntervalStartS < currentCycleS) {
+      _sampleIntervalStartS =
+          _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
+      _subsampleIntervalStartS = _sampleIntervalStartS;
+    }
     printf("Bridge power controller enabled\n");
   } else {
     printf("Bridge power controller disabled\n");
@@ -166,18 +170,16 @@ static void stateLogPrintTarget(const char *state, uint32_t target) {
   vPortFree(printbuf);
 }
 
-void BridgePowerController::_update(
-    void) { // FIXME: Refactor this function to libStateMachine: https://github.com/wavespotter/bristlemouth/issues/379
+void BridgePowerController::_update(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
   do {
     if (!_initDone) { // Initializing
       BRIDGE_LOG_PRINT("Bridge State Init\n");
-      powerBusAndSetSignal(
-          true,
-          false); // We start Bus on, no need to signal an eth up / power up event to l2 & adin
-      vTaskDelay(
-          INIT_POWER_ON_TIMEOUT_MS); // Set bus on for two minutes for init.
-      if(_configError) {
+      // We start Bus on, no need to signal an eth up / power up event to l2 & adin
+      powerBusAndSetSignal(true, false);
+      // Set bus on for two minutes for init.
+      vTaskDelay(INIT_POWER_ON_TIMEOUT_MS);
+      if (_configError) {
         BRIDGE_LOG_PRINT("Bridge configuration error! Please check configs, using default.\n");
       }
       static constexpr size_t printBufSize = 200;
@@ -199,13 +201,21 @@ void BridgePowerController::_update(
       vPortFree(printbuf);
       BRIDGE_LOG_PRINT("Bridge State Init Complete\n");
       checkAndUpdateRTC();
+      uint32_t currentCycleS = getEpochS();
+      if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
+        time_to_sleep_ms =
+            MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
+        powerBusAndSetSignal(false);
+      }
       _initDone = true;
     } else if (_powerControlEnabled && _rtcSet) { // Sampling Enabled
       uint32_t currentCycleS = getEpochS();
-      uint32_t sampleTimeRemainingS = timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
+      uint32_t sampleTimeRemainingS =
+          timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
       if (sampleTimeRemainingS) {
         if (_subsamplingEnabled) { // Subsampling Enabled
-          uint32_t subsampleTimeRemainingS = timeRemainingGeneric(_subsampleIntervalStartS,currentCycleS, _subsampleDurationS);
+          uint32_t subsampleTimeRemainingS = timeRemainingGeneric(
+              _subsampleIntervalStartS, currentCycleS, _subsampleDurationS);
           if (subsampleTimeRemainingS) {
             stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
             powerBusAndSetSignal(true);
@@ -262,6 +272,14 @@ void BridgePowerController::_update(
                            "RTC is not yet set - bus off\n");
           powerBusAndSetSignal(false);
         }
+
+        // Align the first sample to UTC when the RTC finally gets set
+        checkAndUpdateRTC();
+        uint32_t currentCycleS = getEpochS();
+        if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
+          time_to_sleep_ms =
+              MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
+        }
       }
       checkAndUpdateRTC();
     }
@@ -312,7 +330,8 @@ bool BridgePowerController::getAdinDevice() {
 void BridgePowerController::checkAndUpdateRTC() {
   if (isRTCSet() && !_rtcSet) {
     printf("Bridge Power Controller RTC is set.\n");
-    _sampleIntervalStartS = getEpochS();
+    _sampleIntervalStartS =
+        _alignNextInterval(getEpochS(), _sampleIntervalStartS, _sampleIntervalS);
     _subsampleIntervalStartS = _sampleIntervalStartS;
     _rtcSet = true;
   }
