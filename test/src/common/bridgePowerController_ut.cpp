@@ -148,7 +148,7 @@ TEST_F(BridgePowerControllerTest, alignment) {
 TEST_F(BridgePowerControllerTest, goldenPath) {
   BridgePowerController BridgePowerController(
       FAKE_VBUS_EN, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
-      SAMPLE_DURATION_S * 1000, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      SAMPLE_DURATION_S * 1000, BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000);
   BridgePowerController._update();
   // Init sequence powers the bus on for two minutes
@@ -220,7 +220,7 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
   EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[3], 0);
-  curtime += (BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S -
+  curtime += (BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S -
               BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S) *
              1000;
   EXPECT_EQ(xTaskGetTickCount(), curtime);
