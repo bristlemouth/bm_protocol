@@ -205,7 +205,9 @@ void BridgePowerController::_update(void) {
       if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
         time_to_sleep_ms =
             MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
-        powerBusAndSetSignal(false);
+        // The default state until first sample interval depends
+        // on whether bus power control is enabled.
+        powerBusAndSetSignal(!_powerControlEnabled);
       }
       _initDone = true;
     } else if (_powerControlEnabled && _rtcSet) { // Sampling Enabled
