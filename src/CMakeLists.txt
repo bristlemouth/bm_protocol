@@ -111,7 +111,7 @@ set(BOOTLOADER_SIZE 0xC000)
 
 # 968kB Application size, since we have two slots
 # (and want to align to 8kB boundaries for flash erase)
-set(APP_SIZE 0xF2000)
+set(APP_SIZE 0xE8000)
 
 # 16kB scratch size
 set(MCUBOOT_SCRATCH_SIZE 0x4000)
