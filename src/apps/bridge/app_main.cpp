@@ -30,6 +30,7 @@
 #include "debug_rtc.h"
 #include "debug_sys.h"
 #include "debug_w25.h"
+#include "mcuboot_cli.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
@@ -335,6 +336,7 @@ static void defaultTask( void *parameters ) {
 
     debugSysInit();
     debugMemfaultInit(&usbCLI);
+    mcubootCliInit();
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
     debugSpotterInit();
