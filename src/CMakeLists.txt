@@ -113,8 +113,8 @@ set(BOOTLOADER_SIZE 0xC000)
 # (and want to align to 8kB boundaries for flash erase)
 set(APP_SIZE 0xF2000)
 
-# 64kB scratch size
-set(MCUBOOT_SCRATCH_SIZE 0x10000)
+# 16kB scratch size
+set(MCUBOOT_SCRATCH_SIZE 0x4000)
 
 # MCUBOOT can only write flash 16 bytes at a time on the STM32U5
 set(MCUBOOT_BOOT_MAX_ALIGN 16)
