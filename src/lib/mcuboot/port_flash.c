@@ -172,7 +172,7 @@ int     flash_area_erase(const struct flash_area *area, uint32_t off, uint32_t l
 /*< Returns this `flash_area`s alignment */
 size_t flash_area_align(const struct flash_area *area) {
   (void)area;
-  return 8;
+  return 16;
 }
 
 /*< What is value is read from erased flash bytes. */
