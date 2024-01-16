@@ -13,6 +13,7 @@
 #include "util.h"
 
 #include "adin1100.h"
+#include "adin1200.h"
 
 #define LED_ON_TIME_MS 250
 #define LED_PERIOD_MS 1000
@@ -33,6 +34,9 @@ volatile bool     irqFired = false;
 
 adin1100_DeviceStruct_t dev;
 adin1100_DeviceHandle_t hDevice = &dev;
+
+
+
 bool device_ready = false;
 
 adi_phy_LinkStatus_e    linkstatus = ADI_PHY_LINK_STATUS_DOWN;
@@ -40,6 +44,20 @@ adi_phy_LinkStatus_e    oldlinkstatus = ADI_PHY_LINK_STATUS_DOWN;
 adi_phy_AnStatus_t      anstatus;
 
 bool heartbeat_on = false;
+
+
+uint8_t phyDevMem1200[ADI_PHY_DEVICE_SIZE];
+
+adi_phy_DriverConfig_t phyDrvConfig1200 = {
+    .addr       = 0,
+    .pDevMem    = (void *)phyDevMem1200,
+    .devMemSize = sizeof(phyDevMem1200),
+    .enableIrq  = false,
+};
+
+adinPhy_DeviceStruct_t dev1200;
+adinPhy_DeviceHandle_t hDevice1200 = &dev1200;
+
 
 /* Static configuration function for the ADIN1100, it is executed after */
 /* reset and initialization, with the ADIN1100 in software powerdown.   */
@@ -61,6 +79,13 @@ adi_eth_Result_e appPhyConfig(adin1100_DeviceHandle_t hDevice)
 
     return result;
 }
+
+// adi_eth_Result_e adin1200Config(adinPhy_DeviceHandle_t hDevice)
+// {
+//     adi_eth_Result_e        result = ADI_ETH_SUCCESS;
+
+//     return result;
+// }
 
 void phyCallback(void *pCBParam, uint32_t Event, void *pArg)
 {
@@ -160,6 +185,62 @@ void setup(void)
     return;
   }
 
+  vTaskDelay(pdMS_TO_TICKS(1000));
+
+  printf("==========================\n");
+  printf("Initializing ADIN1200\n");
+
+  uint32_t phyAddr = 0x4;
+  phyDrvConfig1200.addr = phyAddr;
+  result = adin_Init(hDevice1200, &phyDrvConfig1200);
+  if (ADI_ETH_SUCCESS == result)
+  {
+      printf("Found ADIN1200 PHY device at address %d\n", phyAddr);
+  }
+  else {
+    printf("NOT Found ADIN1200 PHY device at address %d | %d\n", phyAddr, result);
+  }
+
+  // READS
+  // ADIN1200_ADDR_PHY_ID_2 (0x03) - Returns 0xBC20
+  // ADIN1200_ADDR_MII_CONTROL (0x00) - Returns 0x3800
+
+  // WRITES
+  // ADIN1200_ADDR_LED_CTRL_1 (0x1B) - Data = 0x0401
+  // ADIN1200_ADDR_LED_CTRL_2 (0x1C) - Data = 0x2109
+
+
+  // ADIN1200_ADDR_AUTONEG_ADV (0x04) - Data = 0x0041
+  // ADIN1200_ADDR_EXT_REG_PTR (0x10) - Data = 0xFF38
+  // ADIN1200_ADDR_EXT_REG_DATA (0x11) - Data = 0x0001
+  // ADIN1200_ADDR_MII_CONTROL (0x00) - Data = 0x1300
+
+  // result = adin_AnegAdvertiseConfig( hDevice1200, ADI_PHY_ANEG_HD_10_ADV_EN );
+  // if (ADI_ETH_SUCCESS == result)
+  // {
+  //     printf("Set autoneg\n" );
+  // }
+
+  result = adin_PhyWrite(hDevice1200, 0x04, 0x0041);
+  if (ADI_ETH_SUCCESS == result)
+  {
+      printf("Set autoneg\n" );
+  }
+  result = adin_PhyWrite(hDevice1200, 0x10, 0xFF38);
+  if (ADI_ETH_SUCCESS == result)
+  {
+      printf("Set ext ptr\n" );
+  }
+  result = adin_PhyWrite(hDevice1200, 0x11, 0x0001);
+  if (ADI_ETH_SUCCESS == result)
+  {
+      printf("Set ext data\n" );
+  }
+  result = adin_PhyWrite(hDevice1200, 0x00, 0x1300);
+  if (ADI_ETH_SUCCESS == result)
+  {
+      printf("Set mii ctrl\n" );
+  }
 
   device_ready = true;
 }
