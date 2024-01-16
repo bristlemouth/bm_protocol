@@ -16,7 +16,8 @@
 
 #define PAYLOAD_WATCHDOG_TIMEOUT_MS (60 * 1000)
 #define BM_SOFT_WATCHDOG_MAX_TRIGGERS (3)
-#define BM_SOFT_RESET_WAIT_TIME_MS (5) // https://www.digikey.com/en/htmldatasheets/production/1186938/0/0/1/g-nico-018
+// https://www.digikey.com/en/htmldatasheets/production/1186938/0/0/1/g-nico-018
+#define BM_SOFT_RESET_WAIT_TIME_MS (5)
 
 static constexpr char SOFTMODULE_WATCHDOG_ID[] = "softmodule";
 static constexpr char soft_log[] = "soft.log";
@@ -94,9 +95,12 @@ static bool BmSoftWatchdogHandler(void *arg) {
       reinterpret_cast<SensorWatchdog::sensor_watchdog_t *>(arg);
   printf("Resetting BM soft\n");
   if (watchdog->_triggerCount < watchdog->_max_triggers) {
+    bm_fprintf(0, soft_log, "Resetting Bm Soft\n");
     soft.reset();
     vTaskDelay(BM_SOFT_RESET_WAIT_TIME_MS);
     BmSoftStartAndValidate();
-  } 
+  } else {
+    bm_fprintf(0, soft_log, "Failed to reset BM soft with max retries: %" PRIu32 "\n", watchdog->_max_triggers);
+  }
   return true;
 }
