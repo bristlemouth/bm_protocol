@@ -299,6 +299,38 @@ adi_eth_Result_e adin1100_GetAnStatus(adin1100_DeviceHandle_t hDevice, adi_phy_A
     return adin1100PhyDriverEntry.GetAnStatus(hDevice->pPhyDevice, status);
 }
 
+#include <stdio.h>
+adi_eth_Result_e adin1100_EnterMediaConverterMode(adin1100_DeviceHandle_t hDevice )
+{
+    adi_eth_Result_e    result = ADI_ETH_SUCCESS;
+    uint16_t            val16;
+
+    // Read the current config register
+    result = adin1100_PhyRead(hDevice, ADDR_CRSM_MAC_IF_CFG, &val16);
+    if (result != ADI_ETH_SUCCESS)
+    {
+        goto end;
+    }
+
+    printf( "mac reg: %d\n", (int)val16 );
+
+    if ((val16 & BITM_CRSM_MAC_IF_CFG_CRSM_RMII_MEDIA_CNV_EN) != 0) {
+        // The MEDIA_CNV_EN bit is set
+        printf( "don't set\n" );
+    } else {
+        // The MEDIA_CNV_EN bit is not set
+        val16 |= BITM_CRSM_MAC_IF_CFG_CRSM_RMII_MEDIA_CNV_EN;
+        printf( "do set\n" );
+    }
+    result = adin1100_PhyWrite(hDevice, ADDR_CRSM_MAC_IF_CFG, val16);
+    // result = ADI_ETH_SUCCESS;
+
+end:
+    return result;
+    // return adin1100PhyDriverEntry.EnterMediaConverterMode(hDevice->pPhyDevice);
+}
+
+
 /*!
  * @brief           Enter software powerdown.
  *

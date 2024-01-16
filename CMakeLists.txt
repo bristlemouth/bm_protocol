@@ -21,7 +21,7 @@ include(BuildOptions.cmake)
 
 # If we're not a subproject, globally apply our warning flags
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  add_compile_options(-Wall -Wextra)
+  add_compile_options(-Wall -Wextra -Wno-write-strings)
 endif()
 
 # This function can be used to generate a linker map file on an executable target

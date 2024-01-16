@@ -80,6 +80,7 @@ adi_eth_Result_e    adin1100_ReadIrqStatus           (adin1100_DeviceHandle_t hD
 adi_eth_Result_e    adin1100_AnAdvTxMode             (adin1100_DeviceHandle_t hDevice, adi_phy_AnAdvTxMode_e txMode);
 adi_eth_Result_e    adin1100_AnAdvMstSlvCfg          (adin1100_DeviceHandle_t hDevice, adi_phy_AnAdvMasterSlaveCfg_e msCfg);
 adi_eth_Result_e    adin1100_AnEnable                (adin1100_DeviceHandle_t hDevice, bool enable);
+adi_eth_Result_e    adin1100_EnterMediaConverterMode (adin1100_DeviceHandle_t hDevice );
 
 adi_eth_Result_e    adin1100_EnterSoftwarePowerdown  (adin1100_DeviceHandle_t hDevice);
 adi_eth_Result_e    adin1100_ExitSoftwarePowerdown   (adin1100_DeviceHandle_t hDevice);

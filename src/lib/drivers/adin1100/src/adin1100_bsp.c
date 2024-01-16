@@ -13,6 +13,45 @@
 
 #include "adin1100_common.h"
 #include "adin1100_bsp.h"
+#include "stm32_io.h"
+
+static ADI_CB gpfIntCallback = NULL;
+static void *gpIntCBParam = NULL;
+
+static adin1100_irq_evt_t _irq_evt_cb = NULL;
+
+static bool _adin1100_irq_fired = false;
+
+
+static bool adin1100_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args);
+
+//
+// IRQ callback (called from eth_adin2111 event task)
+//
+void adin1100_bsp_irq_callback() {
+  if (gpfIntCallback) {
+    (*gpfIntCallback)(gpIntCBParam, 0, NULL);
+  } else {
+    /* No GPIO Callback function assigned */
+  }
+}
+
+//
+// ADIN GPIO ISR callback (All calls must be ISR safe!)
+//
+static bool adin1100_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args)
+{
+  (void)pinHandle;
+
+  _adin1100_irq_fired = true;
+  if (gpfIntCallback) {
+    (*gpfIntCallback)(gpIntCBParam, (uint32_t)value, args);
+  } else {
+    /* No GPIO Callback function assigned */
+  }
+
+  return false;
+}
 
 void BSP_ClrPendingIRQ(void)
 {
@@ -27,8 +66,6 @@ void BSP_DisableIRQ(void)
     NVIC_DisableIRQ(ADIN1100_INT_N_EXTI_IRQn);
 }
 
-
-// TODO:
 /*
  * @brief Helper for MDIO GPIO Clock toggle
  *
@@ -44,16 +81,15 @@ uint32_t BSP_SetPinMDC(bool set)
 {
     if (set)
     {
-        // adi_gpio_SetHigh(MDC_PORT, MDC_PIN);
+        IOWrite(&ADIN1100_MDC, 1);
     }
     else
     {
-        // adi_gpio_SetLow(MDC_PORT, MDC_PIN);
+        IOWrite(&ADIN1100_MDC, 0);
     }
     return 0;
 }
 
-// TODO:
 /*
  * @brief Helper for MDIO GPIO Read Pin value
  *
@@ -67,22 +103,13 @@ uint32_t BSP_SetPinMDC(bool set)
  */
 uint16_t BSP_GetPinMDInput(void)
 {
-//   uint16_t data = 0;
-  uint16_t val = 0;
-//   adi_gpio_GetData ( MDIO_PORT, MDIO_PIN, &data);
-//   if((data & MDIO_PIN) == MDIO_PIN)
-//   {
-//     val = 1;
-//   }
-//   else
-//   {
-//     val = 0;
-//   }
+  uint8_t data = 0;
 
-return val;
+  IORead(&ADIN1100_MDIO, &data);
+
+  return (uint16_t)data;
 }
 
-// TODO:
 /*
  * @brief Helper for MDIO GPIO Changes pin in/out
  *
@@ -96,22 +123,31 @@ return val;
  */
 void BSP_ChangeMDIPinDir(bool output)
 {
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+  const STM32Pin_t* pin = ADIN1100_MDIO.pin;
+
   if (output == true)
   {
-    // adi_gpio_OutputEnable(MDIO_PORT, MDIO_PIN, true);
-    // adi_gpio_InputEnable(MDIO_PORT, MDIO_PIN, false);
+    // // Bring the level back to high
+    // LL_GPIO_SetOutputPin(pin->gpio, pin->pinmask);
 
+    GPIO_InitStruct.Pin = pin->pinmask;
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_MEDIUM;
+    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+    LL_GPIO_Init(pin->gpio, &GPIO_InitStruct);
   }
   else
   {
-    // adi_gpio_OutputEnable(MDIO_PORT, MDIO_PIN, false);
-    // adi_gpio_InputEnable(MDIO_PORT, MDIO_PIN, true);
-
+    GPIO_InitStruct.Pin = pin->pinmask;
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+    LL_GPIO_Init(pin->gpio, &GPIO_InitStruct);
   }
 
 }
 
-// TODO:
 /*
  * @brief Helper for MDIO GPIO Changes ouptut pin value
  *
@@ -127,43 +163,31 @@ uint32_t BSP_SetPinMDIO(bool set)
 {
     if (set)
     {
-        // adi_gpio_SetHigh(MDIO_PORT, MDIO_PIN);
+        IOWrite(&ADIN1100_MDIO, 1);
     }
     else
     {
-        // adi_gpio_SetLow(MDIO_PORT, MDIO_PIN);
+        IOWrite(&ADIN1100_MDIO, 0);
     }
     return 0;
 }
 
-// TODO:
 uint32_t BSP_RegisterIRQCallback(ADI_CB const *intCallback, void * hDevice)
 {
-  uint32_t error = SUCCESS;
-  do
-  {
     NVIC_DisableIRQ(ADIN1100_INT_N_EXTI_IRQn);
-    (void)intCallback;
-    (void)hDevice;
-    //  if(ADI_GPIO_SUCCESS != adi_gpio_InputEnable(PHY_IRQ_PORT, PHY_IRQ_PIN, true))
-    // {
-    //     error = FAILURE;
-    // }
-    // /* Enable pin interrupt on group interrupt A */
-    // if(ADI_GPIO_SUCCESS != (adi_gpio_SetGroupInterruptPins(PHY_IRQ_PORT, ADI_GPIO_INTA_IRQ, PHY_IRQ_PIN )))
-    // {
-    //     break;
-    // }
-    // /* Register the callback */
-    // if(ADI_GPIO_SUCCESS != (adi_gpio_RegisterCallback (ADI_GPIO_INTA_IRQ, (ADI_CALLBACK)intCallback, (void*)hDevice)))
-    // {
-    //     break;
-    // }
-    // GPIO priority must be lower then SPI priority!!!
+
+    IORegisterCallback(&ADIN1100_INT_N, adin1100_bsp_gpio_callback_fromISR, NULL);
+    gpfIntCallback = (ADI_CB)intCallback;
+    gpIntCBParam = hDevice;
+
     NVIC_SetPriority(ADIN1100_INT_N_EXTI_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
     NVIC_DisableIRQ(ADIN1100_INT_N_EXTI_IRQn);
-  }while(0);
-  return error;
+
+    return 0;
+}
+
+void adin1100_bsp_register_irq_evt(adin1100_irq_evt_t irq_evt_cb) {
+  _irq_evt_cb = irq_evt_cb;
 }
 
 /*

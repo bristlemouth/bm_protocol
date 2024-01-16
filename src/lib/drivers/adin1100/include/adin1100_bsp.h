@@ -27,6 +27,9 @@ typedef void (* ADI_CB) (  /*!< Callback function pointer */
     uint32_t   Event,            /*!< Event ID specific to the Driver/Service */
     void      *pArg);            /*!< Pointer to the event specific argument */
 
+// Function pointer to spi/irq event callback
+typedef void (*adin1100_irq_evt_t)(BaseType_t *pxHigherPriorityTaskWoken);
+
 /*Functions prototypes*/
 uint32_t BSP_RegisterIRQCallback(ADI_CB const *intCallback, void * hDevice);
 void BSP_DisableIRQ(void);
@@ -35,6 +38,8 @@ uint32_t BSP_SetPinMDC(bool set);
 uint32_t BSP_SetPinMDIO(bool set);
 uint16_t BSP_GetPinMDInput(void);
 void BSP_ChangeMDIPinDir(bool output);
+
+void adin1100_bsp_register_irq_evt(adin1100_irq_evt_t irq_evt_cb);
 
 extern void msgWrite(char * ptr);
 

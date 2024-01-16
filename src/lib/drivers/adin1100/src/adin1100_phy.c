@@ -1602,6 +1602,27 @@ adi_eth_Result_e PHY_Write(adi_phy_Device_t *hDevice, uint32_t regAddr, uint16_t
     return result;
 }
 
+// adi_eth_Result_e PHY_Write(adi_phy_Device_t *hDevice, uint32_t regAddr, uint16_t data)
+// {
+//     adi_eth_Result_e    result = ADI_ETH_SUCCESS;
+//     uint32_t            backup;
+
+//     backup = ADI_HAL_GET_ENABLE_IRQ(hDevice->adinDevice);
+//     ADI_HAL_DISABLE_IRQ(hDevice->adinDevice);
+
+//     if (hDevice->writeFn(hDevice->phyAddr, regAddr, data) != ADI_HAL_SUCCESS)
+//     {
+//         result = ADI_ETH_COMM_ERROR;
+//     }
+
+//     if (backup)
+//     {
+//         ADI_HAL_ENABLE_IRQ(hDevice->adinDevice);
+//     }
+
+//     return result;
+// }
+
 /*
 * @brief MDIO Read, according to clause 45
  *

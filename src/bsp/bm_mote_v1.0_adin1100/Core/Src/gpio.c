@@ -60,12 +60,12 @@ void MX_GPIO_Init(void)
 
   /**/
   LL_GPIO_ResetOutputPin(GPIOA, ADIN_RST_Pin|I2C_MUX_RESET_Pin|FLASH_CS_Pin|ADIN_CS_Pin);
-
-  /**/
-  LL_GPIO_ResetOutputPin(ADIN1100_MDC_GPIO_Port, ADIN1100_MDC_Pin);
   
   /**/
   LL_GPIO_ResetOutputPin(VBUS_BF_EN_GPIO_Port, VBUS_BF_EN_Pin);
+
+  /**/
+  LL_GPIO_SetOutputPin(ADIN1100_MDC_GPIO_Port, ADIN1100_MDC_Pin);
 
   /**/
   GPIO_InitStruct.Pin = GPIO2_Pin;
