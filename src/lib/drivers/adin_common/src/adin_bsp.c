@@ -12,15 +12,11 @@
 #include <ctype.h>
 
 #include "adin_common.h"
-#include "adin1100_bsp.h"
+#include "adin_bsp.h"
 #include "stm32_io.h"
 
 static ADI_CB gpfIntCallback = NULL;
 static void *gpIntCBParam = NULL;
-
-static adin1100_irq_evt_t _irq_evt_cb = NULL;
-
-static bool _adin1100_irq_fired = false;
 
 
 static bool adin1100_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args);
@@ -43,7 +39,6 @@ static bool adin1100_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t va
 {
   (void)pinHandle;
 
-  _adin1100_irq_fired = true;
   if (gpfIntCallback) {
     (*gpfIntCallback)(gpIntCBParam, (uint32_t)value, args);
   } else {

@@ -24,7 +24,7 @@
 #include "adin1100_addr_rdef.h"
 #endif
 
-#include "adin1100_eth_common.h"
+#include "adin_eth_common.h"
 #include "adin1100_hal.h"
 
 #ifdef __cplusplus
@@ -42,18 +42,7 @@ extern "C" {
 /*! CRSM interrupt sources showing a hardware error that requires a reset/reconfiguration of the device. */
 #define ADI_PHY_CRSM_HW_ERROR           (0x2BFF)
 
-/*!
- * @brief PHY driver states
- */
-typedef enum
-{
-    ADI_PHY_STATE_UNINITIALIZED = 0,        /*!< Software driver has not been initialized.                        */
-    ADI_PHY_STATE_HW_RESET,                 /*!< PHY has been through hardware reset and needs to be initialized. */
-    ADI_PHY_STATE_SOFTWARE_POWERDOWN,       /*!< PHY is in software powerdown.                                    */
-    ADI_PHY_STATE_OPERATION,                /*!< PHY is in operation mode.                                        */
-    ADI_PHY_STATE_DIAGNOSTIC,               /*!< PHY is in diagnostic mode.                                       */
-    ADI_PHY_STATE_ERROR,                    /*!< Error state.                                                     */
-} adi_phy_State_e;
+
 
 /*!
  * @brief Advertised transmit operating mode.
@@ -138,15 +127,6 @@ typedef enum
 #define ADI_PHY_CAP_PMA_LOCAL_LOOPBACK      (1 << 2)    /*!< PHY supports 10BASE-T1L PMA local loopback.   */
 
 /*!
-* @brief Link status
-*/
-typedef enum
-{
-    ADI_PHY_LINK_STATUS_DOWN        = (0),         /*!< Link down.  */
-    ADI_PHY_LINK_STATUS_UP          = (1),         /*!< Link up.    */
-} adi_phy_LinkStatus_e;
-
-/*!
 * @brief PHY loopback modes.
 */
 typedef enum
@@ -195,15 +175,6 @@ typedef struct
 } adi_phy_MseLinkQuality_t;
 
 /*!
- * @brief PHY LED ports.
- */
-typedef enum
-{
-    ADI_PHY_LED_0 = 0,                          /*!< LED 0. */
-    ADI_PHY_LED_1,                              /*!< LED 1. */
-} adi_phy_LedPort_e;
-
-/*!
  * @brief PHY frame generator mode.
  */
 typedef enum
@@ -250,18 +221,6 @@ typedef enum
 } adi_phy_FrameChkSource_e;
 
 /*!
-* @brief PHY driver configuration
-*/
-typedef struct
-{
-    uint32_t        addr;               /*!< Device address on the MDIO bus.                                                                    */
-    void            *pDevMem;           /*!< Pointer to memory area used by the driver.                                                         */
-    uint32_t        devMemSize;         /*!< Size of the memory used by the driver. Needs to be greater than or equal to #ADI_PHY_DEVICE_SIZE.  */
-    bool            enableIrq;          /*!< Controls if the driver should   */
-} adi_phy_DriverConfig_t;
-
-
-/*!
  * @brief Auto-negotiation status.
  */
 typedef struct {
@@ -301,10 +260,6 @@ typedef uint32_t (*HAL_WriteFn_t)   (uint8_t hwAddr, uint32_t regAddr, uint16_t 
 /*! MSE threshold for MARGINAL link quality. */
 #define ADI_PHY_LINK_QUALITY_THR_MARGINAL   (0x05E1)
 
-typedef struct
-{
-    uint32_t linkDropped;
-} adi_phy_Stats_t;
 
 typedef struct
 {

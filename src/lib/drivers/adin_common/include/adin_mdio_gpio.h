@@ -9,16 +9,18 @@
  *---------------------------------------------------------------------------
  */
 
-#ifndef __ADIN1100_MDIO_GPIO_H__
-#define __ADIN1100_MDIO_GPIO_H__
+#ifndef __ADIN_COMMON_ADIN_MDIO_GPIO_H__
+#define __ADIN_COMMON_ADIN_MDIO_GPIO_H__
 
 #include <stdint.h>
-#include "adin1100_bsp.h"
+#include "adin_bsp.h"
 
 uint32_t mdioGPIORead(uint8_t phyAddr, uint8_t phyReg, uint16_t *phyData );
 uint32_t mdioGPIOWrite(uint8_t phyAddr, uint8_t phyReg, uint16_t phyData );
 uint32_t mdioGPIORead_cl45(uint8_t phyAddr, uint32_t phyReg, uint16_t *phyData );
 uint32_t mdioGPIOWrite_cl45(uint8_t phyAddr, uint32_t phyReg, uint16_t phyData );
+uint32_t mdioGPIORead_cl22(uint8_t phyAddr, uint32_t phyReg, uint16_t *phyData );
+uint32_t mdioGPIOWrite_cl22(uint8_t phyAddr, uint32_t phyReg, uint16_t phyData );
 
 
-#endif /* __ADIN1100_MDIO_GPIO_H__ */
+#endif /* __ADIN_COMMON_ADIN_MDIO_GPIO_H__ */

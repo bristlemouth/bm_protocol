@@ -14,8 +14,8 @@
  *---------------------------------------------------------------------------
  */
 
-#ifndef __ADIN1100_COMMON_H__
-#define __ADIN1100_COMMON_H__
+#ifndef __ADIN_COMMON_ADIN_COMMON_H__
+#define __ADIN_COMMON_ADIN_COMMON_H__
 
 #define FAILURE 1u
 
@@ -27,4 +27,4 @@
 
 
 
-#endif /* __ADIN1100_COMMON_H__ */
+#endif /* __ADIN_COMMON_ADIN_COMMON_H__ */

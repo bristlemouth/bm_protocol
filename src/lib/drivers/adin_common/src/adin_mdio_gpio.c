@@ -10,8 +10,8 @@
  */
 
 #include <stdint.h>
-#include "adin1100_mdio_gpio.h"
-#include "adin1100_common.h"
+#include "adin_mdio_gpio.h"
+#include "adin_common.h"
 
 
 #define MMD_ACR_ADDRESS                 (0x0000U)
@@ -360,6 +360,7 @@ static uint32_t mdioAddr45Clause(uint8_t phyAddr, uint8_t devType, uint16_t regA
 uint32_t mdioGPIORead_cl45(uint8_t phyAddr, uint32_t phyReg, uint16_t *phyData )
 {
   /*Applying the device type */
+   printf( "Phyread45 dev:reg: %d:%d\n", DEVTYPE(phyReg), REGADDR(phyReg) );
    mdioAddr45Clause(phyAddr, DEVTYPE(phyReg), REGADDR(phyReg) );
 
    /*Reading from register address*/
@@ -380,10 +381,48 @@ uint32_t mdioGPIORead_cl45(uint8_t phyAddr, uint32_t phyReg, uint16_t *phyData )
  */
 uint32_t mdioGPIOWrite_cl45(uint8_t phyAddr, uint32_t phyReg, uint16_t phyData )
 {
+  printf( "Phywrite45 dev:reg: %d:%d\n", DEVTYPE(phyReg), REGADDR(phyReg) );
      /*Applying the device type*/
     mdioAddr45Clause(phyAddr, DEVTYPE(phyReg), REGADDR(phyReg));
 
     /*Writing data to register address*/
     mdioWrite45Clause(phyAddr, DEVTYPE(phyReg), phyData );
    return 0;
+}
+
+/*
+ * @brief MDIO Indirect Read from Clause 45 register space via Clause 22
+ *
+ * @param [in] phyAddr - Hardware Phy address
+ * @param [in] phyReg - Register address in clause 45 combined devType and regAddr
+ * @param [out] phyData - pointer to the data buffer
+ * @return error if TA bit is not pulled down by the slave
+ *
+ * @details
+ *
+ * @sa
+ */
+uint32_t mdioGPIORead_cl22(uint8_t phyAddr, uint32_t phyReg, uint16_t *phyData )
+{
+  printf( "Phyread22 dev:reg: %d:%d\n", DEVTYPE(phyReg), REGADDR(phyReg) );
+  return mdioGPIORead( phyAddr, phyReg, phyData );
+}
+
+/*
+ * @brief MDIO Indirect Write to Clause 45 register space via Clause 22
+ *
+ * @param [in] phyAddr - Hardware Phy address
+ * @param [in] phyReg - Register address in clause 45 combined devAddr and regAddr
+ * @param [out] phyData -  data
+ * @return none
+ *
+ * @details
+ *
+ * @sa
+ */
+uint32_t mdioGPIOWrite_cl22(uint8_t phyAddr, uint32_t phyReg, uint16_t phyData )
+{
+  printf( "Phywrite22 dev:reg: %d:%d\n", DEVTYPE(phyReg), REGADDR(phyReg) );
+  mdioGPIOWrite( phyAddr, phyReg, phyData );
+  return 0;
 }

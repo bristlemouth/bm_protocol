@@ -9,8 +9,8 @@
  *---------------------------------------------------------------------------
  */
 
-#ifndef __ADIN1100_BSP_H__
-#define __ADIN1100_BSP_H__
+#ifndef __ADIN_COMMON_ADIN_BSP_H__
+#define __ADIN_COMMON_ADIN_BSP_H__
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -39,12 +39,10 @@ uint32_t BSP_SetPinMDIO(bool set);
 uint16_t BSP_GetPinMDInput(void);
 void BSP_ChangeMDIPinDir(bool output);
 
-void adin1100_bsp_register_irq_evt(adin1100_irq_evt_t irq_evt_cb);
-
 extern void msgWrite(char * ptr);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __ADIN1100_BSP_H__ */
+#endif /* __ADIN_COMMON_ADIN_BSP_H__ */

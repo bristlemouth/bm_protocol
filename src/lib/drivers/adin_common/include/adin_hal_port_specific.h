@@ -9,8 +9,8 @@
  *---------------------------------------------------------------------------
  */
 
-#ifndef __ADIN1100_HAL_PORT_SPECIFIC_H__
-#define __ADIN1100_HAL_PORT_SPECIFIC_H__
+#ifndef __ADIN_COMMON_HAL_PORT_SPECIFIC_H__
+#define __ADIN_COMMON_HAL_PORT_SPECIFIC_H__
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -64,4 +64,4 @@ extern "C" {
 }
 #endif
 
-#endif /* __ADIN1100_HAL_PORT_SPECIFIC_H__ */
+#endif /* __ADIN_COMMON_HAL_PORT_SPECIFIC_H__ */

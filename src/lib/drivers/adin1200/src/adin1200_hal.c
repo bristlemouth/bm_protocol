@@ -14,7 +14,7 @@
  */
 
 #include <string.h>
-#include "adin1100_hal.h"
+#include "adin1200_hal.h"
 
 #ifdef MDIO_GPIO
 #include "adin_mdio_gpio.h"
@@ -33,21 +33,17 @@
  *
  * @sa
  */
-uint32_t HAL_ADIN1100_PhyRead(uint8_t hwAddr, uint32_t RegAddr, uint16_t *data)
+#include <stdio.h>
+uint32_t HAL_ADIN1200_PhyRead(uint8_t hwAddr, uint32_t RegAddr, uint16_t *data)
 {
-#ifdef MDIO_GPIO
-#if defined(MDIO_CL22)
-    return (uint32_t)mdioGPIORead_cl22(hwAddr, RegAddr, data);
-#else
-    return (uint32_t)mdioGPIORead_cl45(hwAddr, RegAddr, data);
-#endif
-#else
-#if defined(MDIO_CL22)
-    return (uint32_t)adi_MdioRead_Cl22(hwAddr, RegAddr, data);
-#else
-    return (uint32_t)adi_MdioRead_Cl45(hwAddr, RegAddr, data);
-#endif
-#endif
+    printf( "Phyread: %d:%d\n", hwAddr, RegAddr );
+    if( RegAddr <= ADI_PHY_REG_ACCESS_CL22 ) {
+        return (uint32_t)mdioGPIORead_cl22(hwAddr, RegAddr, data);
+    }
+    else
+    {
+        return (uint32_t)mdioGPIORead_cl45(hwAddr, RegAddr, data);
+    }
 }
 
 /*
@@ -62,21 +58,16 @@ uint32_t HAL_ADIN1100_PhyRead(uint8_t hwAddr, uint32_t RegAddr, uint16_t *data)
  *
  * @sa
  */
-uint32_t HAL_ADIN1100_PhyWrite(uint8_t hwAddr, uint32_t RegAddr, uint16_t data)
+uint32_t HAL_ADIN1200_PhyWrite(uint8_t hwAddr, uint32_t RegAddr, uint16_t data)
 {
-#ifdef MDIO_GPIO
-#if defined(MDIO_CL22)
-  return mdioGPIOWrite_cl22(hwAddr, RegAddr, data);
-#else
-  return mdioGPIOWrite_cl45(hwAddr, RegAddr, data);
-#endif
-#else
-#if defined(MDIO_CL22)
-  return adi_MdioWrite_Cl22(hwAddr, RegAddr, data);
-#else
-  return adi_MdioWrite_Cl45(hwAddr, RegAddr, data);
-#endif
-#endif
+    printf( "Phywrite: %d:%d=%d\n", hwAddr, RegAddr, data );
+    if( RegAddr <= ADI_PHY_REG_ACCESS_CL22 ) {
+        return mdioGPIOWrite_cl22(hwAddr, RegAddr, data);
+    }
+    else
+    {
+        return mdioGPIOWrite_cl45(hwAddr, RegAddr, data);
+    }
 }
 
 /*
@@ -90,7 +81,7 @@ uint32_t HAL_ADIN1100_PhyWrite(uint8_t hwAddr, uint32_t RegAddr, uint16_t data)
  *
  * @sa
  */
-uint32_t HAL_ADIN1100_DisableIrq(void)
+uint32_t HAL_ADIN1200_DisableIrq(void)
 {
     BSP_DisableIRQ();
 
@@ -108,26 +99,26 @@ uint32_t HAL_ADIN1100_DisableIrq(void)
  *
  * @sa
  */
-uint32_t HAL_ADIN1100_EnableIrq(void)
+uint32_t HAL_ADIN1200_EnableIrq(void)
 {
     BSP_EnableIRQ();
 
     return ADI_HAL_SUCCESS;
 }
 
-uint32_t HAL_ADIN1100_SetPendingIrq(void)
+uint32_t HAL_ADIN1200_SetPendingIrq(void)
 {
     NVIC_SetPendingIRQ(ADIN1100_INT_N_EXTI_IRQn);
 
     return ADI_HAL_SUCCESS;
 }
 
-uint32_t HAL_ADIN1100_GetPendingIrq(void)
+uint32_t HAL_ADIN1200_GetPendingIrq(void)
 {
     return NVIC_GetPendingIRQ(ADIN1100_INT_N_EXTI_IRQn);
 }
 
-uint32_t HAL_ADIN1100_GetEnableIrq(void)
+uint32_t HAL_ADIN1200_GetEnableIrq(void)
 {
     return NVIC_GetEnableIRQ(ADIN1100_INT_N_EXTI_IRQn);
 
@@ -145,7 +136,7 @@ uint32_t HAL_ADIN1100_GetEnableIrq(void)
  *
  * @sa
  */
-uint32_t HAL_ADIN1100_RegisterCallback(HAL_Callback_t const *intCallback, void * hDevice)
+uint32_t HAL_ADIN1200_RegisterCallback(HAL_Callback_t const *intCallback, void * hDevice)
 {
     return BSP_RegisterIRQCallback (intCallback, hDevice);
 }
@@ -185,12 +176,12 @@ uint32_t HAL_ADIN1100_RegisterCallback(HAL_Callback_t const *intCallback, void *
 //     return BSP_spi0_register_callback (spiCallback, hDevice);
 // }
 
-uint32_t HAL_ADIN1100_Init_Hook(void)
+uint32_t HAL_ADIN1200_Init_Hook(void)
 {
     return ADI_HAL_SUCCESS;
 }
 
-uint32_t HAL_ADIN1100_UnInit_Hook(void)
+uint32_t HAL_ADIN1200_UnInit_Hook(void)
 {
     return ADI_HAL_SUCCESS;
 }
