@@ -82,11 +82,11 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
 
-    # ${SRC_DIR}/lib/drivers/adin1100/src/adin1100.c
-    # ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_bsp.c
-    # ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_hal.c
-    # ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_phy.c
-    # ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_mdio_gpio.c
+    ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_bsp.c
+    ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_hal.c
+    ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_mdio_gpio.c
+    ${SRC_DIR}/lib/drivers/adin1100/src/adin1100_phy.c
+    ${SRC_DIR}/lib/drivers/adin1100/src/adin1100.c
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
@@ -139,7 +139,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
     ${SRC_DIR}/lib/drivers
-    # ${SRC_DIR}/lib/drivers/adin1100/include
+    ${SRC_DIR}/lib/drivers/adin1100/include
     ${SRC_DIR}/lib/drivers/adin2111/include
     ${SRC_DIR}/lib/drivers/include
     ${SRC_DIR}/lib/drivers/protected
@@ -284,6 +284,10 @@ set(APP_DEFINES
 
     # Add network stress test functions
     STRESS_TEST_ENABLE
+
+    # ADIN1100 defines
+    ADIN1100
+    MDIO_GPIO
     )
 
 if (DFU_HOST  STREQUAL 1)
