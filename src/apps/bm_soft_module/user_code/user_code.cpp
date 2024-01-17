@@ -13,11 +13,14 @@
 #include "uptime.h"
 #include "util.h"
 #include "sensorWatchdog.h"
+#include "bm_soft_data_msg.h"
+#include "device_info.h"
 
 #define PAYLOAD_WATCHDOG_TIMEOUT_MS (60 * 1000)
 #define BM_SOFT_WATCHDOG_MAX_TRIGGERS (3)
 // https://www.digikey.com/en/htmldatasheets/production/1186938/0/0/1/g-nico-018
 #define BM_SOFT_RESET_WAIT_TIME_MS (5)
+#define BM_SOFT_DATA_MSG_MAX_SIZE (128)
 
 static constexpr char SOFTMODULE_WATCHDOG_ID[] = "softmodule";
 static constexpr char soft_log[] = "soft.log";
@@ -28,9 +31,12 @@ extern cfg::Configuration *userConfigurationPartition;
 static TSYS01 soft(&spi1, &BM_CS);
 static uint32_t serial_number = 0;
 static uint32_t soft_delay = 5000;
+static char bmSoftTopic[BM_TOPIC_MAX_LEN];
+static int bmSoftTopicStrLen;
 
 static bool BmSoftWatchdogHandler(void *arg);
 static bool BmSoftStartAndValidate(void);
+static int createBmSoftDataTopic(void);
 
 void setup(void) {
   BmSoftStartAndValidate();
@@ -39,7 +45,7 @@ void setup(void) {
   } else {
     printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay);
   }
-
+  bmSoftTopicStrLen = createBmSoftDataTopic();
   SensorWatchdog::SensorWatchdogAdd(SOFTMODULE_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmSoftWatchdogHandler,
                                     BM_SOFT_WATCHDOG_MAX_TRIGGERS, soft_log);
@@ -60,6 +66,20 @@ void loop(void) {
              rtcTimeBuffer, temperature);
       bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(),
              rtcTimeBuffer, temperature);
+      BmSoftDataMsg::Data d;
+      d.header.version = 1;
+      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) * 1e-3; 
+      d.header.reading_uptime_millis = uptimeGetMs();
+      d.temperature_deg_c = temperature;
+      static uint8_t cbor_buf[BM_SOFT_DATA_MSG_MAX_SIZE];
+      memset(cbor_buf, 0, sizeof(cbor_buf));
+      size_t encoded_len = 0;
+      if(BmSoftDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
+        bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf,
+              encoded_len, 0);
+      } else {
+        printf("Failed to encode data message\n");
+      }
   } else {
     printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
              rtcTimeBuffer, NAN);
@@ -103,4 +123,10 @@ static bool BmSoftWatchdogHandler(void *arg) {
     bm_fprintf(0, soft_log, "Failed to reset BM soft with max retries: %" PRIu32 "\n", watchdog->_max_triggers);
   }
   return true;
+}
+
+static int createBmSoftDataTopic(void) {
+  int topiclen = snprintf(bmSoftTopic, BM_TOPIC_MAX_LEN, "%" PRIx64 "/bm_soft_temp", getNodeId());
+  configASSERT(topiclen > 0);
+  return topiclen;
 }
