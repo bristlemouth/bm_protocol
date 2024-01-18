@@ -66,6 +66,9 @@
 #include "micropython_freertos.h"
 #endif
 
+// uncomment for the `update sec`, `update clr`, `update confirm` commands
+//#include "mcuboot_cli.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -335,6 +338,8 @@ static void defaultTask( void *parameters ) {
 
     debugSysInit();
     debugMemfaultInit(&usbCLI);
+    // uncomment for the `update sec`, `update clr`, `update confirm` commands
+    // mcubootCliInit();
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
     debugSpotterInit();
