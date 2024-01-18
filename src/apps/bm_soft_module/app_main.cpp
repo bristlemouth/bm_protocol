@@ -137,6 +137,7 @@ SerialHandle_t usbPcap = {
 };
 
 cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *sysConfigurationPartition = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
@@ -382,6 +383,7 @@ static void defaultTask(void *parameters) {
                                        sys_cfg_sensorsPollIntervalMs);
   debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
+  sysConfigurationPartition = &debug_configuration_system;
   userConfigurationPartition = &debug_configuration_user;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
