@@ -4,6 +4,7 @@
 #include "task.h"
 #include "configuration.h"
 #include "bridgePowerController.h"
+#include "reportBuilder.h"
 
 #include <stdint.h>
 
@@ -11,5 +12,6 @@
 
 void topology_sampler_init(BridgePowerController *power_controller, cfg::Configuration* hw_cfg, cfg::Configuration* sys_cfg);
 bool topology_sampler_get_node_list(uint64_t *node_list, size_t &node_list_size, uint32_t &num_nodes, uint32_t timeout_ms);
+bool topology_sampler_get_sensor_type_list(report_builder_sensor_type_e *sensor_type_list, size_t &sensor_type_list_size, uint32_t &num_nodes, uint32_t timeout_ms);
 uint8_t* topology_sampler_alloc_last_network_config(uint32_t &network_crc32, uint32_t &cbor_config_size);
 void bm_topology_last_network_info_cb(void);

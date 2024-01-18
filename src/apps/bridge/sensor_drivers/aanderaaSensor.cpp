@@ -146,7 +146,7 @@ void AanderaaSensor::aggregate(void) {
     if(!logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
       printf("Failed to get time string for Aanderaa aggregation\n");
       snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
-    };
+    }
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                     "%s,"          // timestamp(ticks/UTC)
                     "%" PRIx64 "," // Node Id
@@ -176,8 +176,6 @@ void AanderaaSensor::aggregate(void) {
       printf("ERROR: Failed to print Aanderaa data\n");
     }
     reportBuilderAddToQueue(node_id, AANDERAA_SENSOR_TYPE, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
-    // TODO - send aggregated data to a "report builder" task that will
-    // combine all the data from all the sensors and send it to the spotter
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     abs_speed_cm_s.clear();

@@ -6,6 +6,7 @@
 typedef enum abstractSensorType {
     SENSOR_TYPE_UNKNOWN = 0,
     SENSOR_TYPE_AANDERAA = 1,
+    SENSOR_TYPE_SOFT = 2,
 } abstractSensorType_e;
 
 struct AbstractSensor {

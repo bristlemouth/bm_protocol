@@ -4,6 +4,7 @@
 #include "bridgePowerController.h"
 #include "device_info.h"
 #include "reportBuilder.h"
+#include "softSensor.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "task_priorities.h"
@@ -173,6 +174,19 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                 abstractSensorAddSensorSub(aanderaa_sub);
             }
         }
+      } else if (strncmp(reply.app_name, "bm_soft_module", MIN(reply.app_name_strlen, strlen("bm_soft_module"))) == 0) {
+        if (!sensorControllerFindSensorById(reply.node_id)) {
+          uint32_t current_agg_period_ms = (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
+          _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS, strlen(AppConfig::SAMPLE_DURATION_MS),
+                                        current_agg_period_ms);
+            uint32_t AVERAGER_MAX_SAMPLES =
+                (current_agg_period_ms / _ctx.current_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
+            Soft_t * soft_sub = createSoftSub(reply.node_id, current_agg_period_ms, AVERAGER_MAX_SAMPLES);
+            if(soft_sub){
+                abstractSensorAddSensorSub(soft_sub);
+            }
+        }
+        printf("Soft sensor node found %" PRIx64 "\n", reply.node_id);
       }
     } else {
       printf("NACK\n");
