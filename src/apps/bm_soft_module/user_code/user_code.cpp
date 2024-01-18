@@ -17,7 +17,7 @@
 #include "util.h"
 
 #define PAYLOAD_WATCHDOG_TIMEOUT_MS (60 * 1000)
-#define BM_SOFT_WATCHDOG_MAX_TRIGGERS (3)
+#define NO_MAX_TRIGGER (0)
 // https://www.digikey.com/en/htmldatasheets/production/1186938/0/0/1/g-nico-018
 #define BM_SOFT_RESET_WAIT_TIME_MS (5)
 #define BM_SOFT_DATA_MSG_MAX_SIZE (128)
@@ -33,6 +33,7 @@ extern cfg::Configuration *sysConfigurationPartition;
 static TSYS01 soft(&spi1, &BM_CS);
 static uint32_t serial_number = 0;
 static uint32_t soft_delay_ms = 500;
+static uint32_t cal_time_epoch = 0;
 static char bmSoftTopic[BM_TOPIC_MAX_LEN];
 static int bmSoftTopicStrLen;
 static float calibrationOffsetDegC = 0.0;
@@ -41,7 +42,6 @@ static bool BmSoftWatchdogHandler(void *arg);
 static bool BmSoftStartAndValidate(void);
 static int createBmSoftDataTopic(void);
 static void BmSoftInitalize(void);
-static bool BmSoftValidateTemp(float temp);
 
 void setup(void) {
   configASSERT(userConfigurationPartition);
@@ -51,10 +51,33 @@ void setup(void) {
   int32_t calTempMilliC = 0;
   if (sysConfigurationPartition->getConfig("calTempC", strlen("calTempC"), calTempC)) {
     printf("calTempC: %" PRId32 "\n", calTempC);
+  } else {
+    printf("No calibration temperature found\n");
+    bm_fprintf(0, soft_log, "No calibration temperature found\n");
+    bm_printf(0, "No calibration temperature found");
+  }
+  if (sysConfigurationPartition->getConfig("tsysId", strlen("tsysId"), serial_number)) {
+    printf("SOFT Serial Number: %" PRIu32 "\n", serial_number);
+  } else {
+    printf("No calibration serial number found\n");
+    bm_fprintf(0, soft_log, "No calibration serial number found\n");
+    bm_printf(0, "No calibration serial number found");
+  }
+  if (sysConfigurationPartition->getConfig("calTimeEpoch", strlen("calTimeEpoch"),
+                                           cal_time_epoch)) {
+    printf("Cal time: %" PRIu32 "\n", cal_time_epoch);
+  } else {
+    printf("No calibration time found\n");
+    bm_fprintf(0, soft_log, "No calibration time found\n");
+    bm_printf(0, "No calibration time found");
   }
   if (sysConfigurationPartition->getConfig("calTempMilliC", strlen("calTempMilliC"),
                                            calTempMilliC)) {
     printf("calTempMilliC: %" PRId32 "\n", calTempMilliC);
+  } else {
+    printf("No calibration temperature (milliDegC) found\n");
+    bm_fprintf(0, soft_log, "No calibration temperature (milliDegC) found\n");
+    bm_printf(0, "No calibration temperature (milliDegC) found");
   }
   calibrationOffsetDegC = (calTempC + (calTempMilliC / 1000.0f));
   if (userConfigurationPartition->getConfig("softReadingPeriodMs",
@@ -65,61 +88,43 @@ void setup(void) {
   }
   bmSoftTopicStrLen = createBmSoftDataTopic();
   SensorWatchdog::SensorWatchdogAdd(SOFTMODULE_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
-                                    BmSoftWatchdogHandler, BM_SOFT_WATCHDOG_MAX_TRIGGERS,
-                                    soft_log);
+                                    BmSoftWatchdogHandler, NO_MAX_TRIGGER, soft_log);
 }
 
 void loop(void) {
   float temperature = 0.0f;
 
-  do {
-    RTCTimeAndDate_t time_and_date = {};
-    char rtcTimeBuffer[32];
-    bool rtcValid = rtcGet(&time_and_date);
-    if (rtcValid == pdPASS) {
-      rtcPrint(rtcTimeBuffer, &time_and_date);
-    };
+  RTCTimeAndDate_t time_and_date = {};
+  char rtcTimeBuffer[32];
+  bool rtcValid = rtcGet(&time_and_date);
+  if (rtcValid == pdPASS) {
+    rtcPrint(rtcTimeBuffer, &time_and_date);
+  };
 
-    if (!soft.getTemperature(temperature)) {
-      SensorWatchdog::SensorWatchdogPet(SOFTMODULE_WATCHDOG_ID);
-      if (!BmSoftValidateTemp(temperature)) {
-        printf("soft | Invalid temperature reading: %f\n", temperature);
-        bm_fprintf(0, soft_log, "soft | Invalid temperature reading: %f\n", temperature);
-        bm_printf(0, "soft | Invalid temperature reading: %f", temperature);
-        BmSoftInitalize();
-        break;
-      }
-      temperature += calibrationOffsetDegC;
-      printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
-             temperature);
-      bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
-                 rtcTimeBuffer, temperature);
-      bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
-                temperature);
-      BmSoftDataMsg::Data d;
-      d.header.version = 1;
-      if (rtcValid) {
-        d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) * 1e-3;
-      }
-      d.header.reading_uptime_millis = uptimeGetMs();
-      d.temperature_deg_c = temperature;
-      static uint8_t cbor_buf[BM_SOFT_DATA_MSG_MAX_SIZE];
-      memset(cbor_buf, 0, sizeof(cbor_buf));
-      size_t encoded_len = 0;
-      if (BmSoftDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
-        bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf, encoded_len, 0);
-      } else {
-        printf("Failed to encode data message\n");
-        break;
-      }
-    } else {
-      printf("soft | Unable to read temperature: %f\n", temperature);
-      bm_fprintf(0, soft_log, "soft | Unable to read temperature: %f\n", temperature);
-      bm_printf(0, "soft | Unable to read temperature: %f", temperature);
-      BmSoftInitalize();
-      break;
+  if (soft.getTemperature(temperature)) {
+    SensorWatchdog::SensorWatchdogPet(SOFTMODULE_WATCHDOG_ID);
+
+    printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, temperature);
+    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
+               rtcTimeBuffer, temperature);
+    bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
+              temperature);
+    BmSoftDataMsg::Data d;
+    d.header.version = 1;
+    if (rtcValid) {
+      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) * 1e-3;
     }
-  } while (0);
+    d.header.reading_uptime_millis = uptimeGetMs();
+    d.temperature_deg_c = temperature;
+    static uint8_t cbor_buf[BM_SOFT_DATA_MSG_MAX_SIZE];
+    memset(cbor_buf, 0, sizeof(cbor_buf));
+    size_t encoded_len = 0;
+    if (BmSoftDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
+      bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf, encoded_len, 0);
+    } else {
+      printf("Failed to encode data message\n");
+    }
+  }
 
   // Delay between readings
   vTaskDelay(pdMS_TO_TICKS(soft_delay_ms));
@@ -128,7 +133,7 @@ void loop(void) {
 static bool BmSoftStartAndValidate(void) {
   bool success = false;
   do {
-    if (!soft.begin()) {
+    if (!soft.begin(calibrationOffsetDegC, serial_number, cal_time_epoch)) {
       break;
     }
     if (!soft.checkPROM()) {
@@ -149,24 +154,18 @@ static bool BmSoftStartAndValidate(void) {
 }
 
 static bool BmSoftWatchdogHandler(void *arg) {
-  SensorWatchdog::sensor_watchdog_t *watchdog =
-      reinterpret_cast<SensorWatchdog::sensor_watchdog_t *>(arg);
+  (void)arg;
   printf("Resetting BM soft\n");
-  if (watchdog->_triggerCount < watchdog->_max_triggers) {
+  soft.reset();
+  vTaskDelay(BM_SOFT_RESET_WAIT_TIME_MS);
+  if (BmSoftStartAndValidate()) {
     bm_fprintf(0, soft_log, "soft | Watchdog: Resetting Bm Soft\n");
     bm_printf(0, "soft | Watchdog: Resetting Bm Soft");
-    printf("soft | Watchdog:Resetting Bm Soft\n");
-    soft.reset();
-    vTaskDelay(BM_SOFT_RESET_WAIT_TIME_MS);
-    BmSoftStartAndValidate();
+    printf("soft | Watchdog: Resetting Bm Soft\n");
   } else {
-    bm_fprintf(0, soft_log,
-               "soft | Watchdog: Failed to reset BM soft with max retries: %" PRIu32 "\n",
-               watchdog->_max_triggers);
-    bm_printf(0, "soft | Watchdog: Failed to reset BM soft with max retries: %" PRIu32 "\n",
-              watchdog->_max_triggers);
-    printf("soft | Watchdog: Failed to reset BM soft with max retries: %" PRIu32 "\n",
-           watchdog->_max_triggers);
+    bm_fprintf(0, soft_log, "soft | Watchdog: Failed to reset Bm Soft\n");
+    bm_printf(0, "soft | Watchdog: Failed to reset Bm Soft");
+    printf("soft | Watchdog: Failed to reset Bm Soft\n");
   }
   return true;
 }
@@ -195,10 +194,4 @@ static void BmSoftInitalize(void) {
     bm_fprintf(0, soft_log, "Successfully recovered & started BM soft\n");
     bm_printf(0, "Successfully recovered & started BM soft");
   }
-}
-
-static bool BmSoftValidateTemp(float temp) {
-  static constexpr float T_MIN_DEG_C = -200.0f;
-  static constexpr float T_MAX_DEG_C = 200.0f;
-  return (temp != NAN) && (temp > T_MIN_DEG_C && temp < T_MAX_DEG_C);
 }
