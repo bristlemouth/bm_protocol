@@ -30,7 +30,6 @@
 #include "debug_rtc.h"
 #include "debug_sys.h"
 #include "debug_w25.h"
-#include "mcuboot_cli.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
@@ -66,6 +65,9 @@
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
 #endif
+
+// uncomment for the `update sec`, `update clr`, `update confirm` commands
+//#include "mcuboot_cli.h"
 
 #include <stdio.h>
 #include <string.h>
