@@ -336,7 +336,8 @@ static void defaultTask( void *parameters ) {
 
     debugSysInit();
     debugMemfaultInit(&usbCLI);
-    mcubootCliInit();
+    // uncomment for the `update sec`, `update clr`, `update confirm` commands
+    // mcubootCliInit();
 
     debugGpioInit(debugGpioPins, sizeof(debugGpioPins)/sizeof(DebugGpio_t));
     debugSpotterInit();
