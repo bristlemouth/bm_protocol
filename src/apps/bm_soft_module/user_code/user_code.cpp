@@ -18,8 +18,6 @@
 
 #define PAYLOAD_WATCHDOG_TIMEOUT_MS (60 * 1000)
 #define NO_MAX_TRIGGER (0)
-// https://www.digikey.com/en/htmldatasheets/production/1186938/0/0/1/g-nico-018
-#define BM_SOFT_RESET_WAIT_TIME_MS (5)
 #define BM_SOFT_DATA_MSG_MAX_SIZE (128)
 #define BM_SOFT_PERIODIC_INIT_DELAY_MS (500)
 
@@ -134,10 +132,7 @@ static bool BmSoftStartAndValidate(void) {
   bool success = false;
   do {
     if (!soft.begin(calibrationOffsetDegC, serial_number, cal_time_epoch)) {
-      break;
-    }
-    if (!soft.checkPROM()) {
-      printf("SOFT PROM Invalid\n");
+      printf("SOFT Init Failed\n");
       break;
     }
     if (!soft.getSerialNumber(serial_number)) {
@@ -156,12 +151,10 @@ static bool BmSoftStartAndValidate(void) {
 static bool BmSoftWatchdogHandler(void *arg) {
   (void)arg;
   printf("Resetting BM soft\n");
-  soft.reset();
-  vTaskDelay(BM_SOFT_RESET_WAIT_TIME_MS);
   if (BmSoftStartAndValidate()) {
-    bm_fprintf(0, soft_log, "soft | Watchdog: Resetting Bm Soft\n");
-    bm_printf(0, "soft | Watchdog: Resetting Bm Soft");
-    printf("soft | Watchdog: Resetting Bm Soft\n");
+    bm_fprintf(0, soft_log, "soft | Watchdog: Reset Bm Soft\n");
+    bm_printf(0, "soft | Watchdog: Reset Bm Soft");
+    printf("soft | Watchdog: Reset Bm Soft\n");
   } else {
     bm_fprintf(0, soft_log, "soft | Watchdog: Failed to reset Bm Soft\n");
     bm_printf(0, "soft | Watchdog: Failed to reset Bm Soft");
@@ -187,7 +180,6 @@ static void BmSoftInitalize(void) {
       failed_init = true;
     }
     vTaskDelay(pdMS_TO_TICKS(BM_SOFT_PERIODIC_INIT_DELAY_MS));
-    soft.reset();
   }
   if (failed_init) {
     printf("Successfully recovered & started BM soft\n");

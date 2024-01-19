@@ -55,24 +55,30 @@ bool TSYS01::getTemperature(float &temperature) {
   float temp = 0;
   uint8_t data[3] = {0};
   bool spiTransactionSuccess = true;
-  bool rval = true;
+  bool rval = false;
 
-  spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
-  spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
+  do {
+    // For SPI we need a way to check if the device is present.
+    if (!validatePROM()) {
+      break;
+    }
+    spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
+    spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
 
-  // round() macro returns a long (4 bytes)
-  uint32_t adc16 =
-      round(((float)(((uint32_t)data[0]) << 16 | ((uint32_t)data[1]) << 8 | data[2])) / 256);
-  for (uint8_t i = 0; i < CALIB_CNT; i++) {
-    temp += _calibrations[i] * pow(adc16, 4 - i);
-  }
+    // round() macro returns a long (4 bytes)
+    uint32_t adc16 =
+        round(((float)(((uint32_t)data[0]) << 16 | ((uint32_t)data[1]) << 8 | data[2])) / 256);
+    for (uint8_t i = 0; i < CALIB_CNT; i++) {
+      temp += _calibrations[i] * pow(adc16, 4 - i);
+    }
 
-  if (spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX) {
-    temperature = temp + calibrationOffsetDegC;
-  } else {
-    printf("TSYS01 reading error\n");
-    rval = false;
-  }
+    if (spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX) {
+      temperature = temp + calibrationOffsetDegC;
+      rval = true;
+    } else {
+      printf("TSYS01 reading error\n");
+    }
+  } while (0);
 
   return rval;
 }
@@ -81,23 +87,23 @@ bool TSYS01::validatePROM() {
   uint16_t checksum = 0;
   uint8_t data[2] = {0};
   bool spiTransactionSuccess = true;
-
-  // Reset calibrations
-  _calibrations[0] = CALIB_4_CONST;
-  _calibrations[1] = CALIB_3_CONST;
-  _calibrations[2] = CALIB_2_CONST;
-  _calibrations[3] = CALIB_1_CONST;
-  _calibrations[4] = CALIB_0_CONST;
-
+  float calibrations[] = {CALIB_4_CONST, CALIB_3_CONST, CALIB_2_CONST, CALIB_1_CONST,
+                          CALIB_0_CONST};
   for (uint8_t i = 0; i < PROM_ADDR_CNT; i++) {
     spiTransactionSuccess &= readData(PROM_ADDR_0 + (i * 2), data, sizeof(data));
     checksum += data[0] + data[1];
     if (i && i < 6) {
       uint16_t kCoeff = ((uint16_t)data[0]) << 8 | data[1];
-      _calibrations[i - 1] *= kCoeff;
+      calibrations[i - 1] *= kCoeff;
     }
   }
-  return spiTransactionSuccess && checksum && !(checksum & 0xFF);
+  bool rval = spiTransactionSuccess && checksum && !(checksum & 0xFF);
+  if (rval) {
+    for (int i = 0; i < NUM_CALIB; i++) {
+      _calibrations[i] = calibrations[i];
+    }
+  }
+  return rval;
 }
 
 /*!
