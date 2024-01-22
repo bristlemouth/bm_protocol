@@ -16,11 +16,11 @@ public:
       uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000,
       uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S * 1000,
-      bool subSamplingEnabled = false, bool powerControllerEnabled = false,
+      bool subsamplingEnabled = false, bool powerControllerEnabled = false,
       uint32_t alignmentS = DEFAULT_ALIGNMENT_S);
   void powerControlEnable(bool enable);
   bool isPowerControlEnabled();
-  void subSampleEnable(bool enable);
+  void subsampleEnable(bool enable);
   bool isSubsampleEnabled();
   bool waitForSignal(bool on, TickType_t ticks_to_wait);
   bool isBridgePowerOn(void);
@@ -28,13 +28,16 @@ public:
 
   // Shim function for FreeRTOS compatibility, should not be called as part of the public API.
   void _update(void); // PRIVATE
+  // Public member only for testability. Not part of the public API.
+  uint32_t _alignNextInterval(uint32_t nowEpochS, uint32_t lastIntervalStartS,
+                              uint32_t sampleIntervalS);
+
 private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
   bool getAdinDevice();
   void checkAndUpdateRTC();
   uint32_t getEpochS();
-  uint32_t alignEpoch(uint32_t epochS);
 
 public:
   static constexpr uint32_t OFF = (1 << 0);
@@ -45,7 +48,7 @@ public:
   static constexpr uint32_t DEFAULT_SUBSAMPLE_ENABLED = 0;
   static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_S = (60);
   static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_S = (30);
-  static constexpr uint32_t MIN_SAMPLE_DURATION_S = (6); 
+  static constexpr uint32_t MIN_SAMPLE_DURATION_S = (6);
   static constexpr uint32_t MIN_SAMPLE_INTERVAL_S = (6); // Set to 6s to allow for enough time for devices to broadcast for the topology.
   static constexpr uint32_t MAX_SAMPLE_INTERVAL_S = (24 * 60 * 60);
   static constexpr uint32_t MAX_SAMPLE_DURATION_S = (24 * 60 * 60);
@@ -69,12 +72,12 @@ private:
   uint32_t _subsampleIntervalS;
   uint32_t _subsampleDurationS;
   uint32_t _sampleIntervalStartS;
-  uint32_t _subSampleIntervalStartS;
+  uint32_t _subsampleIntervalStartS;
   uint32_t _alignmentS;
 
   bool _rtcSet;
   bool _initDone;
-  bool _subSamplingEnabled;
+  bool _subsamplingEnabled;
   bool _configError;
   adin2111_DeviceHandle_t _adin_handle;
   EventGroupHandle_t _busPowerEventGroup;

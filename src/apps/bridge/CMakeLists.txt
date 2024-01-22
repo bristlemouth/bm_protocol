@@ -174,6 +174,8 @@ set(MCUBOOT_FILES
 
     ${SRC_DIR}/lib/mcuboot/port_flash.c
     ${SRC_DIR}/lib/mcuboot/port_misc.c
+    # uncomment for the `update sec`, `update clr`, `update confirm` commands
+    # ${SRC_DIR}/lib/mcuboot/mcuboot_cli.c
     )
 set(MCUBOOT_INCLUDES
     ${MCUBOOT_DIR}/boot
@@ -182,6 +184,8 @@ set(MCUBOOT_INCLUDES
 
     # FreeRTOS port
     ${SRC_DIR}/lib/mcuboot/include
+    # uncomment for the `update sec`, `update clr`, `update confirm` commands
+    # ${SRC_DIR}/lib/mcuboot/
 
     ${SRC_DIR}/lib/drivers/
     )

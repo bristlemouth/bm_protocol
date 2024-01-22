@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--software_type", default="unknown", help="Software type")
-    parser.add_argument("--project", default="xmoonjelly", help="Memfault project name")
+    parser.add_argument("--project", default="bristlemouth", help="Memfault project name")
     parser.add_argument("--org", default="sofar-ocean", help="Memfault org")
     parser.add_argument("--version", help="Version string")
     parser.add_argument("--username", help="Memfault username/email")
