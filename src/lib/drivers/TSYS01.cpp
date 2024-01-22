@@ -4,14 +4,13 @@
 // Ported by Victor (To bm_protocol)
 //
 
-#include "FreeRTOS.h"
-#include "task.h"
 #include "TSYS01.h"
+#include "FreeRTOS.h"
 #include "debug.h"
+#include "task.h"
 
-TSYS01::TSYS01(SPIInterface_t* spiInterface, IOPinHandle_t *cspin):
-_SPIInterface(spiInterface),_CSPin(cspin)
-{
+TSYS01::TSYS01(SPIInterface_t *spiInterface, IOPinHandle_t *cspin)
+    : _SPIInterface(spiInterface), _CSPin(cspin) {
   IOWrite(_CSPin, 1);
 }
 
@@ -21,7 +20,7 @@ _SPIInterface(spiInterface),_CSPin(cspin)
   \return Will return false if sensor is not present or communicating
 */
 
-bool TSYS01::begin( float offsetCentiDegC, uint32_t signature, uint32_t caltime ) {
+bool TSYS01::begin(float offsetCentiDegC, uint32_t signature, uint32_t caltime) {
   // Make sure CS pin is high before starting
   uint32_t sn;
   IOWrite(_CSPin, 1);
@@ -31,7 +30,6 @@ bool TSYS01::begin( float offsetCentiDegC, uint32_t signature, uint32_t caltime 
 
   calibrationOffsetDegC = 0.0;
   calibrated = false;
-  no_cal = false;
 
   if (!rval) {
     printf("TSYS01 init failed\n");
@@ -39,7 +37,6 @@ bool TSYS01::begin( float offsetCentiDegC, uint32_t signature, uint32_t caltime 
   } else if (!signature && !caltime && !offsetCentiDegC) {
     printf("TSYS01 no cal during init\n");
     calibrated = false;
-    no_cal = true;
   } else if (signature && caltime && signature == sn) {
     printf("TSYS01 init success\n");
     calibrationOffsetDegC = offsetCentiDegC / 100.0f;
@@ -52,61 +49,61 @@ bool TSYS01::begin( float offsetCentiDegC, uint32_t signature, uint32_t caltime 
   return rval;
 }
 
-void TSYS01::reset( void ) {
-  doCommand(RESET, RESET_WAIT_TIME_MS);
-}
+void TSYS01::reset(void) { doCommand(RESET, RESET_WAIT_TIME_MS); }
 
-bool TSYS01::getTemperature( float &temperature ) {
+bool TSYS01::getTemperature(float &temperature) {
   float temp = 0;
-  uint8_t data[3] = { 0 };
+  uint8_t data[3] = {0};
   bool spiTransactionSuccess = true;
-  bool rval = true;
+  bool rval = false;
 
-  spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
-  spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
-
-  // round() macro returns a long (4 bytes)
-  uint32_t adc16 = round(((float) (((uint32_t) data[0]) << 16 | ((uint32_t) data[1]) << 8 | data[2])) / 256);
-  for( uint8_t i = 0; i < CALIB_CNT; i++){
-    temp += _calibrations[i] * pow(adc16, 4 - i);
-  }
-
-  if( spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX){
-    temperature = temp + calibrationOffsetDegC;
-    if (no_cal){
-      printf("TSYS01 no cal during reading\n");
-    } else if (!calibrated) {
-      printf("TSYS01 invalid calibration error during reading\n");
+  do {
+    // For SPI we need a way to check if the device is present.
+    if (!validatePROM()) {
+      break;
     }
-  } else {
-    printf("TSYS01 reading error\n");
-    rval = false;
-  }
+    spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
+    spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
+
+    // round() macro returns a long (4 bytes)
+    uint32_t adc16 =
+        round(((float)(((uint32_t)data[0]) << 16 | ((uint32_t)data[1]) << 8 | data[2])) / 256);
+    for (uint8_t i = 0; i < CALIB_CNT; i++) {
+      temp += _calibrations[i] * pow(adc16, 4 - i);
+    }
+
+    if (spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX) {
+      temperature = temp + calibrationOffsetDegC;
+      rval = true;
+    } else {
+      printf("TSYS01 reading error\n");
+    }
+  } while (0);
 
   return rval;
 }
 
 bool TSYS01::validatePROM() {
   uint16_t checksum = 0;
-  uint8_t data[2] = { 0 };
+  uint8_t data[2] = {0};
   bool spiTransactionSuccess = true;
-
-  // Reset calibrations
-  _calibrations[0] = CALIB_4_CONST;
-  _calibrations[1] = CALIB_3_CONST;
-  _calibrations[2] = CALIB_2_CONST;
-  _calibrations[3] = CALIB_1_CONST;
-  _calibrations[4] = CALIB_0_CONST;
-
-  for( uint8_t i = 0; i < PROM_ADDR_CNT; i++ ){
+  float calibrations[] = {CALIB_4_CONST, CALIB_3_CONST, CALIB_2_CONST, CALIB_1_CONST,
+                          CALIB_0_CONST};
+  for (uint8_t i = 0; i < PROM_ADDR_CNT; i++) {
     spiTransactionSuccess &= readData(PROM_ADDR_0 + (i * 2), data, sizeof(data));
     checksum += data[0] + data[1];
-    if( i && i < 6 ){
-      uint16_t kCoeff = ((uint16_t) data[0]) << 8 | data[1];
-      _calibrations[i-1] *= kCoeff;
+    if (i && i < 6) {
+      uint16_t kCoeff = ((uint16_t)data[0]) << 8 | data[1];
+      calibrations[i - 1] *= kCoeff;
     }
   }
-  return spiTransactionSuccess && checksum && !(checksum & 0xFF);
+  bool rval = spiTransactionSuccess && checksum && !(checksum & 0xFF);
+  if (rval) {
+    for (int i = 0; i < NUM_CALIB; i++) {
+      _calibrations[i] = calibrations[i];
+    }
+  }
+  return rval;
 }
 
 /*!
@@ -129,7 +126,7 @@ bool TSYS01::checkPROM() {
   return rval;
 }
 
-bool TSYS01::doCommand( uint8_t command, uint32_t waitTimeMs ){
+bool TSYS01::doCommand(uint8_t command, uint32_t waitTimeMs) {
   SPIResponse_t status;
   uint8_t dummyRxByte; // SPI transmits and receives at the same time
 
@@ -139,20 +136,20 @@ bool TSYS01::doCommand( uint8_t command, uint32_t waitTimeMs ){
   return (status == SPI_OK);
 }
 
-bool TSYS01::readData( uint8_t address, uint8_t data[], size_t dataSize) {
+bool TSYS01::readData(uint8_t address, uint8_t data[], size_t dataSize) {
   uint8_t txData[sizeof(address) + dataSize];
   uint8_t rxData[sizeof(address) + dataSize];
   SPIResponse_t status;
 
   txData[0] = address;
 
-  for(uint32_t index=0; index < dataSize; index++) {
+  for (uint32_t index = 0; index < dataSize; index++) {
     txData[1 + index] = data[index];
   }
 
   status = spiTxRx(_SPIInterface, _CSPin, sizeof(txData), txData, rxData, 10);
 
-  for(uint32_t index=0; index < dataSize; index++) {
+  for (uint32_t index = 0; index < dataSize; index++) {
     data[index] = rxData[1 + index];
   }
 

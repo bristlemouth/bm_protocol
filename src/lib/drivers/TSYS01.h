@@ -7,10 +7,10 @@
 #ifndef WS_APPS_TSYS01_H
 #define WS_APPS_TSYS01_H
 
-#include "stm32u5xx_hal.h"
 #include "io.h"
 #include "math.h"
 #include "protected_spi.h"
+#include "stm32u5xx_hal.h"
 
 #define RESET 0x1E
 #define START_ADC_TEMP_CONV 0x48
@@ -19,8 +19,8 @@
 #define SN_ADDR_0 0xAC
 #define SN_ADDR_1 0xAE
 
-#define RESET_WAIT_TIME_MS 6      // 2.8 ms x2 for assurance
-#define ADC_CONV_WAIT_TIME_MS 10   // 8.22 ms + 1 ms for assurance
+#define RESET_WAIT_TIME_MS 6     // 2.8 ms x2 for assurance
+#define ADC_CONV_WAIT_TIME_MS 10 // 8.22 ms + 1 ms for assurance
 #define PROM_ADDR_CNT 8
 #define CALIB_CNT 5
 
@@ -36,27 +36,30 @@
 #define TSYS01_INVALID_TEMP (-100)
 
 class TSYS01 {
-public:
-  TSYS01(SPIInterface_t* spiInterface, IOPinHandle_t *cspin);
+private:
+  static constexpr uint8_t NUM_CALIB = 5;
 
-  bool begin( float offsetCentiDegC = 0.0, uint32_t signature = 0, uint32_t caltime = 0);
-  void reset( void );
-  bool getTemperature( float &temperature );
+public:
+  TSYS01(SPIInterface_t *spiInterface, IOPinHandle_t *cspin);
+
+  bool begin(float offsetCentiDegC = 0.0, uint32_t signature = 0, uint32_t caltime = 0);
+  void reset(void);
+  bool getTemperature(float &temperature);
   bool checkPROM();
   bool getSerialNumber(uint32_t &sn);
 
 private:
-
-  SPIInterface_t* _SPIInterface;
-  IOPinHandle_t* _CSPin;
-  float _calibrations[5] = { CALIB_4_CONST, CALIB_3_CONST, CALIB_2_CONST, CALIB_1_CONST, CALIB_0_CONST };
+  SPIInterface_t *_SPIInterface;
+  IOPinHandle_t *_CSPin;
+  float _calibrations[NUM_CALIB] = {CALIB_4_CONST, CALIB_3_CONST, CALIB_2_CONST, CALIB_1_CONST,
+                                    CALIB_0_CONST};
   bool calibrated;
   float calibrationOffsetDegC;
   bool no_cal;
 
   bool validatePROM();
-  bool doCommand( uint8_t command, uint32_t waitTimeMs );
-  bool readData( uint8_t address, uint8_t data[] , size_t dataSize);
+  bool doCommand(uint8_t command, uint32_t waitTimeMs);
+  bool readData(uint8_t address, uint8_t data[], size_t dataSize);
 };
 
 #endif //WS_APPS_TSYS01_H
