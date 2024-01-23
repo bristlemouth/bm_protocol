@@ -17,6 +17,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_it.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/sysmem.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/system_stm32u5xx.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/tim.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/usb_otg.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpdma.c

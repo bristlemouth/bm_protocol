@@ -89,8 +89,8 @@ void SystemPower_Config_ext(void);
 #define PAYLOAD_RX_GPIO_Port GPIOA
 #define BB_PL_BUCK_EN_Pin LL_GPIO_PIN_4
 #define BB_PL_BUCK_EN_GPIO_Port GPIOA
-#define BM_SCK_RX3_Pin LL_GPIO_PIN_5
-#define BM_SCK_RX3_GPIO_Port GPIOA
+#define LED_PWM_Pin LL_GPIO_PIN_5
+#define LED_PWM_GPIO_Port GPIOA
 #define BM_MISO_Pin LL_GPIO_PIN_6
 #define BM_MISO_GPIO_Port GPIOA
 #define BM_MOSI_TX3_Pin LL_GPIO_PIN_7

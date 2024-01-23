@@ -115,20 +115,14 @@ void MX_USART3_UART_Init(void)
 
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
   /**USART3 GPIO Configuration
-  PA5   ------> USART3_RX
   PA7   ------> USART3_TX
   */
-  GPIO_InitStruct.Pin = BM_SCK_RX3_Pin|BM_MOSI_TX3_Pin;
+  GPIO_InitStruct.Pin = BM_MOSI_TX3_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_7;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* USART3 interrupt Init */
-  NVIC_SetPriority(USART3_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
-  NVIC_EnableIRQ(USART3_IRQn);
+  LL_GPIO_Init(BM_MOSI_TX3_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN USART3_Init 1 */
 
@@ -139,13 +133,12 @@ void MX_USART3_UART_Init(void)
   USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
   USART_InitStruct.Parity = LL_USART_PARITY_NONE;
   USART_InitStruct.TransferDirection = LL_USART_DIRECTION_TX_RX;
-  USART_InitStruct.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
   USART_InitStruct.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART3, &USART_InitStruct);
   LL_USART_SetTXFIFOThreshold(USART3, LL_USART_FIFOTHRESHOLD_1_8);
   LL_USART_SetRXFIFOThreshold(USART3, LL_USART_FIFOTHRESHOLD_1_8);
   LL_USART_DisableFIFO(USART3);
-  LL_USART_ConfigAsyncMode(USART3);
+  LL_USART_ConfigHalfDuplexMode(USART3);
   LL_USART_Enable(USART3);
   /* USER CODE BEGIN USART3_Init 2 */
 

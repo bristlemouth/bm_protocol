@@ -47,6 +47,7 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
+#include "tim.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
 #include "util.h"
@@ -68,27 +69,6 @@
 #include <string.h>
 
 static void defaultTask(void *parameters);
-
-// Serial console (when no usb present)
-SerialHandle_t usart3 = {
-    .device = USART3,
-    .name = "usart3",
-    .txPin = &BM_MOSI_TX3,
-    .rxPin = &BM_SCK_RX3,
-    .interruptPin = NULL,
-    .txStreamBuffer = NULL,
-    .rxStreamBuffer = NULL,
-    .txBufferSize = 1024,
-    .rxBufferSize = 512,
-    .rxBytesFromISR = serialGenericRxBytesFromISR,
-    .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-    .processByte = NULL,
-    .data = NULL,
-    .enabled = false,
-    .flags = 0,
-    .preTxCb = NULL,
-    .postTxCb = NULL,
-};
 
 // Serial console USB device
 SerialHandle_t usbCLI = {
@@ -137,9 +117,7 @@ cfg::Configuration *systemConfigurationPartition = NULL;
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
-extern "C" void USART3_IRQHandler(void) {
-  serialGenericUartIRQHandler(&usart3);
-}
+extern TIM_HandleTypeDef htim2;
 
 // Only needed if we want the debug commands too
 // extern INA::INA232 *debugIna;
@@ -154,6 +132,10 @@ extern "C" int main(void) {
   SystemClock_Config();
 
   SystemPower_Config_ext();
+
+  MX_TIM2_Init();
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  TIM2->CCR1 = 10000;
 
   // If you NEED to have an interrupt based timer, or other interrupts running before the
   // scheduler starts, you can enable them here. The reason for this is that FreeRTOS will
