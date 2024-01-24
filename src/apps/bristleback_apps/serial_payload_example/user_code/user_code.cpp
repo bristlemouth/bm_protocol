@@ -14,11 +14,16 @@
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
+#define DEFAULT_PWM_LED_DUTY (0.0)
+#define PWM_LED_CCR1 ((int32_t)(led_pwm_duty * 65535) % 65535)
 
 bool led_state = false;
 
 // A buffer to put data from out payload sensor into.
 char payload_buffer[2048];
+
+extern cfg::Configuration* userConfigurationPartition;
+float led_pwm_duty = DEFAULT_PWM_LED_DUTY;
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
@@ -36,6 +41,9 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   IOWrite(&BB_PL_BUCK_EN, 0);
+  // Rewrite LED PWM value based on user config.
+  userConfigurationPartition->getConfig("ledDutyCycle", strlen("ledDutyCycle"), led_pwm_duty);
+  TIM2->CCR1 = PWM_LED_CCR1;
 }
 
 void loop(void) {
