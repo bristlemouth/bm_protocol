@@ -87,14 +87,25 @@ CborError sensor_report_encoder_close_sensor(sensor_report_encoder_context_t &co
 }
 
 /*!
- * @brief Open a sample array for encoding.
+ * @brief Open a sample array for encoding. The first member in the sampe array is the sample type.
  * @param[in] context The encoding context.
  * @param[in] num_sample_members The number of samples in the sensor.
+ * @param[in] sample_type A string defining type of sample.
  * @return Cbor error code.
  */
 CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &context,
-                                            size_t num_sample_members) {
-  return cbor_encoder_create_array(&context.sensor_array, &context.sample_array, num_sample_members);
+                                            size_t num_sample_members,
+                                            const char *sample_type) {
+  CborError err = CborNoError;
+  do {
+    err = cbor_encoder_create_array(&context.sensor_array, &context.sample_array,
+                                    num_sample_members + 1);
+    if (err != CborNoError) {
+      break;
+    }
+    err = cbor_encode_text_stringz(&context.sample_array, sample_type);
+  } while (0);
+  return err;
 }
 
 /*!
@@ -105,8 +116,8 @@ CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &con
  * @return Cbor error code.
  */
 CborError sensor_report_encoder_add_sample_member(sensor_report_encoder_context_t &context,
-                                            sample_encoder_cb sample_member_encoder_cb,
-                                            void *sensor_data) {
+                                                  sample_encoder_cb sample_member_encoder_cb,
+                                                  void *sensor_data) {
   return sample_member_encoder_cb(context.sample_array, sensor_data);
 }
 
