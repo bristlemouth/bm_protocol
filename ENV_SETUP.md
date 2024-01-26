@@ -5,6 +5,9 @@ If you already have your development environment set up, check out the [DEVELOPE
 
 If you're developing on the Bristlemouth Development Kit, see the [BMDK_README.md](./src/apps/bm_devkit/BMDK_README.md)
 
+After you're finished setting everything up for the command line, if you want to build using VS Code, check out
+[`docs/vscode-setup.md`](docs/vscode-setup.md).
+
 ## Initial setup
 ### Install conda
 
