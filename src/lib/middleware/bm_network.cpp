@@ -16,6 +16,18 @@ typedef struct {
 static const char networkTopic[] = "spotter/transmit-data";
 static constexpr uint8_t networkTopicType = 1;
 
+/*! \brief Transmit data via the Spotter's satellite or cellular connection.
+ *
+ * Currently, there are 2 notable limitations on this function.
+ * First, only network type `BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK` shows up in the Sofar Ocean API.
+ * Second, the `data_len` has a realistic max of 311 bytes because
+ * Iridium messages are limited to 340 bytes, and Spotter adds a 29-byte header.
+ *
+ * \param data Pointer to the data to transmit.
+ * \param data_len Length of the data to transmit. Max: 311.
+ * \param type Network type to send over. MUST be BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK.
+ * \return True if the data was successfully queued for transmission.
+ */
 bool spotter_tx_data(const void* data, uint16_t data_len, bm_serial_network_type_e type) {
     bool rval = false;
     size_t msg_len = sizeof(bm_serial_network_data_header_t) + data_len;
