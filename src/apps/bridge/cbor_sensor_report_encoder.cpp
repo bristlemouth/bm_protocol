@@ -87,7 +87,7 @@ CborError sensor_report_encoder_close_sensor(sensor_report_encoder_context_t &co
 }
 
 /*!
- * @brief Open a sample array for encoding. The first member in the sampe array is the sample type.
+ * @brief Open a sample array for encoding. The first member in the sample array is the sample type.
  * @param[in] context The encoding context.
  * @param[in] num_sample_members The number of samples in the sensor.
  * @param[in] sample_type A string defining type of sample.

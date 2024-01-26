@@ -357,7 +357,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     aanderaa_aggregations_t aanderaa_sample =
         (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
     if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS,
-                                          "aandera_current_v0") != CborNoError) {
+                                          "aanderaa_current_v0") != CborNoError) {
       BRIDGE_LOG_PRINT("Failed to open sample in addSamplesToReport\n");
       break;
     }
