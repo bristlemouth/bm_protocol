@@ -38,6 +38,14 @@ extern "C" {
 #define APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TYPE        1
 #define APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_VERSION     1
 
+#define APP_PUB_SUB_BM_BRIDGE_SOFT_IND_TOPIC       "bridge/soft_ind"
+#define APP_PUB_SUB_BM_BRIDGE_SOFT_IND_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SOFT_IND_VERSION     1
+
+#define APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_TOPIC       "bridge/soft_agg"
+#define APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_VERSION     1
+
 typedef struct app_pub_sub_bm_bridge_sensor_report_data {
     uint32_t bm_config_crc32;
     size_t cbor_buffer_len;

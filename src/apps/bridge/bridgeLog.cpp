@@ -21,6 +21,14 @@ void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t l
                 printf("[%s] %.*s", "AANDERAA_AGG", len, str);
                 bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_TYPE, APP_PUB_SUB_BM_BRIDGE_AANDERAA_AGG_VERSION);
                 break;
+            case SOFT_IND:
+                printf("[%s] %.*s", "SOFT_IND", len, str);
+                bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_SOFT_IND_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_SOFT_IND_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_SOFT_IND_TYPE, APP_PUB_SUB_BM_BRIDGE_SOFT_IND_VERSION);
+                break;
+            case SOFT_AGG:
+                printf("[%s] %.*s", "SOFT_AGG", len, str);
+                bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_TYPE, APP_PUB_SUB_BM_BRIDGE_SOFT_AGG_VERSION);
+                break;
             default:
                 printf("ERROR: Unknown sensor type in bridgerSensorLogPrintf\n");
                 break;
