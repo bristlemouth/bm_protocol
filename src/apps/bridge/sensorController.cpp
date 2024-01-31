@@ -106,6 +106,9 @@ static void runController(void *param) {
           if(curr->type == SENSOR_TYPE_AANDERAA){
             Aanderaa_t* aanderaa = static_cast<Aanderaa_t*>(curr);
             aanderaa->aggregate();
+          } else if (curr->type == SENSOR_TYPE_SOFT) {
+            Soft_t *soft = static_cast<Soft_t *>(curr);
+            soft->aggregate();
           }
           curr = curr->next;
         }
