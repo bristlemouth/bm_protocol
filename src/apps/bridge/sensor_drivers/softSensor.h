@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define SOFT_NUM_SAMPLE_MEMBERS 2
+#define SOFT_NUM_SAMPLE_MEMBERS 1
 
 typedef struct soft_aggregations_s {
   double temp_mean_deg_c;

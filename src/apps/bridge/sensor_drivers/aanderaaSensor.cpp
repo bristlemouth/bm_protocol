@@ -73,7 +73,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                      "%.3f,"          // north_cm_s
                      "%.3f,"          // tilt_x_deg
                      "%.3f,"          // tilt_y_deg
-                     "%.3f\n",         // transducer_strength_db
+                     "%.3f\n",        // transducer_strength_db
                      node_id, d.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,

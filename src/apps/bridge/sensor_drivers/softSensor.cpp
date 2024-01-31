@@ -56,7 +56,7 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
                      "%03" PRIu32 "," // reading_time_utc_ms millis part
                      "%" PRIu64 "."   // sensor_reading_time_ms seconds part
                      "%03" PRIu32 "," // sensor_reading_time_ms millis part
-                     "%.3f\n",          // temp_deg_c
+                     "%.3f\n",        // temp_deg_c
                      node_id, soft_data.header.reading_uptime_millis, reading_time_sec,
                       reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                       soft_data.temperature_deg_c);
