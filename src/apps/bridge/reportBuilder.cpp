@@ -1,4 +1,3 @@
-#include "reportBuilder.h"
 #include "FreeRTOS.h"
 #include "aanderaaSensor.h"
 #include "app_config.h"
@@ -15,6 +14,8 @@
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
 #include "timers.h"
+#include "topology_sampler.h"
+#include "reportBuilder.h"
 #include <string.h>
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
@@ -447,7 +448,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
   case SOFT_SENSOR_TYPE: {
     soft_aggregations_t soft_sample =
         (static_cast<soft_aggregations_t *>(sensor_data))[sample_index];
-    if (sensor_report_encoder_open_sample(context, SOFT_NUM_SAMPLE_MEMBERS) != CborNoError) {
+    if (sensor_report_encoder_open_sample(context, SOFT_NUM_SAMPLE_MEMBERS,
+                                          "bm_soft_temp_v0") != CborNoError) {
       BRIDGE_LOG_PRINT("Failed to open soft sample in addSamplesToReport\n");
       break;
     }
