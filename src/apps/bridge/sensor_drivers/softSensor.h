@@ -35,7 +35,7 @@ private:
                              uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/soft";
+  static constexpr char subtag[] = "/bm_soft_temp";
 } Soft_t;
 
 Soft_t* createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms, uint32_t averager_max_samples);
