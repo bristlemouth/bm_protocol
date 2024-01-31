@@ -11,6 +11,7 @@
 #include "util.h"
 
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms
+#define DEFAULT_SOFT_READING_PERIOD_MS 500 // default is 500 ms (2 HZ)
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -24,6 +25,7 @@ typedef struct sensorControllerCtx {
   BridgePowerController *_bridge_power_controller;
   cfg::Configuration *_sys_cfg;
   uint32_t current_reading_period_ms;
+  uint32_t soft_reading_period_ms;
 } sensorsControllerCtx_t;
 
 static sensorsControllerCtx_t _ctx;
@@ -51,6 +53,9 @@ void sensorControllerInit(BridgePowerController *power_controller,
 
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
   _ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS, strlen(AppConfig::CURRENT_READING_PERIOD_MS), _ctx.current_reading_period_ms);
+
+  _ctx.soft_reading_period_ms = DEFAULT_SOFT_READING_PERIOD_MS;
+  _ctx._sys_cfg->getConfig(AppConfig::SOFT_READING_PERIOD_MS, strlen(AppConfig::SOFT_READING_PERIOD_MS), _ctx.soft_reading_period_ms);
 
   BaseType_t rval = xTaskCreate(runController, "Sensor Controller", 128 * 4, NULL,
                                 SENSOR_CONTROLLER_TASK_PRIORITY, &_ctx._task_handle);
@@ -179,12 +184,12 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "bm_soft_module", MIN(reply.app_name_strlen, strlen("bm_soft_module"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          uint32_t current_agg_period_ms = (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
+          uint32_t soft_agg_period_ms = (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
           _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS, strlen(AppConfig::SAMPLE_DURATION_MS),
-                                        current_agg_period_ms);
+                                        soft_agg_period_ms);
             uint32_t AVERAGER_MAX_SAMPLES =
-                (current_agg_period_ms / _ctx.current_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
-            Soft_t * soft_sub = createSoftSub(reply.node_id, current_agg_period_ms, AVERAGER_MAX_SAMPLES);
+                (soft_agg_period_ms / _ctx.soft_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
+            Soft_t * soft_sub = createSoftSub(reply.node_id, soft_agg_period_ms, AVERAGER_MAX_SAMPLES);
             if(soft_sub){
                 abstractSensorAddSensorSub(soft_sub);
             }
