@@ -775,7 +775,7 @@ void bm_topology_last_network_info_cb(void){
  * @param app_name The name of the application associated with the node.
  * @param app_name_len The length of the application name.
  */
-void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len) {
+static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len) {
   (void) app_name_len;
   for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
     if (_node_list.nodes[i] == node_id) {
