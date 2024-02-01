@@ -757,7 +757,21 @@ void bm_topology_last_network_info_cb(void){
   }
 }
 
-
+/**
+ * @brief Updates the sensor type list with the given node ID and application name.
+ *
+ * This function iterates over the node list. If a node with the given ID is found,
+ * the function checks the application name. If the application name is "aanderaa",
+ * the sensor type for that node is set to SENSOR_TYPE_AANDERAA. If the application
+ * name is "bm_soft_module", the sensor type for that node is set to SENSOR_TYPE_SOFT.
+ * This function makes sure that the sensor type list is updated in the same order as
+ * the node list. By default the sensor type list is initialized to SENSOR_TYPE_UNKNOWN,
+ * aka zero's.
+ *
+ * @param node_id The ID of the node to update.
+ * @param app_name The name of the application associated with the node.
+ * @param app_name_len The length of the application name.
+ */
 void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len) {
   (void) app_name_len;
   for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {

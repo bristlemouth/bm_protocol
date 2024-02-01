@@ -1,15 +1,15 @@
 #include "softSensor.h"
-#include "bm_soft_data_msg.h"
 #include "app_config.h"
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_pubsub.h"
+#include "bm_soft_data_msg.h"
 #include "bridgeLog.h"
 #include "device_info.h"
 #include "reportBuilder.h"
 #include "semphr.h"
-#include "util.h"
 #include "stm32_rtc.h"
+#include "util.h"
 #include <new>
 
 bool SoftSensor::subscribe() {
@@ -58,8 +58,8 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
                      "%03" PRIu32 "," // sensor_reading_time_ms millis part
                      "%.3f\n",        // temp_deg_c
                      node_id, soft_data.header.reading_uptime_millis, reading_time_sec,
-                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                      soft_data.temperature_deg_c);
+                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
+                     soft_data.temperature_deg_c);
         if (log_buflen > 0) {
           // TODO - keep as individual log or switch to the bm_sensor common log
           BRIDGE_SENSOR_LOG_PRINTN(SOFT_IND, log_buf, log_buflen);
@@ -86,7 +86,8 @@ void SoftSensor::aggregate(void) {
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       soft_aggs.temp_mean_deg_c = temp_deg_c.getMean();
       soft_aggs.reading_count = reading_count;
-      if (soft_aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN ||soft_aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
+      if (soft_aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN ||
+          soft_aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
         soft_aggs.temp_mean_deg_c = NAN;
       }
     }
@@ -96,19 +97,21 @@ void SoftSensor::aggregate(void) {
       printf("Failed to get RTC time string for Soft aggregation\n");
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
-    log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                          "%s,"          // timstamp(ticks/UTC)
-                          "%" PRIx64 "," // Node Id
-                          "%" PRIu32 "," // reading_count
-                          "%.3f\n",      // temp_mean_deg_c
-                          time_str, node_id, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
+    log_buflen =
+        snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                 "%s,"          // timstamp(ticks/UTC)
+                 "%" PRIx64 "," // Node Id
+                 "%" PRIu32 "," // reading_count
+                 "%.3f\n",      // temp_mean_deg_c
+                 time_str, node_id, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
     if (log_buflen > 0) {
       // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(SOFT_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print soft aggregate log\n");
     }
-    reportBuilderAddToQueue(node_id, SENSOR_TYPE_SOFT, static_cast<void *>(&soft_aggs), sizeof(soft_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_SOFT, static_cast<void *>(&soft_aggs),
+                            sizeof(soft_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     temp_deg_c.clear();
@@ -120,7 +123,8 @@ void SoftSensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-Soft_t* createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms, uint32_t averager_max_samples) {
+Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
+                      uint32_t averager_max_samples) {
   Soft_t *new_sub = static_cast<Soft_t *>(pvPortMalloc(sizeof(Soft_t)));
   new_sub = new (new_sub) Soft_t();
   configASSERT(new_sub);
