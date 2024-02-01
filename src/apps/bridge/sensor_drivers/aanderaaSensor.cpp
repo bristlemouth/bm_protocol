@@ -177,7 +177,7 @@ void AanderaaSensor::aggregate(void) {
     } else {
       printf("ERROR: Failed to print Aanderaa data\n");
     }
-    reportBuilderAddToQueue(node_id, AANDERAA_SENSOR_TYPE, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     abs_speed_cm_s.clear();

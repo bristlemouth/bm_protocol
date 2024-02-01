@@ -182,7 +182,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
                                                  uint8_t sensor_type, void *sensor_data,
                                                  uint32_t sample_counter) {
   switch (sensor_type) {
-  case AANDERAA_SENSOR_TYPE: {
+  case SENSOR_TYPE_AANDERAA: {
     if (element->sample_counter < sample_counter) {
       // Back fill the sensor_data with NANs if we are not on the right sample counter
       // We use the element->sample_counter to track within each element how many samples
@@ -208,7 +208,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     element->sample_counter++;
     break;
   }
-  case SOFT_SENSOR_TYPE: {
+  case SENSOR_TYPE_SOFT: {
     if (element->sample_counter < sample_counter) {
       // Back fill the sensor_data with NANs if we are not on the right sample counter
       // We use the element->sample_counter to track within each element how many samples
@@ -381,7 +381,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                                void *sensor_data, uint32_t sample_index) {
   bool rval = false;
   switch (sensor_type) {
-  case AANDERAA_SENSOR_TYPE: {
+  case SENSOR_TYPE_AANDERAA: {
     aanderaa_aggregations_t aanderaa_sample =
         (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
     if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS,
@@ -444,7 +444,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
-  case SOFT_SENSOR_TYPE: {
+  case SENSOR_TYPE_SOFT: {
     soft_aggregations_t soft_sample =
         (static_cast<soft_aggregations_t *>(sensor_data))[sample_index];
     if (sensor_report_encoder_open_sample(context, SOFT_NUM_SAMPLE_MEMBERS,
@@ -547,7 +547,7 @@ static void report_builder_task(void *parameters) {
                                          _ctx._report_period_node_list[i]);
                       BRIDGE_LOG_PRINTN(buffer, len);
                       switch (_ctx._report_period_sensor_type_list[i]) {
-                      case AANDERAA_SENSOR_TYPE: {
+                      case SENSOR_TYPE_AANDERAA: {
                         _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
                             _ctx._report_period_node_list[i],
                             _ctx._report_period_sensor_type_list[i], NULL,
@@ -555,7 +555,7 @@ static void report_builder_task(void *parameters) {
                             (_ctx._sample_counter - 1));
                         break;
                       }
-                      case SOFT_SENSOR_TYPE: {
+                      case SENSOR_TYPE_SOFT: {
                         _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
                             _ctx._report_period_node_list[i],
                             _ctx._report_period_sensor_type_list[i], NULL,
