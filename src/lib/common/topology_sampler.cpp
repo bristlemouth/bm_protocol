@@ -768,6 +768,9 @@ void bm_topology_last_network_info_cb(void){
  * the node list. By default the sensor type list is initialized to SENSOR_TYPE_UNKNOWN,
  * aka zero's.
  *
+ * Note: This function can only be called in a location that has taken the
+ * _node_list.node_list_mutex.
+ *
  * @param node_id The ID of the node to update.
  * @param app_name The name of the application associated with the node.
  * @param app_name_len The length of the application name.
