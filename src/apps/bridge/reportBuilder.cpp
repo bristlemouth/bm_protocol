@@ -1,3 +1,4 @@
+#include "reportBuilder.h"
 #include "FreeRTOS.h"
 #include "aanderaaSensor.h"
 #include "app_config.h"
@@ -15,7 +16,6 @@
 #include "timer_callback_handler.h"
 #include "timers.h"
 #include "topology_sampler.h"
-#include "reportBuilder.h"
 #include <string.h>
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
@@ -92,8 +92,7 @@ typedef struct ReportBuilderContext_s {
   uint32_t _transmitAggregations;
   ReportBuilderLinkedList _reportBuilderLinkedList;
   uint64_t _report_period_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
-  report_builder_sensor_type_e
-      _report_period_sensor_type_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  abstractSensorType_e _report_period_sensor_type_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   uint32_t _report_period_num_nodes;
   uint32_t _report_period_max_network_crc32;
 } ReportBuilderContext_t;
@@ -520,11 +519,12 @@ static void report_builder_task(void *parameters) {
               app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = NULL;
               uint8_t *cbor_buffer = NULL;
               do {
-                // This num_sensors is for the cbor encoder. We will loop through the sensors type list
-                // and only count the number of sensors that are not UNKNOWN_SENSOR_TYPE
+                // This num_sensors is for the cbor encoder to know how many sensors will be in the report.
+                // We will loop through the sensors type list and only count the number of sensors that are
+                // not UNKNOWN_SENSOR_TYPE.
                 uint32_t num_sensors = 0;
                 for (size_t i = 0; i < _ctx._report_period_num_nodes; i++) {
-                  if (_ctx._report_period_sensor_type_list[i] > UNKNOWN_SENSOR_TYPE) {
+                  if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
                     num_sensors++;
                   }
                 }
@@ -545,7 +545,7 @@ static void report_builder_task(void *parameters) {
                   if (element == NULL) {
                     constexpr size_t bufsize = 80;
                     static char buffer[bufsize];
-                    if (_ctx._report_period_sensor_type_list[i] > UNKNOWN_SENSOR_TYPE) {
+                    if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
                       int len = snprintf(buffer, bufsize,
                                          "No data for node %" PRIx64
                                          " in report period, adding it to the list\n",

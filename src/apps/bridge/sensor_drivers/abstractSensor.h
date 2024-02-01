@@ -3,7 +3,7 @@
 #include "semphr.h"
 #include <stdint.h>
 
-typedef enum abstractSensorType {
+typedef enum abstractSensorType : uint8_t {
     SENSOR_TYPE_UNKNOWN = 0,
     SENSOR_TYPE_AANDERAA = 1,
     SENSOR_TYPE_SOFT = 2,

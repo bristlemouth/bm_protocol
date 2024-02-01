@@ -52,7 +52,7 @@ typedef struct network_configuration_info {
 
 typedef struct node_list {
   uint64_t nodes[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
-  report_builder_sensor_type_e sensor_type[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  abstractSensorType_e sensor_type[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   uint16_t num_nodes;
   SemaphoreHandle_t node_list_mutex;
   network_configuration_info_s last_network_configuration_info;
@@ -395,11 +395,10 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
       if (xQueueReceive(_sys_info_queue, &info_reply,
                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS))) {
 
-        // Call function here that will update the sensor_type list and match a node id to a sensor type
         // This function will use the app name to determine the sensor type and update the _node_list.sensor_type array
-        // so that the reportBuilder can pull the sensor type from the node id. The sensor type array will match the
+        // so that the reportBuilder can pull the sensor type from the node id. The sensor type array must match the
         // order of the node id array. This function call is placed here since it is run from the context of the topology
-        // sampler callback, which will have the _node_list mutex taken.
+        // sampler callback, which will already have the _node_list mutex taken.
         _update_sensor_type_list(info_reply.node_id, info_reply.app_name, info_reply.app_name_strlen);
 
         // If we have a sys info reply coming back, request the cbor map
@@ -679,7 +678,7 @@ bool topology_sampler_get_node_list(uint64_t *node_list, size_t &node_list_size,
   * @param[out] num_nodes The number of nodes in the node list.
   * @param[in] timeout_ms The timeout in milliseconds.
  */
-bool topology_sampler_get_sensor_type_list(report_builder_sensor_type_e *sensor_type_list,
+bool topology_sampler_get_sensor_type_list(abstractSensorType_e *sensor_type_list,
                                            size_t &sensor_type_list_size, uint32_t &num_nodes,
                                            uint32_t timeout_ms) {
   configASSERT(sensor_type_list);
@@ -689,11 +688,11 @@ bool topology_sampler_get_sensor_type_list(report_builder_sensor_type_e *sensor_
       if (!_node_list.num_nodes) {
         break;
       }
-      if (sensor_type_list_size < _node_list.num_nodes * sizeof(report_builder_sensor_type_e)) {
+      if (sensor_type_list_size < _node_list.num_nodes * sizeof(abstractSensorType_e)) {
         break;
       }
       num_nodes = _node_list.num_nodes;
-      sensor_type_list_size = _node_list.num_nodes * sizeof(report_builder_sensor_type_e);
+      sensor_type_list_size = _node_list.num_nodes * sizeof(abstractSensorType_e);
       memcpy(sensor_type_list, _node_list.sensor_type, sensor_type_list_size);
       rval = true;
     } while (0);
@@ -764,12 +763,10 @@ void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_nam
   for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
     if (_node_list.nodes[i] == node_id) {
       if (strncmp(app_name, "aanderaa", strlen("aanderaa")) == 0) {
-        _node_list.sensor_type[i] = AANDERAA_SENSOR_TYPE;
-        printf("Found aanderaa sensor node %" PRIx64 " in the topology sampler!\n", node_id);
+        _node_list.sensor_type[i] = SENSOR_TYPE_AANDERAA;
         break;
       } else if (strncmp(app_name, "bm_soft_module", strlen("bm_soft_module")) == 0) {
-        _node_list.sensor_type[i] = SOFT_SENSOR_TYPE;
-        printf("Found soft sensor node %" PRIx64 " in the topology sampler!\n", node_id);
+        _node_list.sensor_type[i] = SENSOR_TYPE_SOFT;
         break;
       }
     }
