@@ -8,6 +8,11 @@
 
 #define AANDERAA_NUM_SAMPLE_MEMBERS 8
 
+// Clang doesn't have M_TWOPI defined in math.h so for CI tests we define it here.
+#ifdef CI_TEST
+#define M_TWOPI 2*M_PI
+#endif
+
 typedef struct aanderaa_aggregations_s {
   double abs_speed_mean_cm_s;
   double abs_speed_std_cm_s;
