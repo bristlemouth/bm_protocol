@@ -457,11 +457,6 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       BRIDGE_LOG_PRINT("Failed to add soft sample member in addSamplesToReport\n");
       break;
     }
-    // if (sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
-    //                                             &soft_sample.reading_count) != CborNoError) {
-    //   BRIDGE_LOG_PRINT("Failed to add soft sample member in addSamplesToReport\n");
-    //   break;
-    // }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
       BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
       break;

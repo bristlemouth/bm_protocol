@@ -12,12 +12,6 @@ typedef enum {
   REPORT_BUILDER_CHECK_CRC,
 } report_builder_message_e;
 
-typedef enum : uint8_t{
-  UNKNOWN_SENSOR_TYPE = 0,
-  AANDERAA_SENSOR_TYPE = 1,
-  SOFT_SENSOR_TYPE = 2,
-} report_builder_sensor_type_e;
-
 typedef struct {
   report_builder_message_e message_type;
   uint64_t node_id;
