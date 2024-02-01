@@ -253,7 +253,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sm_config_crc_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/aanderaaSensor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/SoftSensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/softSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensorController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cbor_sensor_report_encoder.cpp
