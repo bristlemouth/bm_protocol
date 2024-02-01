@@ -81,6 +81,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                      d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s, d.tilt_x_deg,
                      d.tilt_y_deg, d.transducer_strength_db);
         if (log_buflen > 0) {
+          // TODO - keep as individual log or switch to the bm_sensor common log
           BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
         } else {
           printf("ERROR: Failed to print Aanderaa data\n");
@@ -171,6 +172,7 @@ void AanderaaSensor::aggregate(void) {
                     agg.std_tilt_mean_rad,
                     agg.reading_count);
     if (log_buflen > 0) {
+      // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print Aanderaa data\n");
