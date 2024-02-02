@@ -509,21 +509,21 @@ static void report_builder_task(void *parameters) {
         BRIDGE_LOG_PRINTN(buffer, len);
         if (_ctx._sample_counter >= _ctx._samplesPerReport) {
           if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
+            // This num_sensors is for the cbor encoder to know how many sensors will be in the report.
+            // We will loop through the sensors type list and only count the number of sensors that are
+            // not UNKNOWN_SENSOR_TYPE.
+            uint32_t num_sensors = 0;
+            for (size_t i = 0; i < _ctx._report_period_num_nodes; i++) {
+              if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
+                num_sensors++;
+              }
+            }
             // Need to have more than one node to report anything (1 node would be just the bridge)
-            if (_ctx._report_period_num_nodes > 1) {
+            // We also need more than one managed sensor to report anything.
+            if (_ctx._report_period_num_nodes > 1 && num_sensors > 0) {
               app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = NULL;
               uint8_t *cbor_buffer = NULL;
               do {
-                // This num_sensors is for the cbor encoder to know how many sensors will be in the report.
-                // We will loop through the sensors type list and only count the number of sensors that are
-                // not UNKNOWN_SENSOR_TYPE.
-                uint32_t num_sensors = 0;
-                for (size_t i = 0; i < _ctx._report_period_num_nodes; i++) {
-                  if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
-                    num_sensors++;
-                  }
-                }
-
                 sensor_report_encoder_context_t context;
                 cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
                 configASSERT(cbor_buffer != NULL);
