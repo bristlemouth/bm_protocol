@@ -22,7 +22,6 @@
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
-#include "reportBuilder.h"
 #include "sm_config_crc_list.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
@@ -53,6 +52,7 @@ typedef struct network_configuration_info {
 
 typedef struct node_list {
   uint64_t nodes[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  abstractSensorType_e sensor_type[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   uint16_t num_nodes;
   SemaphoreHandle_t node_list_mutex;
   network_configuration_info_s last_network_configuration_info;
@@ -81,6 +81,8 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
                                       ConfigCborMapSrvReplyMsg::Data &cbor_map_reply);
 static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bufsize);
 
+static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len);
+
 static void topology_sample_cb(networkTopology_t *networkTopology) {
   uint8_t *cbor_buffer = NULL;
   bm_common_network_info_t *network_info = NULL;
@@ -104,6 +106,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     configASSERT(sizeof(_node_list.nodes) >= _node_list.num_nodes * sizeof(uint64_t));
 
     memset(_node_list.nodes, 0, sizeof(_node_list.nodes));
+    memset(_node_list.sensor_type, 0, sizeof(_node_list.sensor_type));
 
     neighborTableEntry_t *cursor = NULL;
     uint16_t counter;
@@ -391,6 +394,13 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
       // Update the network crc with all of the node crcs
       if (xQueueReceive(_sys_info_queue, &info_reply,
                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS))) {
+
+        // This function will use the app name to determine the sensor type and update the _node_list.sensor_type array
+        // so that the reportBuilder can pull the sensor type from the node id. The sensor type array must match the
+        // order of the node id array. This function call is placed here since it is run from the context of the topology
+        // sampler callback, which will already have the _node_list mutex taken.
+        _update_sensor_type_list(info_reply.node_id, info_reply.app_name, info_reply.app_name_strlen);
+
         // If we have a sys info reply coming back, request the cbor map
         if (!config_cbor_map_service_request(info_reply.node_id, CONFIG_CBOR_MAP_PARTITION_ID_SYS,
                                            cbor_config_map_reply_cb,
@@ -662,6 +672,36 @@ bool topology_sampler_get_node_list(uint64_t *node_list, size_t &node_list_size,
 }
 
 /*!
+  * @brief Get the sensor type list from the topology sampler
+  * @param[out] sensor_type_list The sensor type list to populate
+  * @param[in,out] sensor_type_list_size The size of the sensor type list in bytes. Will be updated with the size of the sensor type list in bytes.
+  * @param[out] num_nodes The number of nodes in the node list.
+  * @param[in] timeout_ms The timeout in milliseconds.
+ */
+bool topology_sampler_get_sensor_type_list(abstractSensorType_e *sensor_type_list,
+                                           size_t &sensor_type_list_size, uint32_t &num_nodes,
+                                           uint32_t timeout_ms) {
+  configASSERT(sensor_type_list);
+  bool rval = false;
+  if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(timeout_ms))) {
+    do {
+      if (!_node_list.num_nodes) {
+        break;
+      }
+      if (sensor_type_list_size < _node_list.num_nodes * sizeof(abstractSensorType_e)) {
+        break;
+      }
+      num_nodes = _node_list.num_nodes;
+      sensor_type_list_size = _node_list.num_nodes * sizeof(abstractSensorType_e);
+      memcpy(sensor_type_list, _node_list.sensor_type, sensor_type_list_size);
+      rval = true;
+    } while (0);
+    xSemaphoreGive(_node_list.node_list_mutex);
+  }
+  return rval;
+}
+
+/*!
  * @brief Get the last network configuration from the topology sampler
  * @note This function will allocate memory for the cbor config map, the caller is responsible for freeing it.
  * @param[out] network_crc32 The network crc32
@@ -714,5 +754,38 @@ void bm_topology_last_network_info_cb(void){
                                   _node_list.last_network_configuration_info.cbor_config_map);
     } while (0);
     xSemaphoreGive(_node_list.node_list_mutex);
+  }
+}
+
+/**
+ * @brief Updates the sensor type list with the given node ID and application name.
+ *
+ * This function iterates over the node list. If a node with the given ID is found,
+ * the function checks the application name. If the application name is "aanderaa",
+ * the sensor type for that node is set to SENSOR_TYPE_AANDERAA. If the application
+ * name is "bm_soft_module", the sensor type for that node is set to SENSOR_TYPE_SOFT.
+ * This function makes sure that the sensor type list is updated in the same order as
+ * the node list. By default the sensor type list is initialized to SENSOR_TYPE_UNKNOWN,
+ * aka zero's.
+ *
+ * Note: This function can only be called in a location that has taken the
+ * _node_list.node_list_mutex.
+ *
+ * @param node_id The ID of the node to update.
+ * @param app_name The name of the application associated with the node.
+ * @param app_name_len The length of the application name.
+ */
+static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len) {
+  (void) app_name_len;
+  for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
+    if (_node_list.nodes[i] == node_id) {
+      if (strncmp(app_name, "aanderaa", strlen("aanderaa")) == 0) {
+        _node_list.sensor_type[i] = SENSOR_TYPE_AANDERAA;
+        break;
+      } else if (strncmp(app_name, "bm_soft_module", strlen("bm_soft_module")) == 0) {
+        _node_list.sensor_type[i] = SENSOR_TYPE_SOFT;
+        break;
+      }
+    }
   }
 }

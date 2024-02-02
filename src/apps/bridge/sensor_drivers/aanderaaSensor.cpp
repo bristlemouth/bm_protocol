@@ -73,7 +73,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                      "%.3f,"          // north_cm_s
                      "%.3f,"          // tilt_x_deg
                      "%.3f,"          // tilt_y_deg
-                     "%.3f\n",         // transducer_strength_db
+                     "%.3f\n",        // transducer_strength_db
                      node_id, d.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
@@ -81,6 +81,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                      d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s, d.tilt_x_deg,
                      d.tilt_y_deg, d.transducer_strength_db);
         if (log_buflen > 0) {
+          // TODO - keep as individual log or switch to the bm_sensor common log
           BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
         } else {
           printf("ERROR: Failed to print Aanderaa data\n");
@@ -146,7 +147,7 @@ void AanderaaSensor::aggregate(void) {
     if(!logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
       printf("Failed to get time string for Aanderaa aggregation\n");
       snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
-    };
+    }
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                     "%s,"          // timestamp(ticks/UTC)
                     "%" PRIx64 "," // Node Id
@@ -171,13 +172,12 @@ void AanderaaSensor::aggregate(void) {
                     agg.std_tilt_mean_rad,
                     agg.reading_count);
     if (log_buflen > 0) {
+      // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print Aanderaa data\n");
     }
-    reportBuilderAddToQueue(node_id, AANDERAA_SENSOR_TYPE, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
-    // TODO - send aggregated data to a "report builder" task that will
-    // combine all the data from all the sensors and send it to the spotter
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     abs_speed_cm_s.clear();

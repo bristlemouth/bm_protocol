@@ -10,10 +10,12 @@
 #include "queue.h"
 #include "semphr.h"
 #include "sensorController.h"
+#include "softSensor.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
 #include "timers.h"
+#include "topology_sampler.h"
 #include <string.h>
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
@@ -55,6 +57,8 @@ static aanderaa_aggregations_t NAN_AGG = {.abs_speed_mean_cm_s = NAN,
                                           .std_tilt_mean_rad = NAN,
                                           .reading_count = 0};
 
+static soft_aggregations_t SOFT_NAN_AGG = {.temp_mean_deg_c = NAN, .reading_count = 0};
+
 class ReportBuilderLinkedList {
 private:
   report_builder_element_t *newElement(uint64_t node_id, uint8_t sensor_type, void *sensor_data,
@@ -88,6 +92,7 @@ typedef struct ReportBuilderContext_s {
   uint32_t _transmitAggregations;
   ReportBuilderLinkedList _reportBuilderLinkedList;
   uint64_t _report_period_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  abstractSensorType_e _report_period_sensor_type_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   uint32_t _report_period_num_nodes;
   uint32_t _report_period_max_network_crc32;
 } ReportBuilderContext_t;
@@ -177,7 +182,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
                                                  uint8_t sensor_type, void *sensor_data,
                                                  uint32_t sample_counter) {
   switch (sensor_type) {
-  case AANDERAA_SENSOR_TYPE: {
+  case SENSOR_TYPE_AANDERAA: {
     if (element->sample_counter < sample_counter) {
       // Back fill the sensor_data with NANs if we are not on the right sample counter
       // We use the element->sample_counter to track within each element how many samples
@@ -199,6 +204,29 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
       memcpy(&(static_cast<aanderaa_aggregations_t *>(
                  element->sensor_data))[element->sample_counter],
              &NAN_AGG, sizeof(aanderaa_aggregations_t));
+    }
+    element->sample_counter++;
+    break;
+  }
+  case SENSOR_TYPE_SOFT: {
+    if (element->sample_counter < sample_counter) {
+      // Back fill the sensor_data with NANs if we are not on the right sample counter
+      // We use the element->sample_counter to track within each element how many samples
+      // the element has received.
+      for (; element->sample_counter < sample_counter; element->sample_counter++) {
+        memcpy(&(static_cast<soft_aggregations_t *>(
+                   element->sensor_data))[element->sample_counter],
+               &SOFT_NAN_AGG, sizeof(soft_aggregations_t));
+      }
+    }
+    if (sensor_data != NULL) {
+      memcpy(
+          &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter],
+          sensor_data, sizeof(soft_aggregations_t));
+    } else {
+      memcpy(
+          &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter],
+          &SOFT_NAN_AGG, sizeof(soft_aggregations_t));
     }
     element->sample_counter++;
     break;
@@ -353,7 +381,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                                void *sensor_data, uint32_t sample_index) {
   bool rval = false;
   switch (sensor_type) {
-  case AANDERAA_SENSOR_TYPE: {
+  case SENSOR_TYPE_AANDERAA: {
     aanderaa_aggregations_t aanderaa_sample =
         (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
     if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS,
@@ -416,6 +444,26 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
+  case SENSOR_TYPE_SOFT: {
+    soft_aggregations_t soft_sample =
+        (static_cast<soft_aggregations_t *>(sensor_data))[sample_index];
+    if (sensor_report_encoder_open_sample(context, SOFT_NUM_SAMPLE_MEMBERS,
+                                          "bm_soft_temp_v0") != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to open soft sample in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                                &soft_sample.temp_mean_deg_c) != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to add soft sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_close_sample(context) != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
+      break;
+    }
+    rval = true;
+    break;
+  }
   default: {
     BRIDGE_LOG_PRINT("Received invalid sensor type in addSamplesToReport\n");
     break;
@@ -466,8 +514,16 @@ static void report_builder_task(void *parameters) {
               app_pub_sub_bm_bridge_sensor_report_data_t *message_buff = NULL;
               uint8_t *cbor_buffer = NULL;
               do {
-                // This num_sensors is for the cbor encoder and we subtract one since the bridge is not included in the report
-                uint32_t num_sensors = _ctx._report_period_num_nodes - 1;
+                // This num_sensors is for the cbor encoder to know how many sensors will be in the report.
+                // We will loop through the sensors type list and only count the number of sensors that are
+                // not UNKNOWN_SENSOR_TYPE.
+                uint32_t num_sensors = 0;
+                for (size_t i = 0; i < _ctx._report_period_num_nodes; i++) {
+                  if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
+                    num_sensors++;
+                  }
+                }
+
                 sensor_report_encoder_context_t context;
                 cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(MAX_SENSOR_REPORT_CBOR_LEN));
                 configASSERT(cbor_buffer != NULL);
@@ -484,19 +540,40 @@ static void report_builder_task(void *parameters) {
                   if (element == NULL) {
                     constexpr size_t bufsize = 80;
                     static char buffer[bufsize];
-                    int len = snprintf(buffer, bufsize,
-                                       "No data for node %" PRIx64
-                                       " in report period, adding it to the list\n",
-                                       _ctx._report_period_node_list[i]);
-                    BRIDGE_LOG_PRINTN(buffer, len);
-                    // we have a sensor that may have been added at the end of the report period
-                    // so lets add it to the list and this wil backfill all of the data so we can still send it
-                    // in the report. We will need to pass (_ctx._sample_counter - 1) to make sure we don't overflow the sensor_data buffer.
-                    // Also we will pass NULL into the sensor_data since we don't have any data for it yet and we will fill the whole thing with NANs
-                    _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
-                        _ctx._report_period_node_list[i], AANDERAA_SENSOR_TYPE, NULL,
-                        sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport,
-                        (_ctx._sample_counter - 1));
+                    if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
+                      int len = snprintf(buffer, bufsize,
+                                         "No data for node %" PRIx64
+                                         " in report period, adding it to the list\n",
+                                         _ctx._report_period_node_list[i]);
+                      BRIDGE_LOG_PRINTN(buffer, len);
+                      switch (_ctx._report_period_sensor_type_list[i]) {
+                      case SENSOR_TYPE_AANDERAA: {
+                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
+                            _ctx._report_period_node_list[i],
+                            _ctx._report_period_sensor_type_list[i], NULL,
+                            sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport,
+                            (_ctx._sample_counter - 1));
+                        break;
+                      }
+                      case SENSOR_TYPE_SOFT: {
+                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
+                            _ctx._report_period_node_list[i],
+                            _ctx._report_period_sensor_type_list[i], NULL,
+                            sizeof(soft_aggregations_t), _ctx._samplesPerReport,
+                            (_ctx._sample_counter - 1));
+                        break;
+                      }
+                      default: {
+                        BRIDGE_LOG_PRINT("Invalid sensor type in report_builder_task\n");
+                        break;
+                      }
+                      }
+                    } else {
+                      BRIDGE_LOG_PRINT("Unknown sensor type in report_builder_task\n");
+                      // This is an unkown sensor type (i.e. hello world or something else) so we won't add it to the report.
+                      // So instead, lets continue the for loop to the next node!
+                      continue;
+                    }
                     element = _ctx._reportBuilderLinkedList.findElement(
                         _ctx._report_period_node_list[i]);
                   } else {
@@ -571,6 +648,8 @@ static void report_builder_task(void *parameters) {
           _ctx._report_period_num_nodes = 0;
           _ctx._report_period_max_network_crc32 = 0;
           memset(_ctx._report_period_node_list, 0, sizeof(_ctx._report_period_node_list));
+          memset(_ctx._report_period_sensor_type_list, 0,
+                 sizeof(_ctx._report_period_sensor_type_list));
         }
         break;
       }
@@ -625,6 +704,17 @@ static void report_builder_task(void *parameters) {
                 _ctx._report_period_num_nodes = temp_num_nodes;
                 memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
                 _ctx._report_period_max_network_crc32 = temp_network_crc32;
+                size_t report_period_sensor_type_list_size =
+                    sizeof(_ctx._report_period_sensor_type_list);
+                if (!topology_sampler_get_sensor_type_list(_ctx._report_period_sensor_type_list,
+                                                           report_period_sensor_type_list_size,
+                                                           _ctx._report_period_num_nodes,
+                                                           TOPO_TIMEOUT_MS)) {
+                  BRIDGE_LOG_PRINT("Failed to get the sensor type list in report builder!\n");
+                } else {
+                  BRIDGE_LOG_PRINT("Got sensor type list in report builder!\n");
+                }
+
               } else {
                 BRIDGE_LOG_PRINT("Not updating CRC and topology in report builder, new "
                                  "topology is smaller than the old one!\n");
