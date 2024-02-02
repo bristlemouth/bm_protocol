@@ -22,8 +22,8 @@ typedef struct SoftSensor : public AbstractSensor {
   // Extra sample padding to account for timing slop.
   static constexpr uint32_t N_SAMPLES_PAD = 10;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
-  static constexpr double TEMP_SAMPLE_MEMBER_MIN = -200.0;
-  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 200.0;
+  static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5;
+  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 40;
 
 public:
   bool subscribe() override;
