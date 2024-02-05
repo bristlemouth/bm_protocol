@@ -30,13 +30,13 @@ extern "C" {
 #define APP_PUB_SUB_BM_BRIDGE_PRINTF_TYPE        1
 #define APP_PUB_SUB_BM_BRIDGE_PRINTF_VERSION     1
 
-#define APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_TOPIC       "bridge/bm_common_ind"
-#define APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_TYPE        1
-#define APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_VERSION     1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TOPIC       "bridge/sensor_ind_log"
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_VERSION     1
 
-#define APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_TOPIC       "bridge/bm_common_agg"
-#define APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_TYPE        1
-#define APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_VERSION     1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TOPIC       "bridge/sensor_agg_log"
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TYPE        1
+#define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_VERSION     1
 
 typedef struct app_pub_sub_bm_bridge_sensor_report_data {
     uint32_t bm_config_crc32;

@@ -16,11 +16,11 @@ void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t l
             // TODO - keep as sensor specific logs or switch to the bm_sensor common log
             case BM_COMMON_IND:
                 printf("[%s] %.*s", "BM_COMMON_IND", len, str);
-                bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_TYPE, APP_PUB_SUB_BM_BRIDGE_BM_COMMON_IND_VERSION);
+                bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TYPE, APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_VERSION);
                 break;
             case BM_COMMON_AGG:
                 printf("[%s] %.*s", "BM_COMMON_AGG", len, str);
-                bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_TYPE, APP_PUB_SUB_BM_BRIDGE_BM_COMMON_AGG_VERSION);
+                bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TOPIC, sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TOPIC)-1, reinterpret_cast<const uint8_t*>(str),len, APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TYPE, APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_VERSION);
                 break;
             default:
                 printf("ERROR: Unknown log type in bridgerSensorLogPrintf\n");
