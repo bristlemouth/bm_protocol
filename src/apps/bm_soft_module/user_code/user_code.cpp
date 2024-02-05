@@ -107,7 +107,7 @@ void loop(void) {
                rtcTimeBuffer, temperature);
     bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
-    BmSoftDataMsg::Data d;
+    static BmSoftDataMsg::Data d;
     d.header.version = 1;
     if (rtcValid) {
       d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) * 1e-3;

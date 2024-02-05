@@ -54,7 +54,7 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                      "%" PRIx64 ","   // Node Id
-                     "%" PRIi8, ","   // node_position
+                     "%" PRIi8 ","   // node_position
                      "soft,"          // node_app_name
                      "%" PRIu64 ","   // reading_uptime_millis
                      "%" PRIu64 "."   // reading_time_utc_ms seconds part
