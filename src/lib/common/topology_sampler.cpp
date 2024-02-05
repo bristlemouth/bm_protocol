@@ -702,6 +702,28 @@ bool topology_sampler_get_sensor_type_list(abstractSensorType_e *sensor_type_lis
 }
 
 /*!
+ * @brief Get the node position in the node list from the topology sampler
+ * @param[in] node_id The node id to search for.
+ * @param[in] timeout_ms The timeout in milliseconds.
+ * @return The position of the node in the node list or -1 if not found.
+ */
+int8_t topology_sampler_get_node_position(uint64_t node_id, uint32_t timeout_ms) {
+  int requested_nodes_position = -1;
+  if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(timeout_ms))) {
+    do {
+      for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
+        if (_node_list.nodes[i] == node_id) {
+          requested_nodes_position = i;
+          break;
+        }
+      }
+    } while (0);
+    xSemaphoreGive(_node_list.node_list_mutex);
+  }
+  return requested_nodes_position;
+}
+
+/*!
  * @brief Get the last network configuration from the topology sampler
  * @note This function will allocate memory for the cbor config map, the caller is responsible for freeing it.
  * @param[out] network_crc32 The network crc32

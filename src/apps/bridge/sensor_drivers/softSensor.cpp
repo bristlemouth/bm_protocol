@@ -9,6 +9,7 @@
 #include "reportBuilder.h"
 #include "semphr.h"
 #include "stm32_rtc.h"
+#include "topology_sampler.h"
 #include "util.h"
 #include <new>
 
@@ -48,16 +49,20 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
         uint64_t sensor_reading_time_sec = soft_data.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = soft_data.header.sensor_reading_time_ms % 1000U;
 
+        int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                      "%" PRIx64 ","   // Node Id
+                     "%" PRIi8, ","   // node_position
+                     "soft,"          // node_app_name
                      "%" PRIu64 ","   // reading_uptime_millis
                      "%" PRIu64 "."   // reading_time_utc_ms seconds part
                      "%03" PRIu32 "," // reading_time_utc_ms millis part
                      "%" PRIu64 "."   // sensor_reading_time_ms seconds part
                      "%03" PRIu32 "," // sensor_reading_time_ms millis part
                      "%.3f\n",        // temp_deg_c
-                     node_id, soft_data.header.reading_uptime_millis, reading_time_sec,
+                     node_id, node_position, soft_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      soft_data.temperature_deg_c);
         if (log_buflen > 0) {
@@ -97,13 +102,18 @@ void SoftSensor::aggregate(void) {
       printf("Failed to get RTC time string for Soft aggregation\n");
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
+
+    int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+
     log_buflen =
         snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                 "%s,"          // timstamp(ticks/UTC)
                  "%" PRIx64 "," // Node Id
+                 "%" PRIi8 ","  // node_position
+                 "soft,"        // node_app_name
+                 "%s,"          // timstamp(ticks/UTC)
                  "%" PRIu32 "," // reading_count
                  "%.3f\n",      // temp_mean_deg_c
-                 time_str, node_id, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
+                 node_id, node_position, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
     if (log_buflen > 0) {
       // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
