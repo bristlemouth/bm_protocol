@@ -159,7 +159,7 @@ void AanderaaSensor::aggregate(void) {
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                     "%" PRIx64 "," // Node Id
                     "%" PRIu8 ","  // node_position
-                    "aanderaa,"    // nade_app_name
+                    "aanderaa,"    // node_app_name
                     "%s,"          // timestamp(ticks/UTC)
                     "%" PRIu32 "," // reading_count
                     "%.3f,"        // abs_speed_mean_cm_s
@@ -168,20 +168,18 @@ void AanderaaSensor::aggregate(void) {
                     "%.3f,"        // direction_circ_std_rad
                     "%.3f,"        // temp_mean_deg_c
                     "%.3f,"        // abs_tilt_mean_rad
-                    "%.3f,"        // std_tilt_mean_rad
-                    "%" PRIu32 "\n", // reading_count
+                    "%.3f",        // std_tilt_mean_rad
                     node_id,
                     node_position,
                     timeStrbuf,
-                    abs_speed_cm_s.getNumSamples(),
+                    agg.reading_count,
                     agg.abs_speed_mean_cm_s,
                     agg.abs_speed_std_cm_s,
                     agg.direction_circ_mean_rad,
                     agg.direction_circ_std_rad,
                     agg.temp_mean_deg_c,
                     agg.abs_tilt_mean_rad,
-                    agg.std_tilt_mean_rad,
-                    agg.reading_count);
+                    agg.std_tilt_mean_rad);
     if (log_buflen > 0) {
       // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
