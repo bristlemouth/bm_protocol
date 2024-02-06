@@ -4,10 +4,8 @@
 constexpr size_t SENSOR_LOG_BUF_SIZE = 512;
 
 typedef enum {
-    AANDERAA_IND,
-    AANDERAA_AGG,
-    SOFT_IND,
-    SOFT_AGG
+    BM_COMMON_IND,
+    BM_COMMON_AGG,
 } bridgeSensorLogType_e;
 
 void bridgeLogPrintf(const char *str, size_t len);

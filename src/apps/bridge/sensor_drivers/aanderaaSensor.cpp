@@ -8,8 +8,9 @@
 #include "device_info.h"
 #include "reportBuilder.h"
 #include "semphr.h"
-#include "util.h"
 #include "stm32_rtc.h"
+#include "topology_sampler.h"
+#include "util.h"
 #include <new>
 
 bool AanderaaSensor::subscribe() {
@@ -52,9 +53,13 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         uint64_t sensor_reading_time_sec = d.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = d.header.sensor_reading_time_ms % 1000U;
 
+        int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                      "%" PRIx64 ","   // Node Id
+                     "%" PRIi8 ","    // node_position
+                     "aanderaa,"      // node_app_name
                      "%" PRIu64 ","   // reading_uptime_millis
                      "%" PRIu64 "."   // reading_time_utc_ms seconds part
                      "%03" PRIu32 "," // reading_time_utc_ms millis part
@@ -74,7 +79,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                      "%.3f,"          // tilt_x_deg
                      "%.3f,"          // tilt_y_deg
                      "%.3f\n",        // transducer_strength_db
-                     node_id, d.header.reading_uptime_millis, reading_time_sec,
+                     node_id, node_position, d.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
                      d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.single_ping_std_cm_s,
@@ -82,7 +87,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                      d.tilt_y_deg, d.transducer_strength_db);
         if (log_buflen > 0) {
           // TODO - keep as individual log or switch to the bm_sensor common log
-          BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_IND, log_buf, log_buflen);
+          BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
           printf("ERROR: Failed to print Aanderaa data\n");
         }
@@ -148,32 +153,36 @@ void AanderaaSensor::aggregate(void) {
       printf("Failed to get time string for Aanderaa aggregation\n");
       snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
     }
+
+    int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                    "%s,"          // timestamp(ticks/UTC)
                     "%" PRIx64 "," // Node Id
-                    "%" PRIu32 "," // N Readings
+                    "%" PRIi8 ","  // node_position
+                    "aanderaa,"    // node_app_name
+                    "%s,"          // timestamp(ticks/UTC)
+                    "%" PRIu32 "," // reading_count
                     "%.3f,"        // abs_speed_mean_cm_s
                     "%.3f,"        // abs_speed_std_cm_s
                     "%.3f,"        // direction_circ_mean_rad
                     "%.3f,"        // direction_circ_std_rad
                     "%.3f,"        // temp_mean_deg_c
                     "%.3f,"        // abs_tilt_mean_rad
-                    "%.3f,"        // std_tilt_mean_rad
-                    "%" PRIu32 "\n", // reading_count
-                    timeStrbuf,
+                    "%.3f\n",      // std_tilt_mean_rad
                     node_id,
-                    abs_speed_cm_s.getNumSamples(),
+                    node_position,
+                    timeStrbuf,
+                    agg.reading_count,
                     agg.abs_speed_mean_cm_s,
                     agg.abs_speed_std_cm_s,
                     agg.direction_circ_mean_rad,
                     agg.direction_circ_std_rad,
                     agg.temp_mean_deg_c,
                     agg.abs_tilt_mean_rad,
-                    agg.std_tilt_mean_rad,
-                    agg.reading_count);
+                    agg.std_tilt_mean_rad);
     if (log_buflen > 0) {
       // TODO - keep as individual log or switch to the bm_sensor common log
-      BRIDGE_SENSOR_LOG_PRINTN(AANDERAA_AGG, log_buf, log_buflen);
+      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print Aanderaa data\n");
     }
