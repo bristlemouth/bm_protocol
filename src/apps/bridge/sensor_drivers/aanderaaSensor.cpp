@@ -58,7 +58,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                      "%" PRIx64 ","   // Node Id
-                     "%" PRIu8 ","    // node_position
+                     "%" PRIi8 ","    // node_position
                      "aanderaa,"      // node_app_name
                      "%" PRIu64 ","   // reading_uptime_millis
                      "%" PRIu64 "."   // reading_time_utc_ms seconds part
@@ -158,7 +158,7 @@ void AanderaaSensor::aggregate(void) {
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                     "%" PRIx64 "," // Node Id
-                    "%" PRIu8 ","  // node_position
+                    "%" PRIi8 ","  // node_position
                     "aanderaa,"    // node_app_name
                     "%s,"          // timestamp(ticks/UTC)
                     "%" PRIu32 "," // reading_count
