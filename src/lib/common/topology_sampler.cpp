@@ -708,7 +708,7 @@ bool topology_sampler_get_sensor_type_list(abstractSensorType_e *sensor_type_lis
  * @return The position of the node in the node list or -1 if not found.
  */
 int8_t topology_sampler_get_node_position(uint64_t node_id, uint32_t timeout_ms) {
-  int requested_nodes_position = -1;
+  int8_t requested_nodes_position = -1;
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(timeout_ms))) {
     do {
       for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
