@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 OrderedSeparatorLineParser::OrderedSeparatorLineParser(const char* separator, size_t maxLineLen,
-                                                       ValueType* valueTypes, size_t numValues, const char* header /*= nullptr*/)
+                                                       const ValueType* valueTypes, size_t numValues, const char* header /*= nullptr*/)
     : LineParser(separator, maxLineLen, valueTypes, numValues, header) { }
 
 // Parse the value based on its type

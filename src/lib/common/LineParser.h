@@ -30,7 +30,7 @@ struct Value {
 
 class LineParser {
 public:
-  LineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues,
+  LineParser(const char* separator, size_t maxLineLen, const ValueType* valueTypes, size_t numValues,
              const char* header = nullptr);
     // NOTE - header must be NULL terminated if used!
   bool init();
@@ -45,7 +45,7 @@ private:
 
 protected:
   Value* _values;
-  ValueType* _valueTypes;
+  const ValueType* _valueTypes;
   const char* _separator;
   size_t _maxLineLen;
   size_t _numValues;
