@@ -168,7 +168,7 @@ void AanderaaSensor::aggregate(void) {
                     "%.3f,"        // direction_circ_std_rad
                     "%.3f,"        // temp_mean_deg_c
                     "%.3f,"        // abs_tilt_mean_rad
-                    "%.3f",        // std_tilt_mean_rad
+                    "%.3f\n",      // std_tilt_mean_rad
                     node_id,
                     node_position,
                     timeStrbuf,
