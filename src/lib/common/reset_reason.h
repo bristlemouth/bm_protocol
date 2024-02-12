@@ -10,6 +10,8 @@ extern "C" {
 // This value is stored in .noinit to confirm the data in the .noinit ResetReason was set intentionally prior to boot.
 #define RESET_REASON_MAGIC 0xB8278F7D
 
+#define BROWNOUT_MAGIC 0x1A2B3C4D
+
 typedef enum {
     RESET_REASON_NONE = 0,
     RESET_REASON_DEBUG_RESET,
@@ -19,6 +21,8 @@ typedef enum {
     RESET_REASON_CONFIG,
     RESET_REASON_UPDATE_FAILED,
     RESET_REASON_MICROPYTHON,
+    RESET_REASON_BROWNOUT,
+    RESET_REASON_BUTTON_RESET,
 
     RESET_REASON_INVALID,   // make sure this is always the last enum
     // If adding additional reset reasons, make sure they fit inside

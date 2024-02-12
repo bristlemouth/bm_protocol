@@ -11,6 +11,7 @@
 // Peripheral includes for MX_ init functions
 #include "gpdma.h"
 #include "gpio.h"
+#include "flash.h"
 #include "icache.h"
 #include "iwdg.h"
 #include "usart.h"
@@ -82,4 +83,5 @@ void mxInit(void) {
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_IWDG_Init();
+  MX_FLASH_Init();
 }
