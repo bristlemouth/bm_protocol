@@ -157,7 +157,7 @@ void RbrCodaSensor::aggregate(void) {
                  node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
                  aggs.temp_mean_deg_c, aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar);
     if (log_buflen > 0) {
-      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
+      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print rbr_coda aggregation log\n");
     }
