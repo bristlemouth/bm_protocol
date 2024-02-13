@@ -2,18 +2,21 @@
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
 #include "avgSampler.h"
+#include "bm_rbr_data_msg.h"
 #include "sensorController.h"
 
 #include <stdint.h>
 #include <stdlib.h>
 
-#define RBR_CODA_MAX_NUM_SAMPLE_MEMBERS 3
+#define RBR_CODA_NUM_SAMPLE_MEMBERS 3
+
 
 typedef struct rbr_coda_aggregations_s {
   double temp_mean_deg_c;
   double pressure_mean_ubar;
   double pressure_stdev_ubar;
   uint32_t reading_count;
+  BmRbrDataMsg::SensorType_t sensor_type;
 } rbr_coda_aggregations_t;
 
 typedef struct RbrCodaSensor : public AbstractSensor {
@@ -21,6 +24,7 @@ typedef struct RbrCodaSensor : public AbstractSensor {
   AveragingSampler temp_deg_c;
   AveragingSampler pressure_ubar;
   uint32_t reading_count;
+  BmRbrDataMsg::SensorType_t latest_sensor_type;
 
   // TODO - double check these values
   static constexpr uint32_t N_SAMPLES_PAD = 270;

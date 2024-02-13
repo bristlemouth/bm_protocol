@@ -33,7 +33,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
   printf("RBR CODA data received from node %" PRIx64 " On topic: %.*s\n", node_id, topic_len,
         topic);
   RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id));
-  if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR) {
+  if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR_CODA) {
     if (xSemaphoreTake(rbr_coda->_mutex, portMAX_DELAY)) {
       static BmRbrDataMsg::Data rbr_data;
       if (BmRbrDataMsg::decode(rbr_data, data, data_len) == CborNoError) {
@@ -42,7 +42,9 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         rbr_coda->temp_deg_c.addSample(rbr_data.temperature_deg_c);
         rbr_coda->pressure_ubar.addSample(rbr_data.pressure_deci_bar);
         rbr_coda->reading_count++;
-
+        // Update the RBR CODA's latest sensor type
+        // TODO - verify that we should do this here v.s. when we aggregate. Although I'm not sure if we will be able to do that in the aggregate function.
+        rbr_coda->latest_sensor_type = rbr_data.sensor_type;
         // Large floats get formatted in scientific notation,
         // so we print integer seconds and millis separately.
         uint64_t reading_time_sec = rbr_data.header.reading_time_utc_ms / 1000U;
@@ -52,11 +54,23 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
 
         int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
 
+        // Use the latest sensor type to determine the sensor type string
+        const char *sensor_type_str;
+        if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
+          sensor_type_str = "RBR.T";
+        } else if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
+          sensor_type_str = "RBR.D";
+        } else if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+          sensor_type_str = "RBR.DT";
+        } else {
+          sensor_type_str = "RBR.UNKNOWN";
+        }
+
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                      "%" PRIx64 ","   // Node Id
                      "%" PRIi8 ","    // node_position
-                     "rbr_coda,"      // node_app_name
+                     "%s,"            // node_app_name
                      "%" PRIu64 ","   // reading_uptime_millis
                      "%" PRIu64 "."   // reading_time_utc_ms seconds part
                      "%03" PRIu32 "," // reading_time_utc_ms millis part
@@ -65,7 +79,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
                      "%.3f,"          // temperature_deg_c
                      "%.3f,"          // pressure_ubar
                      "%" PRIu32 "\n", // reading_count
-                     node_id, node_position, rbr_data.header.reading_uptime_millis, reading_time_sec,
+                     node_id, node_position, sensor_type_str, rbr_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar, rbr_coda->reading_count);
         if (log_buflen > 0) {
@@ -90,7 +104,9 @@ void RbrCodaSensor::aggregate(void) {
     rbr_coda_aggregations_t aggs = {.temp_mean_deg_c = NAN,
                                     .pressure_mean_ubar = NAN,
                                     .pressure_stdev_ubar = NAN,
-                                    .reading_count = 0};
+                                    .reading_count = 0,
+                                    .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN};
+    aggs.sensor_type = latest_sensor_type;
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
       aggs.pressure_mean_ubar = pressure_ubar.getMean();
@@ -116,24 +132,37 @@ void RbrCodaSensor::aggregate(void) {
 
     int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
 
+    // Use the latest sensor type to determine the sensor type string
+    // TODO - this is duplicated from the callback function. Should we make this a function?
+    const char *sensor_type_str;
+    if (latest_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
+      sensor_type_str = "RBR.T";
+    } else if (latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
+      sensor_type_str = "RBR.D";
+    } else if (latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+      sensor_type_str = "RBR.DT";
+    } else {
+      sensor_type_str = "RBR.UNKNOWN";
+    }
+
     log_buflen =
         snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                  "%" PRIx64 "," // Node Id
                  "%" PRIi8 ","  // node_position
-                 "rbr_coda,"    // node_app_name
+                 "%s,"          // node_app_name
                  "%s,"          // timeStamp(ticks/UTC)
                  "%" PRIu32","  // reading_count
                  "%.3f,"        // temp_mean_deg_c
                  "%.3f,"        // pressure_mean_ubar
                  "%.3f\n",        // pressure_stdev_ubar
-                 node_id, node_position, time_str, aggs.reading_count, aggs.temp_mean_deg_c,
-                 aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar);
+                 node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
+                 aggs.temp_mean_deg_c, aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print rbr_coda aggregation log\n");
     }
-    reportBuilderAddToQueue(node_id, SENSOR_TYPE_RBR, static_cast<void *>(&aggs),
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_RBR_CODA, static_cast<void *>(&aggs),
                             sizeof(rbr_coda_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     temp_deg_c.clear();
     pressure_ubar.clear();
@@ -155,7 +184,7 @@ RbrCoda_t* createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   configASSERT(new_sub->_mutex);
 
   new_sub->node_id = node_id;
-  new_sub->type = SENSOR_TYPE_RBR;
+  new_sub->type = SENSOR_TYPE_RBR_CODA;
   new_sub->next = NULL;
   new_sub->rbr_coda_agg_period_ms = rbr_coda_agg_period_ms;
   new_sub->temp_deg_c.initBuffer(averager_max_samples);

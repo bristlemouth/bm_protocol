@@ -8,6 +8,7 @@
 #include "cbor_sensor_report_encoder.h"
 #include "device_info.h"
 #include "queue.h"
+#include "rbrCodaSensor.h"
 #include "semphr.h"
 #include "sensorController.h"
 #include "softSensor.h"
@@ -58,6 +59,12 @@ static aanderaa_aggregations_t NAN_AGG = {.abs_speed_mean_cm_s = NAN,
                                           .reading_count = 0};
 
 static soft_aggregations_t SOFT_NAN_AGG = {.temp_mean_deg_c = NAN, .reading_count = 0};
+
+static rbr_coda_aggregations_t RBR_CODA_NAN_AGG = {.temp_mean_deg_c = NAN,
+                                                   .pressure_mean_ubar = NAN,
+                                                   .pressure_stdev_ubar = NAN,
+                                                   .reading_count = 0,
+                                                   .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN};
 
 class ReportBuilderLinkedList {
 private:
@@ -227,6 +234,23 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
       memcpy(
           &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter],
           &SOFT_NAN_AGG, sizeof(soft_aggregations_t));
+    }
+    element->sample_counter++;
+    break;
+  }
+  case SENSOR_TYPE_RBR_CODA: {
+    if (element->sample_counter < sample_counter) {
+      // Back fill the sensor_data with NANs if we are not on the right sample counter
+      // We use the element->sample_counter to track within each element how many samples
+      // the element has received.
+      for(; element->sample_counter < sample_counter; element->sample_counter++) {
+        memcpy(&(static_cast<rbr_coda_aggregations_t *>(element->sensor_data))[element->sample_counter], &RBR_CODA_NAN_AGG, sizeof(rbr_coda_aggregations_t));
+      }
+    }
+    if (sensor_data != NULL) {
+      memcpy(&(static_cast<rbr_coda_aggregations_t *>(element->sensor_data))[element->sample_counter], sensor_data, sizeof(rbr_coda_aggregations_t));
+    } else {
+      memcpy(&(static_cast<rbr_coda_aggregations_t *>(element->sensor_data))[element->sample_counter], &RBR_CODA_NAN_AGG, sizeof(rbr_coda_aggregations_t));
     }
     element->sample_counter++;
     break;
@@ -455,6 +479,58 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &soft_sample.temp_mean_deg_c) != CborNoError) {
       BRIDGE_LOG_PRINT("Failed to add soft sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_close_sample(context) != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
+      break;
+    }
+    rval = true;
+    break;
+  }
+  case SENSOR_TYPE_RBR_CODA: {
+    rbr_coda_aggregations_t rbr_coda_sample = (static_cast<rbr_coda_aggregations_t *>(sensor_data))[sample_index];
+    bool rbr_coda_sample_valid = false;
+    switch(rbr_coda_sample.sensor_type) {
+      case BmRbrDataMsg::SensorType::TEMPERATURE: {
+        if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS, "bm_rbr_t_v0") != CborNoError) {
+          BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        }
+        rbr_coda_sample_valid = true;
+        break;
+      }
+      case BmRbrDataMsg::SensorType::PRESSURE: {
+        if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS, "bm_rbr_d_v0") != CborNoError) {
+          BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        }
+        rbr_coda_sample_valid = true;
+        break;
+      }
+      case BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE: {
+        if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS, "bm_rbr_td_v0") != CborNoError) {
+          BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        }
+        rbr_coda_sample_valid = true;
+        break;
+      }
+      default: {
+        BRIDGE_LOG_PRINT("Received invalid rbr type in addSamplesToReport\n");
+        break;
+      }
+    }
+    if (!rbr_coda_sample_valid) {
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &rbr_coda_sample.temp_mean_deg_c) != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &rbr_coda_sample.pressure_mean_ubar) != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member, &rbr_coda_sample.pressure_stdev_ubar) != CborNoError) {
+      BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
