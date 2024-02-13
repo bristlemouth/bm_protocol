@@ -9,7 +9,7 @@
 
 class OrderedSeparatorLineParser : public LineParser {
 public:
-  OrderedSeparatorLineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues,
+  OrderedSeparatorLineParser(const char* separator, size_t maxLineLen, const ValueType* valueTypes, size_t numValues,
                              const char* header = nullptr);
 
 private:

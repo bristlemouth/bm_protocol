@@ -7,7 +7,7 @@
 #include "util.h"
 #include <cstdlib>
 
-LineParser::LineParser(const char* separator, size_t maxLineLen, ValueType* valueTypes, size_t numValues,
+LineParser::LineParser(const char* separator, size_t maxLineLen, const ValueType* valueTypes, size_t numValues,
                        const char* header /*= nullptr*/) :
   _values(nullptr),
   _valueTypes(valueTypes),

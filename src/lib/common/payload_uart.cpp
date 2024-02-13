@@ -36,8 +36,7 @@ static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
   if (_useLineBuffer) {
     // This function requires data to be a pointer to a SerialLineBuffer_t
     configASSERT(handle->data != NULL);
-    SerialLineBuffer_t *lineBuffer =
-        reinterpret_cast<SerialLineBuffer_t *>(handle->data);
+    SerialLineBuffer_t *lineBuffer = reinterpret_cast<SerialLineBuffer_t *>(handle->data);
     // We need a buffer to use!
     configASSERT(lineBuffer->buffer != NULL);
     lineBuffer->buffer[lineBuffer->idx] = byte;
@@ -51,7 +50,7 @@ static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
       }
       // Reset buffer index
       lineBuffer->idx = 0;
-//    printf("buffer reset!\n");
+      //    printf("buffer reset!\n");
     } else {
       lineBuffer->idx++;
       // Heavy handed way of dealing with overflow for now
@@ -89,25 +88,17 @@ static void processLine(void *serialHandle, uint8_t *line, size_t len) {
 
 char getTerminationCharacter() { return terminationCharacter; }
 
-void setTerminationCharacter(char term_char) {
-  terminationCharacter = term_char;
-}
+void setTerminationCharacter(char term_char) { terminationCharacter = term_char; }
 
 bool getUseLineBuffer() { return _useLineBuffer; }
 
-void setUseLineBuffer(bool enable) {
-  _useLineBuffer = enable;
-}
+void setUseLineBuffer(bool enable) { _useLineBuffer = enable; }
 
-  bool getUseByteStreamBuffer() { return _useByteStreamBuffer; }
+bool getUseByteStreamBuffer() { return _useByteStreamBuffer; }
 
-  void setUseByteStreamBuffer(bool enable) {
-    _useByteStreamBuffer = enable;
-  }
+void setUseByteStreamBuffer(bool enable) { _useByteStreamBuffer = enable; }
 
-bool byteAvailable(void) {
-  return (!xStreamBufferIsEmpty(user_byte_stream_buffer));
-}
+bool byteAvailable(void) { return (!xStreamBufferIsEmpty(user_byte_stream_buffer)); }
 
 bool lineAvailable(void) {
   bool rval = false;
@@ -115,6 +106,19 @@ bool lineAvailable(void) {
   rval = _user_line.ready;
   xSemaphoreGive(_user_line.mutex);
   return rval;
+}
+
+void reset(void) {
+  disable(); // Disable the UART
+  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
+  // Clear the line buffer state
+  memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
+  _user_line.len = 0;
+  _user_line.ready = false;
+  xSemaphoreGive(_user_line.mutex);
+  // Clear the user byte stream buffer
+  xStreamBufferReset(user_byte_stream_buffer);
+  enable(); // Reeable the UART
 }
 
 uint8_t readByte(void) {
@@ -127,13 +131,13 @@ uint16_t readLine(char *buffer, size_t len) {
   int16_t rval = 0;
   size_t copy_len;
 
+  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
   if (len > _user_line.len) {
     copy_len = _user_line.len;
   } else {
     copy_len = len;
   }
 
-  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
   memcpy(buffer, _user_line.buffer, copy_len);
   memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
   _user_line.ready = false;
@@ -142,9 +146,7 @@ uint16_t readLine(char *buffer, size_t len) {
   return rval;
 }
 
-void write(uint8_t *buffer, size_t len) {
-  serialWrite(&PLUART::uart_handle, buffer, len);
-}
+void write(uint8_t *buffer, size_t len) { serialWrite(&PLUART::uart_handle, buffer, len); }
 
 void setBaud(uint32_t new_baud_rate) {
   LL_LPUART_SetBaudRate(static_cast<USART_TypeDef *>(uart_handle.device),
@@ -154,11 +156,13 @@ void setBaud(uint32_t new_baud_rate) {
 
 void enable(void) { serialEnable(&uart_handle); }
 
+void disable(void) { serialDisable(&uart_handle); }
+
 // variable definitions
 static uint8_t lpUart1Buffer[LPUART1_LINE_BUFF_LEN];
 SerialLineBuffer_t lpUART1LineBuffer = {
-    .buffer = lpUart1Buffer, // pointer to the buffer memory
-    .idx = 0,                // variable to store current index in the buffer
+    .buffer = lpUart1Buffer,      // pointer to the buffer memory
+    .idx = 0,                     // variable to store current index in the buffer
     .len = sizeof(lpUart1Buffer), // total size of buffer
     .lineCallback =
         processLine // lineCallback callback function to call when a line is complete (glued together in the UART handle's byte callback).
@@ -175,7 +179,8 @@ SerialHandle_t uart_handle = {
     .rxBufferSize = 2048,
     .rxBytesFromISR = serialGenericRxBytesFromISR,
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-    .processByte = processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
+    .processByte =
+        processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
     .data = &lpUART1LineBuffer, // Pointer to the line buffer this handle should use
     .enabled = false,
     .flags = 0,
@@ -198,10 +203,9 @@ BaseType_t init(uint8_t task_priority) {
   configASSERT(uart_handle.txStreamBuffer != NULL);
   uart_handle.rxStreamBuffer = xStreamBufferCreate(uart_handle.rxBufferSize, 1);
   configASSERT(uart_handle.rxStreamBuffer != NULL);
-  BaseType_t rval =
-      xTaskCreate(serialGenericRxTask, "LPUartRx",
-                  // TODO - verify stack size
-                  2048, &PLUART::uart_handle, task_priority, NULL);
+  BaseType_t rval = xTaskCreate(serialGenericRxTask, "LPUartRx",
+                                // TODO - verify stack size
+                                2048, &PLUART::uart_handle, task_priority, NULL);
   configASSERT(rval == pdTRUE);
 
   return rval;

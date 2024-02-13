@@ -12,6 +12,8 @@ void setBaud(uint32_t new_baud_rate);
 // Enable the payload UART
 void enable(void);
 
+void disable(void);
+
 // Return true if there is a byte to read, otherwise return false
 bool byteAvailable(void);
 
@@ -36,8 +38,11 @@ bool getUseLineBuffer();
 void setUseLineBuffer(bool enable);
 
 // Getter and setter for _useByteStreamBuffer
-  bool getUseByteStreamBuffer();
-  void setUseByteStreamBuffer(bool enable);
+bool getUseByteStreamBuffer();
+void setUseByteStreamBuffer(bool enable);
+
+// Clear the uart buffer and reset the uart
+void reset(void);
 
 // Setup Rx and Tx stream buffers, and start the Rx handler task LPUartRx
 BaseType_t init(uint8_t task_priority);

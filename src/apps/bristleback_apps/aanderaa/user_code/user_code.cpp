@@ -110,7 +110,7 @@ static const char lineHeader[] = "MEASUREMENT";
 // Let's use 64 bit doubles for everything.
 //   We've got luxurious amounts of RAM on this chip, and it's much easier to avoid roll-overs and precision issues
 //   by using it vs. troubleshooting them because we prematurely optimized things.
-static ValueType valueTypes[NUM_PARAMS_TO_AGG] = {
+static const ValueType valueTypes[NUM_PARAMS_TO_AGG] = {
     TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
     TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
     TYPE_DOUBLE,

@@ -75,7 +75,7 @@ char payload_buffer[2048];
 // For unsigned ints, let's use 64 bits, and for floating point let's use 64 bit doubles.
 //   We've got luxurious amounts of RAM on this chip, and it's much easier to avoid roll-overs and precision issues
 //   by using it vs. troubleshooting them because we prematurely optimized things.
-ValueType valueTypes[] = {TYPE_UINT64, TYPE_DOUBLE};
+const ValueType valueTypes[] = {TYPE_UINT64, TYPE_DOUBLE};
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
 OrderedSeparatorLineParser parser(",", 256, valueTypes, 2);
