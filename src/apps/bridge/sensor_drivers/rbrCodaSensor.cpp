@@ -77,11 +77,10 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
                      "%" PRIu64 ","   // sensor_reading_time_ms seconds part
                      "%03" PRIu32 "," // sensor_reading_time_ms millis part
                      "%.3f,"          // temperature_deg_c
-                     "%.3f,"          // pressure_ubar
-                     "%" PRIu32 "\n", // reading_count
+                     "%.3f\n",          // pressure_ubar
                      node_id, node_position, sensor_type_str, rbr_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar, rbr_coda->reading_count);
+                     rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
