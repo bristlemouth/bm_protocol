@@ -64,3 +64,21 @@
     bsp: bm_mote_v1.0
     build_type: Debug
   sign: false
+
+- name: bm_soft_module_release
+  description: BM Soft Module - Release
+  type: build_fw
+  args:
+    app: bm_soft_module
+    bsp: bm_mote_spi_v1_0
+    build_type: Release
+  sign: true
+
+- name: bm_rbr_release
+  description: BM RBR - Release
+  type: build_fw
+  args:
+    app: bm_rbr
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+  sign: true
