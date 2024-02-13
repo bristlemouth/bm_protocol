@@ -66,7 +66,6 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      soft_data.temperature_deg_c);
         if (log_buflen > 0) {
-          // TODO - keep as individual log or switch to the bm_sensor common log
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
           printf("ERROR: Failed to print soft individual log\n");
