@@ -22,7 +22,7 @@ bool RbrCodaSensor::subscribe() {
     rval = bm_sub_wl(sub, topic_strlen, rbrCodaSubCallback);
   }
   vPortFree(sub);
-  return
+  return rval;
 }
 
 void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -38,9 +38,9 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
       static BmRbrDataMsg::Data rbr_data;
       if (BmRbrDataMsg::decode(rbr_data, data, data_len) == CborNoError) {
         char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
-        configAssert(log_buf);
+        configASSERT(log_buf);
         rbr_coda->temp_deg_c.addSample(rbr_data.temperature_deg_c);
-        rbr_coda->pressure_ubar.addSample(rbr_data.pressure_ubar);
+        rbr_coda->pressure_ubar.addSample(rbr_data.pressure_deci_bar);
         rbr_coda->reading_count++;
 
         // Large floats get formatted in scientific notation,
@@ -62,12 +62,12 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
                      "%03" PRIu32 "," // reading_time_utc_ms millis part
                      "%" PRIu64 ","   // sensor_reading_time_ms seconds part
                      "%03" PRIu32 "," // sensor_reading_time_ms millis part
-                     "%.2f,"          // temperature_deg_c
-                     "%.2f,"          // pressure_ubar
+                     "%.3f,"          // temperature_deg_c
+                     "%.3f,"          // pressure_ubar
                      "%" PRIu32 "\n", // reading_count
-                     node_id, node_position, rbr_data.header.reading_uptime_ms, reading_time_sec,
+                     node_id, node_position, rbr_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     rbr_data.temperature_deg_c, rbr_data.pressure_ubar, rbr_coda->reading_count);
+                     rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar, rbr_coda->reading_count);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
@@ -84,7 +84,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
 
 void RbrCodaSensor::aggregate(void) {
   char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
-  configAssert(log_buf);
+  configASSERT(log_buf);
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
     size_t log_buflen = 0;
     rbr_coda_aggregations_t aggs = {.temp_mean_deg_c = NAN,
@@ -121,14 +121,13 @@ void RbrCodaSensor::aggregate(void) {
                  "%" PRIx64 "," // Node Id
                  "%" PRIi8 ","  // node_position
                  "rbr_coda,"    // node_app_name
-                 "%" PRIu64 "," // reading_uptime_millis
-                 "%s,"          // time_str
-                 "%.2f,"         // temp_mean_deg_c
-                 "%.2f,"         // pressure_mean_ubar
-                 "%.2f,"         // pressure_stdev_ubar
-                 "%" PRIu32 "\n", // reading_count
-                 node_id, node_position, aggs.reading_uptime_millis, time_str, aggs.temp_mean_deg_c,
-                 aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar, aggs.reading_count);
+                 "%s,"          // timeStamp(ticks/UTC)
+                 "%" PRIu32","  // reading_count
+                 "%.3f,"        // temp_mean_deg_c
+                 "%.3f,"        // pressure_mean_ubar
+                 "%.3f\n",        // pressure_stdev_ubar
+                 node_id, node_position, time_str, aggs.reading_count, aggs.temp_mean_deg_c,
+                 aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
     } else {
@@ -150,17 +149,17 @@ RbrCoda_t* createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
                             uint32_t averager_max_samples) {
   RbrCoda_t *new_sub = static_cast<RbrCoda_t *>(pvPortMalloc(sizeof(RbrCoda_t)));
   new_sub = new (std::nothrow) RbrCoda_t;
-  configAssert(new_sub);
+  configASSERT(new_sub);
 
   new_sub->_mutex = xSemaphoreCreateMutex();
-  configAssert(new_sub->_mutex);
+  configASSERT(new_sub->_mutex);
 
   new_sub->node_id = node_id;
   new_sub->type = SENSOR_TYPE_RBR;
   new_sub->next = NULL;
   new_sub->rbr_coda_agg_period_ms = rbr_coda_agg_period_ms;
-  new_sub->temp_deg_c.init(averager_max_samples);
-  new_sub->pressure_ubar.init(averager_max_samples);
+  new_sub->temp_deg_c.initBuffer(averager_max_samples);
+  new_sub->pressure_ubar.initBuffer(averager_max_samples);
   new_sub->reading_count = 0;
   return new_sub;
 }

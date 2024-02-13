@@ -10,6 +10,7 @@ typedef enum abstractSensorType : uint8_t {
     SENSOR_TYPE_RBR_T = 3,
     SENSOR_TYPE_RBR_D = 4,
     SENSOR_TYPE_RBR_DT = 5,
+    SENSOR_TYPE_RBR = 6,
 } abstractSensorType_e;
 
 struct AbstractSensor {
