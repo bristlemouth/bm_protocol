@@ -194,3 +194,28 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   new_sub->reading_count = 0;
   return new_sub;
 }
+
+BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaSensorType(void) {
+  // TODO - here we need to call topology_sampler_alloc_last_network_config
+  // and then we will need to decode the cbor map in order to find the
+  // rbr sensor type.
+
+  // we should call this function in the aggregate function to get the sensor type
+  // so that way we stamp the sample with the correct sensor type that will be
+  // associated with the crc at the moment of the aggregation. This will
+  // tell the Spotter if the sensor type changes or we will 100% know the
+  // sensor type is the same as the one from the config that will associated
+  // with that message.
+  BmRbrDataMsg::SensorType current_sensor_type = BmRbrDataMsg::SensorType::UNKNOWN;
+
+  uint32_t network_crc32 = 0;
+  uint32_t cbor_config_size = 0;
+  uint8_t *network_config = topology_sampler_alloc_last_network_config(network_crc32, cbor_config_size);
+
+  if (network_config != NULL) {
+    // TODO - decode the cbor map to find the rbr sensor type
+    // and then return the sensor type.
+    vPortFree(network_config);
+  }
+  return current_sensor_type;
+}
