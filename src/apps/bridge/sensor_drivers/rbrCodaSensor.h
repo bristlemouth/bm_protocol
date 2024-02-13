@@ -44,7 +44,7 @@ private:
                                  uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/rbr_coda";
+  static constexpr char subtag[] = "/bm_rbr_data";
 } RbrCoda_t;
 
 RbrCoda_t* createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms, uint32_t averager_max_samples);

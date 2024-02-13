@@ -177,7 +177,7 @@ void RbrCodaSensor::aggregate(void) {
 RbrCoda_t* createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
                             uint32_t averager_max_samples) {
   RbrCoda_t *new_sub = static_cast<RbrCoda_t *>(pvPortMalloc(sizeof(RbrCoda_t)));
-  new_sub = new (std::nothrow) RbrCoda_t;
+  new_sub = new (new_sub) RbrCoda_t();
   configASSERT(new_sub);
 
   new_sub->_mutex = xSemaphoreCreateMutex();
