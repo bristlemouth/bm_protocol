@@ -646,6 +646,14 @@ static void report_builder_task(void *parameters) {
                             (_ctx._sample_counter - 1));
                         break;
                       }
+                      case SENSOR_TYPE_RBR: {
+                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
+                            _ctx._report_period_node_list[i],
+                            _ctx._report_period_sensor_type_list[i], NULL,
+                            sizeof(rbr_coda_aggregations_t), _ctx._samplesPerReport,
+                            (_ctx._sample_counter - 1));
+                        break;
+                      }
                       default: {
                         BRIDGE_LOG_PRINT("Invalid sensor type in report_builder_task\n");
                         break;
