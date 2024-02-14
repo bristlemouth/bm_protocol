@@ -646,7 +646,7 @@ static void report_builder_task(void *parameters) {
                             (_ctx._sample_counter - 1));
                         break;
                       }
-                      case SENSOR_TYPE_RBR: {
+                      case SENSOR_TYPE_RBR_CODA: {
                         _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
                             _ctx._report_period_node_list[i],
                             _ctx._report_period_sensor_type_list[i], NULL,
