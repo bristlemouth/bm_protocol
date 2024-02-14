@@ -517,8 +517,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
         if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS, "bm_rbr_unknown") != CborNoError) {
           BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
         }
-        break;
         rbr_coda_sample_valid = true;
+        break;
       }
       default: {
         BRIDGE_LOG_PRINT("Received invalid rbr type in addSamplesToReport\n");
