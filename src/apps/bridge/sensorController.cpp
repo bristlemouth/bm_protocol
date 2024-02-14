@@ -121,6 +121,9 @@ static void runController(void *param) {
           } else if (curr->type == SENSOR_TYPE_SOFT) {
             Soft_t *soft = static_cast<Soft_t *>(curr);
             soft->aggregate();
+          } else if (curr->type == SENSOR_TYPE_RBR_CODA) {
+            RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
+            rbr_coda->aggregate();
           }
           curr = curr->next;
         }
