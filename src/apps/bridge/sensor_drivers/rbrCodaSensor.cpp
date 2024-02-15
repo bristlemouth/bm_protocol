@@ -102,28 +102,28 @@ void RbrCodaSensor::aggregate(void) {
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
     size_t log_buflen = 0;
     rbr_coda_aggregations_t aggs = {.temp_mean_deg_c = NAN,
-                                    .pressure_mean_ubar = NAN,
-                                    .pressure_stdev_ubar = NAN,
+                                    .pressure_mean_deci_bar = NAN,
+                                    .pressure_stdev_deci_bar = NAN,
                                     .reading_count = 0,
                                     .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN};
     aggs.sensor_type = latest_sensor_type;
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
-      aggs.pressure_mean_ubar = pressure_ubar.getMean();
-      aggs.pressure_stdev_ubar = pressure_ubar.getStd(aggs.pressure_mean_ubar);
+      aggs.pressure_mean_deci_bar = pressure_ubar.getMean();
+      aggs.pressure_stdev_deci_bar = pressure_ubar.getStd(aggs.pressure_mean_deci_bar);
       aggs.reading_count = reading_count;
 
       if (aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN ||
           aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
         aggs.temp_mean_deg_c = NAN;
       }
-      if (aggs.pressure_mean_ubar < PRESSURE_SAMPLE_MEMBER_MIN ||
-          aggs.pressure_mean_ubar > PRESSURE_SAMPLE_MEMBER_MAX) {
-        aggs.pressure_mean_ubar = NAN;
+      if (aggs.pressure_mean_deci_bar < PRESSURE_SAMPLE_MEMBER_MIN ||
+          aggs.pressure_mean_deci_bar > PRESSURE_SAMPLE_MEMBER_MAX) {
+        aggs.pressure_mean_deci_bar = NAN;
       }
-      if (aggs.pressure_stdev_ubar < PRESSURE_STDEV_SAMPLE_MEMBER_MIN ||
-          aggs.pressure_stdev_ubar > PRESSURE_STDEV_SAMPLE_MEMBER_MAX) {
-        aggs.pressure_stdev_ubar = NAN;
+      if (aggs.pressure_stdev_deci_bar < PRESSURE_STDEV_SAMPLE_MEMBER_MIN ||
+          aggs.pressure_stdev_deci_bar > PRESSURE_STDEV_SAMPLE_MEMBER_MAX) {
+        aggs.pressure_stdev_deci_bar = NAN;
       }
     }
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
@@ -155,10 +155,10 @@ void RbrCodaSensor::aggregate(void) {
                  "%s,"          // timeStamp(ticks/UTC)
                  "%" PRIu32 "," // reading_count
                  "%.3f,"        // temp_mean_deg_c
-                 "%.3f,"        // pressure_mean_ubar
-                 "%.3f\n",      // pressure_stdev_ubar
+                 "%.3f,"        // pressure_mean_deci_bar
+                 "%.3f\n",      // pressure_stdev_deci_bar
                  node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
-                 aggs.temp_mean_deg_c, aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar);
+                 aggs.temp_mean_deg_c, aggs.pressure_mean_deci_bar, aggs.pressure_stdev_deci_bar);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {

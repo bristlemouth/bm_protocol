@@ -61,8 +61,8 @@ static aanderaa_aggregations_t NAN_AGG = {.abs_speed_mean_cm_s = NAN,
 static soft_aggregations_t SOFT_NAN_AGG = {.temp_mean_deg_c = NAN, .reading_count = 0};
 
 static rbr_coda_aggregations_t RBR_CODA_NAN_AGG = {.temp_mean_deg_c = NAN,
-                                                   .pressure_mean_ubar = NAN,
-                                                   .pressure_stdev_ubar = NAN,
+                                                   .pressure_mean_deci_bar = NAN,
+                                                   .pressure_stdev_deci_bar = NAN,
                                                    .reading_count = 0,
                                                    .sensor_type =
                                                        BmRbrDataMsg::SensorType::UNKNOWN};
@@ -547,13 +547,13 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
-                                                &rbr_coda_sample.pressure_mean_ubar) !=
+                                                &rbr_coda_sample.pressure_mean_deci_bar) !=
         CborNoError) {
       BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
-                                                &rbr_coda_sample.pressure_stdev_ubar) !=
+                                                &rbr_coda_sample.pressure_stdev_deci_bar) !=
         CborNoError) {
       BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
       break;

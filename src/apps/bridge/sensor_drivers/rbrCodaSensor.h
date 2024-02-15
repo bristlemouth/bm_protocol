@@ -12,8 +12,8 @@
 
 typedef struct rbr_coda_aggregations_s {
   double temp_mean_deg_c;
-  double pressure_mean_ubar;
-  double pressure_stdev_ubar;
+  double pressure_mean_deci_bar;
+  double pressure_stdev_deci_bar;
   uint32_t reading_count;
   BmRbrDataMsg::SensorType_t sensor_type;
 } rbr_coda_aggregations_t;
@@ -29,12 +29,12 @@ typedef struct RbrCodaSensor : public AbstractSensor {
   // 2 minutes is the minimum bridge on period and the soft by default is sampling at 2Hz. So 2*120 + 30 = 270.
   static constexpr uint32_t N_SAMPLES_PAD = 270;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
-  static constexpr double TEMP_SAMPLE_MEMBER_MIN = -20;
-  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 40;
-  static constexpr double PRESSURE_SAMPLE_MEMBER_MIN = 0;
-  static constexpr double PRESSURE_SAMPLE_MEMBER_MAX = 20970000;
+  static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5;
+  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 35;
+  static constexpr double PRESSURE_SAMPLE_MEMBER_MIN = 5;
+  static constexpr double PRESSURE_SAMPLE_MEMBER_MAX = 85;
   static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MIN = 0;
-  static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MAX = 327000;
+  static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MAX = 40;
 
 public:
   bool subscribe() override;
