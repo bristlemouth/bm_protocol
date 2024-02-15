@@ -807,6 +807,8 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
       } else if (strncmp(app_name, "bm_soft_module", strlen("bm_soft_module")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_SOFT;
         break;
+      } else if (strncmp(app_name, "bm_rbr", strlen("bm_rbr")) == 0) {
+        _node_list.sensor_type[i] = SENSOR_TYPE_RBR_CODA;
       }
     }
   }
