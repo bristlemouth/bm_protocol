@@ -120,6 +120,9 @@ void RbrCodaSensor::aggregate(void) {
       if (aggs.pressure_mean_ubar < PRESSURE_SAMPLE_MEMBER_MIN ||
           aggs.pressure_mean_ubar > PRESSURE_SAMPLE_MEMBER_MAX) {
         aggs.pressure_mean_ubar = NAN;
+      }
+      if (aggs.pressure_stdev_ubar < PRESSURE_STDEV_SAMPLE_MEMBER_MIN ||
+          aggs.pressure_stdev_ubar > PRESSURE_STDEV_SAMPLE_MEMBER_MAX) {
         aggs.pressure_stdev_ubar = NAN;
       }
     }
@@ -133,7 +136,6 @@ void RbrCodaSensor::aggregate(void) {
     int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
 
     // Use the latest sensor type to determine the sensor type string
-    // TODO - this is duplicated from the callback function. Should we make this a function?
     const char *sensor_type_str;
     if (latest_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
       sensor_type_str = "RBR.T";
