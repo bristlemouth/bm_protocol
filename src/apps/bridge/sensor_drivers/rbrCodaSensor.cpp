@@ -31,7 +31,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
   (void)type;
   (void)version;
   printf("RBR CODA data received from node %" PRIx64 " On topic: %.*s\n", node_id, topic_len,
-        topic);
+         topic);
   RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id));
   if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR_CODA) {
     if (xSemaphoreTake(rbr_coda->_mutex, portMAX_DELAY)) {
@@ -60,27 +60,28 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
           sensor_type_str = "RBR.T";
         } else if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
           sensor_type_str = "RBR.D";
-        } else if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+        } else if (rbr_coda->latest_sensor_type ==
+                   BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
           sensor_type_str = "RBR.DT";
         } else {
           sensor_type_str = "RBR.UNKNOWN";
         }
 
-        size_t log_buflen =
-            snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                     "%" PRIx64 ","   // Node Id
-                     "%" PRIi8 ","    // node_position
-                     "%s,"            // node_app_name
-                     "%" PRIu64 ","   // reading_uptime_millis
-                     "%" PRIu64 "."   // reading_time_utc_ms seconds part
-                     "%03" PRIu32 "," // reading_time_utc_ms millis part
-                     "%" PRIu64 ","   // sensor_reading_time_ms seconds part
-                     "%03" PRIu32 "," // sensor_reading_time_ms millis part
-                     "%.3f,"          // temperature_deg_c
-                     "%.3f\n",          // pressure_ubar
-                     node_id, node_position, sensor_type_str, rbr_data.header.reading_uptime_millis, reading_time_sec,
-                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar);
+        size_t log_buflen = snprintf(
+            log_buf, SENSOR_LOG_BUF_SIZE,
+            "%" PRIx64 ","   // Node Id
+            "%" PRIi8 ","    // node_position
+            "%s,"            // node_app_name
+            "%" PRIu64 ","   // reading_uptime_millis
+            "%" PRIu64 "."   // reading_time_utc_ms seconds part
+            "%03" PRIu32 "," // reading_time_utc_ms millis part
+            "%" PRIu64 ","   // sensor_reading_time_ms seconds part
+            "%03" PRIu32 "," // sensor_reading_time_ms millis part
+            "%.3f,"          // temperature_deg_c
+            "%.3f\n",        // pressure_ubar
+            node_id, node_position, sensor_type_str, rbr_data.header.reading_uptime_millis,
+            reading_time_sec, reading_time_millis, sensor_reading_time_sec,
+            sensor_reading_time_millis, rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
@@ -150,10 +151,10 @@ void RbrCodaSensor::aggregate(void) {
                  "%" PRIi8 ","  // node_position
                  "%s,"          // node_app_name
                  "%s,"          // timeStamp(ticks/UTC)
-                 "%" PRIu32","  // reading_count
+                 "%" PRIu32 "," // reading_count
                  "%.3f,"        // temp_mean_deg_c
                  "%.3f,"        // pressure_mean_ubar
-                 "%.3f\n",        // pressure_stdev_ubar
+                 "%.3f\n",      // pressure_stdev_ubar
                  node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
                  aggs.temp_mean_deg_c, aggs.pressure_mean_ubar, aggs.pressure_stdev_ubar);
     if (log_buflen > 0) {
@@ -173,7 +174,7 @@ void RbrCodaSensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-RbrCoda_t* createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
+RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
                             uint32_t averager_max_samples) {
   RbrCoda_t *new_sub = static_cast<RbrCoda_t *>(pvPortMalloc(sizeof(RbrCoda_t)));
   new_sub = new (new_sub) RbrCoda_t();

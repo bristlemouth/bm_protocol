@@ -114,7 +114,6 @@ void SoftSensor::aggregate(void) {
                  "%.3f\n",      // temp_mean_deg_c
                  node_id, node_position, time_str, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
     if (log_buflen > 0) {
-      // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print soft aggregate log\n");

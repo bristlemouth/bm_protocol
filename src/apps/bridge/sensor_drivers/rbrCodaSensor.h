@@ -10,7 +10,6 @@
 
 #define RBR_CODA_NUM_SAMPLE_MEMBERS 3
 
-
 typedef struct rbr_coda_aggregations_s {
   double temp_mean_deg_c;
   double pressure_mean_ubar;
@@ -47,4 +46,5 @@ private:
   static constexpr char subtag[] = "/bm_rbr_data";
 } RbrCoda_t;
 
-RbrCoda_t* createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms, uint32_t averager_max_samples);
+RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
+                            uint32_t averager_max_samples);
