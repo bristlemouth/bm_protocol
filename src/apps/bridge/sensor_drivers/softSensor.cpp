@@ -66,7 +66,6 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
                      soft_data.temperature_deg_c);
         if (log_buflen > 0) {
-          // TODO - keep as individual log or switch to the bm_sensor common log
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
           printf("ERROR: Failed to print soft individual log\n");
@@ -110,12 +109,11 @@ void SoftSensor::aggregate(void) {
                  "%" PRIx64 "," // Node Id
                  "%" PRIi8 ","  // node_position
                  "soft,"        // node_app_name
-                 "%s,"          // timstamp(ticks/UTC)
+                 "%s,"          // timestamp(ticks/UTC)
                  "%" PRIu32 "," // reading_count
                  "%.3f\n",      // temp_mean_deg_c
                  node_id, node_position, time_str, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
     if (log_buflen > 0) {
-      // TODO - keep as individual log or switch to the bm_sensor common log
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print soft aggregate log\n");

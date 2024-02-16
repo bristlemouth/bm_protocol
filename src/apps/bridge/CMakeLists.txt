@@ -73,6 +73,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/bm_common_messages/aanderaa_data_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/sensor_header_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/bm_soft_data_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/bm_rbr_data_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
@@ -253,6 +254,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sm_config_crc_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/aanderaaSensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/rbrCodaSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/softSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensorController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
