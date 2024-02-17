@@ -106,7 +106,7 @@ void RbrCodaSensor::aggregate(void) {
                                     .pressure_stdev_deci_bar = NAN,
                                     .reading_count = 0,
                                     .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN};
-    aggs.sensor_type = latest_sensor_type;
+    aggs.sensor_type = rbrCodaGetSensorType();
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
       aggs.pressure_mean_deci_bar = pressure_ubar.getMean();
@@ -195,7 +195,7 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   return new_sub;
 }
 
-BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaSensorType(void) {
+BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
   // TODO - here we need to call topology_sampler_alloc_last_network_config
   // and then we will need to decode the cbor map in order to find the
   // rbr sensor type.
@@ -215,6 +215,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaSensorType(void) {
   if (network_config != NULL) {
     // TODO - decode the cbor map to find the rbr sensor type
     // and then return the sensor type.
+    printf("GOT THE NETWORK CONFIG\n");
     vPortFree(network_config);
   }
   return current_sensor_type;
