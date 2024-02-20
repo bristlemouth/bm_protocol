@@ -221,7 +221,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
     printf("GOT THE NETWORK CONFIG\n");
 
     CborParser parser;
-    CborValue nodes_array, node_sub_array; // sys_cfg_map, value;
+    CborValue nodes_array, node_sub_array, node_array_member;// sys_cfg_map, value;
     do {
       if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &nodes_array) != CborNoError) {
         printf("Failed to initialize the cbor parser\n");
@@ -245,7 +245,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
       }
 
       for (size_t node_idx = 0; node_idx < num_nodes; node_idx++) {
-        if (cbor_value_is_array(&node_sub_array) != CborNoError) {
+        if (!cbor_value_is_array(&node_sub_array)) {
           printf("Failed to get the node sub array\n");
           break;
         }
@@ -264,6 +264,26 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           break;
         }
 
+        if (cbor_value_enter_container(&node_sub_array, &node_array_member) != CborNoError) {
+          printf("Failed to enter the node sub array\n");
+          break;
+        }
+
+        uint64_t extracted_node_id;
+        if (cbor_value_get_uint64(&node_array_member, &extracted_node_id) != CborNoError) {
+          printf("Failed to get the node id\n");
+          break;
+        }
+        printf("Node ID: %" PRIx64 "\n", extracted_node_id);
+        if (extracted_node_id != node_id) {
+          printf("Node ID does not match\n");
+          //close the container???
+          cbor_value_leave_container(&node_sub_array, &node_array_member);
+          cbor_value_advance(&node_sub_array);
+          continue;
+        } else {
+          printf("Node ID matches\n");
+        }
       }
 
     } while (0);
