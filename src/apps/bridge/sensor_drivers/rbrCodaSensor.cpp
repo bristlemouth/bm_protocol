@@ -221,31 +221,31 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
     printf("GOT THE NETWORK CONFIG\n");
 
     CborParser parser;
-    CborValue nodes_array, node_sub_array, node_array_member;// sys_cfg_map, value;
+    CborValue all_nodes_array, individual_node_array, node_array_member;//, sys_cfg_map;
     do {
-      if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &nodes_array) != CborNoError) {
+      if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &all_nodes_array) != CborNoError) {
         printf("Failed to initialize the cbor parser\n");
         break;
       }
-      if (!cbor_value_is_array(&nodes_array)) {
+      if (!cbor_value_is_array(&all_nodes_array)) {
         printf("Failed to get the nodes array\n");
         break;
       }
       // Get the number of nodes
       size_t num_nodes;
-      if (cbor_value_get_array_length(&nodes_array, &num_nodes) != CborNoError) {
+      if (cbor_value_get_array_length(&all_nodes_array, &num_nodes) != CborNoError) {
         printf("Failed to get the number of nodes\n");
         break;
       }
       printf("Number of nodes: %d\n", num_nodes);
 
-      if (cbor_value_enter_container(&nodes_array, &node_sub_array) != CborNoError) {
+      if (cbor_value_enter_container(&all_nodes_array, &individual_node_array) != CborNoError) {
         printf("Failed to enter the nodes array\n");
         break;
       }
 
       for (size_t node_idx = 0; node_idx < num_nodes; node_idx++) {
-        if (!cbor_value_is_array(&node_sub_array)) {
+        if (!cbor_value_is_array(&individual_node_array)) {
           printf("Failed to get the node sub array\n");
           break;
         }
@@ -253,7 +253,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
         // do we need to check if the array is 5 elements?
         // i'll do it just in case i guess.
         size_t num_elements;
-        if (cbor_value_get_array_length(&node_sub_array, &num_elements) != CborNoError) {
+        if (cbor_value_get_array_length(&individual_node_array, &num_elements) != CborNoError) {
           printf("Failed to get the number of elements in the node sub array\n");
           break;
         }
@@ -264,7 +264,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           break;
         }
 
-        if (cbor_value_enter_container(&node_sub_array, &node_array_member) != CborNoError) {
+        if (cbor_value_enter_container(&individual_node_array, &node_array_member) != CborNoError) {
           printf("Failed to enter the node sub array\n");
           break;
         }
@@ -278,15 +278,28 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
         if (extracted_node_id != node_id) {
           printf("Node ID does not match\n");
           //close the container???
-          cbor_value_leave_container(&node_sub_array, &node_array_member);
-          cbor_value_advance(&node_sub_array);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_leave_container(&individual_node_array, &node_array_member);
+          // cbor_value_advance(&all_nodes_array);
           continue;
         } else {
           printf("Node ID matches\n");
-          cbor_value_leave_container(&node_sub_array, &node_array_member);
-          cbor_value_advance(&node_sub_array);
-          continue;
-          break;
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_advance(&node_array_member);
+          cbor_value_leave_container(&individual_node_array, &node_array_member);
+          // if (cbor_value_advance(&node_array_member) != CborNoError) {
+          //   printf("Failed to advance the node array member\n");
+          //   break;
+          // }
+          // if (cbor_value_is_text_string())
+
         }
       }
 
