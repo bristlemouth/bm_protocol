@@ -283,6 +283,10 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           continue;
         } else {
           printf("Node ID matches\n");
+          cbor_value_leave_container(&node_sub_array, &node_array_member);
+          cbor_value_advance(&node_sub_array);
+          continue;
+          break;
         }
       }
 
