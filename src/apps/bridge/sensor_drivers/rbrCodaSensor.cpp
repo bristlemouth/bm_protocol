@@ -277,29 +277,138 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
         printf("Node ID: %" PRIx64 "\n", extracted_node_id);
         if (extracted_node_id != node_id) {
           printf("Node ID does not match\n");
-          //close the container???
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
+          // advance to the end of the individual node array before closing the individual node array
+          // container and advancing to the next all node array member.
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
           cbor_value_leave_container(&individual_node_array, &node_array_member);
-          // cbor_value_advance(&all_nodes_array);
           continue;
         } else {
           printf("Node ID matches\n");
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_advance(&node_array_member);
-          cbor_value_leave_container(&individual_node_array, &node_array_member);
-          // if (cbor_value_advance(&node_array_member) != CborNoError) {
-          //   printf("Failed to advance the node array member\n");
-          //   break;
-          // }
-          // if (cbor_value_is_text_string())
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (!cbor_value_is_text_string(&node_array_member)) {
+            printf("expected string but it is not a string\n");
+            break;
+          }
+          size_t len;
+          if (cbor_value_get_string_length(&node_array_member, &len) != CborNoError) {
+            printf("Failed to get the length of the node app name\n");
+            break;
+          }
+          char *strbuf = static_cast<char *>(pvPortMalloc(len + 1));
+          configASSERT(strbuf);
+          if (cbor_value_copy_text_string(&node_array_member, strbuf, &len, NULL) != CborNoError) {
+            break;
+          }
+          strbuf[len] = '\0';
+          printf("Node app name: %s\n", strbuf);
+          vPortFree(strbuf);
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (!cbor_value_is_unsigned_integer(&node_array_member)) {
+            printf("expected uint but it is not a string\n");
+            break;
+          }
+          uint64_t gitSha;
+          if (cbor_value_get_uint64(&node_array_member, &gitSha) != CborNoError) {
+            printf("Failed to get the git sha\n");
+            break;
+          }
+          printf("Git SHA: %d\n", gitSha);
 
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (!cbor_value_is_unsigned_integer(&node_array_member)) {
+            printf("expected uint but it is not a string\n");
+            break;
+          }
+          uint64_t sys_confg_crc;
+          if (cbor_value_get_uint64(&node_array_member, &sys_confg_crc) != CborNoError) {
+            printf("Failed to get the git sha\n");
+            break;
+          }
+          printf("sys_confg_crc: %d\n", sys_confg_crc);
+          if (cbor_value_advance(&node_array_member) != CborNoError) {
+            printf("Failed to advance the node array member\n");
+            break;
+          }
+          if (!cbor_value_is_map(&node_array_member)) {
+            printf("expected map but it is not a map\n");
+            break;
+          }
+          CborValue sys_cfg_map;
+          if (cbor_value_enter_container(&node_array_member, &sys_cfg_map) != CborNoError) {
+            printf("Failed to enter the sys_cfg_map\n");
+            break;
+          }
+          printf("GOT ALL THE WAY TO THE MAP!\n");
+          while(!cbor_value_at_end(&node_array_member)) {
+            if (!cbor_value_is_text_string(&sys_cfg_map)) {
+              printf("expected string but it is not a string\n");
+              break;
+            }
+            size_t len;
+            if (cbor_value_get_string_length(&sys_cfg_map, &len) != CborNoError) {
+              printf("Failed to get the length of the sys_cfg_map key\n");
+              break;
+            }
+            char *key_str = static_cast<char *>(pvPortMalloc(len + 1));
+            configASSERT(key_str);
+            if (cbor_value_copy_text_string(&sys_cfg_map, key_str, &len, NULL) != CborNoError) {
+              break;
+            }
+            key_str[len] = '\0';
+            printf("sys_cfg_map key: %s\n", key_str);
+            if (strcmp(key_str, "rbrCodaType") == 0) {
+              if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
+                printf("Failed to advance the sys_cfg_map\n");
+                break;
+              }
+              if (!cbor_value_is_unsigned_integer(&sys_cfg_map)) {
+                printf("expected uint but it is not a string\n");
+                break;
+              }
+              uint64_t sensor_type;
+              if (cbor_value_get_uint64(&sys_cfg_map, &sensor_type) != CborNoError) {
+                printf("Failed to get the sensor type\n");
+                break;
+              }
+              current_sensor_type = static_cast<BmRbrDataMsg::SensorType_t>(sensor_type);
+              printf("sensor_type: %d\n", sensor_type);
+              break;
+            }
+            vPortFree(key_str);
+            if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
+              printf("Failed to advance the sys_cfg_map\n");
+              break;
+            }
+          }
+          break;
         }
       }
 
