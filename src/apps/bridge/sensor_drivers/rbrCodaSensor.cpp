@@ -5,6 +5,7 @@
 #include "bm_pubsub.h"
 #include "bm_rbr_data_msg.h"
 #include "bridgeLog.h"
+#include "cbor.h"
 #include "device_info.h"
 #include "reportBuilder.h"
 #include "semphr.h"
@@ -211,11 +212,63 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
   uint32_t network_crc32 = 0;
   uint32_t cbor_config_size = 0;
   uint8_t *network_config = topology_sampler_alloc_last_network_config(network_crc32, cbor_config_size);
+  // bool found_rbr_type = false;
+  // BmRbrDataMsg::SensorType_t sensor_type_rval = BmRbrDataMsg::SensorType::UNKNOWN;
 
   if (network_config != NULL) {
     // TODO - decode the cbor map to find the rbr sensor type
     // and then return the sensor type.
     printf("GOT THE NETWORK CONFIG\n");
+
+    CborParser parser;
+    CborValue nodes_array, node_sub_array; // sys_cfg_map, value;
+    do {
+      if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &nodes_array) != CborNoError) {
+        printf("Failed to initialize the cbor parser\n");
+        break;
+      }
+      if (!cbor_value_is_array(&nodes_array)) {
+        printf("Failed to get the nodes array\n");
+        break;
+      }
+      // Get the number of nodes
+      size_t num_nodes;
+      if (cbor_value_get_array_length(&nodes_array, &num_nodes) != CborNoError) {
+        printf("Failed to get the number of nodes\n");
+        break;
+      }
+      printf("Number of nodes: %d\n", num_nodes);
+
+      if (cbor_value_enter_container(&nodes_array, &node_sub_array) != CborNoError) {
+        printf("Failed to enter the nodes array\n");
+        break;
+      }
+
+      for (size_t node_idx = 0; node_idx < num_nodes; node_idx++) {
+        if (cbor_value_is_array(&node_sub_array) != CborNoError) {
+          printf("Failed to get the node sub array\n");
+          break;
+        }
+        // We know that there is 5 elements in the node sub array
+        // do we need to check if the array is 5 elements?
+        // i'll do it just in case i guess.
+        size_t num_elements;
+        if (cbor_value_get_array_length(&node_sub_array, &num_elements) != CborNoError) {
+          printf("Failed to get the number of elements in the node sub array\n");
+          break;
+        }
+        // the number is 5 but is currently defined in topology_sampler.cpp so i think it
+        // should be moved to a common header.
+        if (num_elements != 5) {
+          printf("The number of elements in the node sub array is not 5\n");
+          break;
+        }
+
+      }
+
+    } while (0);
+
+
     vPortFree(network_config);
   }
   return current_sensor_type;
