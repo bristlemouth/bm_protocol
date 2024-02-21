@@ -337,8 +337,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
             printf("Failed to get the git sha\n");
             break;
           }
-          printf("Git SHA: %d\n", gitSha);
-
+          printf("Git SHA: %" PRIx64 "\n", gitSha);
           if (cbor_value_advance(&node_array_member) != CborNoError) {
             printf("Failed to advance the node array member\n");
             break;
@@ -352,7 +351,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
             printf("Failed to get the git sha\n");
             break;
           }
-          printf("sys_confg_crc: %d\n", sys_confg_crc);
+          printf("sys_confg_crc: %" PRIx64 "\n", sys_confg_crc);
           if (cbor_value_advance(&node_array_member) != CborNoError) {
             printf("Failed to advance the node array member\n");
             break;
@@ -399,7 +398,22 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
                 break;
               }
               current_sensor_type = static_cast<BmRbrDataMsg::SensorType_t>(sensor_type);
-              printf("sensor_type: %d\n", sensor_type);
+              printf("sensor_type: %" PRIu64 "\n", sensor_type);
+              if (current_senspr_type == BmRbrDataMsg::SensorType::UNKNOWN) {
+                printf("Sensor type UKNOWN\n");
+
+              } else if (current_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
+                printf("Sensor type RBR.T\n");
+
+              } else if (current_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
+                printf("Sensor type RBR.D\n");
+
+              } else if (current_sensor_type == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+                printf("Sensor type RBR.DT\n");
+
+              } else {
+                printf("Failed to get the sensor type, setting to UNKOWN\n");
+              }
               break;
             }
             vPortFree(key_str);
