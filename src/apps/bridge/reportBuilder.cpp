@@ -818,7 +818,8 @@ static void report_builder_task(void *parameters) {
               BRIDGE_LOG_PRINT("Got topology in report builder!\n");
               if (temp_num_nodes >= _ctx._report_period_num_nodes) {
                 BRIDGE_LOG_PRINT("Updating CRC and topology in report builder!\n");
-                if (xSemaphoreTake(_ctx._config_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_MUTEX_TIMEOUT_MS))) {
+                if (xSemaphoreTake(_ctx._config_mutex,
+                                   pdMS_TO_TICKS(NETWORK_CONFIG_MUTEX_TIMEOUT_MS))) {
                   if (_ctx.report_period_max_network_config_cbor != NULL) {
                     vPortFree(_ctx.report_period_max_network_config_cbor);
                   }
@@ -831,10 +832,10 @@ static void report_builder_task(void *parameters) {
                   _ctx._report_period_max_network_crc32 = temp_network_crc32;
                   size_t report_period_sensor_type_list_size =
                       sizeof(_ctx._report_period_sensor_type_list);
-                  if (!topology_sampler_get_sensor_type_list(_ctx._report_period_sensor_type_list,
-                                                            report_period_sensor_type_list_size,
-                                                            _ctx._report_period_num_nodes,
-                                                            TOPO_TIMEOUT_MS)) {
+                  if (!topology_sampler_get_sensor_type_list(
+                          _ctx._report_period_sensor_type_list,
+                          report_period_sensor_type_list_size, _ctx._report_period_num_nodes,
+                          TOPO_TIMEOUT_MS)) {
                     BRIDGE_LOG_PRINT("Failed to get the sensor type list in report builder!\n");
                   } else {
                     BRIDGE_LOG_PRINT("Got sensor type list in report builder!\n");
@@ -875,7 +876,6 @@ static void report_builder_task(void *parameters) {
   }
 }
 
-
 /*!
  * @brief Get the last network configuration from the report builder. This will return the last
  * @brief network configuration that may be used to stamp an outbound report.
@@ -885,7 +885,7 @@ static void report_builder_task(void *parameters) {
  * @return The cbor config map or NULL if unable to retreive.
  */
 uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
-                                                    uint32_t &cbor_config_size) {
+                                                  uint32_t &cbor_config_size) {
   uint8_t *rval = NULL;
   if (xSemaphoreTake(_ctx._config_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_MUTEX_TIMEOUT_MS))) {
     do {
@@ -896,8 +896,7 @@ uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
       cbor_config_size = _ctx.report_period_max_network_config_cbor_len;
       rval = static_cast<uint8_t *>(pvPortMalloc(cbor_config_size));
       configASSERT(rval);
-      memcpy(rval, _ctx.report_period_max_network_config_cbor,
-             cbor_config_size);
+      memcpy(rval, _ctx.report_period_max_network_config_cbor, cbor_config_size);
     } while (0);
     xSemaphoreGive(_ctx._config_mutex);
   }

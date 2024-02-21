@@ -405,17 +405,13 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
               printf("sensor_type: %" PRIu64 "\n", sensor_type);
               if (current_sensor_type == BmRbrDataMsg::SensorType::UNKNOWN) {
                 printf("Sensor type UKNOWN\n");
-
               } else if (current_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
                 printf("Sensor type RBR.T\n");
-
               } else if (current_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
                 printf("Sensor type RBR.D\n");
-
               } else if (current_sensor_type ==
                          BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
                 printf("Sensor type RBR.DT\n");
-
               } else {
                 printf("Failed to get the sensor type, setting to UNKOWN\n");
               }
