@@ -399,7 +399,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
               }
               current_sensor_type = static_cast<BmRbrDataMsg::SensorType_t>(sensor_type);
               printf("sensor_type: %" PRIu64 "\n", sensor_type);
-              if (current_senspr_type == BmRbrDataMsg::SensorType::UNKNOWN) {
+              if (current_sensor_type == BmRbrDataMsg::SensorType::UNKNOWN) {
                 printf("Sensor type UKNOWN\n");
 
               } else if (current_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
