@@ -212,7 +212,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
   uint32_t network_crc32 = 0;
   uint32_t cbor_config_size = 0;
   uint8_t *network_config =
-      topology_sampler_alloc_last_network_config(network_crc32, cbor_config_size);
+      report_builder_alloc_last_network_config(network_crc32, cbor_config_size);
   // bool found_rbr_type = false;
   // BmRbrDataMsg::SensorType_t sensor_type_rval = BmRbrDataMsg::SensorType::UNKNOWN;
 

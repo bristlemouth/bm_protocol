@@ -21,6 +21,7 @@
 
 #define REPORT_BUILDER_QUEUE_SIZE (16)
 #define TOPO_TIMEOUT_MS (1000)
+#define NETWORK_CONFIG_MUTEX_TIMEOUT_MS (1000)
 
 /*
   This is the current max length the cbor buffer can be for the sensor report
@@ -101,6 +102,9 @@ typedef struct ReportBuilderContext_s {
   ReportBuilderLinkedList _reportBuilderLinkedList;
   uint64_t _report_period_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   abstractSensorType_e _report_period_sensor_type_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+  uint8_t *report_period_max_network_config_cbor;
+  uint32_t report_period_max_network_config_cbor_len;
+  SemaphoreHandle_t _config_mutex;
   uint32_t _report_period_num_nodes;
   uint32_t _report_period_max_network_crc32;
 } ReportBuilderContext_t;
@@ -501,6 +505,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     bool rbr_coda_sample_valid = false;
     switch (rbr_coda_sample.sensor_type) {
     case BmRbrDataMsg::SensorType::TEMPERATURE: {
+      printf("Sending rbr temp\n");
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_t_v0") != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
@@ -509,6 +514,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       break;
     }
     case BmRbrDataMsg::SensorType::PRESSURE: {
+      printf("Sending rbr pressure\n");
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_d_v0") != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
@@ -517,6 +523,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       break;
     }
     case BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE: {
+      printf("Sending rbr pressure and temp\n");
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_td_v0") != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
@@ -583,6 +590,9 @@ void reportBuilderInit(cfg::Configuration *sys_cfg) {
   sys_cfg->getConfig(AppConfig::TRANSMIT_AGGREGATIONS, strlen(AppConfig::TRANSMIT_AGGREGATIONS),
                      _ctx._transmitAggregations);
   _ctx._sample_counter = 0;
+  _ctx._config_mutex = xSemaphoreCreateMutex();
+  configASSERT(_ctx._config_mutex);
+  _ctx.report_period_max_network_config_cbor = NULL;
   _report_builder_queue =
       xQueueCreate(REPORT_BUILDER_QUEUE_SIZE, sizeof(report_builder_queue_item_t));
   configASSERT(_report_builder_queue);
@@ -808,20 +818,31 @@ static void report_builder_task(void *parameters) {
               BRIDGE_LOG_PRINT("Got topology in report builder!\n");
               if (temp_num_nodes >= _ctx._report_period_num_nodes) {
                 BRIDGE_LOG_PRINT("Updating CRC and topology in report builder!\n");
-                _ctx._report_period_num_nodes = temp_num_nodes;
-                memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
-                _ctx._report_period_max_network_crc32 = temp_network_crc32;
-                size_t report_period_sensor_type_list_size =
-                    sizeof(_ctx._report_period_sensor_type_list);
-                if (!topology_sampler_get_sensor_type_list(_ctx._report_period_sensor_type_list,
-                                                           report_period_sensor_type_list_size,
-                                                           _ctx._report_period_num_nodes,
-                                                           TOPO_TIMEOUT_MS)) {
-                  BRIDGE_LOG_PRINT("Failed to get the sensor type list in report builder!\n");
+                if (xSemaphoreTake(_ctx._config_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_MUTEX_TIMEOUT_MS))) {
+                  if (_ctx.report_period_max_network_config_cbor != NULL) {
+                    vPortFree(_ctx.report_period_max_network_config_cbor);
+                  }
+                  _ctx.report_period_max_network_config_cbor = last_network_config;
+                  last_network_config = NULL;
+                  _ctx.report_period_max_network_config_cbor_len = temp_cbor_config_size;
+                  printf("Updated reportBuilders CBOR map\n");
+                  _ctx._report_period_num_nodes = temp_num_nodes;
+                  memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
+                  _ctx._report_period_max_network_crc32 = temp_network_crc32;
+                  size_t report_period_sensor_type_list_size =
+                      sizeof(_ctx._report_period_sensor_type_list);
+                  if (!topology_sampler_get_sensor_type_list(_ctx._report_period_sensor_type_list,
+                                                            report_period_sensor_type_list_size,
+                                                            _ctx._report_period_num_nodes,
+                                                            TOPO_TIMEOUT_MS)) {
+                    BRIDGE_LOG_PRINT("Failed to get the sensor type list in report builder!\n");
+                  } else {
+                    BRIDGE_LOG_PRINT("Got sensor type list in report builder!\n");
+                  }
+                  xSemaphoreGive(_ctx._config_mutex);
                 } else {
-                  BRIDGE_LOG_PRINT("Got sensor type list in report builder!\n");
+                  BRIDGE_LOG_PRINT("Failed to take the config mutex in report builder!\n");
                 }
-
               } else {
                 BRIDGE_LOG_PRINT("Not updating CRC and topology in report builder, new "
                                  "topology is smaller than the old one!\n");
@@ -834,7 +855,9 @@ static void report_builder_task(void *parameters) {
           }
           // The last network config is not used here, but in the future it can be used to determine if varying sensor types have been
           // connected/disconnected to the network.
-          vPortFree(last_network_config);
+          if (last_network_config != NULL) {
+            vPortFree(last_network_config);
+          }
         }
         break;
       }
@@ -850,4 +873,33 @@ static void report_builder_task(void *parameters) {
       }
     }
   }
+}
+
+
+/*!
+ * @brief Get the last network configuration from the report builder. This will return the last
+ * @brief network configuration that may be used to stamp an outbound report.
+ * @note This function will allocate memory for the cbor config map, the caller is responsible for freeing it.
+ * @param[out] network_crc32 The network crc32
+ * @param[out] cbor_config_size The size of the cbor config map in bytes.
+ * @return The cbor config map or NULL if unable to retreive.
+ */
+uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
+                                                    uint32_t &cbor_config_size) {
+  uint8_t *rval = NULL;
+  if (xSemaphoreTake(_ctx._config_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_MUTEX_TIMEOUT_MS))) {
+    do {
+      if (!_ctx.report_period_max_network_config_cbor) {
+        break;
+      }
+      network_crc32 = _ctx._report_period_max_network_crc32;
+      cbor_config_size = _ctx.report_period_max_network_config_cbor_len;
+      rval = static_cast<uint8_t *>(pvPortMalloc(cbor_config_size));
+      configASSERT(rval);
+      memcpy(rval, _ctx.report_period_max_network_config_cbor,
+             cbor_config_size);
+    } while (0);
+    xSemaphoreGive(_ctx._config_mutex);
+  }
+  return rval;
 }
