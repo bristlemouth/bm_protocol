@@ -45,6 +45,7 @@ private:
                                  const uint8_t *data, uint16_t data_len, uint8_t type,
                                  uint8_t version);
   BmRbrDataMsg::SensorType_t rbrCodaGetSensorType(void);
+
 private:
   static constexpr char subtag[] = "/bm_rbr_data";
 } RbrCoda_t;

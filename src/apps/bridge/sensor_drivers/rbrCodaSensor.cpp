@@ -148,18 +148,18 @@ void RbrCodaSensor::aggregate(void) {
       sensor_type_str = "RBR.UNKNOWN";
     }
 
-    log_buflen =
-        snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                 "%" PRIx64 "," // Node Id
-                 "%" PRIi8 ","  // node_position
-                 "%s,"          // node_app_name
-                 "%s,"          // timeStamp(ticks/UTC)
-                 "%" PRIu32 "," // reading_count
-                 "%.3f,"        // temp_mean_deg_c
-                 "%.3f,"        // pressure_mean_deci_bar
-                 "%.3f\n",      // pressure_stdev_deci_bar
-                 node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
-                 aggs.temp_mean_deg_c, aggs.pressure_mean_deci_bar, aggs.pressure_stdev_deci_bar);
+    log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                          "%" PRIx64 "," // Node Id
+                          "%" PRIi8 ","  // node_position
+                          "%s,"          // node_app_name
+                          "%s,"          // timeStamp(ticks/UTC)
+                          "%" PRIu32 "," // reading_count
+                          "%.3f,"        // temp_mean_deg_c
+                          "%.3f,"        // pressure_mean_deci_bar
+                          "%.3f\n",      // pressure_stdev_deci_bar
+                          node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
+                          aggs.temp_mean_deg_c, aggs.pressure_mean_deci_bar,
+                          aggs.pressure_stdev_deci_bar);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
@@ -211,7 +211,8 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
 
   uint32_t network_crc32 = 0;
   uint32_t cbor_config_size = 0;
-  uint8_t *network_config = topology_sampler_alloc_last_network_config(network_crc32, cbor_config_size);
+  uint8_t *network_config =
+      topology_sampler_alloc_last_network_config(network_crc32, cbor_config_size);
   // bool found_rbr_type = false;
   // BmRbrDataMsg::SensorType_t sensor_type_rval = BmRbrDataMsg::SensorType::UNKNOWN;
 
@@ -221,9 +222,10 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
     printf("GOT THE NETWORK CONFIG\n");
 
     CborParser parser;
-    CborValue all_nodes_array, individual_node_array, node_array_member;//, sys_cfg_map;
+    CborValue all_nodes_array, individual_node_array, node_array_member; //, sys_cfg_map;
     do {
-      if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &all_nodes_array) != CborNoError) {
+      if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &all_nodes_array) !=
+          CborNoError) {
         printf("Failed to initialize the cbor parser\n");
         break;
       }
@@ -264,7 +266,8 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           break;
         }
 
-        if (cbor_value_enter_container(&individual_node_array, &node_array_member) != CborNoError) {
+        if (cbor_value_enter_container(&individual_node_array, &node_array_member) !=
+            CborNoError) {
           printf("Failed to enter the node sub array\n");
           break;
         }
@@ -318,7 +321,8 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           }
           char *strbuf = static_cast<char *>(pvPortMalloc(len + 1));
           configASSERT(strbuf);
-          if (cbor_value_copy_text_string(&node_array_member, strbuf, &len, NULL) != CborNoError) {
+          if (cbor_value_copy_text_string(&node_array_member, strbuf, &len, NULL) !=
+              CborNoError) {
             break;
           }
           strbuf[len] = '\0';
@@ -366,7 +370,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
             break;
           }
           printf("GOT ALL THE WAY TO THE MAP!\n");
-          while(!cbor_value_at_end(&node_array_member)) {
+          while (!cbor_value_at_end(&node_array_member)) {
             if (!cbor_value_is_text_string(&sys_cfg_map)) {
               printf("expected string but it is not a string\n");
               break;
@@ -408,7 +412,8 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
               } else if (current_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
                 printf("Sensor type RBR.D\n");
 
-              } else if (current_sensor_type == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+              } else if (current_sensor_type ==
+                         BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
                 printf("Sensor type RBR.DT\n");
 
               } else {
@@ -427,7 +432,6 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
       }
 
     } while (0);
-
 
     vPortFree(network_config);
   }
