@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 
+#define NUM_CONFIG_FIELDS_PER_NODE (5)
 #define TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE (16) // Note: Derived from satellite message definition, 1 bridge + 15 more nodes.
 
 void topology_sampler_init(BridgePowerController *power_controller, cfg::Configuration* hw_cfg, cfg::Configuration* sys_cfg);

@@ -107,7 +107,7 @@ void RbrCodaSensor::aggregate(void) {
                                     .pressure_stdev_deci_bar = NAN,
                                     .reading_count = 0,
                                     .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN};
-    aggs.sensor_type = rbrCodaGetSensorType();
+    aggs.sensor_type = rbrCodaGetSensorType(node_id);
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
       aggs.pressure_mean_deci_bar = pressure_ubar.getMean();
@@ -196,33 +196,18 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   return new_sub;
 }
 
-BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
-  // TODO - here we need to call topology_sampler_alloc_last_network_config
-  // and then we will need to decode the cbor map in order to find the
-  // rbr sensor type.
 
-  // we should call this function in the aggregate function to get the sensor type
-  // so that way we stamp the sample with the correct sensor type that will be
-  // associated with the crc at the moment of the aggregation. This will
-  // tell the Spotter if the sensor type changes or we will 100% know the
-  // sensor type is the same as the one from the config that will associated
-  // with that message.
+BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id) {
   BmRbrDataMsg::SensorType current_sensor_type = BmRbrDataMsg::SensorType::UNKNOWN;
 
   uint32_t network_crc32 = 0;
   uint32_t cbor_config_size = 0;
   uint8_t *network_config =
       report_builder_alloc_last_network_config(network_crc32, cbor_config_size);
-  // bool found_rbr_type = false;
-  // BmRbrDataMsg::SensorType_t sensor_type_rval = BmRbrDataMsg::SensorType::UNKNOWN;
 
   if (network_config != NULL) {
-    // TODO - decode the cbor map to find the rbr sensor type
-    // and then return the sensor type.
-    printf("GOT THE NETWORK CONFIG\n");
-
     CborParser parser;
-    CborValue all_nodes_array, individual_node_array, node_array_member; //, sys_cfg_map;
+    CborValue all_nodes_array, individual_node_array, node_array_member;
     do {
       if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &all_nodes_array) !=
           CborNoError) {
@@ -251,17 +236,14 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           printf("Failed to get the node sub array\n");
           break;
         }
-        // We know that there is 5 elements in the node sub array
-        // do we need to check if the array is 5 elements?
-        // i'll do it just in case i guess.
+        // We know that there are 5 elements in the node sub array, so lets make sure there are!
         size_t num_elements;
         if (cbor_value_get_array_length(&individual_node_array, &num_elements) != CborNoError) {
           printf("Failed to get the number of elements in the node sub array\n");
           break;
         }
-        // the number is 5 but is currently defined in topology_sampler.cpp so i think it
-        // should be moved to a common header.
-        if (num_elements != 5) {
+        // NUM_CONFIG_FIELDS_PER_NODE is defined in topology_sampler.h
+        if (num_elements != NUM_CONFIG_FIELDS_PER_NODE) {
           printf("The number of elements in the node sub array is not 5\n");
           break;
         }
@@ -277,9 +259,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           printf("Failed to get the node id\n");
           break;
         }
-        printf("Node ID: %" PRIx64 "\n", extracted_node_id);
         if (extracted_node_id != node_id) {
-          printf("Node ID does not match\n");
           // advance to the end of the individual node array before closing the individual node array
           // container and advancing to the next all node array member.
           if (cbor_value_advance(&node_array_member) != CborNoError) {
@@ -305,7 +285,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
           cbor_value_leave_container(&individual_node_array, &node_array_member);
           continue;
         } else {
-          printf("Node ID matches\n");
+          // Here we have found the RBR node we are looking for
           if (cbor_value_advance(&node_array_member) != CborNoError) {
             printf("Failed to advance the node array member\n");
             break;
@@ -326,7 +306,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
             break;
           }
           strbuf[len] = '\0';
-          printf("Node app name: %s\n", strbuf);
+          printf("RBR Node app name: %s\n", strbuf);
           vPortFree(strbuf);
           if (cbor_value_advance(&node_array_member) != CborNoError) {
             printf("Failed to advance the node array member\n");
@@ -369,7 +349,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
             printf("Failed to enter the sys_cfg_map\n");
             break;
           }
-          printf("GOT ALL THE WAY TO THE MAP!\n");
+          // Loop through the map to find the rbrCodaType config
           while (!cbor_value_at_end(&node_array_member)) {
             if (!cbor_value_is_text_string(&sys_cfg_map)) {
               printf("expected string but it is not a string\n");
@@ -386,7 +366,6 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
               break;
             }
             key_str[len] = '\0';
-            printf("sys_cfg_map key: %s\n", key_str);
             if (strcmp(key_str, "rbrCodaType") == 0) {
               if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
                 printf("Failed to advance the sys_cfg_map\n");
@@ -402,16 +381,16 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(void) {
                 break;
               }
               current_sensor_type = static_cast<BmRbrDataMsg::SensorType_t>(sensor_type);
-              printf("sensor_type: %" PRIu64 "\n", sensor_type);
+              printf("rbrCodaType: %" PRIu64 "\n", sensor_type);
               if (current_sensor_type == BmRbrDataMsg::SensorType::UNKNOWN) {
-                printf("Sensor type UKNOWN\n");
+                printf("RBR type UKNOWN\n");
               } else if (current_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
-                printf("Sensor type RBR.T\n");
+                printf("RBR type RBR.T\n");
               } else if (current_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
-                printf("Sensor type RBR.D\n");
+                printf("RBR type RBR.D\n");
               } else if (current_sensor_type ==
                          BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
-                printf("Sensor type RBR.DT\n");
+                printf("RBR type RBR.DT\n");
               } else {
                 printf("Failed to get the sensor type, setting to UNKOWN\n");
               }
