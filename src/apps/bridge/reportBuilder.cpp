@@ -766,6 +766,11 @@ static void report_builder_task(void *parameters) {
           memset(_ctx._report_period_node_list, 0, sizeof(_ctx._report_period_node_list));
           memset(_ctx._report_period_sensor_type_list, 0,
                  sizeof(_ctx._report_period_sensor_type_list));
+          if (_ctx.report_period_max_network_config_cbor != NULL) {
+            vPortFree(_ctx.report_period_max_network_config_cbor);
+          }
+          _ctx.report_period_max_network_config_cbor = NULL;
+          _ctx.report_period_max_network_config_cbor_len = 0;
         }
         break;
       }
