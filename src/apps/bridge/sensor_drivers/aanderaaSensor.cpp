@@ -78,7 +78,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
             "%.3f,"          // abs_tilt_deg
             "%.3f,"          // max_tilt_deg
             "%.3f,"          // std_tilt_deg
-            "%.3f\n,",       // temperature_deg_c
+            "%.3f\n",       // temperature_deg_c
             node_id, node_position, d.header.reading_uptime_millis, reading_time_sec,
             reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
             d.abs_speed_cm_s, d.direction_deg_m, d.north_cm_s, d.east_cm_s, d.heading_deg_m,
