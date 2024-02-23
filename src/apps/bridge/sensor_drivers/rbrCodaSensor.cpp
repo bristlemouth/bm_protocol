@@ -215,6 +215,8 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
   if (network_config != NULL) {
     CborParser parser;
     CborValue all_nodes_array, individual_node_array, node_array_member;
+    char *app_name_str = NULL;
+    char *key_str = NULL;
     do {
       if (cbor_parser_init(network_config, cbor_config_size, 0, &parser, &all_nodes_array) !=
           CborNoError) {
@@ -305,15 +307,15 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
             printf("Failed to get the length of the node app name\n");
             break;
           }
-          char *strbuf = static_cast<char *>(pvPortMalloc(len + 1));
-          configASSERT(strbuf);
-          if (cbor_value_copy_text_string(&node_array_member, strbuf, &len, NULL) !=
+          app_name_str = static_cast<char *>(pvPortMalloc(len + 1));
+          configASSERT(app_name_str);
+          if (cbor_value_copy_text_string(&node_array_member, app_name_str, &len, NULL) !=
               CborNoError) {
             break;
           }
-          strbuf[len] = '\0';
-          printf("RBR Node app name: %s\n", strbuf);
-          vPortFree(strbuf);
+          app_name_str[len] = '\0';
+          printf("RBR Node app name: %s\n", app_name_str);
+          vPortFree(app_name_str);
           if (cbor_value_advance(&node_array_member) != CborNoError) {
             printf("Failed to advance the node array member\n");
             break;
@@ -366,7 +368,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
               printf("Failed to get the length of the sys_cfg_map key\n");
               break;
             }
-            char *key_str = static_cast<char *>(pvPortMalloc(len + 1));
+            key_str = static_cast<char *>(pvPortMalloc(len + 1));
             configASSERT(key_str);
             if (cbor_value_copy_text_string(&sys_cfg_map, key_str, &len, NULL) != CborNoError) {
               break;
@@ -412,6 +414,12 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
         }
       }
     } while (0);
+    if (app_name_str) {
+      vPortFree(app_name_str);
+    }
+    if (key_str) {
+      vPortFree(key_str);
+    }
     vPortFree(network_config);
   }
   return current_sensor_type;
