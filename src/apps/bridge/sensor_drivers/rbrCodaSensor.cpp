@@ -192,6 +192,18 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   return new_sub;
 }
 
+/**
+ * @brief Retrieves the type of the sensor from the RBR Coda device.
+ *
+ * This function gets the RBR Coda type for the type of the sensor
+ * currently in use. The sensor type is returned as an enumerated value
+ * representing different possible sensor types. It gets the type from
+ * the network configurations CBOR map.
+ *
+ * @return An enumeration representing the type of the sensor.
+ * The specific values of the enumeration will depend on the types of sensors
+ * supported by the RBR Coda device.
+ */
 BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id) {
   BmRbrDataMsg::SensorType current_sensor_type = BmRbrDataMsg::SensorType::UNKNOWN;
 
