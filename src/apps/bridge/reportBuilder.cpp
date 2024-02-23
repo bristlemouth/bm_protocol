@@ -823,7 +823,7 @@ static void report_builder_task(void *parameters) {
                   _ctx.report_period_max_network_config_cbor = last_network_config;
                   last_network_config = NULL;
                   _ctx.report_period_max_network_config_cbor_len = temp_cbor_config_size;
-                  BRIDGE_LOG_PRINT("Updated reportBuilders max CBOR map\n");
+                  BRIDGE_LOG_PRINT("Updated reportBuilders max network configuration CBOR map\n");
                   _ctx._report_period_num_nodes = temp_num_nodes;
                   memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
                   _ctx._report_period_max_network_crc32 = temp_network_crc32;
