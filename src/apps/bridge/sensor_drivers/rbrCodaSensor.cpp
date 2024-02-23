@@ -231,7 +231,6 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
         printf("Failed to get the number of nodes\n");
         break;
       }
-      printf("Number of nodes: %d\n", num_nodes);
 
       if (cbor_value_enter_container(&all_nodes_array, &individual_node_array) != CborNoError) {
         printf("Failed to enter the nodes array\n");
@@ -412,9 +411,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
           break;
         }
       }
-
     } while (0);
-
     vPortFree(network_config);
   }
   return current_sensor_type;
