@@ -315,7 +315,6 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
           }
           app_name_str[len] = '\0';
           printf("RBR Node app name: %s\n", app_name_str);
-          vPortFree(app_name_str);
           if (cbor_value_advance(&node_array_member) != CborNoError) {
             printf("Failed to advance the node array member\n");
             break;
@@ -404,7 +403,6 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
               }
               break;
             }
-            vPortFree(key_str);
             if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
               printf("Failed to advance the sys_cfg_map\n");
               break;
