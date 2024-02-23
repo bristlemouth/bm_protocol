@@ -43,9 +43,6 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         rbr_coda->temp_deg_c.addSample(rbr_data.temperature_deg_c);
         rbr_coda->pressure_ubar.addSample(rbr_data.pressure_deci_bar);
         rbr_coda->reading_count++;
-        // Update the RBR CODA's latest sensor type
-        // TODO - verify that we should do this here v.s. when we aggregate. Although I'm not sure if we will be able to do that in the aggregate function.
-        rbr_coda->latest_sensor_type = rbr_data.sensor_type;
         // Large floats get formatted in scientific notation,
         // so we print integer seconds and millis separately.
         uint64_t reading_time_sec = rbr_data.header.reading_time_utc_ms / 1000U;
@@ -57,12 +54,11 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
 
         // Use the latest sensor type to determine the sensor type string
         const char *sensor_type_str;
-        if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
+        if (br_data.sensor_type; == BmRbrDataMsg::SensorType::TEMPERATURE) {
           sensor_type_str = "RBR.T";
-        } else if (rbr_coda->latest_sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
+        } else if (br_data.sensor_type; == BmRbrDataMsg::SensorType::PRESSURE) {
           sensor_type_str = "RBR.D";
-        } else if (rbr_coda->latest_sensor_type ==
-                   BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+        } else if (br_data.sensor_type; == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
           sensor_type_str = "RBR.DT";
         } else {
           sensor_type_str = "RBR.UNKNOWN";
@@ -195,7 +191,6 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   new_sub->reading_count = 0;
   return new_sub;
 }
-
 
 BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id) {
   BmRbrDataMsg::SensorType current_sensor_type = BmRbrDataMsg::SensorType::UNKNOWN;
