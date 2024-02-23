@@ -505,7 +505,6 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     bool rbr_coda_sample_valid = false;
     switch (rbr_coda_sample.sensor_type) {
     case BmRbrDataMsg::SensorType::TEMPERATURE: {
-      printf("Sending rbr temp\n");
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_t_v0") != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
@@ -514,7 +513,6 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       break;
     }
     case BmRbrDataMsg::SensorType::PRESSURE: {
-      printf("Sending rbr pressure\n");
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_d_v0") != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
@@ -523,7 +521,6 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
       break;
     }
     case BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE: {
-      printf("Sending rbr pressure and temp\n");
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_td_v0") != CborNoError) {
         BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
