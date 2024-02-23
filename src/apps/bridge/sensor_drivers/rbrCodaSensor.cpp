@@ -54,11 +54,11 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
 
         // Use the latest sensor type to determine the sensor type string
         const char *sensor_type_str;
-        if (br_data.sensor_type; == BmRbrDataMsg::SensorType::TEMPERATURE) {
+        if (rbr_data.sensor_type == BmRbrDataMsg::SensorType::TEMPERATURE) {
           sensor_type_str = "RBR.T";
-        } else if (br_data.sensor_type; == BmRbrDataMsg::SensorType::PRESSURE) {
+        } else if (rbr_data.sensor_type == BmRbrDataMsg::SensorType::PRESSURE) {
           sensor_type_str = "RBR.D";
-        } else if (br_data.sensor_type; == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
+        } else if (rbr_data.sensor_type == BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
           sensor_type_str = "RBR.DT";
         } else {
           sensor_type_str = "RBR.UNKNOWN";
