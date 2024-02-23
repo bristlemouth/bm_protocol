@@ -26,13 +26,13 @@ bool AanderaaSensor::subscribe() {
 }
 
 void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
-                                  const uint8_t *data, uint16_t data_len, uint8_t type,
-                                  uint8_t version) {
+                                        const uint8_t *data, uint16_t data_len, uint8_t type,
+                                        uint8_t version) {
   (void)type;
   (void)version;
   printf("Aanderaa data received from node %" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  Aanderaa_t *aanderaa = static_cast<Aanderaa_t*>(sensorControllerFindSensorById(node_id));
+  Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(sensorControllerFindSensorById(node_id));
   if (aanderaa && aanderaa->type == SENSOR_TYPE_AANDERAA) {
     if (xSemaphoreTake(aanderaa->_mutex, portMAX_DELAY)) {
       static AanderaaDataMsg::Data d;
@@ -55,36 +55,35 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
 
         int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
 
-        size_t log_buflen =
-            snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                     "%" PRIx64 ","   // Node Id
-                     "%" PRIi8 ","    // node_position
-                     "aanderaa,"      // node_app_name
-                     "%" PRIu64 ","   // reading_uptime_millis
-                     "%" PRIu64 "."   // reading_time_utc_ms seconds part
-                     "%03" PRIu32 "," // reading_time_utc_ms millis part
-                     "%" PRIu64 "."   // sensor_reading_time_ms seconds part
-                     "%03" PRIu32 "," // sensor_reading_time_ms millis part
-                     "%.3f,"          // abs_speed_cm_s
-                     "%.3f,"          // abs_tilt_deg
-                     "%.3f,"          // direction_deg_m
-                     "%.3f,"          // east_cm_s
-                     "%.3f,"          // heading_deg_m
-                     "%.3f,"          // max_tilt_deg
-                     "%.3f,"          // ping_count
-                     "%.3f,"          // single_ping_std_cm_s
-                     "%.3f,"          // std_tilt_deg
-                     "%.3f,"          // temperature_deg_c
-                     "%.3f,"          // north_cm_s
-                     "%.3f,"          // tilt_x_deg
-                     "%.3f,"          // tilt_y_deg
-                     "%.3f\n",        // transducer_strength_db
-                     node_id, node_position, d.header.reading_uptime_millis, reading_time_sec,
-                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     d.abs_speed_cm_s, d.abs_tilt_deg, d.direction_deg_m, d.east_cm_s,
-                     d.heading_deg_m, d.max_tilt_deg, d.ping_count, d.single_ping_std_cm_s,
-                     d.std_tilt_deg, d.temperature_deg_c, d.north_cm_s, d.tilt_x_deg,
-                     d.tilt_y_deg, d.transducer_strength_db);
+        size_t log_buflen = snprintf(
+            log_buf, SENSOR_LOG_BUF_SIZE,
+            "%" PRIx64 ","   // Node Id
+            "%" PRIi8 ","    // node_position
+            "aanderaa,"      // node_app_name
+            "%" PRIu64 ","   // reading_uptime_millis
+            "%" PRIu64 "."   // reading_time_utc_ms seconds part
+            "%03" PRIu32 "," // reading_time_utc_ms millis part
+            "%" PRIu64 "."   // sensor_reading_time_ms seconds part
+            "%03" PRIu32 "," // sensor_reading_time_ms millis part
+            "%.3f,"          // abs_speed_cm_s
+            "%.3f,"          // direction_deg_m
+            "%.3f,"          // north_cm_s
+            "%.3f,"          // east_cm_s
+            "%.3f,"          // heading_deg_m
+            "%.3f,"          // tilt_x_deg
+            "%.3f,"          // tilt_y_deg
+            "%.3f,"          // single_ping_std_cm_s
+            "%.3f,"          // transducer_strength_db
+            "%.3f,"          // ping_count
+            "%.3f,"          // abs_tilt_deg
+            "%.3f,"          // max_tilt_deg
+            "%.3f,"          // std_tilt_deg
+            "%.3f\n",       // temperature_deg_c
+            node_id, node_position, d.header.reading_uptime_millis, reading_time_sec,
+            reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
+            d.abs_speed_cm_s, d.direction_deg_m, d.north_cm_s, d.east_cm_s, d.heading_deg_m,
+            d.tilt_x_deg, d.tilt_y_deg, d.single_ping_std_cm_s, d.transducer_strength_db,
+            d.ping_count, d.abs_tilt_deg, d.max_tilt_deg, d.std_tilt_deg, d.temperature_deg_c);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
@@ -105,17 +104,17 @@ void AanderaaSensor::aggregate(void) {
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
     size_t log_buflen = 0;
     aanderaa_aggregations_t agg = {.abs_speed_mean_cm_s = NAN,
-                                .abs_speed_std_cm_s = NAN,
-                                .direction_circ_mean_rad = NAN,
-                                .direction_circ_std_rad = NAN,
-                                .temp_mean_deg_c = NAN,
-                                .abs_tilt_mean_rad = NAN,
-                                .std_tilt_mean_rad = NAN,
-                                .reading_count = 0};
+                                   .abs_speed_std_cm_s = NAN,
+                                   .direction_circ_mean_rad = NAN,
+                                   .direction_circ_std_rad = NAN,
+                                   .temp_mean_deg_c = NAN,
+                                   .abs_tilt_mean_rad = NAN,
+                                   .std_tilt_mean_rad = NAN,
+                                   .reading_count = 0};
     // Check to make sure we have enough sensor readings for a valid aggregation.
     // If not send NaNs for all the values.
     // TODO - verify that we can assume if one sampler is below the min then all of them are.
-    if(abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
+    if (abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       agg.abs_speed_mean_cm_s = abs_speed_cm_s.getMean(true);
       agg.abs_speed_std_cm_s = abs_speed_cm_s.getStd(agg.abs_speed_mean_cm_s, 0.0, true);
       agg.direction_circ_mean_rad = direction_rad.getCircularMean();
@@ -124,31 +123,38 @@ void AanderaaSensor::aggregate(void) {
       agg.abs_tilt_mean_rad = abs_tilt_rad.getMean(true);
       agg.std_tilt_mean_rad = std_tilt_rad.getMean(true);
       agg.reading_count = reading_count;
-      if (agg.abs_speed_mean_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_mean_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
-          agg.abs_speed_mean_cm_s = NAN;
+      if (agg.abs_speed_mean_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN ||
+          agg.abs_speed_mean_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
+        agg.abs_speed_mean_cm_s = NAN;
       }
-      if (agg.abs_speed_std_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN || agg.abs_speed_std_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
-      agg.abs_speed_std_cm_s = NAN;
+      if (agg.abs_speed_std_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN ||
+          agg.abs_speed_std_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
+        agg.abs_speed_std_cm_s = NAN;
       }
-      if (agg.direction_circ_mean_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
-          agg.direction_circ_mean_rad = NAN;
+      if (agg.direction_circ_mean_rad < DIRECTION_SAMPLE_MEMBER_MIN ||
+          agg.direction_circ_mean_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
+        agg.direction_circ_mean_rad = NAN;
       }
-      if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN || agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
-          agg.direction_circ_std_rad = NAN;
+      if (agg.direction_circ_std_rad < DIRECTION_SAMPLE_MEMBER_MIN ||
+          agg.direction_circ_std_rad > DIRECTION_SAMPLE_MEMBER_MAX) {
+        agg.direction_circ_std_rad = NAN;
       }
-      if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN || agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
-          agg.temp_mean_deg_c = NAN;
+      if (agg.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN ||
+          agg.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
+        agg.temp_mean_deg_c = NAN;
       }
-      if (agg.abs_tilt_mean_rad < TILT_SAMPLE_MEMBER_MIN || agg.abs_tilt_mean_rad > TILT_SAMPLE_MEMBER_MAX) {
-          agg.abs_tilt_mean_rad = NAN;
+      if (agg.abs_tilt_mean_rad < TILT_SAMPLE_MEMBER_MIN ||
+          agg.abs_tilt_mean_rad > TILT_SAMPLE_MEMBER_MAX) {
+        agg.abs_tilt_mean_rad = NAN;
       }
-      if (agg.std_tilt_mean_rad < TILT_SAMPLE_MEMBER_MIN || agg.std_tilt_mean_rad > TILT_SAMPLE_MEMBER_MAX) {
-          agg.std_tilt_mean_rad = NAN;
+      if (agg.std_tilt_mean_rad < TILT_SAMPLE_MEMBER_MIN ||
+          agg.std_tilt_mean_rad > TILT_SAMPLE_MEMBER_MAX) {
+        agg.std_tilt_mean_rad = NAN;
       }
     }
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
     static char timeStrbuf[TIME_STR_BUFSIZE];
-    if(!logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE,true)){
+    if (!logRtcGetTimeStr(timeStrbuf, TIME_STR_BUFSIZE, true)) {
       printf("Failed to get time string for Aanderaa aggregation\n");
       snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
     }
@@ -156,35 +162,29 @@ void AanderaaSensor::aggregate(void) {
     int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                    "%" PRIx64 "," // Node Id
-                    "%" PRIi8 ","  // node_position
-                    "aanderaa,"    // node_app_name
-                    "%s,"          // timestamp(ticks/UTC)
-                    "%" PRIu32 "," // reading_count
-                    "%.3f,"        // abs_speed_mean_cm_s
-                    "%.3f,"        // abs_speed_std_cm_s
-                    "%.3f,"        // direction_circ_mean_rad
-                    "%.3f,"        // direction_circ_std_rad
-                    "%.3f,"        // temp_mean_deg_c
-                    "%.3f,"        // abs_tilt_mean_rad
-                    "%.3f\n",      // std_tilt_mean_rad
-                    node_id,
-                    node_position,
-                    timeStrbuf,
-                    agg.reading_count,
-                    agg.abs_speed_mean_cm_s,
-                    agg.abs_speed_std_cm_s,
-                    agg.direction_circ_mean_rad,
-                    agg.direction_circ_std_rad,
-                    agg.temp_mean_deg_c,
-                    agg.abs_tilt_mean_rad,
-                    agg.std_tilt_mean_rad);
+                          "%" PRIx64 "," // Node Id
+                          "%" PRIi8 ","  // node_position
+                          "aanderaa,"    // node_app_name
+                          "%s,"          // timestamp(ticks/UTC)
+                          "%" PRIu32 "," // reading_count
+                          "%.3f,"        // abs_speed_mean_cm_s
+                          "%.3f,"        // abs_speed_std_cm_s
+                          "%.3f,"        // direction_circ_mean_rad
+                          "%.3f,"        // direction_circ_std_rad
+                          "%.3f,"        // temp_mean_deg_c
+                          "%.3f,"        // abs_tilt_mean_rad
+                          "%.3f\n",      // std_tilt_mean_rad
+                          node_id, node_position, timeStrbuf, agg.reading_count,
+                          agg.abs_speed_mean_cm_s, agg.abs_speed_std_cm_s,
+                          agg.direction_circ_mean_rad, agg.direction_circ_std_rad,
+                          agg.temp_mean_deg_c, agg.abs_tilt_mean_rad, agg.std_tilt_mean_rad);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print Aanderaa data\n");
     }
-    reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA, static_cast<void *>(&agg), sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA, static_cast<void *>(&agg),
+                            sizeof(aanderaa_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     abs_speed_cm_s.clear();
@@ -195,12 +195,13 @@ void AanderaaSensor::aggregate(void) {
     reading_count = 0;
     xSemaphoreGive(_mutex);
   } else {
-      printf("Failed to get the subbed Aanderaa mutex while trying to aggregate\n");
+    printf("Failed to get the subbed Aanderaa mutex while trying to aggregate\n");
   }
   vPortFree(log_buf);
 }
 
-Aanderaa_t* createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms, uint32_t averager_max_samples) {
+Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms,
+                              uint32_t averager_max_samples) {
   Aanderaa_t *new_sub = static_cast<Aanderaa_t *>(pvPortMalloc(sizeof(Aanderaa_t)));
   new_sub = new (new_sub) Aanderaa_t();
   configASSERT(new_sub);
