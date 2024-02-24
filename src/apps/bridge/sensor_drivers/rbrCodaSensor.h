@@ -44,6 +44,7 @@ private:
   static void rbrCodaSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                  const uint8_t *data, uint16_t data_len, uint8_t type,
                                  uint8_t version);
+  static BmRbrDataMsg::SensorType_t rbrCodaGetSensorType(uint64_t node_id);
 
 private:
   static constexpr char subtag[] = "/bm_rbr_data";

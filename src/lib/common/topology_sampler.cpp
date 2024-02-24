@@ -42,7 +42,6 @@
 #define NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_MS (NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_S * 1000)
 // Accounts for name of app + cbor config map + encoding inefficiencies
 #define NODE_CONFIG_PADDING (512)
-#define NUM_CONFIG_FIELDS_PER_NODE (5)
 
 typedef struct network_configuration_info {
   uint32_t network_crc32;
