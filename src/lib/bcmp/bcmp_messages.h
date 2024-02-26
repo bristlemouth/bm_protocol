@@ -11,6 +11,10 @@ typedef struct {
   uint16_t checksum;
   uint8_t flags;
   uint8_t rsvd;
+  uint32_t seq_num;
+  uint8_t frag_total;
+  uint8_t frag_id;
+  uint8_t next_header;
   uint8_t payload[0];
 } __attribute__((packed)) bcmp_header_t;
 
