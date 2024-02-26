@@ -32,6 +32,12 @@
 // 1500 MTU minus ipv6 header
 #define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
 
+// TODO - add a linked list here
+// The linked list will consist of outgoing messages
+// and their sequence numbers and the callback to call
+// upon receipt of the reply.
+// The callback should also handle the timeout case.
+
 typedef struct {
   struct netif* netif;
   struct raw_pcb *pcb;
