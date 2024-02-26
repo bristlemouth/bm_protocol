@@ -383,6 +383,10 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
     header->checksum = 0;
     header->flags = 0; // Unused for now
     header->rsvd = 0; // Unused for now
+    header->seq_num = 0; // Unused for now
+    header->frag_total = 0; // Unused for now
+    header->frag_id = 0; // Unused for now
+    header->next_header = 0; // Unused for now
 
     memcpy(header->payload, buff, len);
 
