@@ -5,6 +5,7 @@
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
 #include "timers.h"
+#include <stdarg.h>
 #include <string.h>
 
 #include "bcmp.h"
@@ -80,6 +81,10 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
 static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bufsize);
 
 static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len);
+
+static CborError cborStreamFunct(void *token, const char *fmt, ...);
+
+static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_size);
 
 static void topology_sample_cb(networkTopology_t *networkTopology) {
   uint8_t *cbor_buffer = NULL;
@@ -164,6 +169,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         configASSERT(_node_list.last_network_configuration_info.cbor_config_map);
         memcpy(_node_list.last_network_configuration_info.cbor_config_map, cbor_buffer,
                cbor_bufsize);
+        log_cbor_network_configurations(cbor_buffer, cbor_bufsize);
       }
       printf("\n");
     }
@@ -174,6 +180,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
       if (!known) {
         static constexpr uint8_t LOG_MSG_SIZE = 128;
         char *log_msg = static_cast<char *>(pvPortMalloc(LOG_MSG_SIZE));
+        configASSERT(log_msg);
         int msglen = snprintf(
             log_msg, LOG_MSG_SIZE,
             "The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32 " Adding it.\n",
@@ -818,4 +825,48 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
       }
     }
   }
+}
+
+static CborError cborStreamFunct(void *token, const char *fmt, ...) {
+  (void)token;
+  CborError err = CborNoError;
+  char *log_msg = NULL;
+  do {
+    va_list args;
+    va_start(args, fmt);
+    int32_t loglen = vsnprintf(NULL, 0, fmt, args);
+    if (!loglen) {
+      break;
+    }
+    loglen += 1; // for null terminator
+    log_msg = static_cast<char *>(pvPortMalloc(loglen));
+    configASSERT(log_msg);
+    memset(log_msg, 0, loglen);
+    if (vsnprintf(log_msg, loglen, fmt, args) < 0) {
+      err = CborErrorOutOfMemory;
+      break;
+    }
+    BRIDGE_CFG_LOG_PRINTN(log_msg, loglen);
+    va_end(args);
+  } while (0);
+  if (log_msg) {
+    vPortFree(log_msg);
+  }
+  return err;
+}
+
+static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_size) {
+  configASSERT(cbor_buf);
+  CborError err = CborNoError;
+  BRIDGE_CFG_LOG_PRINT("Bridge network config: \n");
+  do {
+    CborParser parser;
+    CborValue it;
+    err = cbor_parser_init(cbor_buf, cbor_buf_size, 0, &parser, &it);
+    if (err != CborNoError) {
+      break;
+    }
+    cbor_value_to_pretty_stream(cborStreamFunct, NULL, &it, CborPrettyDefaultFlags);
+  } while (0);
+  BRIDGE_CFG_LOG_PRINT("\n");
 }
