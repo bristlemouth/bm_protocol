@@ -652,17 +652,7 @@ static bool _message_is_sequenced_reply(uint16_t type) {
   bool rval = false;
   if (type == BCMP_CONFIG_VALUE ||
       type == BCMP_CONFIG_STATUS_RESPONSE ||
-      type == BCMP_CONFIG_DELETE_RESPONSE ||
-      type == BCMP_DFU_PAYLOAD_REQ ||
-      type == BCMP_DFU_PAYLOAD ||
-      type == BCMP_DFU_END ||
-      type == BCMP_DFU_ACK ||
-      type == BCMP_DFU_ABORT ||
-      type == BCMP_DFU_HEARTBEAT ||
-      type == BCMP_DFU_REBOOT_REQ ||
-      type == BCMP_DFU_REBOOT ||
-      type == BCMP_DFU_BOOT_COMPLETE ||
-      type == BCMP_ECHO_REPLY) {
+      type == BCMP_CONFIG_DELETE_RESPONSE) {
     rval = true;
   }
   return rval;
@@ -673,11 +663,7 @@ static bool _message_is_sequenced_request(uint16_t type) {
   if (type == BCMP_CONFIG_GET ||
       type == BCMP_CONFIG_SET ||
       type == BCMP_CONFIG_STATUS_REQUEST ||
-      type == BCMP_CONFIG_DELETE_REQUEST ||
-      type == BCMP_DFU_START ||
-      type == BCMP_DFU_PAYLOAD_REQ ||
-      type == BCMP_DFU_REBOOT_REQ ||
-      type == BCMP_ECHO_REQUEST) {
+      type == BCMP_CONFIG_DELETE_REQUEST) {
     rval = true;
   }
   return rval;
