@@ -677,7 +677,6 @@ static bool _message_is_sequenced_request(uint16_t type) {
   bool rval = false;
   if (type == BCMP_CONFIG_GET ||
       type == BCMP_CONFIG_SET ||
-      type == BCMP_CONFIG_COMMIT ||
       type == BCMP_CONFIG_STATUS_REQUEST ||
       type == BCMP_CONFIG_DELETE_REQUEST ||
       type == BCMP_DFU_START ||

@@ -342,7 +342,7 @@ bool bcmp_config_del_key(uint64_t target_node_id, bm_common_config_partition_e p
     return rval;
 }
 
-static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char * key, bool success) {
+static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char * key, bool success, uint16_t seq_num) {
     configASSERT(key);
     bool rval = false;
     size_t msg_size = sizeof(bm_common_config_delete_key_response_t) + key_len;
@@ -354,14 +354,14 @@ static bool bcmp_config_send_del_key_response(uint64_t target_node_id, bm_common
     del_resp->key_length = key_len;
     memcpy(del_resp->key, key, key_len);
     del_resp->success = success;
-    if(bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_DELETE_RESPONSE, reinterpret_cast<uint8_t*>(del_resp), msg_size) == ERR_OK) {
+    if(bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_DELETE_RESPONSE, reinterpret_cast<uint8_t*>(del_resp), msg_size, seq_num) == ERR_OK) {
         rval = true;
     }
     vPortFree(del_resp);
     return rval;
 }
 
-static void bcmp_process_del_request_message(bm_common_config_delete_key_request_t * msg) {
+static void bcmp_process_del_request_message(bm_common_config_delete_key_request_t * msg, uint16_t seq_num) {
     configASSERT(msg);
     do {
         Configuration *cfg;
@@ -373,7 +373,7 @@ static void bcmp_process_del_request_message(bm_common_config_delete_key_request
             break;
         }
         bool success = cfg->removeKey(msg->key,msg->key_length);
-        if(!bcmp_config_send_del_key_response(msg->header.source_node_id, msg->partition, msg->key_length, msg->key, success)){
+        if(!bcmp_config_send_del_key_response(msg->header.source_node_id, msg->partition, msg->key_length, msg->key, success, seq_num)){
             printf("Failed to send del key resp\n");
         }
     } while(0);
@@ -436,25 +436,24 @@ bool bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t *pay
                 break;
             }
             case BCMP_CONFIG_VALUE: {
-                (void) seq_num; // TODO - use it here too!
+                (void) seq_num;
                 bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
                 bcmp_process_value_message(msg);
                 break;
             }
             case BCMP_CONFIG_DELETE_REQUEST: {
-                (void) seq_num; // TODO - use it here too!
                 bm_common_config_delete_key_request_t *msg = reinterpret_cast<bm_common_config_delete_key_request_t *>(payload);
-                bcmp_process_del_request_message(msg);
+                bcmp_process_del_request_message(msg, seq_num);
                 break;
             }
             case BCMP_CONFIG_DELETE_RESPONSE: {
-                (void) seq_num; // TODO - use it here too!
+                (void) seq_num;
                 bm_common_config_delete_key_response_t *msg = reinterpret_cast<bm_common_config_delete_key_response_t *>(payload);
                 bcmp_process_del_response_message(msg);
                 break;
             }
             default:
-                (void) seq_num; // TODO - use it here too!
+                (void) seq_num;
                 printf("Invalid config msg\n");
                 break;
         }
