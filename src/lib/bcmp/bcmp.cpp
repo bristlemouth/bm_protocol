@@ -42,6 +42,7 @@ typedef struct bcmp_request_element {
   uint16_t type;
   uint32_t send_timestamp_ms;
   uint32_t timeout_ms;
+  bcmp_reply_message_cb callback;
   bcmp_request_element *next;
 } bcmp_request_element_t;
 
