@@ -6,7 +6,7 @@
 static Configuration* _usr_cfg;
 static Configuration* _sys_cfg;
 
-bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char* key, err_t &err) {
+bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char* key, err_t &err, bcmp_reply_message_cb reply_cb) {
     configASSERT(key);
     bool rval = false;
     err = ERR_VAL;
@@ -22,7 +22,7 @@ bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e parti
         }
         get_msg->key_length = key_len;
         memcpy(get_msg->key, key, key_len);
-        err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_GET, (uint8_t *)get_msg, msg_size);
+        err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_GET, (uint8_t *)get_msg, msg_size, 0, reply_cb);
         if(err == ERR_OK) {
             rval = true;
         }
@@ -32,7 +32,7 @@ bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e parti
 }
 
 bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e partition,
-    size_t key_len, const char* key, size_t value_size, void * val, err_t &err) {
+    size_t key_len, const char* key, size_t value_size, void * val, err_t &err, bcmp_reply_message_cb reply_cb) {
     configASSERT(key);
     bool rval = false;
     err = ERR_VAL;
@@ -50,7 +50,7 @@ bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e parti
         memcpy(set_msg->keyAndData, key, key_len);
         set_msg->data_length = value_size;
         memcpy(&set_msg->keyAndData[key_len], val, value_size);
-        err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_SET, (uint8_t *)set_msg, msg_len);
+        err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_SET, (uint8_t *)set_msg, msg_len, 0, reply_cb);
         if(err == ERR_OK) {
             rval = true;
         }
@@ -75,7 +75,7 @@ bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e pa
     return rval;
 }
 
-bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partition_e partition, err_t &err) {
+bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partition_e partition, err_t &err, bcmp_reply_message_cb reply_cb) {
     bool rval = false;
     err = ERR_VAL;
     bm_common_config_status_request_t *status_req_msg = (bm_common_config_status_request_t *)pvPortMalloc(sizeof(bm_common_config_status_request_t));
@@ -83,7 +83,7 @@ bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partit
     status_req_msg->header.target_node_id = target_node_id;
     status_req_msg->header.source_node_id = getNodeId();
     status_req_msg->partition = partition;
-    err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_REQUEST, (uint8_t *)status_req_msg, sizeof(bm_common_config_status_request_t));
+    err = bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_STATUS_REQUEST, (uint8_t *)status_req_msg, sizeof(bm_common_config_status_request_t), 0, reply_cb);
     if(err == ERR_OK) {
         rval = true;
     }
@@ -324,7 +324,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
     } while(0);
 }
 
-bool bcmp_config_del_key(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char * key) {
+bool bcmp_config_del_key(uint64_t target_node_id, bm_common_config_partition_e partition, size_t key_len, const char * key, bcmp_reply_message_cb reply_cb) {
     configASSERT(key);
     bool rval = false;
     size_t msg_size = sizeof(bm_common_config_delete_key_request_t) + key_len;
@@ -335,7 +335,7 @@ bool bcmp_config_del_key(uint64_t target_node_id, bm_common_config_partition_e p
     del_msg->partition = partition;
     del_msg->key_length = key_len;
     memcpy(del_msg->key, key, key_len);
-    if(bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_DELETE_REQUEST, reinterpret_cast<uint8_t*>(del_msg), msg_size) == ERR_OK) {
+    if(bcmp_tx(&multicast_ll_addr, BCMP_CONFIG_DELETE_REQUEST, reinterpret_cast<uint8_t*>(del_msg), msg_size, 0, reply_cb) == ERR_OK) {
         rval = true;
     }
     vPortFree(del_msg);
