@@ -59,7 +59,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
 
   printf("PING (%" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id, echo_req->payload_len);
 
-  err_t rval = bcmp_tx(addr, BCMP_ECHO_REQUEST, reinterpret_cast<uint8_t*>(echo_req), echo_len);
+  err_t rval = bcmp_tx(addr, BCMP_ECHO_REQUEST, reinterpret_cast<uint8_t*>(echo_req), echo_len, false, 0);
 
   _ping_request_time = uptimeGetMicroSeconds();
 
@@ -75,9 +75,9 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   \param *addr - ip address to send ping reply to
   \ret ERR_OK if successful
 */
-err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr) {
+err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr, uint16_t seq_num) {
 
-  return bcmp_tx(addr, BCMP_ECHO_REPLY, reinterpret_cast<uint8_t*>(echo_reply), sizeof(*echo_reply) + echo_reply->payload_len);
+  return bcmp_tx(addr, BCMP_ECHO_REPLY, reinterpret_cast<uint8_t*>(echo_reply), sizeof(*echo_reply) + echo_reply->payload_len, true, seq_num);
 }
 
 /*!
@@ -88,12 +88,12 @@ err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr)
   \param *dst - destination ip of request (used for responding to the correct multicast address)
   \ret ERR_OK if successful
 */
-err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src, const ip_addr_t *dst) {
+err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src, const ip_addr_t *dst, uint16_t seq_num) {
   (void) src;
   configASSERT(echo_req);
   if ((echo_req->target_node_id == 0) || (getNodeId() == echo_req->target_node_id)) {
     echo_req->target_node_id = getNodeId();
-    return bcmp_send_ping_reply(reinterpret_cast<bcmp_echo_reply_t*>(echo_req), dst);
+    return bcmp_send_ping_reply(reinterpret_cast<bcmp_echo_reply_t*>(echo_req), dst, seq_num);
   }
 
   return ERR_OK;

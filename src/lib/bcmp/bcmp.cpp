@@ -85,9 +85,10 @@ static bool _message_list_add_message(bcmp_element_t *message);
 static bool _message_list_remove_message(bcmp_element_t *message);
 static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms);
 static void _message_list_timer_callback(TimerHandle_t tmr);
-static bcmp_element_t *_message_list_find_message(uint16_t seq_num, uint16_t type);
+static bcmp_element_t *_message_list_find_message(uint16_t seq_num);
 static void _message_list_timer_expiry_cb(void *arg);
 static bool _message_uses_sequence_numbers(uint16_t type);
+static bool _message_is_request(uint16_t type);
 
 /*!
   BCMP link change event callback
@@ -163,9 +164,9 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
     }
 
     // Check if this type is one that will use sequence numbers
-    if (_message_uses_sequence_numbers(header->type)) {
+    if (_message_uses_sequence_numbers(header->type) && !_message_is_request(header->type)) {
       // Check if the message is a reply to a message we sent
-      bcmp_element_t *sent_message = _message_list_find_message(header->seq_num, header->type);
+      bcmp_element_t *sent_message = _message_list_find_message(header->seq_num);
       if (sent_message) {
         printf("BCMP - Received reply to message with seq_num %d\n", header->seq_num);
         if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
@@ -197,7 +198,7 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       }
 
       case BCMP_ECHO_REQUEST: {
-        bcmp_process_ping_request(reinterpret_cast<bcmp_echo_request_t *>(header->payload), src, dst);
+        bcmp_process_ping_request(reinterpret_cast<bcmp_echo_request_t *>(header->payload), src, dst, header->seq_num);
         break;
       }
 
@@ -440,11 +441,14 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
         // If we are sending a new request, use our own sequence number
         header->seq_num = _ctx.message_count;
         _ctx.message_count++;
+        bcmp_element_t *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
+        _message_list_add_message(sent_message);
       }
     } else {
       // If the message doesn't use sequence numbers, set it to 0
       header->seq_num = 0;
     }
+    printf("BCMP - Sending message with seq_num %d\n", header->seq_num);
     header->frag_total = 0; // Unused for now
     header->frag_id = 0; // Unused for now
     header->next_header = 0; // Unused for now
@@ -463,9 +467,6 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
                               dst,
                               _ctx.netif,
                               src_ip); // Using link-local address
-
-    bcmp_element_t *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
-    _message_list_add_message(sent_message);
 
     // We're done with this pbuf
     // raw_sendto_if_src eventually calls bm_l2_tx, which does a pbuf_ref
@@ -638,12 +639,12 @@ static void _message_list_timer_callback(TimerHandle_t tmr){
   timer_callback_handler_send_cb(_message_list_timer_expiry_cb, tmr, 0);
 }
 
-static bcmp_element_t *_message_list_find_message(uint16_t seq_num, uint16_t type) {
+static bcmp_element_t *_message_list_find_message(uint16_t seq_num) {
   bcmp_element_t *rval = NULL;
   if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
     bcmp_element_t *current = _ctx.messages_list;
     while (current) {
-      if (current->seq_num == seq_num && current->type == type) {
+      if (current->seq_num == seq_num) {
         printf("BCMP message with seq_num %d found\n", current->seq_num);
         rval = current;
         break;
@@ -665,7 +666,20 @@ static bool _message_uses_sequence_numbers(uint16_t type) {
       type == BCMP_DFU_PAYLOAD || type == BCMP_DFU_END ||
       type == BCMP_DFU_ACK || type == BCMP_DFU_ABORT ||
       type == BCMP_DFU_HEARTBEAT || type == BCMP_DFU_REBOOT_REQ ||
-      type == BCMP_DFU_REBOOT || type == BCMP_DFU_BOOT_COMPLETE) {
+      type == BCMP_DFU_REBOOT || type == BCMP_DFU_BOOT_COMPLETE ||
+      type == BCMP_ECHO_REQUEST || type == BCMP_ECHO_REPLY) {
+    rval = true;
+  }
+  return rval;
+}
+
+static bool _message_is_request(uint16_t type) {
+  bool rval = false;
+  if (type == BCMP_CONFIG_GET || type == BCMP_CONFIG_SET ||
+      type == BCMP_CONFIG_COMMIT || type == BCMP_CONFIG_STATUS_REQUEST ||
+      type == BCMP_CONFIG_DELETE_REQUEST || type == BCMP_DFU_START ||
+      type == BCMP_DFU_PAYLOAD_REQ || type == BCMP_DFU_REBOOT_REQ ||
+      type == BCMP_ECHO_REQUEST) {
     rval = true;
   }
   return rval;
