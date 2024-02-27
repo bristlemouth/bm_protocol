@@ -34,7 +34,6 @@
 // 1500 MTU minus ipv6 header
 #define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
 
-static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 1000;
 static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 500;
 
 typedef struct bcmp_request_element {
@@ -410,9 +409,12 @@ static void bcmp_thread(void *parameters) {
   \param type message type
   \param *buff message buffer
   \param len message length
+  \param seq_num The sequence number of the message.
+  \param reply_cb A callback function to handle reply messages.
+  \param request_timeout_ms The timeout for the request in milliseconds.
   \return ERR_OK on success, something else otherwise
 */
-err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num, bcmp_reply_message_cb reply_cb) {
+err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num, bcmp_reply_message_cb reply_cb, uint32_t request_timeout_ms) {
   err_t rval;
 
   do {
@@ -437,7 +439,7 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
       // If we are sending a new request, use our own sequence number
       header->seq_num = _ctx.message_count;
       _ctx.message_count++;
-      bcmp_request_element *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS, reply_cb);
+      bcmp_request_element *sent_message = _message_list_create_element(header->seq_num, header->type, request_timeout_ms, reply_cb);
       _message_list_add_message(sent_message);
       printf("BCMP - Sending message with seq_num %d\n", header->seq_num);
     } else {
