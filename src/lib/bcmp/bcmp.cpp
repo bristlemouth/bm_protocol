@@ -34,16 +34,16 @@
 // 1500 MTU minus ipv6 header
 #define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
 
-static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 100;
+static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 1000;
 static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 500;
 
-typedef struct bcmp_element {
+typedef struct bcmp_request_element {
   uint32_t seq_num;
   uint16_t type;
   uint32_t send_timestamp_ms;
   uint32_t timeout_ms;
-  bcmp_element *next;
-} bcmp_element_t;
+  bcmp_request_element *next;
+} bcmp_request_element_t;
 
 typedef struct {
   struct netif* netif;
@@ -51,7 +51,7 @@ typedef struct {
   QueueHandle_t rx_queue;
   TimerHandle_t heartbeat_timer;
   // Linked list of sent BCMP messages
-  bcmp_element_t *messages_list;
+  bcmp_request_element *messages_list;
   SemaphoreHandle_t messages_list_mutex;
   TimerHandle_t messages_expiration_timer;
   uint32_t message_count;
@@ -76,11 +76,11 @@ typedef struct {
 
 static bcmpContext_t _ctx;
 
-static bool _message_list_add_message(bcmp_element_t *message);
-static bool _message_list_remove_message(bcmp_element_t *message);
-static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms);
+static bool _message_list_add_message(bcmp_request_element *message);
+static bool _message_list_remove_message(bcmp_request_element *message);
+static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms);
 static void _message_list_timer_callback(TimerHandle_t tmr);
-static bcmp_element_t *_message_list_find_message(uint16_t seq_num);
+static bcmp_request_element *_message_list_find_message(uint16_t seq_num);
 static void _message_list_timer_expiry_cb(void *arg);
 static bool _message_is_sequenced_reply(uint16_t type);
 static bool _message_is_sequenced_request(uint16_t type);
@@ -161,7 +161,7 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
     // Check if this type is one that will use sequence numbers
     if (_message_is_sequenced_reply(header->type) && !_message_is_sequenced_request(header->type)) {
       // Check if the message is a reply to a message we sent
-      bcmp_element_t *sent_message = _message_list_find_message(header->seq_num);
+      bcmp_request_element *sent_message = _message_list_find_message(header->seq_num);
       if (sent_message) {
         printf("BCMP - Received reply to message with seq_num %d\n", header->seq_num);
         if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
@@ -434,7 +434,7 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
       // If we are sending a new request, use our own sequence number
       header->seq_num = _ctx.message_count;
       _ctx.message_count++;
-      bcmp_element_t *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
+      bcmp_request_element *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
       _message_list_add_message(sent_message);
       printf("BCMP - Sending message with seq_num %d\n", header->seq_num);
     } else {
@@ -553,14 +553,14 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration*
 }
 
 
-static bool _message_list_add_message(bcmp_element_t *message) {
+static bool _message_list_add_message(bcmp_request_element *message) {
   bool rval = false;
   configASSERT(message);
   if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
     if (_ctx.messages_list == NULL) {
       _ctx.messages_list = message;
     } else {
-      bcmp_element_t *current = _ctx.messages_list;
+      bcmp_request_element *current = _ctx.messages_list;
       while (current->next != NULL) {
         current = current->next;
       }
@@ -574,15 +574,15 @@ static bool _message_list_add_message(bcmp_element_t *message) {
 
 // NOTE: This function is not thread safe and can only be called within a section
 // protected by the messages_list_mutex semaphore.
-static bool _message_list_remove_message(bcmp_element_t *message) {
+static bool _message_list_remove_message(bcmp_request_element *message) {
   bool rval = false;
   configASSERT(message);
-  bcmp_element_t *element_to_delete = NULL;
+  bcmp_request_element *element_to_delete = NULL;
   if (_ctx.messages_list == message) {
     element_to_delete = _ctx.messages_list;
     _ctx.messages_list = _ctx.messages_list->next;
   } else {
-    bcmp_element_t *current = _ctx.messages_list;
+    bcmp_request_element *current = _ctx.messages_list;
     while (current && current->next != message) {
       current = current->next;
     }
@@ -598,8 +598,8 @@ static bool _message_list_remove_message(bcmp_element_t *message) {
   return rval;
 }
 
-static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms) {
-  bcmp_element_t *element = static_cast<bcmp_element_t *>(pvPortMalloc(sizeof(bcmp_element_t)));
+static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms) {
+  bcmp_request_element *element = static_cast<bcmp_request_element *>(pvPortMalloc(sizeof(bcmp_request_element)));
   configASSERT(element);
   element->seq_num = seq_num;
   element->type = type;
@@ -612,7 +612,7 @@ static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t t
 static void _message_list_timer_expiry_cb(void *arg) {
   (void) arg;
   if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
-    bcmp_element_t *current = _ctx.messages_list;
+    bcmp_request_element *current = _ctx.messages_list;
     while (current) {
       if (pdTICKS_TO_MS(xTaskGetTickCount()) - current->send_timestamp_ms > current->timeout_ms) {
         printf("BCMP message with seq_num %d timed out\n", current->seq_num);
@@ -631,10 +631,10 @@ static void _message_list_timer_callback(TimerHandle_t tmr){
   timer_callback_handler_send_cb(_message_list_timer_expiry_cb, tmr, 0);
 }
 
-static bcmp_element_t *_message_list_find_message(uint16_t seq_num) {
-  bcmp_element_t *rval = NULL;
+static bcmp_request_element *_message_list_find_message(uint16_t seq_num) {
+  bcmp_request_element *rval = NULL;
   if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
-    bcmp_element_t *current = _ctx.messages_list;
+    bcmp_request_element *current = _ctx.messages_list;
     while (current) {
       if (current->seq_num == seq_num) {
         printf("BCMP message with seq_num %d found\n", current->seq_num);
