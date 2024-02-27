@@ -87,8 +87,8 @@ static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t t
 static void _message_list_timer_callback(TimerHandle_t tmr);
 static bcmp_element_t *_message_list_find_message(uint16_t seq_num);
 static void _message_list_timer_expiry_cb(void *arg);
-static bool _message_uses_sequence_numbers(uint16_t type);
-static bool _message_is_request(uint16_t type);
+static bool _message_is_sequenced_reply(uint16_t type);
+static bool _message_is_sequenced_request(uint16_t type);
 
 /*!
   BCMP link change event callback
@@ -164,7 +164,7 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
     }
 
     // Check if this type is one that will use sequence numbers
-    if (_message_uses_sequence_numbers(header->type) && !_message_is_request(header->type)) {
+    if (_message_is_sequenced_reply(header->type) && !_message_is_sequenced_request(header->type)) {
       // Check if the message is a reply to a message we sent
       bcmp_element_t *sent_message = _message_list_find_message(header->seq_num);
       if (sent_message) {
@@ -414,7 +414,7 @@ static void bcmp_thread(void *parameters) {
   \param len message length
   \return ERR_OK on success, something else otherwise
 */
-err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, bool is_reply, uint16_t seq_num) {
+err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num) {
   err_t rval;
 
   do {
@@ -432,23 +432,20 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
     header->checksum = 0;
     header->flags = 0; // Unused for now
     header->rsvd = 0; // Unused for now
-    if (_message_uses_sequence_numbers(type)) {
-      if (is_reply) {
-        // if we are replying to a message, use the sequence number from the
-        // received message
-        header->seq_num = seq_num;
-      } else {
-        // If we are sending a new request, use our own sequence number
-        header->seq_num = _ctx.message_count;
-        _ctx.message_count++;
-        bcmp_element_t *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
-        _message_list_add_message(sent_message);
-      }
+    if (_message_is_sequenced_reply(type)) {
+      // if we are replying to a message, use the sequence number from the received message
+      header->seq_num = seq_num;
+    } else if (_message_is_sequenced_request(type)) {
+      // If we are sending a new request, use our own sequence number
+      header->seq_num = _ctx.message_count;
+      _ctx.message_count++;
+      bcmp_element_t *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
+      _message_list_add_message(sent_message);
+      printf("BCMP - Sending message with seq_num %d\n", header->seq_num);
     } else {
       // If the message doesn't use sequence numbers, set it to 0
       header->seq_num = 0;
     }
-    printf("BCMP - Sending message with seq_num %d\n", header->seq_num);
     header->frag_total = 0; // Unused for now
     header->frag_id = 0; // Unused for now
     header->next_header = 0; // Unused for now
@@ -656,29 +653,36 @@ static bcmp_element_t *_message_list_find_message(uint16_t seq_num) {
   return rval;
 }
 
-static bool _message_uses_sequence_numbers(uint16_t type) {
+static bool _message_is_sequenced_reply(uint16_t type) {
   bool rval = false;
-  if (type == BCMP_CONFIG_GET || type == BCMP_CONFIG_VALUE ||
-      type == BCMP_CONFIG_SET || type == BCMP_CONFIG_COMMIT ||
-      type == BCMP_CONFIG_STATUS_REQUEST || type == BCMP_CONFIG_STATUS_RESPONSE ||
-      type == BCMP_CONFIG_DELETE_REQUEST || type == BCMP_CONFIG_DELETE_RESPONSE ||
-      type == BCMP_DFU_START || type == BCMP_DFU_PAYLOAD_REQ ||
-      type == BCMP_DFU_PAYLOAD || type == BCMP_DFU_END ||
-      type == BCMP_DFU_ACK || type == BCMP_DFU_ABORT ||
-      type == BCMP_DFU_HEARTBEAT || type == BCMP_DFU_REBOOT_REQ ||
-      type == BCMP_DFU_REBOOT || type == BCMP_DFU_BOOT_COMPLETE ||
-      type == BCMP_ECHO_REQUEST || type == BCMP_ECHO_REPLY) {
+  if (type == BCMP_CONFIG_VALUE ||
+      type == BCMP_CONFIG_STATUS_RESPONSE ||
+      type == BCMP_CONFIG_DELETE_RESPONSE ||
+      type == BCMP_DFU_PAYLOAD_REQ ||
+      type == BCMP_DFU_PAYLOAD ||
+      type == BCMP_DFU_END ||
+      type == BCMP_DFU_ACK ||
+      type == BCMP_DFU_ABORT ||
+      type == BCMP_DFU_HEARTBEAT ||
+      type == BCMP_DFU_REBOOT_REQ ||
+      type == BCMP_DFU_REBOOT ||
+      type == BCMP_DFU_BOOT_COMPLETE ||
+      type == BCMP_ECHO_REPLY) {
     rval = true;
   }
   return rval;
 }
 
-static bool _message_is_request(uint16_t type) {
+static bool _message_is_sequenced_request(uint16_t type) {
   bool rval = false;
-  if (type == BCMP_CONFIG_GET || type == BCMP_CONFIG_SET ||
-      type == BCMP_CONFIG_COMMIT || type == BCMP_CONFIG_STATUS_REQUEST ||
-      type == BCMP_CONFIG_DELETE_REQUEST || type == BCMP_DFU_START ||
-      type == BCMP_DFU_PAYLOAD_REQ || type == BCMP_DFU_REBOOT_REQ ||
+  if (type == BCMP_CONFIG_GET ||
+      type == BCMP_CONFIG_SET ||
+      type == BCMP_CONFIG_COMMIT ||
+      type == BCMP_CONFIG_STATUS_REQUEST ||
+      type == BCMP_CONFIG_DELETE_REQUEST ||
+      type == BCMP_DFU_START ||
+      type == BCMP_DFU_PAYLOAD_REQ ||
+      type == BCMP_DFU_REBOOT_REQ ||
       type == BCMP_ECHO_REQUEST) {
     rval = true;
   }
