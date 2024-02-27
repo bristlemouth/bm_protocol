@@ -158,19 +158,15 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       break;
     }
 
-    // Check if this type is one that will use sequence numbers
+    // Check if this message is a reply to a message we sent
     if (_message_is_sequenced_reply(header->type) && !_message_is_sequenced_request(header->type)) {
-      // Check if the message is a reply to a message we sent
       bcmp_request_element *sent_message = _message_list_find_message(header->seq_num);
       if (sent_message) {
-        printf("BCMP - Received reply to message with seq_num %d\n", header->seq_num);
+        printf("BCMP - Received reply to our request message with seq_num %d\n", header->seq_num);
         if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
           _message_list_remove_message(sent_message);
           xSemaphoreGive(_ctx.messages_list_mutex);
         }
-      } else {
-        // Not one of our messages, so we will let it pass and perhaps it will be forwarded.
-        printf("BCMP - Received message with seq_num %d that we didn't request, lets forward it!\n", header->seq_num);
       }
     }
 
@@ -236,7 +232,6 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
         if (should_forward) {
           // Forward the message to all ports other than the ingress port.
           bcmp_ll_forward(pbuf, ingress_port);
-          printf("Forwarding config message with seq_num: %d\n", header->seq_num);
         }
         break;
       }
