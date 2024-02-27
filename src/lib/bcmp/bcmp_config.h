@@ -17,4 +17,4 @@ bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partit
 bool bcmp_config_status_response(uint64_t target_node_id,bm_common_config_partition_e partition, bool commited, err_t &err);
 bool bcmp_config_del_key(uint64_t target_node_id,bm_common_config_partition_e partition, size_t key_len, const char * key);
 
-bool bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t *payload);
+bool bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t *payload, uint16_t seq_num);
