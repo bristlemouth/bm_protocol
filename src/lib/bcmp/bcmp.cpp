@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 #include "timers.h"
 
 #include "bcmp.h"
@@ -21,6 +22,7 @@
 #include "bcmp_time.h"
 #include "bcmp_topology.h"
 #include "bcmp_resource_discovery.h"
+#include "timer_callback_handler.h"
 
 #include "bm_dfu.h"
 
@@ -37,12 +39,27 @@
 // and their sequence numbers and the callback to call
 // upon receipt of the reply.
 // The callback should also handle the timeout case.
+static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 100;
+static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 500;
+
+typedef struct bcmp_element {
+  uint32_t seq_num;
+  uint16_t type;
+  uint32_t send_timestamp_ms;
+  uint32_t timeout_ms;
+  bcmp_element *next;
+} bcmp_element_t;
 
 typedef struct {
   struct netif* netif;
   struct raw_pcb *pcb;
   QueueHandle_t rx_queue;
   TimerHandle_t heartbeat_timer;
+  // Linked list of sent BCMP messages
+  bcmp_element_t *messages_list;
+  SemaphoreHandle_t messages_list_mutex;
+  TimerHandle_t messages_expiration_timer;
+  uint32_t message_count;
 } bcmpContext_t;
 
 typedef enum {
@@ -63,6 +80,14 @@ typedef struct {
 } bcmp_queue_item_t;
 
 static bcmpContext_t _ctx;
+
+static bool _message_list_add_message(bcmp_element_t *message);
+static bool _message_list_remove_message(bcmp_element_t *message);
+static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms);
+static void _message_list_timer_callback(TimerHandle_t tmr);
+static bcmp_element_t *_message_list_find_message(uint16_t seq_num, uint16_t type);
+static void _message_list_timer_expiry_cb(void *arg);
+static bool _message_uses_sequence_numbers(uint16_t type);
 
 /*!
   BCMP link change event callback
@@ -103,7 +128,7 @@ static void dfu_copy_and_process_message(struct pbuf *pbuf) {
   \param *dst packet destination
   \return 0 if processed ok, nonzero otherwise
 */
-int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
+int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
   int32_t rval = 0;
   // uint8_t egress_port;
   uint8_t ingress_port;
@@ -135,6 +160,23 @@ int32_t bmcp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
 
       rval = -1;
       break;
+    }
+
+    // Check if this type is one that will use sequence numbers
+    if (_message_uses_sequence_numbers(header->type)) {
+      // Check if the message is a reply to a message we sent
+      bcmp_element_t *sent_message = _message_list_find_message(header->seq_num, header->type);
+      if (sent_message) {
+        printf("BCMP - Received reply to message with seq_num %d\n", header->seq_num);
+        if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
+          _message_list_remove_message(sent_message);
+          xSemaphoreGive(_ctx.messages_list_mutex);
+        }
+      } else {
+        // Not one of our messages, so we should ignore it.
+        printf("BCMP - Received message with seq_num %d that we didn't send\n", header->seq_num);
+        break;
+      }
     }
 
     switch(header->type) {
@@ -336,7 +378,7 @@ static void bcmp_thread(void *parameters) {
 
     switch(item.type) {
       case BCMP_EVT_RX: {
-        bmcp_process_packet(item.pbuf, &item.src, &item.dst);
+        bcmp_process_packet(item.pbuf, &item.src, &item.dst);
         break;
       }
 
@@ -371,7 +413,7 @@ static void bcmp_thread(void *parameters) {
   \param len message length
   \return ERR_OK on success, something else otherwise
 */
-err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
+err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, bool is_reply, uint16_t seq_num) {
   err_t rval;
 
   do {
@@ -389,7 +431,20 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
     header->checksum = 0;
     header->flags = 0; // Unused for now
     header->rsvd = 0; // Unused for now
-    header->seq_num = 0; // Unused for now
+    if (_message_uses_sequence_numbers(type)) {
+      if (is_reply) {
+        // if we are replying to a message, use the sequence number from the
+        // received message
+        header->seq_num = seq_num;
+      } else {
+        // If we are sending a new request, use our own sequence number
+        header->seq_num = _ctx.message_count;
+        _ctx.message_count++;
+      }
+    } else {
+      // If the message doesn't use sequence numbers, set it to 0
+      header->seq_num = 0;
+    }
     header->frag_total = 0; // Unused for now
     header->frag_id = 0; // Unused for now
     header->next_header = 0; // Unused for now
@@ -408,6 +463,9 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
                               dst,
                               _ctx.netif,
                               src_ip); // Using link-local address
+
+    bcmp_element_t *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
+    _message_list_add_message(sent_message);
 
     // We're done with this pbuf
     // raw_sendto_if_src eventually calls bm_l2_tx, which does a pbuf_ref
@@ -477,10 +535,16 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration*
   _ctx.pcb = raw_new(IP_PROTO_BCMP);
   configASSERT(_ctx.pcb);
 
+  _ctx.message_count = 0;
 
   /* Create threads and Queues */
   _ctx.rx_queue = xQueueCreate(BCMP_EVT_QUEUE_LEN, sizeof(bcmp_queue_item_t));
   configASSERT(_ctx.rx_queue);
+  _ctx.messages_list_mutex = xSemaphoreCreateMutex();
+  configASSERT(_ctx.messages_list_mutex);
+  _ctx.messages_expiration_timer = xTimerCreate("bcmp_message_expiration", pdMS_TO_TICKS(MESSAGE_TIMER_EXPIRY_PERIOD_MS),
+                                 pdTRUE, NULL, _message_list_timer_callback);
+  configASSERT(xTimerStart(_ctx.messages_expiration_timer, 10) == pdPASS);
 
   bm_dfu_init(bcmp_dfu_tx, dfu_partition);
   bcmp_config_init(user_cfg, sys_cfg);
@@ -493,4 +557,116 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration*
                      BCMP_TASK_PRIORITY,
                      NULL);
   configASSERT(rval == pdPASS);
+}
+
+
+static bool _message_list_add_message(bcmp_element_t *message) {
+  bool rval = false;
+  configASSERT(message);
+  if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
+    if (_ctx.messages_list == NULL) {
+      _ctx.messages_list = message;
+    } else {
+      bcmp_element_t *current = _ctx.messages_list;
+      while (current->next != NULL) {
+        current = current->next;
+      }
+      current->next = message;
+    }
+    rval = true;
+    xSemaphoreGive(_ctx.messages_list_mutex);
+  }
+  return rval;
+}
+
+// NOTE: This function is not thread safe and can only be called within a section
+// protected by the messages_list_mutex semaphore.
+static bool _message_list_remove_message(bcmp_element_t *message) {
+  bool rval = false;
+  configASSERT(message);
+  bcmp_element_t *element_to_delete = NULL;
+  if (_ctx.messages_list == message) {
+    element_to_delete = _ctx.messages_list;
+    _ctx.messages_list = _ctx.messages_list->next;
+  } else {
+    bcmp_element_t *current = _ctx.messages_list;
+    while (current && current->next != message) {
+      current = current->next;
+    }
+    if (current) {
+      element_to_delete = current->next;
+      current->next = current->next->next;
+    }
+  }
+  if (element_to_delete) {
+    vPortFree(element_to_delete);
+    rval = true;
+  }
+  return rval;
+}
+
+static bcmp_element_t *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms) {
+  bcmp_element_t *element = static_cast<bcmp_element_t *>(pvPortMalloc(sizeof(bcmp_element_t)));
+  configASSERT(element);
+  element->seq_num = seq_num;
+  element->type = type;
+  element->send_timestamp_ms = pdTICKS_TO_MS(xTaskGetTickCount());
+  element->timeout_ms = timeout_ms;
+  element->next = NULL;
+  return element;
+}
+
+static void _message_list_timer_expiry_cb(void *arg) {
+  (void) arg;
+  if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
+    bcmp_element_t *current = _ctx.messages_list;
+    while (current) {
+      if (pdTICKS_TO_MS(xTaskGetTickCount()) - current->send_timestamp_ms > current->timeout_ms) {
+        printf("BCMP message with seq_num %d timed out\n", current->seq_num);
+        _message_list_remove_message(current);
+        current = _ctx.messages_list;
+        continue;
+      }
+      current = current->next;
+    }
+    xSemaphoreGive(_ctx.messages_list_mutex);
+  }
+}
+
+static void _message_list_timer_callback(TimerHandle_t tmr){
+  (void) tmr;
+  timer_callback_handler_send_cb(_message_list_timer_expiry_cb, tmr, 0);
+}
+
+static bcmp_element_t *_message_list_find_message(uint16_t seq_num, uint16_t type) {
+  bcmp_element_t *rval = NULL;
+  if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
+    bcmp_element_t *current = _ctx.messages_list;
+    while (current) {
+      if (current->seq_num == seq_num && current->type == type) {
+        printf("BCMP message with seq_num %d found\n", current->seq_num);
+        rval = current;
+        break;
+      }
+      current = current->next;
+    }
+    xSemaphoreGive(_ctx.messages_list_mutex);
+  }
+  return rval;
+}
+
+static bool _message_uses_sequence_numbers(uint16_t type) {
+  bool rval = false;
+  if (type == BCMP_CONFIG_GET || type == BCMP_CONFIG_VALUE ||
+      type == BCMP_CONFIG_SET || type == BCMP_CONFIG_COMMIT ||
+      type == BCMP_CONFIG_STATUS_REQUEST || type == BCMP_CONFIG_STATUS_RESPONSE ||
+      type == BCMP_CONFIG_DELETE_REQUEST || type == BCMP_CONFIG_DELETE_RESPONSE ||
+      type == BCMP_DFU_START || type == BCMP_DFU_PAYLOAD_REQ ||
+      type == BCMP_DFU_PAYLOAD || type == BCMP_DFU_END ||
+      type == BCMP_DFU_ACK || type == BCMP_DFU_ABORT ||
+      type == BCMP_DFU_HEARTBEAT || type == BCMP_DFU_REBOOT_REQ ||
+      type == BCMP_DFU_REBOOT || type == BCMP_DFU_BOOT_COMPLETE) {
+    rval = true;
+  }
+  return rval;
 }
