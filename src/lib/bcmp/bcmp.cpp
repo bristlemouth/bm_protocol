@@ -34,11 +34,6 @@
 // 1500 MTU minus ipv6 header
 #define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
 
-// TODO - add a linked list here
-// The linked list will consist of outgoing messages
-// and their sequence numbers and the callback to call
-// upon receipt of the reply.
-// The callback should also handle the timeout case.
 static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 100;
 static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 500;
 
