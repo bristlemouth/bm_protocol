@@ -169,9 +169,8 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
           xSemaphoreGive(_ctx.messages_list_mutex);
         }
       } else {
-        // Not one of our messages, so we should ignore it.
-        printf("BCMP - Received message with seq_num %d that we didn't send\n", header->seq_num);
-        break;
+        // Not one of our messages, so we will let it pass and perhaps it will be forwarded.
+        printf("BCMP - Received message with seq_num %d that we didn't request, lets forward it!\n", header->seq_num);
       }
     }
 
@@ -237,6 +236,7 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
         if (should_forward) {
           // Forward the message to all ports other than the ingress port.
           bcmp_ll_forward(pbuf, ingress_port);
+          printf("Forwarding config message with seq_num: %d\n", header->seq_num);
         }
         break;
       }
