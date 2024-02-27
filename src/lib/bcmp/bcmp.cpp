@@ -42,6 +42,7 @@ typedef struct bcmp_request_element {
   uint16_t type;
   uint32_t send_timestamp_ms;
   uint32_t timeout_ms;
+  bcmp_reply_message_cb callback;
   bcmp_request_element *next;
 } bcmp_request_element_t;
 
@@ -78,7 +79,7 @@ static bcmpContext_t _ctx;
 
 static bool _message_list_add_message(bcmp_request_element *message);
 static bool _message_list_remove_message(bcmp_request_element *message);
-static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms);
+static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms, bcmp_reply_message_cb callback);
 static void _message_list_timer_callback(TimerHandle_t tmr);
 static bcmp_request_element *_message_list_find_message(uint16_t seq_num);
 static void _message_list_timer_expiry_cb(void *arg);
@@ -158,12 +159,15 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       break;
     }
 
+    bcmp_reply_message_cb cb = NULL;
+
     // Check if this message is a reply to a message we sent
     if (_message_is_sequenced_reply(header->type) && !_message_is_sequenced_request(header->type)) {
       bcmp_request_element *sent_message = _message_list_find_message(header->seq_num);
       if (sent_message) {
         printf("BCMP - Received reply to our request message with seq_num %d\n", header->seq_num);
         if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
+          cb = sent_message->callback;
           _message_list_remove_message(sent_message);
           xSemaphoreGive(_ctx.messages_list_mutex);
         }
@@ -227,11 +231,15 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_CONFIG_STATUS_RESPONSE:
       case BCMP_CONFIG_DELETE_REQUEST:
       case BCMP_CONFIG_DELETE_RESPONSE: {
-        bool should_forward = bcmp_process_config_message(
-            static_cast<bcmp_message_type_t>(header->type), header->payload, header->seq_num);
-        if (should_forward) {
-          // Forward the message to all ports other than the ingress port.
-          bcmp_ll_forward(pbuf, ingress_port);
+        if (cb) {
+          cb(header->payload);
+        } else {
+          bool should_forward = bcmp_process_config_message(
+              static_cast<bcmp_message_type_t>(header->type), header->payload, header->seq_num);
+          if (should_forward) {
+            // Forward the message to all ports other than the ingress port.
+            bcmp_ll_forward(pbuf, ingress_port);
+          }
         }
         break;
       }
@@ -404,7 +412,7 @@ static void bcmp_thread(void *parameters) {
   \param len message length
   \return ERR_OK on success, something else otherwise
 */
-err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num) {
+err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num, bcmp_reply_message_cb reply_cb) {
   err_t rval;
 
   do {
@@ -429,7 +437,7 @@ err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uin
       // If we are sending a new request, use our own sequence number
       header->seq_num = _ctx.message_count;
       _ctx.message_count++;
-      bcmp_request_element *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS);
+      bcmp_request_element *sent_message = _message_list_create_element(header->seq_num, header->type, DEFAULT_MESSAGE_TIMEOUT_MS, reply_cb);
       _message_list_add_message(sent_message);
       printf("BCMP - Sending message with seq_num %d\n", header->seq_num);
     } else {
@@ -593,13 +601,14 @@ static bool _message_list_remove_message(bcmp_request_element *message) {
   return rval;
 }
 
-static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms) {
+static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms, bcmp_reply_message_cb callback) {
   bcmp_request_element *element = static_cast<bcmp_request_element *>(pvPortMalloc(sizeof(bcmp_request_element)));
   configASSERT(element);
   element->seq_num = seq_num;
   element->type = type;
   element->send_timestamp_ms = pdTICKS_TO_MS(xTaskGetTickCount());
   element->timeout_ms = timeout_ms;
+  element->callback = callback;
   element->next = NULL;
   return element;
 }
