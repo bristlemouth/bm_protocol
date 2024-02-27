@@ -238,7 +238,7 @@ int32_t bcmp_process_packet(struct pbuf *pbuf, ip_addr_t *src, ip_addr_t *dst) {
       case BCMP_CONFIG_DELETE_REQUEST:
       case BCMP_CONFIG_DELETE_RESPONSE: {
         bool should_forward = bcmp_process_config_message(
-            static_cast<bcmp_message_type_t>(header->type), header->payload);
+            static_cast<bcmp_message_type_t>(header->type), header->payload, header->seq_num);
         if (should_forward) {
           // Forward the message to all ports other than the ingress port.
           bcmp_ll_forward(pbuf, ingress_port);
