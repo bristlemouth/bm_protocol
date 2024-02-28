@@ -120,6 +120,7 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
     ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
     ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborpretty.c
     )
 
 set(LIB_INCLUDES
