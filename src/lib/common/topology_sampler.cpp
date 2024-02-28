@@ -891,7 +891,7 @@ static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_con
   }
   memset(crc_msg, 0, CRC_MSG_SIZE);
   uint32_t num_stored_crcs = 0;
-  uint32_t *stored_crcs = sm_config_crc_list.get(num_stored_crcs);
+  uint32_t *stored_crcs = sm_config_crc_list.alloc_list(num_stored_crcs);
   BRIDGE_CFG_LOG_PRINT("Stored CRCs: \n");
   for (uint32_t i = 0; i < num_stored_crcs; i++) {
     msglen = snprintf(crc_msg, CRC_MSG_SIZE, "0x%" PRIx32 "\n", stored_crcs[i]);
@@ -899,5 +899,6 @@ static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_con
       BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
     }
   }
+  vPortFree(stored_crcs);
   vPortFree(crc_msg);
 }
