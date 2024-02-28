@@ -25,6 +25,7 @@
 #include "crc.h"
 #include "device_info.h"
 #include "sm_config_crc_list.h"
+#include "stm32_rtc.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "topology_sampler.h"
@@ -172,9 +173,14 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         static constexpr uint8_t CRC_MSG_SIZE = 128;
         char *crc_msg = static_cast<char *>(pvPortMalloc(CRC_MSG_SIZE));
         configASSERT(crc_msg);
+        uint32_t epoch = 0;
+        RTCTimeAndDate_t rtc;
+        rtcGet(&rtc);
+        epoch = rtcGetMicroSeconds(&rtc) / 1000000;
         int msglen = snprintf(crc_msg, CRC_MSG_SIZE,
-                              "Network configuration change detected! crc: 0x%" PRIx32 "\n",
-                              network_crc32_calc);
+                              "Network configuration change detected! crc: 0x%" PRIx32
+                              " at UTC:%" PRIu32 "\n",
+                              network_crc32_calc, epoch);
         if (msglen) {
           BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
         }
