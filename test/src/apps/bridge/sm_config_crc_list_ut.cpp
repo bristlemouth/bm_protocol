@@ -154,3 +154,27 @@ TEST(SMConfigCRCListTests, Clear) {
   SMConfigCRCList sm_config_crc_list(&mock_cfg);
   sm_config_crc_list.clear();
 }
+
+TEST(SMConfigCRCListTests, AllocList) {
+  MockConfiguration mock_cfg;
+  ON_CALL(mock_cfg,
+          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
+      .WillByDefault(
+          Invoke([](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
+            (void)key;
+            (void)key_len;
+            // cbor array containing one uint32
+            uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
+            value_len = sizeof(buf);
+            memcpy(value, buf, value_len);
+            return true;
+          }));
+
+  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  EXPECT_EQ(sm_config_crc_list.contains(0x12345678), true);
+  uint32_t list_size;
+  uint32_t *crc_list = sm_config_crc_list.alloc_list(list_size);
+  EXPECT_EQ(list_size, 1);
+  EXPECT_EQ(crc_list[0], 0x12345678);
+  free(crc_list);
+}
