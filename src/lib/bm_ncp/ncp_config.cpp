@@ -10,7 +10,7 @@ static Configuration *_usr_cfg;
 static Configuration *_sys_cfg;
 static Configuration *_hw_cfg;
 
-// TODO: BCMP downstream passthrough to be done later. 
+// TODO: BCMP downstream passthrough to be done later.
 
 static Configuration* get_partition(bm_common_config_partition_e partition);
 static uint8_t* alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey_t* keys, size_t& len);
@@ -82,25 +82,29 @@ bool ncp_cfg_commit_cb(uint64_t node_id, bm_common_config_partition_e partition)
 
 bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e partition) {
     bool rval = false;
-    do {
-        Configuration* p = get_partition(partition);
-        if(!p) {
-            printf("Invalid partition\n.");
-            break;
-        }
-        uint8_t num_keys;
-        const ConfigKey_t * keys = p->getStoredKeys(num_keys);
-        size_t buffer_size;
-        uint8_t * keyBuf = (num_keys) ? alloc_ncp_key_buffer(num_keys, keys, buffer_size): NULL;
+    if (node_id == getNodeId() || node_id == 0) {
         do {
-            if(bm_serial_cfg_status_response(node_id, partition, p->needsCommit(), num_keys, keyBuf) != BM_SERIAL_OK){
-                printf("Failed to send status resp\n");
+            Configuration* p = get_partition(partition);
+            if(!p) {
+                printf("Invalid partition\n.");
                 break;
             }
-            rval = true;
-       } while(0);
-       vPortFree(keyBuf);
-    } while(0);
+            uint8_t num_keys;
+            const ConfigKey_t * keys = p->getStoredKeys(num_keys);
+            size_t buffer_size;
+            uint8_t * keyBuf = (num_keys) ? alloc_ncp_key_buffer(num_keys, keys, buffer_size): NULL;
+            do {
+                if(bm_serial_cfg_status_response(node_id, partition, p->needsCommit(), num_keys, keyBuf) != BM_SERIAL_OK){
+                    printf("Failed to send status resp\n");
+                    break;
+                }
+                rval = true;
+        } while(0);
+        vPortFree(keyBuf);
+        } while(0);
+    } else {
+        printf("asking for status from another node\n");
+    }
     return rval;
 }
 
