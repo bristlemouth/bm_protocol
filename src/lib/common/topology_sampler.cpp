@@ -181,17 +181,10 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     bool known = sm_config_crc_list.contains(network_crc32_calc);
     if (!known || _send_on_boot) {
       if (!known) {
-        static constexpr uint8_t LOG_MSG_SIZE = 128;
-        char *log_msg = static_cast<char *>(pvPortMalloc(LOG_MSG_SIZE));
-        configASSERT(log_msg);
-        int msglen = snprintf(
-            log_msg, LOG_MSG_SIZE,
-            "The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32 " Adding it.\n",
-            network_crc32_calc);
-        if (msglen > 0) {
-          BRIDGE_LOG_PRINTN(log_msg, msglen);
-        }
-        vPortFree(log_msg);
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
+                       " Adding it.\n",
+                       network_crc32_calc);
         sm_config_crc_list.add(network_crc32_calc);
         if (!_hw_cfg->saveConfig(false)) {
           printf("Failed to save crc!\n");
@@ -834,36 +827,17 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
 
 static CborError cborStreamFunct(void *token, const char *fmt, ...) {
   (void)token;
-  CborError err = CborNoError;
-  char *log_msg = NULL;
-  do {
-    va_list args;
-    va_start(args, fmt);
-    int32_t loglen = vsnprintf(NULL, 0, fmt, args);
-    if (!loglen) {
-      break;
-    }
-    loglen += 1; // for null terminator
-    log_msg = static_cast<char *>(pvPortMalloc(loglen));
-    configASSERT(log_msg);
-    memset(log_msg, 0, loglen);
-    if (vsnprintf(log_msg, loglen, fmt, args) < 0) {
-      err = CborErrorOutOfMemory;
-      break;
-    }
-    BRIDGE_CFG_LOG_PRINTN(log_msg, loglen);
-    va_end(args);
-  } while (0);
-  if (log_msg) {
-    vPortFree(log_msg);
-  }
-  return err;
+  va_list args;
+  va_start(args, fmt);
+  vBridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, fmt, args);
+  va_end(args);
+  return CborNoError;
 }
 
 static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_size) {
   configASSERT(cbor_buf);
   CborError err = CborNoError;
-  BRIDGE_CFG_LOG_PRINT("Bridge network config: \n");
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge network config: \n");
   do {
     CborParser parser;
     CborValue it;
@@ -873,34 +847,25 @@ static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_s
     }
     cbor_value_to_pretty_stream(cborStreamFunct, NULL, &it, CborPrettyDefaultFlags);
   } while (0);
-  BRIDGE_CFG_LOG_PRINT("\n");
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "\n");
 }
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list) {
-  static constexpr uint8_t CRC_MSG_SIZE = 128;
-  char *crc_msg = static_cast<char *>(pvPortMalloc(CRC_MSG_SIZE));
-  configASSERT(crc_msg);
   uint32_t epoch = 0;
   RTCTimeAndDate_t rtc;
   rtcGet(&rtc);
   epoch = rtcGetMicroSeconds(&rtc) / 1000000;
-  int msglen =
-      snprintf(crc_msg, CRC_MSG_SIZE,
-               "Network configuration change detected! crc: 0x%" PRIx32 " at UTC:%" PRIu32 "\n",
-               network_crc32, epoch);
-  if (msglen) {
-    BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
-  }
-  memset(crc_msg, 0, CRC_MSG_SIZE);
+
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                 "Network configuration change detected! crc: 0x%" PRIx32 " at UTC:%" PRIu32
+                 "\n",
+                 network_crc32, epoch);
   uint32_t num_stored_crcs = 0;
   uint32_t *stored_crcs = sm_config_crc_list.alloc_list(num_stored_crcs);
-  BRIDGE_CFG_LOG_PRINT("Stored CRCs: \n");
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Stored CRCs: \n");
   for (uint32_t i = 0; i < num_stored_crcs; i++) {
-    msglen = snprintf(crc_msg, CRC_MSG_SIZE, "0x%" PRIx32 "\n", stored_crcs[i]);
-    if (msglen) {
-      BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
-    }
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "0x%" PRIx32 "\n",
+                   stored_crcs[i]);
   }
   vPortFree(stored_crcs);
-  vPortFree(crc_msg);
 }
