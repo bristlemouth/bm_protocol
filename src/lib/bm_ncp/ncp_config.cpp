@@ -15,34 +15,70 @@ static Configuration *_hw_cfg;
 static Configuration* get_partition(bm_common_config_partition_e partition);
 static uint8_t* alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey_t* keys, size_t& len);
 
-bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, size_t key_len, const char* key) {
+bool _cfg_get_bcmp_cb(uint8_t *payload) {
     bool rval = false;
-    uint8_t * valueBuf = reinterpret_cast<uint8_t*>(pvPortMalloc(MAX_CONFIG_BUFFER_SIZE_BYTES));
-    configASSERT(valueBuf);
+    bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
     do {
-        Configuration* p = get_partition(partition);
-        if(!p) {
-            printf("Invalid partition\n.");
-            break;
-        }
-        size_t value_len = MAX_CONFIG_BUFFER_SIZE_BYTES;
-        if(!p->getConfigCbor(key, key_len, valueBuf, value_len)){
-            printf("Failed to get config.\n");
-            break;
-        }
-        if(bm_serial_cfg_value(node_id, partition, value_len, valueBuf) != BM_SERIAL_OK) {
+        if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
             printf("Failed to send cfg\n");
             break;
         }
         rval = true;
     } while(0);
-    vPortFree(valueBuf);
+    return rval;
+}
+
+bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, size_t key_len, const char* key) {
+    bool rval = false;
+
+    if (node_id == getNodeId() || node_id == 0) {
+        uint8_t * valueBuf = reinterpret_cast<uint8_t*>(pvPortMalloc(MAX_CONFIG_BUFFER_SIZE_BYTES));
+        configASSERT(valueBuf);
+        do {
+            Configuration* p = get_partition(partition);
+            if(!p) {
+                printf("Invalid partition\n.");
+                break;
+            }
+            size_t value_len = MAX_CONFIG_BUFFER_SIZE_BYTES;
+            if(!p->getConfigCbor(key, key_len, valueBuf, value_len)){
+                printf("Failed to get config.\n");
+                break;
+            }
+            if(bm_serial_cfg_value(node_id, partition, value_len, valueBuf) != BM_SERIAL_OK) {
+                printf("Failed to send cfg\n");
+                break;
+            }
+            rval = true;
+        } while(0);
+        vPortFree(valueBuf);
+    } else {
+        printf("trying to get a value from another node!\n");
+        err_t err = ERR_OK;
+        bcmp_config_get(node_id, partition, key_len, key, err, _cfg_get_bcmp_cb);
+        rval = true;
+    }
+    return rval;
+}
+
+bool _cfg_set_bcmp_cb (uint8_t *payload) {
+    bool rval = false;
+    printf("Made it to the set callback!\n");
+    do {
+        bm_common_config_set_t *msg = reinterpret_cast<bm_common_config_set_t *>(payload);
+        if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->keyAndData) != BM_SERIAL_OK) {
+            printf("Failed to send cfg\n");
+            break;
+        }
+        rval = true;
+    } while(0);
     return rval;
 }
 
 bool ncp_cfg_set_cb(uint64_t node_id, bm_common_config_partition_e partition,
     size_t key_len, const char* key, size_t value_size, void * val) {
     bool rval = false;
+    if (node_id == getNodeId() || node_id == 0) {
     do {
         Configuration* p = get_partition(partition);
         if(!p) {
@@ -59,6 +95,12 @@ bool ncp_cfg_set_cb(uint64_t node_id, bm_common_config_partition_e partition,
         }
         rval = true;
     } while(0);
+    } else {
+        printf("trying to set a value from another node!\n");
+        err_t err = ERR_OK;
+        bcmp_config_set(node_id, partition, key_len, key, value_size, val, err, _cfg_get_bcmp_cb);
+        rval = true;
+    }
     return rval;
 }
 
@@ -73,6 +115,20 @@ bool ncp_cfg_commit_cb(uint64_t node_id, bm_common_config_partition_e partition)
         }
         if(!p->saveConfig()){
             printf("Failed to save config!\n");
+            break;
+        }
+        rval = true;
+    } while(0);
+    return rval;
+}
+
+bool _cfg_status_request_bcmp_cb(uint8_t *payload) {
+    bool rval = false;
+    printf("Made it to the status request callback!\n");
+    do {
+        bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
+        if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition, msg->committed, msg->num_keys, msg->keyData) != BM_SERIAL_OK) {
+            printf("Failed to send status response\n");
             break;
         }
         rval = true;
@@ -104,6 +160,9 @@ bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e pa
         } while(0);
     } else {
         printf("asking for status from another node\n");
+        err_t err = ERR_OK;
+        bcmp_config_status_request(node_id, partition, err, _cfg_status_request_bcmp_cb);
+        rval = true;
     }
     return rval;
 }
