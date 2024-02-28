@@ -86,6 +86,7 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
 static CborError cborStreamFunct(void *token, const char *fmt, ...);
 
 static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_size);
+static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
 static void topology_sample_cb(networkTopology_t *networkTopology) {
   uint8_t *cbor_buffer = NULL;
@@ -171,31 +172,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         configASSERT(_node_list.last_network_configuration_info.cbor_config_map);
         memcpy(_node_list.last_network_configuration_info.cbor_config_map, cbor_buffer,
                cbor_bufsize);
-        static constexpr uint8_t CRC_MSG_SIZE = 128;
-        char *crc_msg = static_cast<char *>(pvPortMalloc(CRC_MSG_SIZE));
-        configASSERT(crc_msg);
-        uint32_t epoch = 0;
-        RTCTimeAndDate_t rtc;
-        rtcGet(&rtc);
-        epoch = rtcGetMicroSeconds(&rtc) / 1000000;
-        int msglen = snprintf(crc_msg, CRC_MSG_SIZE,
-                              "Network configuration change detected! crc: 0x%" PRIx32
-                              " at UTC:%" PRIu32 "\n",
-                              network_crc32_calc, epoch);
-        if (msglen) {
-          BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
-        }
-        memset(crc_msg, 0, CRC_MSG_SIZE);
-        uint32_t num_stored_crcs = 0;
-        uint32_t *stored_crcs = sm_config_crc_list.get(num_stored_crcs);
-        BRIDGE_CFG_LOG_PRINT("Stored CRCs: \n");
-        for (uint32_t i = 0; i < num_stored_crcs; i++) {
-          msglen = snprintf(crc_msg, CRC_MSG_SIZE, "0x%" PRIx32 "\n", stored_crcs[i]);
-          if (msglen) {
-            BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
-          }
-        }
-        vPortFree(crc_msg);
+        log_network_crc_info(network_crc32_calc, sm_config_crc_list);
         log_cbor_network_configurations(cbor_buffer, cbor_bufsize);
       }
       printf("\n");
@@ -895,4 +872,32 @@ static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_s
     cbor_value_to_pretty_stream(cborStreamFunct, NULL, &it, CborPrettyDefaultFlags);
   } while (0);
   BRIDGE_CFG_LOG_PRINT("\n");
+}
+
+static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list) {
+  static constexpr uint8_t CRC_MSG_SIZE = 128;
+  char *crc_msg = static_cast<char *>(pvPortMalloc(CRC_MSG_SIZE));
+  configASSERT(crc_msg);
+  uint32_t epoch = 0;
+  RTCTimeAndDate_t rtc;
+  rtcGet(&rtc);
+  epoch = rtcGetMicroSeconds(&rtc) / 1000000;
+  int msglen =
+      snprintf(crc_msg, CRC_MSG_SIZE,
+               "Network configuration change detected! crc: 0x%" PRIx32 " at UTC:%" PRIu32 "\n",
+               network_crc32, epoch);
+  if (msglen) {
+    BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
+  }
+  memset(crc_msg, 0, CRC_MSG_SIZE);
+  uint32_t num_stored_crcs = 0;
+  uint32_t *stored_crcs = sm_config_crc_list.get(num_stored_crcs);
+  BRIDGE_CFG_LOG_PRINT("Stored CRCs: \n");
+  for (uint32_t i = 0; i < num_stored_crcs; i++) {
+    msglen = snprintf(crc_msg, CRC_MSG_SIZE, "0x%" PRIx32 "\n", stored_crcs[i]);
+    if (msglen) {
+      BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
+    }
+  }
+  vPortFree(crc_msg);
 }
