@@ -92,6 +92,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
   bm_common_network_info_t *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
+    SMConfigCRCList sm_config_crc_list(_hw_cfg);
     if (!networkTopology) {
       printf("networkTopology NULL, task must be busy\n");
       break;
@@ -184,13 +185,22 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         if (msglen) {
           BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
         }
+        memset(crc_msg, 0, CRC_MSG_SIZE);
+        uint32_t num_stored_crcs = 0;
+        uint32_t *stored_crcs = sm_config_crc_list.get(num_stored_crcs);
+        BRIDGE_CFG_LOG_PRINT("Stored CRCs: \n");
+        for (uint32_t i = 0; i < num_stored_crcs; i++) {
+          msglen = snprintf(crc_msg, CRC_MSG_SIZE, "0x%" PRIx32 "\n", stored_crcs[i]);
+          if (msglen) {
+            BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
+          }
+        }
         vPortFree(crc_msg);
         log_cbor_network_configurations(cbor_buffer, cbor_bufsize);
       }
       printf("\n");
     }
 
-    SMConfigCRCList sm_config_crc_list(_hw_cfg);
     bool known = sm_config_crc_list.contains(network_crc32_calc);
     if (!known || _send_on_boot) {
       if (!known) {

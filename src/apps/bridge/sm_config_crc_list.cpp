@@ -176,3 +176,17 @@ void SMConfigCRCList::encode() {
     _cfg->setConfigCbor(KEY, KEY_LEN, buffer, buffer_size);
   } while (0);
 }
+
+/*!
+  \brief Get the list of CRCs.
+
+  This function reads the list from the configuration.
+
+  \param[out] num_crcs[out] The number of CRCs in the list.
+  \return A pointer to the list of CRCs.
+*/
+uint32_t *SMConfigCRCList::get(uint32_t &num_crcs) {
+  decode();
+  num_crcs = _num_crcs;
+  return _crc_list;
+}

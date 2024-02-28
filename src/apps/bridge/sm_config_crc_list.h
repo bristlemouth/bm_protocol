@@ -16,6 +16,7 @@ public:
   bool contains(uint32_t crc);
   void add(uint32_t crc);
   void clear();
+  uint32_t *get(uint32_t &num_crcs);
 
 private:
   cfg::AbstractConfiguration *_cfg;
