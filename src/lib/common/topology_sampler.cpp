@@ -169,6 +169,14 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         configASSERT(_node_list.last_network_configuration_info.cbor_config_map);
         memcpy(_node_list.last_network_configuration_info.cbor_config_map, cbor_buffer,
                cbor_bufsize);
+        static constexpr uint8_t CRC_MSG_SIZE = 128;
+        char *crc_msg = static_cast<char *>(pvPortMalloc(CRC_MSG_SIZE));
+        configASSERT(crc_msg);
+        int msglen = snprintf(crc_msg, CRC_MSG_SIZE,
+                              "Network configuration change detected! crc: 0x%" PRIx32 "\n",
+                              network_crc32_calc);
+        BRIDGE_CFG_LOG_PRINTN(crc_msg, msglen);
+        vPortFree(crc_msg);
         log_cbor_network_configurations(cbor_buffer, cbor_bufsize);
       }
       printf("\n");
