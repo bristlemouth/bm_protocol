@@ -157,7 +157,7 @@ bool ncp_cfg_key_del_request_cb(uint64_t node_id, bm_common_config_partition_e p
         } while(0);
     } else {
         printf("asking for key del from another node\n");
-        bcmp_config_del_key(node_id, partition, key_len, key, _cfg_get_bcmp_cb);
+        bcmp_config_del_key(node_id, partition, key_len, key, _cfg_key_del_bcmp_cb);
         rval = true;
     }
     return rval;
