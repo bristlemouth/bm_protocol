@@ -10,11 +10,12 @@ static Configuration *_usr_cfg;
 static Configuration *_sys_cfg;
 static Configuration *_hw_cfg;
 
-// TODO: BCMP downstream passthrough to be done later.
 
 static Configuration* get_partition(bm_common_config_partition_e partition);
 static uint8_t* alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey_t* keys, size_t& len);
 
+// These are the callback functions that BCMP req/rep will call when we get a response
+// from the target node.
 bool _cfg_get_bcmp_cb(uint8_t *payload);
 bool _cfg_set_bcmp_cb (uint8_t *payload);
 bool _cfg_status_request_bcmp_cb(uint8_t *payload);
