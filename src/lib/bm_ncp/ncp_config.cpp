@@ -3,6 +3,7 @@
 #include "device_info.h"
 #include "FreeRTOS.h"
 #include "bm_serial.h"
+#include "bm_printf.h"
 
 using namespace cfg;
 
@@ -202,20 +203,28 @@ static uint8_t* alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey_t* keys, 
 
 bool _cfg_get_bcmp_cb(uint8_t *payload) {
     bool rval = true;
-    bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
-    if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
-        printf("Failed to send get cfg response\n");
-        rval = false;
+    if (payload != NULL) {
+        bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
+        if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
+            printf("Failed to send get cfg response\n");
+            rval = false;
+        }
+    } else {
+        bm_printf(0, "Failed to get cfg\n");
     }
     return rval;
 }
 
 bool _cfg_set_bcmp_cb (uint8_t *payload) {
     bool rval = true;
-    bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
-    if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
-        printf("Failed to send set cfg response\n");
-        rval = false;
+    if (payload != NULL) {
+        bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
+        if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
+            printf("Failed to send set cfg response\n");
+            rval = false;
+        }
+    } else {
+        bm_printf(0, "Failed to set cfg\n");
     }
     return rval;
 }
@@ -223,20 +232,28 @@ bool _cfg_set_bcmp_cb (uint8_t *payload) {
 
 bool _cfg_status_request_bcmp_cb(uint8_t *payload) {
     bool rval = true;
-    bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
-    if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition, msg->committed, msg->num_keys, msg->keyData) != BM_SERIAL_OK) {
-        printf("Failed to send status response\n");
-        rval = false;
+    if (payload != NULL) {
+        bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
+        if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition, msg->committed, msg->num_keys, msg->keyData) != BM_SERIAL_OK) {
+            printf("Failed to send status response\n");
+            rval = false;
+        }
+    } else {
+        bm_printf(0, "Failed to get cfg status\n");
     }
     return rval;
 }
 
 bool _cfg_key_del_bcmp_cb(uint8_t *payload) {
     bool rval = true;
-    bm_common_config_delete_key_response_t *msg = reinterpret_cast<bm_common_config_delete_key_response_t *>(payload);
-    if (bm_serial_cfg_delete_response(msg->header.source_node_id, msg->partition, msg->key_length, msg->key, msg->success) != BM_SERIAL_OK) {
-        printf("Failed to send key del response\n");
-        rval = false;
+    if (payload != NULL) {
+        bm_common_config_delete_key_response_t *msg = reinterpret_cast<bm_common_config_delete_key_response_t *>(payload);
+        if (bm_serial_cfg_delete_response(msg->header.source_node_id, msg->partition, msg->key_length, msg->key, msg->success) != BM_SERIAL_OK) {
+            printf("Failed to send key del response\n");
+            rval = false;
+        }
+    } else {
+        bm_printf(0, "Failed to delete cfg\n");
     }
     return rval;
 }
