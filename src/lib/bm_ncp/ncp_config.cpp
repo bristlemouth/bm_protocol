@@ -44,7 +44,6 @@ bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, si
         } while(0);
         vPortFree(valueBuf);
     } else {
-        printf("trying to get a value from another node!\n");
         err_t err = ERR_OK;
         bcmp_config_get(node_id, partition, key_len, key, err, _cfg_get_bcmp_cb);
         rval = true;
@@ -73,7 +72,6 @@ bool ncp_cfg_set_cb(uint64_t node_id, bm_common_config_partition_e partition,
         rval = true;
     } while(0);
     } else {
-        printf("trying to set a value from another node!\n");
         err_t err = ERR_OK;
         bcmp_config_set(node_id, partition, key_len, key, value_size, val, err, _cfg_get_bcmp_cb);
         rval = true;
@@ -97,7 +95,6 @@ bool ncp_cfg_commit_cb(uint64_t node_id, bm_common_config_partition_e partition)
             rval = true;
         } while(0);
     } else {
-        printf("trying to commit from another node!\n");
         err_t err = ERR_OK;
         bcmp_config_commit(node_id, partition, err);
         rval = true;
@@ -128,7 +125,6 @@ bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e pa
         vPortFree(keyBuf);
         } while(0);
     } else {
-        printf("asking for status from another node\n");
         err_t err = ERR_OK;
         bcmp_config_status_request(node_id, partition, err, _cfg_status_request_bcmp_cb);
         rval = true;
@@ -150,13 +146,12 @@ bool ncp_cfg_key_del_request_cb(uint64_t node_id, bm_common_config_partition_e p
                 success = false;
             }
             if(bm_serial_cfg_delete_response(node_id, partition, key_len, key, success) != BM_SERIAL_OK) {
-                printf("failed to send key del response\n");
+                printf("Failed to send key del response\n");
                 break;
             }
             rval = true;
         } while(0);
     } else {
-        printf("asking for key del from another node\n");
         bcmp_config_del_key(node_id, partition, key_len, key, _cfg_key_del_bcmp_cb);
         rval = true;
     }
@@ -208,7 +203,7 @@ bool _cfg_get_bcmp_cb(uint8_t *payload) {
     bool rval = true;
     bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
     if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
-        printf("Failed to send cfg\n");
+        printf("Failed to send get cfg response\n");
         rval = false;
     }
     return rval;
@@ -216,10 +211,9 @@ bool _cfg_get_bcmp_cb(uint8_t *payload) {
 
 bool _cfg_set_bcmp_cb (uint8_t *payload) {
     bool rval = true;
-    printf("Made it to the set callback!\n");
-    bm_common_config_set_t *msg = reinterpret_cast<bm_common_config_set_t *>(payload);
-    if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->keyAndData) != BM_SERIAL_OK) {
-        printf("Failed to send cfg\n");
+    bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
+    if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length, msg->data) != BM_SERIAL_OK) {
+        printf("Failed to send set cfg response\n");
         rval = false;
     }
     return rval;
@@ -228,7 +222,6 @@ bool _cfg_set_bcmp_cb (uint8_t *payload) {
 
 bool _cfg_status_request_bcmp_cb(uint8_t *payload) {
     bool rval = true;
-    printf("Made it to the status request callback!\n");
     bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
     if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition, msg->committed, msg->num_keys, msg->keyData) != BM_SERIAL_OK) {
         printf("Failed to send status response\n");
@@ -239,7 +232,6 @@ bool _cfg_status_request_bcmp_cb(uint8_t *payload) {
 
 bool _cfg_key_del_bcmp_cb(uint8_t *payload) {
     bool rval = true;
-    printf("Made it to the key del callback!\n");
     bm_common_config_delete_key_response_t *msg = reinterpret_cast<bm_common_config_delete_key_response_t *>(payload);
     if (bm_serial_cfg_delete_response(msg->header.source_node_id, msg->partition, msg->key_length, msg->key, msg->success) != BM_SERIAL_OK) {
         printf("Failed to send key del response\n");
