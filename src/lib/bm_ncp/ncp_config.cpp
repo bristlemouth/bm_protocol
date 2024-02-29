@@ -24,10 +24,11 @@ bool _cfg_key_del_bcmp_cb(uint8_t *payload);
 
 bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, size_t key_len, const char* key) {
     bool rval = false;
-    if (node_id == getNodeId() || node_id == 0) {
-        uint8_t * valueBuf = reinterpret_cast<uint8_t*>(pvPortMalloc(MAX_CONFIG_BUFFER_SIZE_BYTES));
-        configASSERT(valueBuf);
-        do {
+    uint8_t *valueBuf = NULL;
+    do {
+        if (node_id == getNodeId() || node_id == 0) {
+            valueBuf = reinterpret_cast<uint8_t*>(pvPortMalloc(MAX_CONFIG_BUFFER_SIZE_BYTES));
+            configASSERT(valueBuf);
             Configuration* p = get_partition(partition);
             if(!p) {
                 printf("Invalid partition\n.");
@@ -42,13 +43,19 @@ bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, si
                 printf("Failed to send cfg\n");
                 break;
             }
-            rval = true;
-        } while(0);
-        vPortFree(valueBuf);
-    } else {
-        err_t err = ERR_OK;
-        bcmp_config_get(node_id, partition, key_len, key, err, _cfg_get_bcmp_cb);
+        } else {
+            err_t err = ERR_OK;
+            if (!bcmp_config_get(node_id, partition, key_len, key, err, _cfg_get_bcmp_cb)) {
+                static char buf[64];
+                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg get, err: %" PRIi8 "\n", err);
+                BRIDGE_CFG_LOG_PRINT(buf);
+                break;
+            }
+        }
         rval = true;
+    } while(0);
+    if (valueBuf != NULL) {
+        vPortFree(valueBuf);
     }
     return rval;
 }
@@ -56,35 +63,39 @@ bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, si
 bool ncp_cfg_set_cb(uint64_t node_id, bm_common_config_partition_e partition,
     size_t key_len, const char* key, size_t value_size, void * val) {
     bool rval = false;
-    if (node_id == getNodeId() || node_id == 0) {
     do {
-        Configuration* p = get_partition(partition);
-        if(!p) {
-            printf("Invalid partition\n.");
-            break;
-        }
-        if(!p->setConfigCbor(key, key_len, reinterpret_cast<uint8_t*>(val), value_size)){
-            printf("Failed to set Config\n");
-            break;
-        }
-        if(bm_serial_cfg_value(node_id, partition, value_size, reinterpret_cast<uint8_t*>(val)) != BM_SERIAL_OK) {
-            printf("Failed to send cfg\n");
-            break;
+        if (node_id == getNodeId() || node_id == 0) {
+            Configuration* p = get_partition(partition);
+            if(!p) {
+                printf("Invalid partition\n.");
+                break;
+            }
+            if(!p->setConfigCbor(key, key_len, reinterpret_cast<uint8_t*>(val), value_size)){
+                printf("Failed to set Config\n");
+                break;
+            }
+            if(bm_serial_cfg_value(node_id, partition, value_size, reinterpret_cast<uint8_t*>(val)) != BM_SERIAL_OK) {
+                printf("Failed to send cfg\n");
+                break;
+            }
+        } else {
+            err_t err = ERR_OK;
+            if (!bcmp_config_set(node_id, partition, key_len, key, value_size, val, err, _cfg_get_bcmp_cb)) {
+                static char buf[64];
+                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg set, err: %" PRIi8 "\n", err);
+                BRIDGE_CFG_LOG_PRINT(buf);
+                break;
+            }
         }
         rval = true;
     } while(0);
-    } else {
-        err_t err = ERR_OK;
-        bcmp_config_set(node_id, partition, key_len, key, value_size, val, err, _cfg_get_bcmp_cb);
-        rval = true;
-    }
     return rval;
 }
 
 bool ncp_cfg_commit_cb(uint64_t node_id, bm_common_config_partition_e partition) {
     bool rval = false;
-    if (node_id == getNodeId() || node_id == 0) {
-        do {
+    do {
+        if (node_id == getNodeId() || node_id == 0) {
             Configuration* p = get_partition(partition);
             if(!p) {
                 printf("Invalid partition\n.");
@@ -94,20 +105,24 @@ bool ncp_cfg_commit_cb(uint64_t node_id, bm_common_config_partition_e partition)
                 printf("Failed to save config!\n");
                 break;
             }
-            rval = true;
-        } while(0);
-    } else {
-        err_t err = ERR_OK;
-        bcmp_config_commit(node_id, partition, err);
+        } else {
+            err_t err = ERR_OK;
+            if (!bcmp_config_commit(node_id, partition, err)) {
+                static char buf[64];
+                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg commit, err: %" PRIi8 "\n", err);
+                BRIDGE_CFG_LOG_PRINT(buf);
+                break;
+            }
+        }
         rval = true;
-    }
+    } while(0);
     return rval;
 }
 
 bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e partition) {
     bool rval = false;
-    if (node_id == getNodeId() || node_id == 0) {
-        do {
+    do {
+        if (node_id == getNodeId() || node_id == 0) {
             Configuration* p = get_partition(partition);
             if(!p) {
                 printf("Invalid partition\n.");
@@ -117,27 +132,29 @@ bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e pa
             const ConfigKey_t * keys = p->getStoredKeys(num_keys);
             size_t buffer_size;
             uint8_t * keyBuf = (num_keys) ? alloc_ncp_key_buffer(num_keys, keys, buffer_size): NULL;
-            do {
-                if(bm_serial_cfg_status_response(node_id, partition, p->needsCommit(), num_keys, keyBuf) != BM_SERIAL_OK){
-                    printf("Failed to send status resp\n");
-                    break;
-                }
-                rval = true;
-        } while(0);
-        vPortFree(keyBuf);
-        } while(0);
-    } else {
-        err_t err = ERR_OK;
-        bcmp_config_status_request(node_id, partition, err, _cfg_status_request_bcmp_cb);
+            if(bm_serial_cfg_status_response(node_id, partition, p->needsCommit(), num_keys, keyBuf) != BM_SERIAL_OK){
+                printf("Failed to send status resp\n");
+                break;
+            }
+            vPortFree(keyBuf);
+        } else {
+            err_t err = ERR_OK;
+            if (!bcmp_config_status_request(node_id, partition, err, _cfg_status_request_bcmp_cb)) {
+                static char buf[64];
+                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg status request, err: %" PRIi8 "\n", err);
+                BRIDGE_CFG_LOG_PRINT(buf);
+                break;
+            }
+        }
         rval = true;
-    }
+    } while(0);
     return rval;
 }
 
 bool ncp_cfg_key_del_request_cb(uint64_t node_id, bm_common_config_partition_e partition, size_t key_len, const char * key) {
-    bool rval = true;
-    if (node_id == getNodeId() || node_id == 0) {
-        do {
+    bool rval = false;
+    do {
+        if (node_id == getNodeId() || node_id == 0) {
             Configuration* p = get_partition(partition);
             if(!p) {
                 printf("Invalid partition\n.");
@@ -152,11 +169,14 @@ bool ncp_cfg_key_del_request_cb(uint64_t node_id, bm_common_config_partition_e p
                 break;
             }
             rval = true;
-        } while(0);
-    } else {
-        bcmp_config_del_key(node_id, partition, key_len, key, _cfg_key_del_bcmp_cb);
+        } else {
+            if (!bcmp_config_del_key(node_id, partition, key_len, key, _cfg_key_del_bcmp_cb)) {
+                BRIDGE_CFG_LOG_PRINT("Failed to issue bcmp cfg del\n");
+                break;
+            }
+        }
         rval = true;
-    }
+    } while(0);
     return rval;
 }
 
