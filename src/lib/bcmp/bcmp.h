@@ -34,7 +34,7 @@ using namespace cfg;
  */
 typedef bool (*bcmp_reply_message_cb)(uint8_t *payload);
 
-static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 1000;
+static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 24;
 
 void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration* user_cfg, Configuration* sys_cfg);
 err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num=0, bcmp_reply_message_cb reply_cb=NULL, uint32_t request_timeout_ms=DEFAULT_MESSAGE_TIMEOUT_MS);

@@ -34,7 +34,7 @@
 // 1500 MTU minus ipv6 header
 #define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
 
-static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 500;
+static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 12;
 
 typedef struct bcmp_request_element {
   uint32_t seq_num;
