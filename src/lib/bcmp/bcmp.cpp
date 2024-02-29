@@ -622,6 +622,9 @@ static void _message_list_timer_expiry_cb(void *arg) {
     while (current) {
       if (pdTICKS_TO_MS(xTaskGetTickCount()) - current->send_timestamp_ms > current->timeout_ms) {
         printf("BCMP message with seq_num %d timed out\n", current->seq_num);
+        if (current->callback) {
+          current->callback(NULL);
+        }
         _message_list_remove_message(current);
         current = _ctx.messages_list;
         continue;
