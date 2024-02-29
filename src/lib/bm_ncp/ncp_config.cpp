@@ -3,7 +3,7 @@
 #include "device_info.h"
 #include "FreeRTOS.h"
 #include "bm_serial.h"
-#include "bm_printf.h"
+#include "bridgeLog.h"
 
 using namespace cfg;
 
@@ -210,7 +210,7 @@ bool _cfg_get_bcmp_cb(uint8_t *payload) {
             rval = false;
         }
     } else {
-        bm_printf(0, "Failed to get cfg\n");
+        BRIDGE_CFG_LOG_PRINT("Failed to get cfg\n");
     }
     return rval;
 }
@@ -224,7 +224,7 @@ bool _cfg_set_bcmp_cb (uint8_t *payload) {
             rval = false;
         }
     } else {
-        bm_printf(0, "Failed to set cfg\n");
+        BRIDGE_CFG_LOG_PRINT("Failed to set cfg\n");
     }
     return rval;
 }
@@ -239,7 +239,7 @@ bool _cfg_status_request_bcmp_cb(uint8_t *payload) {
             rval = false;
         }
     } else {
-        bm_printf(0, "Failed to get cfg status\n");
+        BRIDGE_CFG_LOG_PRINT("Failed to get cfg status\n");
     }
     return rval;
 }
@@ -253,7 +253,7 @@ bool _cfg_key_del_bcmp_cb(uint8_t *payload) {
             rval = false;
         }
     } else {
-        bm_printf(0, "Failed to delete cfg\n");
+        BRIDGE_CFG_LOG_PRINT("Failed to delete cfg\n");
     }
     return rval;
 }
