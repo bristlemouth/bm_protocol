@@ -49,7 +49,7 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
         uint64_t sensor_reading_time_sec = soft_data.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = soft_data.header.sensor_reading_time_ms % 1000U;
 
-        int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+        int8_t node_position = topology_sampler_get_node_position(node_id, portMAX_DELAY);
 
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
@@ -102,7 +102,7 @@ void SoftSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+    int8_t node_position = topology_sampler_get_node_position(node_id, portMAX_DELAY);
 
     log_buflen =
         snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
