@@ -165,6 +165,7 @@ target_include_directories(bcmp_dfu_tests
     ${SRC_DIR}/third_party/FreeRTOS/Source/include
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/crc
+    ${SRC_DIR}/third_party/tinycbor/src
     ${TEST_DIR}/third_party/fff
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/lib/bcmp/dfu
@@ -186,8 +187,16 @@ target_sources(bcmp_dfu_tests
 
     # Support files
     ${SRC_DIR}/third_party/crc/crc16.c
+    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/nvmPartition.cpp
+    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
+    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
+
     # Mocks
     ${TEST_DIR}/stubs/mock_mcu_boot.cpp
     ${TEST_DIR}/stubs/mock_FreeRTOS.c

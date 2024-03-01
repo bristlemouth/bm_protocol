@@ -609,7 +609,7 @@ bm_dfu_err_t bm_dfu_get_error(void) {
 }
 
 bool bm_dfu_confirm_is_enabled(void) {
-    uint32_t val = 0;
+    uint32_t val = 1;
     dfu_ctx.sys_cfg->getConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key), val);
     return val;
 }
