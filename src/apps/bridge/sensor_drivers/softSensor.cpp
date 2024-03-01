@@ -49,7 +49,20 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
         uint64_t sensor_reading_time_sec = soft_data.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = soft_data.header.sensor_reading_time_ms % 1000U;
 
-        int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
+        // Keep track of when we last got a reading from this node
+        // If it is the first reading, or if it has been more than the current aggregation period + 1 second
+        // then we will update the node position.
+        static int8_t node_position = 0;
+        static uint32_t last_timestamp = 0;
+        static uint32_t current_timestamp = 0;
+
+        current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
+        if ((current_timestamp - last_timestamp > soft->current_agg_period_ms + 1000u) || soft->reading_count == 1U) {
+          // TODO - remove this debug print before merging
+          printf("Updating soft %" PRIx64 " node position, current_time = %" PRIu32 ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n", node_id, current_timestamp, last_timestamp, soft->reading_count);
+          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
+        }
+        last_timestamp = current_timestamp;
 
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
