@@ -485,6 +485,7 @@ void s_client_update_done_entry(void) {
         // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration, 
         // confirm, reset the config flag, and then reboot.
         if(!bm_dfu_confirm_is_enabled()){
+            memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
             boot_set_confirmed();
             bm_dfu_confirm_enable(true); // Reboot!
         } else {
