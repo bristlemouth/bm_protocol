@@ -482,9 +482,17 @@ void s_client_update_done_entry(void) {
     client_ctx.host_node_id = client_update_reboot_info.host_node_id;
     client_ctx.chunk_retry_num = 0;
     if(getGitSHA() == client_update_reboot_info.gitSHA) {
-        bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
-        /* Kickoff Chunk timeout */
-        configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+        // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration, 
+        // confirm, reset the config flag, and then reboot.
+        if(!bm_dfu_confirm_is_enabled()){
+            memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
+            boot_set_confirmed();
+            bm_dfu_confirm_enable(true); // Reboot!
+        } else {
+            bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
+            /* Kickoff Chunk timeout */
+            configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+        }
     } else {
         bm_dfu_update_end(client_update_reboot_info.host_node_id, false, BM_DFU_ERR_WRONG_VER);
         bm_dfu_client_fail_update_and_reboot();

@@ -544,7 +544,7 @@ void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration*
                                  pdTRUE, NULL, _message_list_timer_callback);
   configASSERT(xTimerStart(_ctx.messages_expiration_timer, 10) == pdPASS);
 
-  bm_dfu_init(bcmp_dfu_tx, dfu_partition);
+  bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
   bcmp_config_init(user_cfg, sys_cfg);
   bcmp_resource_discovery::bcmp_resource_discovery_init();
 
