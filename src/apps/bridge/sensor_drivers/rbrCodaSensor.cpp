@@ -63,7 +63,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
           printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, last_timestamp, rbr_coda->reading_count);
-          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
+          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
         }
         last_timestamp = current_timestamp;
 
@@ -145,7 +145,7 @@ void RbrCodaSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
     // Use the latest sensor type to determine the sensor type string
     const char *sensor_type_str;

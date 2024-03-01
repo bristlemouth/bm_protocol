@@ -53,7 +53,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         uint64_t sensor_reading_time_sec = d.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = d.header.sensor_reading_time_ms % 1000U;
 
-        int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+        int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
         size_t log_buflen = snprintf(
             log_buf, SENSOR_LOG_BUF_SIZE,
@@ -159,7 +159,7 @@ void AanderaaSensor::aggregate(void) {
       snprintf(timeStrbuf, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                           "%" PRIx64 "," // Node Id

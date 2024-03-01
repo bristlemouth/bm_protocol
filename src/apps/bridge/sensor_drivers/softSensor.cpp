@@ -62,7 +62,7 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
           printf("Updating soft %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, last_timestamp, soft->reading_count);
-          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
+          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
         }
         last_timestamp = current_timestamp;
 
@@ -117,7 +117,7 @@ void SoftSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
+    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                           "%" PRIx64 "," // Node Id
