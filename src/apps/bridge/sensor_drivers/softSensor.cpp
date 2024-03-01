@@ -57,9 +57,11 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
         static uint32_t current_timestamp = 0;
 
         current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - last_timestamp > soft->current_agg_period_ms + 1000u) || soft->reading_count == 1U) {
-          // TODO - remove this debug print before merging
-          printf("Updating soft %" PRIx64 " node position, current_time = %" PRIu32 ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n", node_id, current_timestamp, last_timestamp, soft->reading_count);
+        if ((current_timestamp - last_timestamp > soft->current_agg_period_ms + 1000u) ||
+            soft->reading_count == 1U) {
+          printf("Updating soft %" PRIx64 " node position, current_time = %" PRIu32
+                 ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
+                 node_id, current_timestamp, last_timestamp, soft->reading_count);
           node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
         }
         last_timestamp = current_timestamp;
@@ -75,9 +77,9 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
                      "%" PRIu64 "."   // sensor_reading_time_ms seconds part
                      "%03" PRIu32 "," // sensor_reading_time_ms millis part
                      "%.3f\n",        // temp_deg_c
-                     node_id, node_position, soft_data.header.reading_uptime_millis, reading_time_sec,
-                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     soft_data.temperature_deg_c);
+                     node_id, node_position, soft_data.header.reading_uptime_millis,
+                     reading_time_sec, reading_time_millis, sensor_reading_time_sec,
+                     sensor_reading_time_millis, soft_data.temperature_deg_c);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
@@ -117,15 +119,15 @@ void SoftSensor::aggregate(void) {
 
     int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
 
-    log_buflen =
-        snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                 "%" PRIx64 "," // Node Id
-                 "%" PRIi8 ","  // node_position
-                 "soft,"        // node_app_name
-                 "%s,"          // timestamp(ticks/UTC)
-                 "%" PRIu32 "," // reading_count
-                 "%.3f\n",      // temp_mean_deg_c
-                 node_id, node_position, time_str, soft_aggs.reading_count, soft_aggs.temp_mean_deg_c);
+    log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                          "%" PRIx64 "," // Node Id
+                          "%" PRIi8 ","  // node_position
+                          "soft,"        // node_app_name
+                          "%s,"          // timestamp(ticks/UTC)
+                          "%" PRIu32 "," // reading_count
+                          "%.3f\n",      // temp_mean_deg_c
+                          node_id, node_position, time_str, soft_aggs.reading_count,
+                          soft_aggs.temp_mean_deg_c);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
