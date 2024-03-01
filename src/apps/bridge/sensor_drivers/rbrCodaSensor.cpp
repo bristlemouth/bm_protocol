@@ -58,9 +58,9 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         static uint32_t current_timestamp = 0;
 
         current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - last_timestamp > soft->current_agg_period_ms + 1000u) || soft->reading_count == 1U) {
+        if ((current_timestamp - last_timestamp > rbr_coda->current_agg_period_ms + 1000u) || soft->reading_count == 1U) {
           // TODO - remove this debug print before merging
-          printf("Updating soft %" PRIx64 " node position, current_time = %" PRIu32 ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n", node_id, current_timestamp, last_timestamp, soft->reading_count);
+          printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32 ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n", node_id, current_timestamp, last_timestamp, soft->reading_count);
           node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(2000));
         }
         last_timestamp = current_timestamp;
