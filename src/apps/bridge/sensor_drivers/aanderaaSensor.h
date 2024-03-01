@@ -55,7 +55,7 @@ private:
                                  uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/aanderaa";
+  static constexpr char subtag[] = "/sofar/aanderaa";
 } Aanderaa_t;
 
 Aanderaa_t* createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms, uint32_t averager_max_samples);
