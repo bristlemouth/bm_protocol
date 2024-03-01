@@ -58,7 +58,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         static uint32_t current_timestamp = 0;
 
         current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - last_timestamp > rbr_coda->current_agg_period_ms + 1000u) ||
+        if ((current_timestamp - last_timestamp > rbr_coda->rbr_coda_agg_period_ms + 1000u) ||
             soft->reading_count == 1U) {
           printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
