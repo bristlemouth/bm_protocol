@@ -50,7 +50,22 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         uint64_t sensor_reading_time_sec = rbr_data.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = rbr_data.header.sensor_reading_time_ms % 1000U;
 
-        int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+        // Keep track of when we last got a reading from this node
+        // If it is the first reading, or if it has been more than the rbr aggregation period + 1 second
+        // then we will update the node position.
+        static int8_t node_position = 0;
+        static uint32_t last_timestamp = 0;
+        static uint32_t current_timestamp = 0;
+
+        current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
+        if ((current_timestamp - last_timestamp > rbr_coda->rbr_coda_agg_period_ms + 1000u) ||
+            rbr_coda->reading_count == 1U) {
+          printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
+                 ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
+                 node_id, current_timestamp, last_timestamp, rbr_coda->reading_count);
+          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+        }
+        last_timestamp = current_timestamp;
 
         // Use the latest sensor type to determine the sensor type string
         const char *sensor_type_str;
@@ -130,7 +145,7 @@ void RbrCodaSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, 1000);
+    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
     // Use the latest sensor type to determine the sensor type string
     const char *sensor_type_str;
