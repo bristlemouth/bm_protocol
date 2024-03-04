@@ -11,6 +11,7 @@
 #include "bcmp_messages.h"
 #include "nvmPartition.h"
 #include "lib_state_machine.h"
+#include "configuration.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -113,9 +114,12 @@ void bm_dfu_req_next_chunk(uint64_t dst_node_id, uint16_t chunk_num);
 void bm_dfu_update_end(uint64_t dst_node_id, uint8_t success, bm_dfu_err_t err_code);
 void bm_dfu_send_heartbeat(uint64_t dst_node_id);
 
-void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition);
+void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition, cfg::Configuration* sys_cfg);
 void bm_dfu_process_message(uint8_t * buf, size_t len);
 bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, update_finish_cb_t update_finish_callback, uint32_t timeoutMs );
+
+bool bm_dfu_confirm_is_enabled(void);
+void bm_dfu_confirm_enable(bool en);
 
 /*!
  * UNIT TEST FUNCTIONS BELOW HERE
