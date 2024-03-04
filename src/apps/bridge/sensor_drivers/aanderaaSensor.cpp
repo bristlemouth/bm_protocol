@@ -63,7 +63,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
         if ((current_timestamp - last_timestamp > aanderaa->current_agg_period_ms + 30000u) ||
             aanderaa->reading_count == 1U) {
-          printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
+          printf("Updating aanderaa %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, last_timestamp, aanderaa->reading_count);
           node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));

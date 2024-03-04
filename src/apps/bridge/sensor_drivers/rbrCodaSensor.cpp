@@ -51,7 +51,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         uint32_t sensor_reading_time_millis = rbr_data.header.sensor_reading_time_ms % 1000U;
 
         // Keep track of when we last got a reading from this node
-        // If it is the first reading, or if it has been more than the current aggregation period + 1 second
+        // If it is the first reading, or if it has been more than the rbr aggregation period + 1 second
         // then we will update the node position.
         static int8_t node_position = 0;
         static uint32_t last_timestamp = 0;
