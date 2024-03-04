@@ -732,6 +732,8 @@ int8_t topology_sampler_get_node_position(uint64_t node_id, uint32_t timeout_ms)
       }
     } while (0);
     xSemaphoreGive(_node_list.node_list_mutex);
+  } else {
+    printf("Failed to take node list mutex\n");
   }
   return requested_nodes_position;
 }
