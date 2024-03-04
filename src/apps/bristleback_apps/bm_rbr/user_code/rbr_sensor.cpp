@@ -139,9 +139,9 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       rtcPrint(rtcTimeBuffer, NULL);
       bm_fprintf(0, RBR_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
                  rtcTimeBuffer, read_len, _payload_buffer);
-      bm_printf(0, "[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+      bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
                 rtcTimeBuffer, read_len, _payload_buffer);
-      printf("[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+      printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
              read_len, _payload_buffer);
 
       // Now when we get a line of text data, our LineParser turns it into numeric values.

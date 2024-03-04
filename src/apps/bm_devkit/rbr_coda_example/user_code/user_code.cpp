@@ -233,9 +233,9 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, NULL);
     bm_fprintf(0, "rbr_raw.log", "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
                rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
+    bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
               read_len, payload_buffer);
-    printf("[rbr] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+    printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
            read_len, payload_buffer);
 
     // trigger a pulse on LED2
