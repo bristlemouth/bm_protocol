@@ -863,9 +863,13 @@ static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_con
   uint32_t num_stored_crcs = 0;
   uint32_t *stored_crcs = sm_config_crc_list.alloc_list(num_stored_crcs);
   bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Stored CRCs: \n");
-  for (uint32_t i = 0; i < num_stored_crcs; i++) {
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "0x%" PRIx32 "\n",
-                   stored_crcs[i]);
+  if (stored_crcs) {
+    for (uint32_t i = 0; i < num_stored_crcs; i++) {
+      bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "0x%" PRIx32 "\n",
+                     stored_crcs[i]);
+    }
   }
-  vPortFree(stored_crcs);
+  if (stored_crcs) {
+    vPortFree(stored_crcs);
+  }
 }
