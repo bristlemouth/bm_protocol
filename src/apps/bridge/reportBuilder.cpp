@@ -267,7 +267,8 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     break;
   }
   default: {
-    BRIDGE_LOG_PRINT("Unknown sensor type in addSampleToElement\n");
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Unknown sensor type in addSampleToElement\n");
     configASSERT(0);
     break;
   }
@@ -421,59 +422,69 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
         (static_cast<aanderaa_aggregations_t *>(sensor_data))[sample_index];
     if (sensor_report_encoder_open_sample(context, AANDERAA_NUM_SAMPLE_MEMBERS,
                                           "aanderaa_current_v0") != CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to open sample in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to open sample in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.abs_speed_mean_cm_s) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.abs_speed_std_cm_s) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.direction_circ_mean_rad) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.direction_circ_std_rad) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.temp_mean_deg_c) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.abs_tilt_mean_rad) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &aanderaa_sample.std_tilt_mean_rad) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                 &aanderaa_sample.reading_count) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to close sample in addSamplesToReport\n");
       break;
     }
     rval = true;
@@ -484,16 +495,19 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
         (static_cast<soft_aggregations_t *>(sensor_data))[sample_index];
     if (sensor_report_encoder_open_sample(context, SOFT_NUM_SAMPLE_MEMBERS,
                                           "bm_soft_temp_v0") != CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to open soft sample in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to open sample in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &soft_sample.temp_mean_deg_c) != CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add soft sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to close sample in addSamplesToReport\n");
       break;
     }
     rval = true;
@@ -507,7 +521,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     case BmRbrDataMsg::SensorType::TEMPERATURE: {
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_t_v0") != CborNoError) {
-        BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to open rbr_coda sample in addSamplesToReport\n");
       }
       rbr_coda_sample_valid = true;
       break;
@@ -515,7 +530,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     case BmRbrDataMsg::SensorType::PRESSURE: {
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_d_v0") != CborNoError) {
-        BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to open rbr_coda sample in addSamplesToReport\n");
       }
       rbr_coda_sample_valid = true;
       break;
@@ -523,7 +539,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     case BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE: {
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_td_v0") != CborNoError) {
-        BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to open rbr_coda sample in addSamplesToReport\n");
       }
       rbr_coda_sample_valid = true;
       break;
@@ -531,13 +548,15 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     case BmRbrDataMsg::SensorType::UNKNOWN: {
       if (sensor_report_encoder_open_sample(context, RBR_CODA_NUM_SAMPLE_MEMBERS,
                                             "bm_rbr_unknown") != CborNoError) {
-        BRIDGE_LOG_PRINT("Failed to open rbr_coda sample in addSamplesToReport\n");
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to open rbr_coda sample in addSamplesToReport\n");
       }
       rbr_coda_sample_valid = true;
       break;
     }
     default: {
-      BRIDGE_LOG_PRINT("Received invalid rbr type in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Received invalid rbr type in addSamplesToReport\n");
       break;
     }
     }
@@ -547,30 +566,35 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &rbr_coda_sample.temp_mean_deg_c) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add rbr_coda sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &rbr_coda_sample.pressure_mean_deci_bar) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add rbr_coda sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                 &rbr_coda_sample.pressure_stdev_deci_bar) !=
         CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to add rbr_coda sample member in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add rbr_coda sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
-      BRIDGE_LOG_PRINT("Failed to close sample in addSamplesToReport\n");
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to close rbr_coda sample in addSamplesToReport\n");
       break;
     }
     rval = true;
     break;
   }
   default: {
-    BRIDGE_LOG_PRINT("Received invalid sensor type in addSamplesToReport\n");
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Received invalid sensor type in addSamplesToReport\n");
     break;
   }
   }
@@ -610,11 +634,8 @@ static void report_builder_task(void *parameters) {
       switch (item.message_type) {
       case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT: {
         _ctx._sample_counter++;
-        constexpr size_t bufsize = 50;
-        static char buffer[bufsize];
-        int len = snprintf(buffer, bufsize, "Incrementing sample counter to %d\n",
-                           _ctx._sample_counter);
-        BRIDGE_LOG_PRINTN(buffer, len);
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Incrementing sample counter to %d\n", _ctx._sample_counter);
         if (_ctx._sample_counter >= _ctx._samplesPerReport) {
           if (_ctx._samplesPerReport > 0 && _ctx._transmitAggregations) {
             // This num_sensors is for the cbor encoder to know how many sensors will be in the report.
@@ -637,7 +658,8 @@ static void report_builder_task(void *parameters) {
                 configASSERT(cbor_buffer != NULL);
                 if (sensor_report_encoder_open_report(cbor_buffer, MAX_SENSOR_REPORT_CBOR_LEN,
                                                       num_sensors, context) != CborNoError) {
-                  BRIDGE_LOG_PRINT("Failed to open report in report_builder_task\n");
+                  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                 "Failed to open report in report_builder_task\n");
                   break;
                 }
                 bool abort_cbor_encoding = false;
@@ -646,14 +668,11 @@ static void report_builder_task(void *parameters) {
                   report_builder_element_t *element = _ctx._reportBuilderLinkedList.findElement(
                       _ctx._report_period_node_list[i]);
                   if (element == NULL) {
-                    constexpr size_t bufsize = 80;
-                    static char buffer[bufsize];
                     if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
-                      int len = snprintf(buffer, bufsize,
-                                         "No data for node %" PRIx64
-                                         " in report period, adding it to the list\n",
-                                         _ctx._report_period_node_list[i]);
-                      BRIDGE_LOG_PRINTN(buffer, len);
+                      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                                     "No data for node %" PRIx64
+                                     " in report period, adding it to the list\n",
+                                     _ctx._report_period_node_list[i]);
                       switch (_ctx._report_period_sensor_type_list[i]) {
                       case SENSOR_TYPE_AANDERAA: {
                         _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
@@ -680,12 +699,14 @@ static void report_builder_task(void *parameters) {
                         break;
                       }
                       default: {
-                        BRIDGE_LOG_PRINT("Invalid sensor type in report_builder_task\n");
+                        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                       "Invalid sensor type in report_builder_task\n");
                         break;
                       }
                       }
                     } else {
-                      BRIDGE_LOG_PRINT("Unknown sensor type in report_builder_task\n");
+                      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                     "Unknown sensor type in report_builder_task\n");
                       // This is an unkown sensor type (i.e. hello world or something else) so we won't add it to the report.
                       // So instead, lets continue the for loop to the next node!
                       continue;
@@ -693,24 +714,23 @@ static void report_builder_task(void *parameters) {
                     element = _ctx._reportBuilderLinkedList.findElement(
                         _ctx._report_period_node_list[i]);
                   } else {
-                    constexpr size_t bufsize = 70;
-                    static char buffer[bufsize];
-                    int len = snprintf(buffer, bufsize,
-                                       "Found data for node %" PRIx64
-                                       " adding it to the the report\n",
-                                       _ctx._report_period_node_list[i]);
-                    BRIDGE_LOG_PRINTN(buffer, len);
+                    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                                   "Found data for node %" PRIx64
+                                   " adding it to the the report\n",
+                                   _ctx._report_period_node_list[i]);
                   }
                   if (sensor_report_encoder_open_sensor(context, _ctx._samplesPerReport) !=
                       CborNoError) {
-                    BRIDGE_LOG_PRINT("Failed to open sensor in report_builder_task\n");
+                    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                   "Failed to open sensor in report_builder_task\n");
                     abort_cbor_encoding = true;
                     break;
                   }
                   for (uint32_t j = 0; j < _ctx._samplesPerReport; j++) {
                     if (!addSamplesToReport(context, element->sensor_type, element->sensor_data,
                                             j)) {
-                      BRIDGE_LOG_PRINT(
+                      bridgeLogPrint(
+                          BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                           "Failed to add samples to report in report_builder_task\n");
                       abort_cbor_encoding = true;
                       break;
@@ -718,7 +738,8 @@ static void report_builder_task(void *parameters) {
                   }
                   if (sensor_report_encoder_close_sensor(context) != CborNoError ||
                       abort_cbor_encoding) {
-                    BRIDGE_LOG_PRINT("Failed to close sensor in report_builder_task\n");
+                    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                   "Failed to close sensor in report_builder_task\n");
                     abort_cbor_encoding = true;
                     break;
                   }
@@ -727,7 +748,8 @@ static void report_builder_task(void *parameters) {
                   break;
                 }
                 if (sensor_report_encoder_close_report(context) != CborNoError) {
-                  BRIDGE_LOG_PRINT("Failed to close report in report_builder_task\n");
+                  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                 "Failed to close report in report_builder_task\n");
                   break;
                 }
                 size_t cbor_buffer_len = sensor_report_encoder_get_report_size_bytes(context);
@@ -753,12 +775,15 @@ static void report_builder_task(void *parameters) {
                 vPortFree(cbor_buffer);
               }
             } else {
-              BRIDGE_LOG_PRINT("No nodes to send data for\n");
+              bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                             "No nodes to send data for\n");
             }
-            BRIDGE_LOG_PRINT("Clearing the list\n");
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                           "Clearing the list\n");
             _ctx._reportBuilderLinkedList.clear();
           }
-          BRIDGE_LOG_PRINT("Clearing the sample counter\n");
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "Clearing the sample counter\n");
           _ctx._sample_counter = 0;
           // Clear the report periods network associated data to rebuild it for the next report period
           _ctx._report_period_num_nodes = 0;
@@ -772,16 +797,14 @@ static void report_builder_task(void *parameters) {
 
       case REPORT_BUILDER_SAMPLE_MESSAGE: {
         if (_ctx._samplesPerReport > 0) {
-          constexpr size_t bufsize = 55;
-          static char buffer[bufsize];
-          int len = snprintf(buffer, bufsize, "Adding sample for %" PRIx64 " to list\n",
-                             item.node_id);
-          BRIDGE_LOG_PRINTN(buffer, len);
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "Adding sample for %" PRIx64 " to list\n", item.node_id);
           _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
               item.node_id, item.sensor_type, item.sensor_data, item.sensor_data_size,
               _ctx._samplesPerReport, _ctx._sample_counter);
         } else {
-          BRIDGE_LOG_PRINT("samplesPerReport is 0, not adding sample to list\n");
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "samplesPerReport is 0, not adding sample to list\n");
         }
         break;
       }
@@ -791,7 +814,8 @@ static void report_builder_task(void *parameters) {
         // IMPORTANT: If the bus is constantly on, the currentAggPeriodMin(or sample period eventually) must be longer than the topology sampler period (1 min)
         // otherwise the CRC for the report builder may not update before a message needs to be sent
 
-        BRIDGE_LOG_PRINT("Checking CRC in report builder!\n");
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Checking CRC in report builder!\n");
         // Get the latest crc - if it doens't match our saved one, pull the latest topology and compare the topology
         // to our current topology - if it doesn't match our current one (and mainly if it is bigger or the same size) then
         // update the crc and the topology list
@@ -800,21 +824,22 @@ static void report_builder_task(void *parameters) {
         uint8_t *last_network_config = topology_sampler_alloc_last_network_config(
             temp_network_crc32, temp_cbor_config_size);
         if (last_network_config != NULL) {
-          constexpr size_t bufsize = 50;
-          static char buffer[bufsize];
-          int len = snprintf(buffer, bufsize, "Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n",
-                             temp_network_crc32, _ctx._report_period_max_network_crc32);
-          BRIDGE_LOG_PRINTN(buffer, len);
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "Got CRC %" PRIx32 " OLD CRC %" PRIx32 "\n", temp_network_crc32,
+                         _ctx._report_period_max_network_crc32);
           if (temp_network_crc32 != _ctx._report_period_max_network_crc32) {
-            BRIDGE_LOG_PRINT("Getting topology in report builder!\n");
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                           "Getting topology in report builder!\n");
             uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
             size_t temp_node_list_size = sizeof(temp_node_list);
             uint32_t temp_num_nodes;
             if (topology_sampler_get_node_list(temp_node_list, temp_node_list_size,
                                                temp_num_nodes, TOPO_TIMEOUT_MS)) {
-              BRIDGE_LOG_PRINT("Got topology in report builder!\n");
+              bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                             "Got topology in report builder!\n");
               if (temp_num_nodes >= _ctx._report_period_num_nodes) {
-                BRIDGE_LOG_PRINT("Updating CRC and topology in report builder!\n");
+                bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                               "Updating CRC and topology in report builder!\n");
                 if (xSemaphoreTake(_ctx._config_mutex,
                                    pdMS_TO_TICKS(NETWORK_CONFIG_MUTEX_TIMEOUT_MS))) {
                   if (_ctx.report_period_max_network_config_cbor != NULL) {
@@ -823,7 +848,8 @@ static void report_builder_task(void *parameters) {
                   _ctx.report_period_max_network_config_cbor = last_network_config;
                   last_network_config = NULL;
                   _ctx.report_period_max_network_config_cbor_len = temp_cbor_config_size;
-                  BRIDGE_LOG_PRINT("Updated reportBuilders max network configuration CBOR map\n");
+                  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                                 "Updated reportBuilders max network configuration CBOR map\n");
                   _ctx._report_period_num_nodes = temp_num_nodes;
                   memcpy(_ctx._report_period_node_list, temp_node_list, sizeof(temp_node_list));
                   _ctx._report_period_max_network_crc32 = temp_network_crc32;
@@ -833,23 +859,29 @@ static void report_builder_task(void *parameters) {
                           _ctx._report_period_sensor_type_list,
                           report_period_sensor_type_list_size, _ctx._report_period_num_nodes,
                           TOPO_TIMEOUT_MS)) {
-                    BRIDGE_LOG_PRINT("Failed to get the sensor type list in report builder!\n");
+                    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                   "Failed to get the sensor type list in report builder!\n");
                   } else {
-                    BRIDGE_LOG_PRINT("Got sensor type list in report builder!\n");
+                    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                                   "Updated reportBuilders max network sensor type list\n");
                   }
                   xSemaphoreGive(_ctx._config_mutex);
                 } else {
-                  BRIDGE_LOG_PRINT("Failed to take the config mutex in report builder!\n");
+                  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                                 "Failed to take the config mutex in report builder!\n");
                 }
               } else {
-                BRIDGE_LOG_PRINT("Not updating CRC and topology in report builder, new "
-                                 "topology is smaller than the old one!\n");
+                bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                               "Not updating CRC and topology in report builder, new topology "
+                               "is smaller than the old one!\n");
               }
             } else {
-              BRIDGE_LOG_PRINT("Failed to get the node list in report builder!\n");
+              bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                             "Failed to get the node list in report builder!\n");
             }
           } else {
-            BRIDGE_LOG_PRINT("CRCs match, not updating\n");
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                           "CRCs match, not updating\n");
           }
           // The last network config is not used here, but in the future it can be used to determine if varying sensor types have been
           // connected/disconnected to the network.
@@ -861,7 +893,8 @@ static void report_builder_task(void *parameters) {
       }
 
       default: {
-        BRIDGE_LOG_PRINT("Uknown message type received in report_builder_task\n");
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                       "Unknown message type received in report_builder_task\n");
         break;
       }
       }

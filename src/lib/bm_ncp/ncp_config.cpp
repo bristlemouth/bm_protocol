@@ -46,9 +46,7 @@ bool ncp_cfg_get_cb(uint64_t node_id, bm_common_config_partition_e partition, si
         } else {
             err_t err = ERR_OK;
             if (!bcmp_config_get(node_id, partition, key_len, key, err, _cfg_get_bcmp_cb)) {
-                static char buf[64];
-                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg get, err: %" PRIi8 "\n", err);
-                BRIDGE_CFG_LOG_PRINT(buf);
+                bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to issue bcmp cfg get, err: %" PRIi8 "\n", err);
                 break;
             }
         }
@@ -81,9 +79,7 @@ bool ncp_cfg_set_cb(uint64_t node_id, bm_common_config_partition_e partition,
         } else {
             err_t err = ERR_OK;
             if (!bcmp_config_set(node_id, partition, key_len, key, value_size, val, err, _cfg_get_bcmp_cb)) {
-                static char buf[64];
-                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg set, err: %" PRIi8 "\n", err);
-                BRIDGE_CFG_LOG_PRINT(buf);
+                bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to issue bcmp cfg set, err: %" PRIi8 "\n", err);
                 break;
             }
         }
@@ -108,9 +104,7 @@ bool ncp_cfg_commit_cb(uint64_t node_id, bm_common_config_partition_e partition)
         } else {
             err_t err = ERR_OK;
             if (!bcmp_config_commit(node_id, partition, err)) {
-                static char buf[64];
-                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg commit, err: %" PRIi8 "\n", err);
-                BRIDGE_CFG_LOG_PRINT(buf);
+                bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to issue bcmp cfg commit, err: %" PRIi8 "\n", err);
                 break;
             }
         }
@@ -140,9 +134,7 @@ bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e pa
         } else {
             err_t err = ERR_OK;
             if (!bcmp_config_status_request(node_id, partition, err, _cfg_status_request_bcmp_cb)) {
-                static char buf[64];
-                snprintf(buf, sizeof(buf), "Failed to issue bcmp cfg status request, err: %" PRIi8 "\n", err);
-                BRIDGE_CFG_LOG_PRINT(buf);
+                bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to issue bcmp cfg status request, err: %" PRIi8 "\n", err);
                 break;
             }
         }
@@ -171,7 +163,7 @@ bool ncp_cfg_key_del_request_cb(uint64_t node_id, bm_common_config_partition_e p
             rval = true;
         } else {
             if (!bcmp_config_del_key(node_id, partition, key_len, key, _cfg_key_del_bcmp_cb)) {
-                BRIDGE_CFG_LOG_PRINT("Failed to issue bcmp cfg del\n");
+                bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to issue bcmp cfg del\n");
                 break;
             }
         }
@@ -230,7 +222,7 @@ bool _cfg_get_bcmp_cb(uint8_t *payload) {
             rval = false;
         }
     } else {
-        BRIDGE_CFG_LOG_PRINT("Failed to get cfg\n");
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to get cfg\n");
     }
     return rval;
 }
@@ -244,7 +236,7 @@ bool _cfg_set_bcmp_cb (uint8_t *payload) {
             rval = false;
         }
     } else {
-        BRIDGE_CFG_LOG_PRINT("Failed to set cfg\n");
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to set cfg\n");
     }
     return rval;
 }
@@ -259,7 +251,7 @@ bool _cfg_status_request_bcmp_cb(uint8_t *payload) {
             rval = false;
         }
     } else {
-        BRIDGE_CFG_LOG_PRINT("Failed to get cfg status\n");
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to get cfg status\n");
     }
     return rval;
 }
@@ -273,7 +265,7 @@ bool _cfg_key_del_bcmp_cb(uint8_t *payload) {
             rval = false;
         }
     } else {
-        BRIDGE_CFG_LOG_PRINT("Failed to delete cfg\n");
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to delete cfg\n");
     }
     return rval;
 }
