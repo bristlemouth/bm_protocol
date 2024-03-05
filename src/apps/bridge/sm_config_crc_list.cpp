@@ -86,6 +86,8 @@ uint32_t *SMConfigCRCList::alloc_list(uint32_t &num_crcs) {
     configASSERT(crc_list);
     memcpy(crc_list, _crc_list, _num_crcs * sizeof(uint32_t));
     return crc_list;
+  } else {
+    num_crcs = 0;
   }
   return NULL;
 }

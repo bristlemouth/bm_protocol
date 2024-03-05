@@ -23,7 +23,7 @@ TEST(SMConfigCRCListTests, EmptyList) {
 
   SMConfigCRCList sm_config_crc_list(&mock_cfg);
   EXPECT_EQ(sm_config_crc_list.contains(0x12345678), false);
-  uint32_t list_size;
+  uint32_t list_size = 0;
   uint32_t *crc_list = sm_config_crc_list.alloc_list(list_size);
   EXPECT_EQ(list_size, 0);
   EXPECT_EQ(crc_list, nullptr);
