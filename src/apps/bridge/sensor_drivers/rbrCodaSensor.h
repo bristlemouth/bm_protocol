@@ -47,7 +47,7 @@ private:
   static BmRbrDataMsg::SensorType_t rbrCodaGetSensorType(uint64_t node_id);
 
 private:
-  static constexpr char subtag[] = "/bm_rbr_data";
+  static constexpr char subtag[] = "/sofar/bm_rbr_data";
 } RbrCoda_t;
 
 RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,

@@ -18,7 +18,7 @@ bool RbrCodaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(sub);
-  int topic_strlen = snprintf(sub, BM_TOPIC_MAX_LEN, "%" PRIx64 "%s", node_id, subtag);
+  int topic_strlen = snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
     rval = bm_sub_wl(sub, topic_strlen, rbrCodaSubCallback);
   }
