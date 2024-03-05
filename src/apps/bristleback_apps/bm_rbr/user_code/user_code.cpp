@@ -74,7 +74,7 @@ static bool BmRbrWatchdogHandler(void *arg) {
 }
 
 static int createBmRbrDataTopic(void) {
-  int topiclen = snprintf(bmRbrTopic, BM_TOPIC_MAX_LEN, "%" PRIx64 "/sofar/bm_rbr_data", getNodeId());
+  int topiclen = snprintf(bmRbrTopic, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "/sofar/bm_rbr_data", getNodeId());
   configASSERT(topiclen > 0);
   return topiclen;
 }

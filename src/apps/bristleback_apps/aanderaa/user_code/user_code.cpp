@@ -205,7 +205,7 @@ static bool aanderaaSensorWatchdogHandler(void *arg) {
 }
 
 static int createAanderaaDataTopic(void) {
-  int topiclen = snprintf(aanderaaTopic, BM_TOPIC_MAX_LEN, "%" PRIx64 "/sofar/aanderaa", getNodeId());
+  int topiclen = snprintf(aanderaaTopic, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "/sofar/aanderaa", getNodeId());
   configASSERT(topiclen > 0);
   return topiclen;
 }

@@ -165,7 +165,7 @@ static bool BmSoftWatchdogHandler(void *arg) {
 
 static int createBmSoftDataTopic(void) {
   int topiclen =
-      snprintf(bmSoftTopic, BM_TOPIC_MAX_LEN, "%" PRIx64 "/sofar/bm_soft_temp", getNodeId());
+      snprintf(bmSoftTopic, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "/sofar/bm_soft_temp", getNodeId());
   configASSERT(topiclen > 0);
   return topiclen;
 }
