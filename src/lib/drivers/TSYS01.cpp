@@ -20,7 +20,7 @@ TSYS01::TSYS01(SPIInterface_t *spiInterface, IOPinHandle_t *cspin)
   \return Will return false if sensor is not present or communicating
 */
 
-bool TSYS01::begin(float offsetCentiDegC, uint32_t signature, uint32_t caltime) {
+bool TSYS01::begin(float offsetDegC, uint32_t signature, uint32_t caltime) {
   // Make sure CS pin is high before starting
   uint32_t sn;
   IOWrite(_CSPin, 1);
@@ -34,12 +34,12 @@ bool TSYS01::begin(float offsetCentiDegC, uint32_t signature, uint32_t caltime) 
   if (!rval) {
     printf("TSYS01 init failed\n");
     calibrated = false;
-  } else if (!signature && !caltime && !offsetCentiDegC) {
+  } else if (!signature && !caltime && !offsetDegC) {
     printf("TSYS01 no cal during init\n");
     calibrated = false;
   } else if (signature && caltime && signature == sn) {
     printf("TSYS01 init success\n");
-    calibrationOffsetDegC = offsetCentiDegC / 100.0f;
+    calibrationOffsetDegC = offsetDegC;
     calibrated = true;
   } else {
     printf("TSYS01 invalid calibration error during init\n");

@@ -42,7 +42,7 @@ private:
 public:
   TSYS01(SPIInterface_t *spiInterface, IOPinHandle_t *cspin);
 
-  bool begin(float offsetCentiDegC = 0.0, uint32_t signature = 0, uint32_t caltime = 0);
+  bool begin(float offsetDegC = 0.0, uint32_t signature = 0, uint32_t caltime = 0);
   void reset(void);
   bool getTemperature(float &temperature);
   bool checkPROM();
