@@ -135,7 +135,7 @@ extern "C" int main(void) {
 
   MX_TIM2_Init();
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  TIM2->CCR1 = 10000;
+  TIM2->CCR1 = 0;
 
   // If you NEED to have an interrupt based timer, or other interrupts running before the
   // scheduler starts, you can enable them here. The reason for this is that FreeRTOS will

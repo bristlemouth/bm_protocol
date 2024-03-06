@@ -15,7 +15,7 @@
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 #define DEFAULT_PWM_LED_DUTY (0.0)
-#define PWM_LED_CCR1 ((int32_t)(led_pwm_duty * 65535) % 65535)
+#define PWM_LED_CCR1 ((int32_t)(led_pwm_duty * 1300000) % 1300001)
 
 bool led_state = false;
 
