@@ -19,10 +19,13 @@ if not os.path.exists(file_path):
 
 print("Logging serial data from {} to {}".format(com_port, file_path))
 
+failed_to_connect_count = 0
+
 while True:
     try:
         # Open the serial port
         ser = serial.Serial(com_port)
+        failed_to_connect_count = 0
 
         # Open the log file in append mode
         with open(file_path, 'a') as file:
@@ -51,7 +54,9 @@ while True:
                     break
 
     except serial.SerialException as e:
-        sys.stderr.write('could not open port {}: {}\n'.format(com_port, e))
+        if failed_to_connect_count % 30 == 0:
+          sys.stderr.write('could not open port {}: {}\n'.format(com_port, e))
+        failed_to_connect_count += 1
 
     # Wait for a second before the next attempt
-    time.sleep(1)
+    time.sleep(0.5)
