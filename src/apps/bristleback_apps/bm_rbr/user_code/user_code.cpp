@@ -16,11 +16,13 @@ static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t PROBE_TIME_PERIOD_MS = 8 * 1000;
 static constexpr uint32_t BM_RBR_DATA_MSG_MAX_SIZE = 256;
 static constexpr uint8_t NO_MAX_TRIGGER = 0;
+static constexpr char DEPTH_CAL_CONFIG_STR[] = "rbrCodaDepthCalM";
 
 extern cfg::Configuration *systemConfigurationPartition;
 static RbrSensor rbr_sensor;
 static char bmRbrTopic[BM_TOPIC_MAX_LEN];
 static int bmRbrTopicStrLen;
+static float depthConfigM = 0.0;
 
 static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
@@ -46,6 +48,17 @@ void loop(void) {
   static uint32_t last_probe_time_ms = uptimeGetMs();
   if (uptimeGetMs() - last_probe_time_ms > PROBE_TIME_PERIOD_MS) {
     rbr_sensor.probeType();
+    float readDepthConfigM;
+    if (rbr_sensor.getDepthConfiguration(readDepthConfigM) &&
+        readDepthConfigM != depthConfigM) {
+      depthConfigM = readDepthConfigM;
+      bm_fprintf(0, RbrSensor::RBR_RAW_LOG, "DEBUG - Depth configuration updated to %f\n",
+                 depthConfigM);
+      bm_printf(0, "DEBUG - Depth configuration updated to %f\n", depthConfigM);
+      printf("DEBUG - Depth configuration updated to %f\n", depthConfigM);
+      systemConfigurationPartition->setConfig(DEPTH_CAL_CONFIG_STR,
+                                              strlen(DEPTH_CAL_CONFIG_STR), depthConfigM);
+    }
     last_probe_time_ms = uptimeGetMs();
   }
   if (rbr_sensor.getData(d)) {
@@ -74,7 +87,8 @@ static bool BmRbrWatchdogHandler(void *arg) {
 }
 
 static int createBmRbrDataTopic(void) {
-  int topiclen = snprintf(bmRbrTopic, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "/sofar/bm_rbr_data", getNodeId());
+  int topiclen = snprintf(bmRbrTopic, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "/sofar/bm_rbr_data",
+                          getNodeId());
   configASSERT(topiclen > 0);
   return topiclen;
 }

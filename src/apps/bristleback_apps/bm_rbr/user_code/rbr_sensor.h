@@ -14,6 +14,14 @@ public:
   bool probeType(uint32_t timeout_ms = 1000);
   bool getData(BmRbrDataMsg::Data &d);
   void flush(void);
+  bool getDepthConfiguration(float &depthM);
+
+private:
+  bool getPressurePa(float &pressure_pa);
+  bool getDensityGramPerCubicMeter(float &density_g_per_m3);
+  static inline float convertPressureDecibarToPa(float pressure_deci_bar) {
+    return pressure_deci_bar * 10000;
+  }
 
 public:
   static constexpr char RBR_RAW_LOG[] = "rbr_raw.log";
@@ -24,8 +32,13 @@ private:
   static constexpr ValueType parserValueTypeOne[] = {TYPE_UINT64, TYPE_DOUBLE};
   static constexpr ValueType parserValueTypeTwo[] = {TYPE_UINT64, TYPE_DOUBLE, TYPE_DOUBLE};
   static constexpr char typeCommand[] = "outputformat channelslist\n";
+  static constexpr char getSettingsCommandAtmosphericPressure[] = "settings atmosphere\n";
+  static constexpr char settingsCommandAtmosphericPressureTag[] = "settings atmosphere = ";
+  static constexpr char getSettingsCommandDensity[] = "settings density\n";
+  static constexpr char settingsCommandDensityTag[] = "settings density = ";
   static constexpr uint8_t SENSOR_DROP_DEBOUNCE_MAX_COUNT = 3;
   static constexpr uint8_t NUM_PARSERS = 4;
+  static constexpr float GRAVITAIONAL_ACCELERATION = 9.81;
 
 private:
   BmRbrDataMsg::SensorType_t _type;
