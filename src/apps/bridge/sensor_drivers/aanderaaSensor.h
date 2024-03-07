@@ -32,6 +32,8 @@ typedef struct AanderaaSensor : public AbstractSensor {
   AveragingSampler abs_tilt_rad;
   AveragingSampler std_tilt_rad;
   uint32_t reading_count;
+  int8_t node_position;
+  uint32_t last_timestamp;
 
   static constexpr uint32_t N_SAMPLES_PAD =
       10; // Extra sample padding to account for timing slop.

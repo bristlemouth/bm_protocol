@@ -24,6 +24,8 @@ typedef struct RbrCodaSensor : public AbstractSensor {
   AveragingSampler pressure_ubar;
   uint32_t reading_count;
   BmRbrDataMsg::SensorType_t latest_sensor_type;
+  int8_t node_position;
+  uint32_t last_timestamp;
 
   // Extra sample padding to account for timing slop. Calculated as the sample frequency + 2 minutes bridge on period + some extra slop.
   // 2 minutes is the minimum bridge on period and the soft by default is sampling at 2Hz. So 2*120 + 30 = 270.

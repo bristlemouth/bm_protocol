@@ -18,6 +18,8 @@ typedef struct SoftSensor : public AbstractSensor {
   uint32_t current_agg_period_ms;
   AveragingSampler temp_deg_c;
   uint32_t reading_count;
+  int8_t node_position;
+  uint32_t last_timestamp;
 
   // Extra sample padding to account for timing slop. Calculated as the sample frequency + 2 minutes bridge on period + some extra slop.
   // 2 minutes is the minimum bridge on period and the soft by default is sampling at 2Hz. So 2*120 + 30 = 270.

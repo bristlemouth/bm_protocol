@@ -53,22 +53,15 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         uint64_t sensor_reading_time_sec = d.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = d.header.sensor_reading_time_ms % 1000U;
 
-        // Keep track of when we last got a reading from this node
-        // If it is the first reading, or if it has been more than the current aggregation period + 30 seconds
-        // then we will update the node position.
-        static int8_t node_position = 0;
-        static uint32_t last_timestamp = 0;
-        static uint32_t current_timestamp = 0;
-
-        current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - last_timestamp > aanderaa->current_agg_period_ms + 30000u) ||
+        uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
+        if ((current_timestamp - aanderaa->last_timestamp > aanderaa->current_agg_period_ms + 30000u) ||
             aanderaa->reading_count == 1U) {
           printf("Updating aanderaa %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
-                 node_id, current_timestamp, last_timestamp, aanderaa->reading_count);
-          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+                 node_id, current_timestamp, aanderaa->last_timestamp, aanderaa->reading_count);
+          aanderaa->node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
         }
-        last_timestamp = current_timestamp;
+        aanderaa->last_timestamp = current_timestamp;
 
         size_t log_buflen = snprintf(
             log_buf, SENSOR_LOG_BUF_SIZE,
@@ -94,7 +87,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
             "%.3f,"          // max_tilt_deg
             "%.3f,"          // std_tilt_deg
             "%.3f\n",       // temperature_deg_c
-            node_id, node_position, d.header.reading_uptime_millis, reading_time_sec,
+            node_id, aanderaa->node_position, d.header.reading_uptime_millis, reading_time_sec,
             reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
             d.abs_speed_cm_s, d.direction_deg_m, d.north_cm_s, d.east_cm_s, d.heading_deg_m,
             d.tilt_x_deg, d.tilt_y_deg, d.single_ping_std_cm_s, d.transducer_strength_db,
