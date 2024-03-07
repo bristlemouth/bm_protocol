@@ -14,6 +14,9 @@
 #include "util.h"
 #include <new>
 
+// TODO - get this from the sensor node itself
+#define DEFAULT_RBR_CODA_READING_PERIOD_MS 500 // 2Hz
+
 bool RbrCodaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
@@ -50,22 +53,15 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         uint64_t sensor_reading_time_sec = rbr_data.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis = rbr_data.header.sensor_reading_time_ms % 1000U;
 
-        // Keep track of when we last got a reading from this node
-        // If it is the first reading, or if it has been more than the rbr aggregation period + 1 second
-        // then we will update the node position.
-        static int8_t node_position = 0;
-        static uint32_t last_timestamp = 0;
-        static uint32_t current_timestamp = 0;
-
-        current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - last_timestamp > rbr_coda->rbr_coda_agg_period_ms + 1000u) ||
+        uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
+        if ((current_timestamp - rbr_coda->last_timestamp > DEFAULT_RBR_CODA_READING_PERIOD_MS + 1000u) ||
             rbr_coda->reading_count == 1U) {
           printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
-                 node_id, current_timestamp, last_timestamp, rbr_coda->reading_count);
-          node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+                 node_id, current_timestamp, rbr_coda->last_timestamp, rbr_coda->reading_count);
+          rbr_coda->node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
         }
-        last_timestamp = current_timestamp;
+        rbr_coda->last_timestamp = current_timestamp;
 
         // Use the latest sensor type to determine the sensor type string
         const char *sensor_type_str;
@@ -91,7 +87,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
             "%03" PRIu32 "," // sensor_reading_time_ms millis part
             "%.3f,"          // temperature_deg_c
             "%.3f\n",        // pressure_ubar
-            node_id, node_position, sensor_type_str, rbr_data.header.reading_uptime_millis,
+            node_id, rbr_coda->node_position, sensor_type_str, rbr_data.header.reading_uptime_millis,
             reading_time_sec, reading_time_millis, sensor_reading_time_sec,
             sensor_reading_time_millis, rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar);
         if (log_buflen > 0) {
