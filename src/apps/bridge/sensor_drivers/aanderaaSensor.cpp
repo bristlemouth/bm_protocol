@@ -13,6 +13,9 @@
 #include "util.h"
 #include <new>
 
+// TODO - get this from the sensor node itself
+#define DEFAULT_AANDERAA_READING_PERIOD_MS 60 * 1000 // 1 minute
+
 bool AanderaaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
@@ -54,7 +57,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         uint32_t sensor_reading_time_millis = d.header.sensor_reading_time_ms % 1000U;
 
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - aanderaa->last_timestamp > aanderaa->current_agg_period_ms + 30000u) ||
+        if ((current_timestamp - aanderaa->last_timestamp > DEFAULT_AANDERAA_READING_PERIOD_MS + 30000u) ||
             aanderaa->reading_count == 1U) {
           printf("Updating aanderaa %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",

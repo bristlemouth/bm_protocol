@@ -14,6 +14,9 @@
 #include "util.h"
 #include <new>
 
+// TODO - get this from the sensor node itself
+#define DEFAULT_RBR_CODA_READING_PERIOD_MS 500 // 2Hz
+
 bool RbrCodaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
@@ -51,7 +54,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         uint32_t sensor_reading_time_millis = rbr_data.header.sensor_reading_time_ms % 1000U;
 
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - rbr_coda->last_timestamp > rbr_coda->rbr_coda_agg_period_ms + 1000u) ||
+        if ((current_timestamp - rbr_coda->last_timestamp > DEFAULT_RBR_CODA_READING_PERIOD_MS + 1000u) ||
             rbr_coda->reading_count == 1U) {
           printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
