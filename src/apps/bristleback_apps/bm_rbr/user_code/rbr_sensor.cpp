@@ -239,7 +239,7 @@ bool RbrSensor::getPressurePa(float &pressure_pa) {
   uint8_t retries = 0;
   PLUART::write((uint8_t *)getSettingsCommandAtmosphericPressure,
                 strlen(getSettingsCommandAtmosphericPressure));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   do {
     if (PLUART::lineAvailable()) {
       do {
@@ -273,11 +273,11 @@ bool RbrSensor::getPressurePa(float &pressure_pa) {
   return rval;
 }
 
-bool RbrSensor::getDensityGramPerCubicMeter(float &density_g_per_m3) {
+bool RbrSensor::getDensityKgPerCubicMeter(float &density_kg_per_m3) {
   uint8_t retries = 0;
   bool rval = false;
   PLUART::write((uint8_t *)getSettingsCommandDensity, strlen(getSettingsCommandDensity));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   do {
     if (PLUART::lineAvailable()) {
       do {
@@ -297,10 +297,11 @@ bool RbrSensor::getDensityGramPerCubicMeter(float &density_g_per_m3) {
         if (static_cast<size_t>(densityVal - _payload_buffer) >= line_len) {
           break;
         }
-
-        if (!bStrtof(const_cast<char *>(densityVal), &density_g_per_m3)) {
+        float density_g_per_cm3 = 0.0;
+        if (!bStrtof(const_cast<char *>(densityVal), &density_g_per_cm3)) {
           break;
         }
+        density_kg_per_m3 = density_g_per_cm3 * 1000.0;
         rval = true;
       } while (0);
     }
@@ -318,11 +319,10 @@ bool RbrSensor::getDepthConfiguration(float &depthM) {
   bool rval = false;
   uint8_t retries = 0;
   float atmosphericPressurePa = 0.0;
-  float densityGramPerCubicMeter = 0.0;
+  float densityKgPerM3 = 0.0;
   do {
-    if (getPressurePa(atmosphericPressurePa) &&
-        getDensityGramPerCubicMeter(densityGramPerCubicMeter)) {
-      depthM = atmosphericPressurePa / (densityGramPerCubicMeter * GRAVITAIONAL_ACCELERATION);
+    if (getPressurePa(atmosphericPressurePa) && getDensityKgPerCubicMeter(densityKgPerM3)) {
+      depthM = atmosphericPressurePa / (densityKgPerM3 * GRAVITAIONAL_ACCELERATION);
       rval = true;
     }
   } while (!rval && retries++ < 3);

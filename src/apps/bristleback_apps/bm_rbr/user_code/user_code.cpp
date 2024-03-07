@@ -10,6 +10,7 @@
 #include "sensorWatchdog.h"
 #include "uptime.h"
 #include "util.h"
+#include <math.h>
 
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
@@ -23,7 +24,7 @@ extern cfg::Configuration *systemConfigurationPartition;
 static RbrSensor rbr_sensor;
 static char bmRbrTopic[BM_TOPIC_MAX_LEN];
 static int bmRbrTopicStrLen;
-static float depthConfigM = 0.0;
+static float depthConfigM = NAN;
 
 static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
@@ -62,6 +63,7 @@ void loop(void) {
       printf("DEBUG - Depth configuration updated to %f\n", depthConfigM);
       systemConfigurationPartition->setConfig(DEPTH_CAL_CONFIG_STR,
                                               strlen(DEPTH_CAL_CONFIG_STR), depthConfigM);
+      systemConfigurationPartition->saveConfig(false);
     }
     last_probe_time_ms = uptimeGetMs();
   }

@@ -18,7 +18,7 @@ public:
 
 private:
   bool getPressurePa(float &pressure_pa);
-  bool getDensityGramPerCubicMeter(float &density_g_per_m3);
+  bool getDensityKgPerCubicMeter(float &density_kg_per_m3);
   static inline float convertPressureDecibarToPa(float pressure_deci_bar) {
     return pressure_deci_bar * 10000;
   }
