@@ -16,6 +16,7 @@ static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t PROBE_TIME_PERIOD_MS = 8 * 1000;
 static constexpr uint32_t BM_RBR_DATA_MSG_MAX_SIZE = 256;
 static constexpr uint8_t NO_MAX_TRIGGER = 0;
+static constexpr char RBR_CODA_TYPE_CONFIG_STR[] = "rbrCodaType";
 static constexpr char DEPTH_CAL_CONFIG_STR[] = "rbrCodaDepthCalM";
 
 extern cfg::Configuration *systemConfigurationPartition;
@@ -31,7 +32,10 @@ void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   configASSERT(systemConfigurationPartition);
   uint32_t sensor_type = static_cast<uint32_t>(BmRbrDataMsg::SensorType_t::UNKNOWN);
-  systemConfigurationPartition->getConfig("rbrCodaType", strlen("rbrCodaType"), sensor_type);
+  systemConfigurationPartition->getConfig(RBR_CODA_TYPE_CONFIG_STR,
+                                          strlen(RBR_CODA_TYPE_CONFIG_STR), sensor_type);
+  systemConfigurationPartition->getConfig(DEPTH_CAL_CONFIG_STR, strlen(DEPTH_CAL_CONFIG_STR),
+                                          depthConfigM);
   rbr_sensor.init(static_cast<BmRbrDataMsg::SensorType_t>(sensor_type));
   SensorWatchdog::SensorWatchdogAdd(BM_RBR_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmRbrWatchdogHandler, NO_MAX_TRIGGER,
