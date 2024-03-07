@@ -55,7 +55,8 @@ while True:
 
     except serial.SerialException as e:
         if failed_to_connect_count % 30 == 0:
-          sys.stderr.write('could not open port {}: {}\n'.format(com_port, e))
+          timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+          sys.stderr.write('{}: could not open port {}: {}\n'.format(timestamp, com_port, e))
         failed_to_connect_count += 1
 
     # Wait for a second before the next attempt
