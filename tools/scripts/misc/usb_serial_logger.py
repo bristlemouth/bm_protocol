@@ -6,7 +6,6 @@ from datetime import datetime
 from serial.tools import list_ports
 
 def connect_to_bristlemouth():
-    print(list_ports.comports())
     skip_first = True
     for port in list_ports.comports():
         if 'Bristlemouth' in port.description:
