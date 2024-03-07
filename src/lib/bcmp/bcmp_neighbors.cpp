@@ -8,6 +8,8 @@
 #include "device_info.h"
 #include "util.h"
 
+#include "bm_printf.h"
+
 // Pointer to neighbor linked-list
 static bm_neighbor_t *_neighbors;
 static uint8_t _num_neighbors = 0;
@@ -69,7 +71,7 @@ void bcmp_neighbor_foreach(neighbor_callback_t cb) {
 static void _neighbor_check(bm_neighbor_t *neighbor) {
   if(neighbor->online && !timeRemainingTicks( neighbor->last_heartbeat_ticks,
                                               pdMS_TO_TICKS(2 * neighbor->heartbeat_period_s * 1000))) {
-    printf("🏚  Neighbor offline :'( %016" PRIx64 "\n", neighbor->node_id);
+    bm_fprintf(0, "port.log", "🏚  Neighbor offline :'( %016" PRIx64 "\n", neighbor->node_id);
     if(neighbor_discovery_cb) {
       neighbor_discovery_cb(false,neighbor);
     }
@@ -142,7 +144,7 @@ bm_neighbor_t *bcmp_update_neighbor(uint64_t node_id, uint8_t port) {
   bm_neighbor_t *neighbor = bcmp_find_neighbor(node_id);
 
   if(neighbor == NULL) {
-    printf("🏘  Adding new neighbor! %016" PRIx64 "\n", node_id);
+    bm_fprintf(0, "port.log", "🏘  Adding new neighbor! %016" PRIx64 "\n", node_id);
     neighbor = bcmp_add_neighbor(node_id, port);
     // Let's get this node's information
     bcmp_request_info(node_id, &multicast_ll_addr);
