@@ -3,6 +3,19 @@ import os
 import time
 import serial
 from datetime import datetime
+from serial.tools import list_ports
+
+def connect_to_bristlemouth():
+    for port in list_ports.comports():
+        if 'bristlemouth' in port.description.lower():
+            try:
+                ser = serial.Serial(port.device)
+                print(f'Connected to {port.device}')
+                return ser
+            except serial.SerialException as e:
+                print(f'Could not open port {port.device}: {e}')
+    print('No Bristlemouth device found')
+    return None
 
 # Check if a COM port and file path were provided
 if len(sys.argv) < 3:
@@ -24,7 +37,7 @@ failed_to_connect_count = 0
 while True:
     try:
         # Open the serial port
-        ser = serial.Serial(com_port)
+        ser = connect_to_bristlemouth()
         failed_to_connect_count = 0
 
         # Open the log file in append mode
