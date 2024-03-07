@@ -37,7 +37,7 @@ while True:
                 try:
                     line = ser.readline().decode(errors='replace')
                     if line:
-                        if "rtc: 0," or "rtc: ," in line:
+                        if "rtc: 0," in line or "rtc: ," in line:
                             print("RTC 0 detected!!!")
                         timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
                         file.write(f'{timestamp}: {line}')
