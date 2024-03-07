@@ -236,70 +236,76 @@ void RbrSensor::flush(void) { PLUART::reset(); }
 
 bool RbrSensor::getPressurePa(float &pressure_pa) {
   bool rval = false;
+  uint8_t retries = 0;
   PLUART::write((uint8_t *)getSettingsCommandAtmosphericPressure,
                 strlen(getSettingsCommandAtmosphericPressure));
   vTaskDelay(pdMS_TO_TICKS(200));
-  if (PLUART::lineAvailable()) {
-    do {
-      PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      const char *tagAtmosphericPressure =
-          strstr(_payload_buffer, settingsCommandAtmosphericPressureTag);
-      if (!tagAtmosphericPressure) {
-        break;
-      }
-      const char *tagEndLine = strstr(_payload_buffer, "\n");
-      if (!tagEndLine) {
-        break;
-      }
-      size_t line_len = tagEndLine - tagAtmosphericPressure;
-      if (line_len > sizeof(_payload_buffer)) {
-        break;
-      }
-      const char *atmophericPressureVal =
-          tagAtmosphericPressure + strlen(settingsCommandAtmosphericPressureTag);
-      if (atmophericPressureVal >= tagEndLine) {
-        break;
-      }
-      float atmosphericPressuredeciBar = 0.0;
-      if (!bStrtof(const_cast<char *>(atmophericPressureVal), &atmosphericPressuredeciBar)) {
-        break;
-      }
-      pressure_pa = convertPressureDecibarToPa(atmosphericPressuredeciBar);
-      rval = true;
-    } while (0);
-  }
+  do {
+    if (PLUART::lineAvailable()) {
+      do {
+        size_t line_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+        if (line_len < strlen(settingsCommandAtmosphericPressureTag)) {
+          break;
+        }
+        _payload_buffer[line_len - 1] = '\0'; // Remove the CR
+        const char *tagAtmosphericPressure =
+            strstr(_payload_buffer, settingsCommandAtmosphericPressureTag);
+        if (!tagAtmosphericPressure) {
+          break;
+        }
+        if (line_len > sizeof(_payload_buffer)) {
+          break;
+        }
+        const char *atmophericPressureVal =
+            tagAtmosphericPressure + strlen(settingsCommandAtmosphericPressureTag);
+        if (static_cast<size_t>(atmophericPressureVal - _payload_buffer) >= line_len) {
+          break;
+        }
+        float atmosphericPressuredeciBar = 0.0;
+        if (!bStrtof(const_cast<char *>(atmophericPressureVal), &atmosphericPressuredeciBar)) {
+          break;
+        }
+        pressure_pa = convertPressureDecibarToPa(atmosphericPressuredeciBar);
+        rval = true;
+      } while (0);
+    }
+  } while (retries++ < 3 && !rval);
   return rval;
 }
 
 bool RbrSensor::getDensityGramPerCubicMeter(float &density_g_per_m3) {
+  uint8_t retries = 0;
   bool rval = false;
   PLUART::write((uint8_t *)getSettingsCommandDensity, strlen(getSettingsCommandDensity));
   vTaskDelay(pdMS_TO_TICKS(200));
-  if (PLUART::lineAvailable()) {
-    do {
-      PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      const char *tagDensity = strstr(_payload_buffer, settingsCommandDensityTag);
-      if (!tagDensity) {
-        break;
-      }
-      const char *tagEndLine = strstr(_payload_buffer, "\n");
-      if (!tagEndLine) {
-        break;
-      }
-      size_t line_len = tagEndLine - tagDensity;
-      if (line_len > sizeof(_payload_buffer)) {
-        break;
-      }
-      const char *densityVal = tagDensity + strlen(settingsCommandDensityTag);
-      if (densityVal >= tagEndLine) {
-        break;
-      }
-      if (!bStrtof(const_cast<char *>(densityVal), &density_g_per_m3)) {
-        break;
-      }
-      rval = true;
-    } while (0);
-  }
+  do {
+    if (PLUART::lineAvailable()) {
+      do {
+        size_t line_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+        if (line_len < strlen(settingsCommandDensityTag)) {
+          break;
+        }
+        _payload_buffer[line_len - 1] = '\0'; // Remove the CR
+        const char *tagDensity = strstr(_payload_buffer, settingsCommandDensityTag);
+        if (!tagDensity) {
+          break;
+        }
+        if (line_len > sizeof(_payload_buffer)) {
+          break;
+        }
+        const char *densityVal = tagDensity + strlen(settingsCommandDensityTag);
+        if (static_cast<size_t>(densityVal - _payload_buffer) >= line_len) {
+          break;
+        }
+
+        if (!bStrtof(const_cast<char *>(densityVal), &density_g_per_m3)) {
+          break;
+        }
+        rval = true;
+      } while (0);
+    }
+  } while (retries++ < 3 && !rval);
+
   return rval;
 }
 
