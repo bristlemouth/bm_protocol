@@ -229,6 +229,7 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
                              uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
+    printf("RECEIVED UTC MESSAGE!\n");
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
       utcDateTime_t time;
       const bm_common_pub_sub_utc_t *utc =
@@ -393,7 +394,13 @@ static void defaultTask(void *parameters) {
   config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);
   SensorWatchdog::SensorWatchdogInit();
-  bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
+
+  while (!bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions)) {
+    printf("Failed to subscribe to %s\n", APP_PUB_SUB_UTC_TOPIC);
+    printf("Waiting 1 second and trying again\n");
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
+
 
   // Turn of the bristleback leds
   IOWrite(&LED_GREEN, BB_LED_OFF);
