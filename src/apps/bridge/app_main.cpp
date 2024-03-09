@@ -372,7 +372,7 @@ static void defaultTask(void *parameters) {
       VBUS_SW_EN, pwrcfg.sampleIntervalMs, pwrcfg.sampleDurationMs, pwrcfg.subsampleIntervalMs,
       pwrcfg.subsampleDurationMs, static_cast<bool>(pwrcfg.subsampleEnabled),
       static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
-      (pwrcfg.alignmentInterval5Min * BridgePowerController::DEFAULT_ALIGNMENT_S));
+      (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S));
 
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user,
           &debug_configuration_system, &debug_configuration_hardware);

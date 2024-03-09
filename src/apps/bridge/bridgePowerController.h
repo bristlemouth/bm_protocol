@@ -57,6 +57,7 @@ public:
   static constexpr uint32_t MAX_SUBSAMPLE_INTERVAL_S = (60 * 60);
   static constexpr uint32_t MAX_SUBSAMPLE_DURATION_S = (60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_S = (5 * 60);
+  static constexpr uint32_t ALIGNMENT_INCREMENT_S = (5 * 60);
   static constexpr uint32_t MAX_ALIGNMENT_S = (24 * 60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_5_MIN_INTERVAL = (1);
 
