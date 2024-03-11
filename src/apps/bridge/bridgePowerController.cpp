@@ -226,7 +226,7 @@ void BridgePowerController::_update(void) {
         if (nextSampleEpochS > currentCycleS) {
           powerBusAndSetSignal(false);
         }
-        xTaskNotify(sensor_controller_task_handle, AANDERAA_AGGREGATION_TIMER_BITS, eSetBits);
+        xTaskNotify(sensor_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
         break;
       }
     } else { // Sampling Not Enabled

@@ -218,7 +218,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     // Should these two be outside of the do-while loop? That way we will always notify the other tasks?
     // The first four inputs are not used by this message type
     reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
-    xTaskNotify(sensor_controller_task_handle, AANDERAA_AGGREGATION_TIMER_BITS, eSetBits);
+    xTaskNotify(sensor_controller_task_handle, SAMPLER_TIMER_BITS, eSetBits);
 
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);

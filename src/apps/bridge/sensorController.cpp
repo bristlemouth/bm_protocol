@@ -24,7 +24,6 @@ typedef struct sensorControllerCtx {
   TaskHandle_t _task_handle;
   uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   bool _initialized;
-  TimerHandle_t _sample_timer;
   BridgePowerController *_bridge_power_controller;
   cfg::Configuration *_sys_cfg;
   uint32_t current_reading_period_ms;
@@ -34,12 +33,10 @@ typedef struct sensorControllerCtx {
 
 static sensorsControllerCtx_t _ctx;
 
-static constexpr uint32_t SAMPLE_TIMER_MS = 30 * 1000;
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
 
 static void runController(void *param);
-static void sampleTimerCallback(TimerHandle_t timer);
 static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                const char *service, size_t reply_len, uint8_t *reply_data);
 static void abstractSensorAddSensorSub(AbstractSensor *sensor);
@@ -76,11 +73,6 @@ void sensorControllerInit(BridgePowerController *power_controller,
   configASSERT(rval == pdTRUE);
 }
 
-static void sampleTimerCallback(TimerHandle_t timer) {
-  (void)timer;
-  xTaskNotify(_ctx._task_handle, SAMPLER_TIMER_BITS, eSetBits);
-}
-
 static void runController(void *param) {
   (void)param;
   uint32_t task_notify_bits;
@@ -89,10 +81,6 @@ static void runController(void *param) {
   }
   _ctx._subbed_sensors = NULL;
   _ctx._num_subbed_sensors = 0;
-  _ctx._sample_timer = xTimerCreate("SensorCtlTim", pdMS_TO_TICKS(SAMPLE_TIMER_MS), pdTRUE,
-                                    NULL, sampleTimerCallback);
-  configASSERT(_ctx._sample_timer);
-  configASSERT(xTimerStart(_ctx._sample_timer, 10) == pdTRUE);
   _ctx._initialized = true;
   while (true) {
     // wait for a notification from one of the timers, clear all the bits on exit
@@ -116,7 +104,7 @@ static void runController(void *param) {
         }
       }
     }
-    if (task_notify_bits & AANDERAA_AGGREGATION_TIMER_BITS) {
+    if (task_notify_bits & AGGREGATION_TIMER_BITS) {
       printf("Aggregation period done!\n");
       if (_ctx._subbed_sensors != NULL) {
         AbstractSensor *curr = _ctx._subbed_sensors;
