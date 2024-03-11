@@ -214,11 +214,13 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
         _send_on_boot = false;
       }
     }
+
+    // The first four inputs are not used by this message type
+    reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
+
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);
 
-  // The first four inputs are not used by this message type
-  reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
   // Notify the sensor controller task to sample for sensors
   xTaskNotify(sensor_controller_task_handle, SAMPLER_TIMER_BITS, eSetBits);
 
