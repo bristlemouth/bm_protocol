@@ -26,7 +26,7 @@ typedef struct SoftSensor : public AbstractSensor {
   static constexpr uint32_t N_SAMPLES_PAD = 270;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
   static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5;
-  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 40;
+  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 50;
 
 public:
   bool subscribe() override;
