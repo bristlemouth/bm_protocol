@@ -145,6 +145,8 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       BmRbrSensorUtil::preprocessLine(_payload_buffer, read_len);
 
       if (!BmRbrSensorUtil::validSensorDataString(_payload_buffer, read_len)) {
+        bm_fprintf(0, RBR_RAW_LOG, "Invalid sensor data string: %.*s\n", read_len, _payload_buffer);
+        bm_printf(0, "Invalid sensor data string: %.*s\n", read_len, _payload_buffer);
         printf("Invalid sensor data string: %.*s\n", read_len, _payload_buffer);
         break;
       }
