@@ -5,12 +5,12 @@
 
 bool IOAdcInit(void *handle) {
   configASSERT(handle != 0);
-  ADC_HandleTypeDef *adcHandle = (ADC_HandleTypeDef *)handle;
+  // ADC_HandleTypeDef *adcHandle = (ADC_HandleTypeDef *)handle;
 
   MX_ADC1_Init();
 
   // Calibrate ADC
-  HAL_ADCEx_Calibration_Start(adcHandle, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED);
+  // HAL_ADCEx_Calibration_Start(adcHandle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   return true;
 }
 
@@ -23,13 +23,18 @@ bool IOAdcDeInit(void *handle) {
 }
 
 AdcStatus_t IOAdcRead(void *handle, int32_t *value) {
+  uint16_t rval = 0;
   configASSERT(handle != 0);
   ADC_HandleTypeDef *adcHandle = (ADC_HandleTypeDef *)handle;
 
   HAL_ADC_Start(adcHandle);
 
+  HAL_Delay(5000);
+
   // TODO - use interrupts
-  HAL_ADC_PollForConversion(adcHandle, 10);
+  if (HAL_ADC_PollForConversion(adcHandle, 1000) != HAL_OK) {
+    rval = ADC_ERR;
+  }
   int32_t lResult = HAL_ADC_GetValue(adcHandle);
   HAL_ADC_Stop(adcHandle);
 
@@ -37,7 +42,7 @@ AdcStatus_t IOAdcRead(void *handle, int32_t *value) {
     *value = lResult;
   }
 
-  return 0;
+  return rval;
 }
 
 AdcStatus_t IOAdcReadMv(void *handle, int32_t *valueMv) {

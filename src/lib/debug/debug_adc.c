@@ -1,4 +1,4 @@
-/* FreeRTOS includes. */
+  /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -35,10 +35,12 @@ static uint32_t adcGetSampleMv(uint32_t channel) {
   ADC_ChannelConfTypeDef config = {0};
 
   config.Rank = ADC_REGULAR_RANK_1;
-  config.SamplingTime = ADC_SAMPLETIME_68CYCLES;
+  config.SamplingTime = ADC_SAMPLETIME_391CYCLES_5;
   config.SingleDiff = ADC_SINGLE_ENDED;
   config.OffsetNumber = ADC_OFFSET_NONE;
   config.Offset = 0;
+
+  printf("Get bits: 0x%" PRIx32 "\n", LL_ADC_GetCommonPathInternalCh(ADC12_COMMON));
 
   config.Channel = channel;
   IOAdcChannelConfig(&hadc1, &config);
