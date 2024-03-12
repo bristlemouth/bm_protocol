@@ -157,6 +157,10 @@ void loop(void) {
     break;
   }
   default: {
+    printf("soft | tick: %llu, rtc: %s, UNKNOWN ERROR\n", uptimeGetMs(), rtcTimeBuffer);
+    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR\n", uptimeGetMs(),
+               rtcTimeBuffer);
+    bm_printf(0, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR", uptimeGetMs(), rtcTimeBuffer);
     break;
   }
   }
