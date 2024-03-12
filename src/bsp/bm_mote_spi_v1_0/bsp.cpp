@@ -9,6 +9,7 @@
 #include "spi.h"
 #include "stm32_io.h"
 // Peripheral includes for MX_ init functions
+#include "adc.h"
 #include "gpdma.h"
 #include "gpio.h"
 #include "icache.h"
@@ -116,4 +117,5 @@ void mxInit(void) {
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_IWDG_Init();
+  MX_ADC1_Init();
 }
