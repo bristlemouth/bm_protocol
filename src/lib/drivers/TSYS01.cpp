@@ -51,15 +51,16 @@ bool TSYS01::begin(float offsetDegC, uint32_t signature, uint32_t caltime) {
 
 void TSYS01::reset(void) { doCommand(RESET, RESET_WAIT_TIME_MS); }
 
-bool TSYS01::getTemperature(float &temperature) {
+TSYS01::tsys01_result_e TSYS01::getTemperature(float &temperature) {
   float temp = 0;
   uint8_t data[3] = {0};
   bool spiTransactionSuccess = true;
-  bool rval = false;
+  tsys01_result_e rval = TSYS01_RESULT_ERROR;
 
   do {
     // For SPI we need a way to check if the device is present.
     if (!validatePROM()) {
+      rval = TSYS01_RESULT_COMMS;
       break;
     }
     spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
@@ -74,9 +75,11 @@ bool TSYS01::getTemperature(float &temperature) {
 
     if (spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX) {
       temperature = temp + calibrationOffsetDegC;
-      rval = true;
+      rval = TSYS01_RESULT_OK;
+    } else if (!spiTransactionSuccess) {
+      rval = TSYS01_RESULT_COMMS;
     } else {
-      printf("TSYS01 reading error\n");
+      rval = TSYS01_RESULT_INVALID;
     }
   } while (0);
 

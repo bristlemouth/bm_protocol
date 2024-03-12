@@ -114,12 +114,12 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &time_and_date);
   };
 
-  if (soft.getTemperature(temperature)) {
+  TSYS01::tsys01_result_e result = soft.getTemperature(temperature);
+  switch (result) {
+  case TSYS01::TSYS01_RESULT_OK: {
     SensorWatchdog::SensorWatchdogPet(SOFTMODULE_WATCHDOG_ID);
 
     printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, temperature);
-    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
-               rtcTimeBuffer, temperature);
     bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
     static BmSoftDataMsg::Data d;
@@ -137,6 +137,27 @@ void loop(void) {
     } else {
       printf("Failed to encode data message\n");
     }
+    break;
+  }
+  case TSYS01::TSYS01_RESULT_COMMS: {
+    printf("soft | tick: %llu, rtc: %s, COMMS ERROR\n", uptimeGetMs(), rtcTimeBuffer);
+    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s,  COMMS ERROR\n", uptimeGetMs(),
+               rtcTimeBuffer);
+    bm_printf(0, "soft | tick: %llu, rtc: %s,  COMMS ERROR", uptimeGetMs(), rtcTimeBuffer);
+    break;
+  }
+  case TSYS01::TSYS01_RESULT_INVALID: {
+    printf("soft | tick: %llu, rtc: %s, INVALID temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
+           temperature);
+    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, INVALID temp: %f\n", uptimeGetMs(),
+               rtcTimeBuffer, temperature);
+    bm_printf(0, "soft | tick: %llu, rtc: %s, INVALID temp: %f", uptimeGetMs(), rtcTimeBuffer,
+              temperature);
+    break;
+  }
+  default: {
+    break;
+  }
   }
 
   // Delay between readings

@@ -40,11 +40,18 @@ private:
   static constexpr uint8_t NUM_CALIB = 5;
 
 public:
+  typedef enum tsys01_result {
+    TSYS01_RESULT_OK = 0,
+    TSYS01_RESULT_ERROR = 1,
+    TSYS01_RESULT_COMMS = 2,
+    TSYS01_RESULT_INVALID = 3,
+  } tsys01_result_e;
+
   TSYS01(SPIInterface_t *spiInterface, IOPinHandle_t *cspin);
 
   bool begin(float offsetDegC = 0.0, uint32_t signature = 0, uint32_t caltime = 0);
   void reset(void);
-  bool getTemperature(float &temperature);
+  tsys01_result_e getTemperature(float &temperature);
   bool checkPROM();
   bool getSerialNumber(uint32_t &sn);
 
