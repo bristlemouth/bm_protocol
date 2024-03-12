@@ -32,7 +32,7 @@ typedef struct RbrCodaSensor : public AbstractSensor {
   static constexpr uint32_t N_SAMPLES_PAD = 270;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
   static constexpr double TEMP_SAMPLE_MEMBER_MIN = -5;
-  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 35;
+  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 50;
   static constexpr double PRESSURE_SAMPLE_MEMBER_MIN = 5;
   static constexpr double PRESSURE_SAMPLE_MEMBER_MAX = 85;
   static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MIN = 0;

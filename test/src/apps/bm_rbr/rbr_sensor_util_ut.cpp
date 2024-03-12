@@ -2,6 +2,7 @@
 #include "mock_configuration.h"
 #include "rbr_sensor_util.h"
 #include "gtest/gtest.h"
+#include <string.h>
 
 DEFINE_FFF_GLOBALS;
 
@@ -31,7 +32,7 @@ TEST(rbrSensorUtilTest, InvalidString) {
 
 TEST(rbrSensorUtilTest, validData) {
   EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, 17.7684));
-  EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, 35.0));
+  EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, 50.0));
   EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, -5.0));
   EXPECT_TRUE(validSensorData(DataType_e::PRESSURE, 85.0));
   EXPECT_TRUE(validSensorData(DataType_e::PRESSURE, 5.0));
@@ -39,7 +40,7 @@ TEST(rbrSensorUtilTest, validData) {
 }
 
 TEST(rbrSensorUtilTest, InvalidData) {
-  EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, 35.1));
+  EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, 50.1));
   EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, -5.1));
   EXPECT_FALSE(validSensorData(DataType_e::PRESSURE, -10));
   EXPECT_FALSE(validSensorData(DataType_e::PRESSURE, 4.9));
@@ -69,4 +70,13 @@ TEST(rbrSensorUtilTest, InvalidOutputFormat) {
   EXPECT_FALSE(validSensorOutputformat(mangle1, strlen(mangle1)));
   EXPECT_FALSE(validSensorOutputformat(mangle2, strlen(mangle2)));
   EXPECT_FALSE(validSensorOutputformat(mangle3, strlen(mangle3)));
+}
+
+TEST(rbrSensorUtilTest, parseoutReady) {
+  static constexpr char parsedReady[] = "96500, 10.1841";
+  char readystr[] = "Ready: 96500, 10.1841";
+  uint16_t line_len = strlen(readystr);
+  preprocessLine(readystr, line_len);
+  EXPECT_EQ(line_len, strlen(parsedReady));
+  EXPECT_STREQ(readystr, parsedReady);
 }
