@@ -153,6 +153,7 @@ void loop(void) {
                rtcTimeBuffer, temperature);
     bm_printf(0, "soft | tick: %llu, rtc: %s, INVALID temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
+    BmSoftStartAndValidate();
     break;
   }
   default: {
