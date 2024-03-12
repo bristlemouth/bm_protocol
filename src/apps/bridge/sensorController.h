@@ -13,7 +13,7 @@
 
 typedef enum {
   SAMPLER_TIMER_BITS = 0x01,
-  AANDERAA_AGGREGATION_TIMER_BITS = 0x02,
+  AGGREGATION_TIMER_BITS = 0x02,
 } sensorControllerBits_t;
 
 extern TaskHandle_t sensor_controller_task_handle;

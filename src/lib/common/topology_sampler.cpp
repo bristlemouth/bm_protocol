@@ -24,6 +24,7 @@
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
+#include "sensorController.h"
 #include "sm_config_crc_list.h"
 #include "stm32_rtc.h"
 #include "sys_info_service.h"
@@ -219,6 +220,9 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
 
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);
+
+  // Notify the sensor controller task to sample for sensors
+  xTaskNotify(sensor_controller_task_handle, SAMPLER_TIMER_BITS, eSetBits);
 
   if (cbor_buffer) {
     vPortFree(cbor_buffer);
