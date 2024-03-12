@@ -22,6 +22,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
+#include "debug_adc.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
 #include "debug_gpio.h"
@@ -393,6 +394,7 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
+  debugADCInit();
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,

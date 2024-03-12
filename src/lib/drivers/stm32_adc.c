@@ -10,7 +10,7 @@ bool IOAdcInit(void *handle) {
   MX_ADC1_Init();
 
   // Calibrate ADC
-  HAL_ADCEx_Calibration_Start(adcHandle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
+  HAL_ADCEx_Calibration_Start(adcHandle, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED);
   return true;
 }
 
