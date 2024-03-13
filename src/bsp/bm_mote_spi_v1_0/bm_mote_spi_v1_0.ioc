@@ -1,6 +1,6 @@
 #MicroXplorer Configuration settings - do not modify
 ADC1.Channel-1\#ChannelRegularConversion=ADC_CHANNEL_TEMPSENSOR
-ADC1.ClockPrescaler=ADC_CLOCK_ASYNC_DIV4
+ADC1.ClockPrescaler=ADC_CLOCK_ASYNC_DIV256
 ADC1.CommonPathInternal=null|ADC_CHANNEL_TEMPSENSOR|null|null
 ADC1.ContinuousConvMode=ENABLE
 ADC1.EnableInjectedConversion=DISABLE
@@ -11,8 +11,8 @@ ADC1.NbrOfConversion=1
 ADC1.NbrOfConversionFlag=1
 ADC1.OffsetNumber-1\#ChannelRegularConversion=ADC_OFFSET_NONE
 ADC1.Rank-1\#ChannelRegularConversion=1
-ADC1.Resolution=ADC_RESOLUTION_12B
-ADC1.SamplingTime-1\#ChannelRegularConversion=ADC_SAMPLETIME_391CYCLES_5
+ADC1.Resolution=ADC_RESOLUTION_14B
+ADC1.SamplingTime-1\#ChannelRegularConversion=ADC_SAMPLETIME_814CYCLES
 ADC1.TriggerFrequencyMode=ADC_TRIGGER_FREQ_HIGH
 ADC1.master=1
 CAD.formats=
