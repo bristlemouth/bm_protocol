@@ -2,10 +2,11 @@
 ADC1.Channel-1\#ChannelRegularConversion=ADC_CHANNEL_TEMPSENSOR
 ADC1.ClockPrescaler=ADC_CLOCK_ASYNC_DIV256
 ADC1.CommonPathInternal=null|ADC_CHANNEL_TEMPSENSOR|null|null
-ADC1.ContinuousConvMode=ENABLE
+ADC1.ContinuousConvMode=DISABLE
+ADC1.EOCSelection=ADC_EOC_SINGLE_CONV
 ADC1.EnableInjectedConversion=DISABLE
 ADC1.EnableRegularConversion=ENABLE
-ADC1.IPParameters=NbrOfConversion,EnableRegularConversion,Rank-1\#ChannelRegularConversion,Channel-1\#ChannelRegularConversion,SamplingTime-1\#ChannelRegularConversion,OffsetNumber-1\#ChannelRegularConversion,MonitoredBy-1\#ChannelRegularConversion,NbrOfConversionFlag,TriggerFrequencyMode,EnableInjectedConversion,Resolution,ClockPrescaler,ContinuousConvMode,master,CommonPathInternal
+ADC1.IPParameters=NbrOfConversion,EnableRegularConversion,Rank-1\#ChannelRegularConversion,Channel-1\#ChannelRegularConversion,SamplingTime-1\#ChannelRegularConversion,OffsetNumber-1\#ChannelRegularConversion,MonitoredBy-1\#ChannelRegularConversion,NbrOfConversionFlag,TriggerFrequencyMode,EnableInjectedConversion,Resolution,ClockPrescaler,ContinuousConvMode,master,EOCSelection,CommonPathInternal
 ADC1.MonitoredBy-1\#ChannelRegularConversion=__NULL
 ADC1.NbrOfConversion=1
 ADC1.NbrOfConversionFlag=1
