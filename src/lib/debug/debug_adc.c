@@ -40,11 +40,10 @@ static uint32_t adcGetSampleMv(uint32_t channel) {
   config.OffsetNumber = ADC_OFFSET_NONE;
   config.Offset = 0;
 
-  printf("Get bits: 0x%" PRIx32 "\n", LL_ADC_GetCommonPathInternalCh(ADC12_COMMON));
-
   config.Channel = channel;
+  printf("ADC config\n");
   IOAdcChannelConfig(&hadc1, &config);
-
+  printf("ADC read\n");
   IOAdcReadMv(&hadc1, &result);
   return ((uint32_t)result);
 }
@@ -55,11 +54,11 @@ static BaseType_t debugADCCommand(char *writeBuffer,
   ( void ) writeBuffer;
   ( void ) writeBufferLen;
   ( void ) commandString;
-
+  printf("ADC init\n");
   IOAdcInit(&hadc1);
 
   float vts1 = (float)adcGetSampleMv(ADC_CHANNEL_TEMPSENSOR);
-  printf("VOLTAGE = %0.8f V\n", vts1);
+  printf("VOLTAGE = %f V\n", vts1);
 
   IOAdcDeInit(&hadc1);
 

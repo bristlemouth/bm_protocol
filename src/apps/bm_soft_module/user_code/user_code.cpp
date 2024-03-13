@@ -103,8 +103,8 @@ void setup(void) {
   bmSoftTopicStrLen = createBmSoftDataTopic();
   SensorWatchdog::SensorWatchdogAdd(SOFTMODULE_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmSoftWatchdogHandler, NO_MAX_TRIGGER, soft_log);
-  MX_ADC1_Init();
-  HAL_ADC_Start(&hadc1);
+  // MX_ADC1_Init();
+  // HAL_ADC_Start(&hadc1);
 }
 
 void loop(void) {
@@ -142,13 +142,13 @@ void loop(void) {
     }
   }
 
-  uint16_t readValue;
-  float tCelsius;
-  readValue = HAL_ADC_GetValue(&hadc1);
-  printf("ADC Value: %d\n", readValue);
-  tCelsius = ((float)readValue) * 3300.0 / 4095.0; // To mV
-  tCelsius = (tCelsius - 500.0) / 10.0; // To degrees C
-  printf("Temperature = %f\n", tCelsius);
+  // uint16_t readValue;
+  // float tCelsius;
+  // readValue = HAL_ADC_GetValue(&hadc1);
+  // printf("ADC Value: %d\n", readValue);
+  // tCelsius = ((float)readValue) * 3300.0 / 4095.0; // To mV
+  // tCelsius = (tCelsius - 500.0) / 10.0; // To degrees C
+  // printf("Temperature = %f\n", tCelsius);
 
   // Delay between readings
   vTaskDelay(pdMS_TO_TICKS(soft_delay_ms));

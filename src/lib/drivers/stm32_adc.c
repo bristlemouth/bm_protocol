@@ -28,11 +28,10 @@ AdcStatus_t IOAdcRead(void *handle, int32_t *value) {
   ADC_HandleTypeDef *adcHandle = (ADC_HandleTypeDef *)handle;
 
   HAL_ADC_Start(adcHandle);
-
-  HAL_Delay(5000);
-
   // TODO - use interrupts
-  if (HAL_ADC_PollForConversion(adcHandle, 1000) != HAL_OK) {
+  uint8_t poll_rval = HAL_ADC_PollForConversion(adcHandle, 2000);
+  if (poll_rval != HAL_OK) {
+    printf("ADC Poll for conversion failed: %u\n", poll_rval);
     rval = ADC_ERR;
   }
   int32_t lResult = HAL_ADC_GetValue(adcHandle);
@@ -51,7 +50,8 @@ AdcStatus_t IOAdcReadMv(void *handle, int32_t *valueMv) {
 
   AdcStatus_t rval = IOAdcRead(handle, valueMv);
   if (rval == ADC_OK) {
-    *valueMv = (*valueMv * 3300)/(1 << 14);
+    printf("ADC value: %d\n", *valueMv);
+    // *valueMv = (*valueMv * 3300)/(1 << 14);
   }
 
   return rval;
