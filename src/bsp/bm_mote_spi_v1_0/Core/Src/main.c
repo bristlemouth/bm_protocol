@@ -196,19 +196,6 @@ void SystemClock_Config(void)
   */
 static void SystemPower_Config(void)
 {
-  PWR_PVDTypeDef sConfigPVD = {0};
-
-  /*
-   * PVD Configuration
-   */
-  sConfigPVD.PVDLevel = PWR_PVDLEVEL_0;
-  sConfigPVD.Mode = PWR_PVD_MODE_NORMAL;
-  HAL_PWR_ConfigPVD(&sConfigPVD);
-
-  /*
-   * Enable the PVD Output
-   */
-  HAL_PWR_EnablePVD();
 
   /*
    * Disable the internal Pull-Up in Dead Battery pins of UCPD peripheral

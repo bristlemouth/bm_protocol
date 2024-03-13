@@ -27,9 +27,13 @@ AdcStatus_t IOAdcRead(void *handle, int32_t *value) {
   configASSERT(handle != 0);
   ADC_HandleTypeDef *adcHandle = (ADC_HandleTypeDef *)handle;
 
-  HAL_ADC_Start(adcHandle);
+  uint8_t start_rval = HAL_ADC_Start(adcHandle);
+  if (start_rval != HAL_OK) {
+    printf("ADC Start failed: %u\n", start_rval);
+    rval = ADC_ERR;
+  }
   // TODO - use interrupts
-  uint8_t poll_rval = HAL_ADC_PollForConversion(adcHandle, 2000);
+  uint8_t poll_rval = HAL_ADC_PollForConversion(adcHandle, 1000);
   if (poll_rval != HAL_OK) {
     printf("ADC Poll for conversion failed: %u\n", poll_rval);
     rval = ADC_ERR;
