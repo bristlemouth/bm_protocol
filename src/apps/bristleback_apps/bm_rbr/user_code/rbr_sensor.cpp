@@ -95,7 +95,15 @@ bool RbrSensor::probeType(uint32_t timeout_ms) {
           _type = BmRbrDataMsg::SensorType::TEMPERATURE;
           success = true;
           break;
+        } else {
+          bm_fprintf(0, RBR_RAW_LOG, "Invalid outputformat: %s\n", _payload_buffer);
+          bm_printf(0, "Invalid outputformat: %s\n", _payload_buffer);
+          printf("Invalid outputformat: %s\n", _payload_buffer);
         }
+      } else {
+        bm_fprintf(0, RBR_RAW_LOG, "Invalid outputformat: %s\n", _payload_buffer);
+        bm_printf(0, "Invalid outputformat: %s\n", _payload_buffer);
+        printf("Invalid outputformat: %s\n", _payload_buffer);
       }
     }
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -108,10 +116,10 @@ bool RbrSensor::probeType(uint32_t timeout_ms) {
       printf("RBR sensor was lost\n");
     }
   } else {
-    if (_sensorDropDebounceCount) {
-      bm_fprintf(0, RBR_RAW_LOG, "RBR sensor was recovered\n");
-      bm_printf(0, "RBR sensor was recovered\n");
-      printf("RBR sensor was recovered\n");
+    if (_sensorDropDebounceCount >= SENSOR_DROP_DEBOUNCE_MAX_COUNT) {
+      bm_fprintf(0, RBR_RAW_LOG, "RBR sensor online\n");
+      bm_printf(0, "RBR sensor online\n");
+      printf("RBR sensor online\n");
     }
     _sensorDropDebounceCount = 0;
   }
@@ -145,7 +153,8 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       BmRbrSensorUtil::preprocessLine(_payload_buffer, read_len);
 
       if (!BmRbrSensorUtil::validSensorDataString(_payload_buffer, read_len)) {
-        bm_fprintf(0, RBR_RAW_LOG, "Invalid sensor data string: %.*s\n", read_len, _payload_buffer);
+        bm_fprintf(0, RBR_RAW_LOG, "Invalid sensor data string: %.*s\n", read_len,
+                   _payload_buffer);
         bm_printf(0, "Invalid sensor data string: %.*s\n", read_len, _payload_buffer);
         printf("Invalid sensor data string: %.*s\n", read_len, _payload_buffer);
         break;
@@ -158,7 +167,8 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
           Value timeValue = _parsers[_type]->getValue(0);
           Value tempValue = _parsers[_type]->getValue(1);
           if (timeValue.type != TYPE_UINT64 || tempValue.type != TYPE_DOUBLE) {
-            printf("Parsed invalid values: time: %d, temp: %d\n", timeValue.type, tempValue.type);
+            printf("Parsed invalid values: time: %d, temp: %d\n", timeValue.type,
+                   tempValue.type);
             break;
           }
           if (!BmRbrSensorUtil::validSensorData(BmRbrSensorUtil::TEMPERATURE,
