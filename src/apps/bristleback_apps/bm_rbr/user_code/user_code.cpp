@@ -46,10 +46,6 @@ void loop(void) {
   /* USER LOOP CODE GOES HERE */
   static BmRbrDataMsg::Data d;
   static uint32_t last_probe_time_ms = uptimeGetMs();
-  if (uptimeGetMs() - last_probe_time_ms > PROBE_TIME_PERIOD_MS) {
-    rbr_sensor.probeType();
-    last_probe_time_ms = uptimeGetMs();
-  }
   if (rbr_sensor.getData(d)) {
     SensorWatchdog::SensorWatchdogPet(BM_RBR_WATCHDOG_ID);
     static uint8_t cbor_buf[BM_RBR_DATA_MSG_MAX_SIZE];
@@ -60,6 +56,10 @@ void loop(void) {
     } else {
       printf("Failed to encode data message\n");
     }
+  }
+  if (uptimeGetMs() - last_probe_time_ms > PROBE_TIME_PERIOD_MS) {
+    rbr_sensor.probeType();
+    last_probe_time_ms = uptimeGetMs();
   }
 }
 
