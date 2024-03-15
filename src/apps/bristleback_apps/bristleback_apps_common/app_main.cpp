@@ -230,7 +230,7 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
                              uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
-    bm_printf("RECEIVED UTC MESSAGE! Node 2\n");
+    bm_printf(0, "RECEIVED UTC MESSAGE! Node 1\n");
     bm_fprintf(0, "rtc.log", "RECEIVED UTC MESSAGE!\n");
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
       utcDateTime_t time;
@@ -252,16 +252,16 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
         bm_fprintf(0, "rtc.log", "Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
                rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
                rtc_time.second, rtc_time.ms);
-        bm_printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u Node 2\n", rtc_time.year,
+        bm_printf(0, "Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u Node 1\n", rtc_time.year,
                rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
                rtc_time.second, rtc_time.ms);
       } else {
         bm_fprintf(0, "rtc.log", "\n Failed to set RTC.\n");
-        bm_printf("\n Failed to set RTC. Node 2\n");
+        bm_printf(0, "\n Failed to set RTC. Node 1\n");
       }
     } else {
       bm_fprintf(0, "rtc.log", "Unrecognized version: %u and type: %u\n", version, type);
-      bm_printf("Unrecognized version: %u and type: %u Node 2\n", version, type);
+      bm_printf(0, "Unrecognized version: %u and type: %u Node 1\n");
     }
   } else {
     printf("Topic: %.*s\n", topic_len, topic);
@@ -405,8 +405,8 @@ static void defaultTask(void *parameters) {
   while (!bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions)) {
     bm_fprintf(0, "rtc.log", "Failed to subscribe to %s\n", APP_PUB_SUB_UTC_TOPIC);
     bm_fprintf(0, "rtc.log", "Waiting 1 second and trying again\n");
-    bm_printf("Failed to subscribe to %s\n Node 2", APP_PUB_SUB_UTC_TOPIC);
-    bm_printf("Waiting 1 second and trying again Node 2\n");
+    bm_printf(0, "Failed to subscribe to %s Node 1\n", APP_PUB_SUB_UTC_TOPIC);
+    bm_printf(0, "Waiting 1 second and trying again Node 1\n");
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 
