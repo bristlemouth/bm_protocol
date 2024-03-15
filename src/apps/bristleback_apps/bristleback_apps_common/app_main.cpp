@@ -18,6 +18,7 @@
 #include "app_pub_sub.h"
 #include "bm_l2.h"
 #include "bm_pubsub.h"
+#include "bm_printf.h"
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
@@ -229,7 +230,8 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
                              uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
-    printf("RECEIVED UTC MESSAGE!\n");
+    bm_printf("RECEIVED UTC MESSAGE! Node 1\n");
+    bm_fprintf(0, "rtc.log", "RECEIVED UTC MESSAGE!\n");
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
       utcDateTime_t time;
       const bm_common_pub_sub_utc_t *utc =
@@ -247,14 +249,19 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
+        bm_fprintf(0, "rtc.log", "Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
+               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
+               rtc_time.second, rtc_time.ms);
+        bm_printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u Node 1\n", rtc_time.year,
                rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
                rtc_time.second, rtc_time.ms);
       } else {
-        printf("\n Failed to set RTC.\n");
+        bm_fprintf(0, "rtc.log", "\n Failed to set RTC.\n");
+        bm_printf("\n Failed to set RTC. Node 1\n");
       }
     } else {
-      printf("Unrecognized version: %u and type: %u\n", version, type);
+      bm_fprintf(0, "rtc.log", "Unrecognized version: %u and type: %u\n", version, type);
+      bm_printf("Unrecognized version: %u and type: %u Node 1\n", version, type);
     }
   } else {
     printf("Topic: %.*s\n", topic_len, topic);
@@ -396,8 +403,10 @@ static void defaultTask(void *parameters) {
   SensorWatchdog::SensorWatchdogInit();
 
   while (!bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions)) {
-    printf("Failed to subscribe to %s\n", APP_PUB_SUB_UTC_TOPIC);
-    printf("Waiting 1 second and trying again\n");
+    bm_fprintf(0, "rtc.log", "Failed to subscribe to %s\n", APP_PUB_SUB_UTC_TOPIC);
+    bm_fprintf(0, "rtc.log", "Waiting 1 second and trying again\n");
+    bm_printf("Failed to subscribe to %s\n Node 1", APP_PUB_SUB_UTC_TOPIC);
+    bm_printf("Waiting 1 second and trying again Node 1\n");
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 
