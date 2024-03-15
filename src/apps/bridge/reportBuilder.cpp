@@ -629,7 +629,7 @@ void reportBuilderInit(cfg::Configuration *sys_cfg) {
     save_config = true;
   }
   if (save_config) {
-    sys_cfg->saveConfig(true);
+    sys_cfg->saveConfig(false);
   }
   _ctx._sample_counter = 0;
   _ctx._config_mutex = xSemaphoreCreateMutex();

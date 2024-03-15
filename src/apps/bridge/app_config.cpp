@@ -93,7 +93,7 @@ power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
     save_config = true;
   }
   if (save_config) {
-    syscfg.saveConfig(true);
+    syscfg.saveConfig(false);
   }
 
   return pwrcfg;
