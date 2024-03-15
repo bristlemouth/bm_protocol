@@ -8,6 +8,7 @@
 #include "FreeRTOS.h"
 #include "debug.h"
 #include "task.h"
+#include "bm_printf.h"
 
 TSYS01::TSYS01(SPIInterface_t *spiInterface, IOPinHandle_t *cspin)
     : _SPIInterface(spiInterface), _CSPin(cspin) {
@@ -58,25 +59,28 @@ bool TSYS01::getTemperature(float &temperature) {
   bool rval = false;
 
   do {
+    bm_printf(0, "Starting a TSYS01 reading\n");
     // For SPI we need a way to check if the device is present.
     if (!validatePROM()) {
       break;
     }
     spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
+    bm_printf(0, "Read doCommand done, spiTransactionSuccess: %d\n", spiTransactionSuccess);
     spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
-
+    bm_printf(0, "Read data done, spiTransactionSuccess: %d\n", spiTransactionSuccess);
     // round() macro returns a long (4 bytes)
     uint32_t adc16 =
         round(((float)(((uint32_t)data[0]) << 16 | ((uint32_t)data[1]) << 8 | data[2])) / 256);
     for (uint8_t i = 0; i < CALIB_CNT; i++) {
       temp += _calibrations[i] * pow(adc16, 4 - i);
     }
+    bm_printf(0, "Temp: %f\n", temp);
 
     if (spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX) {
       temperature = temp + calibrationOffsetDegC;
       rval = true;
     } else {
-      printf("TSYS01 reading error\n");
+      bm_printf(0, "TSYS01 reading error\n");
     }
   } while (0);
 
@@ -103,6 +107,7 @@ bool TSYS01::validatePROM() {
       _calibrations[i] = calibrations[i];
     }
   }
+  bm_printf(0, "PROM VALIDATION Result: %d\n", rval);
   return rval;
 }
 
@@ -118,9 +123,9 @@ bool TSYS01::checkPROM() {
   bool rval = validatePROM();
 
   if (!rval) {
-    printf("TSYS01 reading error while checking PROM\n");
+    bm_printf(0, "TSYS01 reading error while checking PROM\n");
   } else {
-    printf("TSYS01 PROM check passed\n");
+    bm_printf(0, "TSYS01 PROM check passed\n");
   }
 
   return rval;

@@ -120,8 +120,11 @@ void loop(void) {
     if (BmSoftDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
       bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf, encoded_len, 0);
     } else {
+      bm_printf(0, "Failed to encode data message\n");
       printf("Failed to encode data message\n");
     }
+  } else {
+    bm_printf(0, "SOFT Read Failed\n");
   }
 
   // Delay between readings
