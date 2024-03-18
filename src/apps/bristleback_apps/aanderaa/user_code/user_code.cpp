@@ -215,6 +215,8 @@ static int createAanderaaDataTopic(void) {
 static bool aanderaaWakeupTest(void *in_data, uint32_t in_len, void *out_data,
                                uint32_t &out_len) {
   static constexpr char wakeup_cmd[] = "X\r\n";
+  static constexpr char wake_seq[] = "!";
+  static constexpr char err_seq[] = "*\t";
   configASSERT(out_data == NULL);
   (void)in_data;
   (void)in_len;
@@ -229,8 +231,8 @@ static bool aanderaaWakeupTest(void *in_data, uint32_t in_len, void *out_data,
     PLUART::write((uint8_t *)wakeup_cmd, strlen(wakeup_cmd));
     vTaskDelay(AANDERAA_WAKEUP_CMD_DELAY);
     if (PLUART::readLine(payload_buffer, sizeof(payload_buffer)) > 0) {
-      if ((strncmp(payload_buffer, "!", strlen("!")) == 0) ||
-          (strncmp(payload_buffer, "*\t", strlen("*\t")) == 0)) {
+      if ((strncmp(payload_buffer, wake_seq, strlen(wake_seq)) == 0) ||
+          (strncmp(payload_buffer, err_seq, strlen(err_seq)) == 0)) {
         success = true;
         break;
       }
