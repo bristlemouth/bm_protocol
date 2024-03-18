@@ -27,6 +27,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/services/echo_service.cpp
     ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
     ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
+    ${SRC_DIR}/lib/middleware/services/device_test_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
 
     ${BCMP_FILES}
@@ -70,6 +71,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/device_test_svc_reply_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/device_test_svc_request_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/aanderaa_data_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/sensor_header_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/bm_soft_data_msg.cpp
@@ -78,6 +81,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
+    ${SRC_DIR}/lib/debug/debug_bridge_cli.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
     ${SRC_DIR}/lib/debug/debug_memfault.c
     ${SRC_DIR}/lib/debug/debug_rtc.c

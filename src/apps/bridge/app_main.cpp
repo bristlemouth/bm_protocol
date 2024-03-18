@@ -29,6 +29,7 @@
 #include "config_cbor_map_service.h"
 #include "configuration.h"
 #include "debug_bm_service.h"
+#include "debug_bridge_cli.h"
 #include "debug_bridge_power_controller.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
@@ -385,6 +386,7 @@ static void defaultTask(void *parameters) {
   sensorControllerInit(&bridge_power_controller, &debug_configuration_system);
   config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);
+  debugBridgeCliInit();
   IOWrite(&ALARM_OUT, 1);
   IOWrite(&LED_BLUE, LED_OFF);
 
