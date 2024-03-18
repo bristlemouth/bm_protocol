@@ -1,6 +1,7 @@
 #include "sensorController.h"
 #include "aanderaaSensor.h"
 #include "app_config.h"
+#include "bridgeLog.h"
 #include "bridgePowerController.h"
 #include "device_info.h"
 #include "rbrCodaSensor.h"
@@ -51,21 +52,54 @@ void sensorControllerInit(BridgePowerController *power_controller,
   configASSERT(sys_cfg);
   _ctx._bridge_power_controller = power_controller;
   _ctx._sys_cfg = sys_cfg;
-
+  bool save_config = false;
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
-  _ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS,
-                           strlen(AppConfig::CURRENT_READING_PERIOD_MS),
-                           _ctx.current_reading_period_ms);
+  if (!_ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS,
+                                strlen(AppConfig::CURRENT_READING_PERIOD_MS),
+                                _ctx.current_reading_period_ms)) {
+    bridgeLogPrint(
+        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+        "Failed to get current reading period from config, using default value and writing "
+        "to config: %" PRIu32 "ms\n",
+        _ctx.current_reading_period_ms);
+    _ctx._sys_cfg->setConfig(AppConfig::CURRENT_READING_PERIOD_MS,
+                             strlen(AppConfig::CURRENT_READING_PERIOD_MS),
+                             _ctx.current_reading_period_ms);
+    save_config = true;
+  }
 
   _ctx.soft_reading_period_ms = DEFAULT_SOFT_READING_PERIOD_MS;
-  _ctx._sys_cfg->getConfig(AppConfig::SOFT_READING_PERIOD_MS,
-                           strlen(AppConfig::SOFT_READING_PERIOD_MS),
-                           _ctx.soft_reading_period_ms);
+  if (!_ctx._sys_cfg->getConfig(AppConfig::SOFT_READING_PERIOD_MS,
+                                strlen(AppConfig::SOFT_READING_PERIOD_MS),
+                                _ctx.soft_reading_period_ms)) {
+    bridgeLogPrint(
+        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+        "Failed to get soft reading period from config, using default value and writing "
+        "to config: %" PRIu32 "ms\n",
+        _ctx.soft_reading_period_ms);
+    _ctx._sys_cfg->setConfig(AppConfig::SOFT_READING_PERIOD_MS,
+                             strlen(AppConfig::SOFT_READING_PERIOD_MS),
+                             _ctx.soft_reading_period_ms);
+    save_config = true;
+  }
 
   _ctx.rbr_coda_agg_period_ms = DEFAULT_RBR_CODA_READING_PERIOD_MS;
-  _ctx._sys_cfg->getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
-                           strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
-                           _ctx.rbr_coda_agg_period_ms);
+  if (!_ctx._sys_cfg->getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+                                strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                                _ctx.rbr_coda_agg_period_ms)) {
+    bridgeLogPrint(
+        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+        "Failed to get coda reading period from config, using default value and writing "
+        "to config: %" PRIu32 "ms\n",
+        _ctx.rbr_coda_agg_period_ms);
+    _ctx._sys_cfg->setConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+                             strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                             _ctx.rbr_coda_agg_period_ms);
+    save_config = true;
+  }
+  if (save_config) {
+    _ctx._sys_cfg->saveConfig(false);
+  }
 
   BaseType_t rval = xTaskCreate(runController, "Sensor Controller", 128 * 4, NULL,
                                 SENSOR_CONTROLLER_TASK_PRIORITY, &_ctx._task_handle);
