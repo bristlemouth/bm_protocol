@@ -83,7 +83,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
             "%" PRIu64 ","   // reading_uptime_millis
             "%" PRIu64 "."   // reading_time_utc_ms seconds part
             "%03" PRIu32 "," // reading_time_utc_ms millis part
-            "%" PRIu64 ","   // sensor_reading_time_ms seconds part
+            "%" PRIu64 "."   // sensor_reading_time_ms seconds part
             "%03" PRIu32 "," // sensor_reading_time_ms millis part
             "%.3f,"          // temperature_deg_c
             "%.3f\n",        // pressure_ubar
