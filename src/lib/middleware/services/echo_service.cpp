@@ -21,8 +21,8 @@ static bool echo_service_handler (size_t service_strlen,
  */
 void echo_service_init(void) {
     static char echo_service_str[BM_SERVICE_MAX_SERVICE_STRLEN];
-    size_t topic_strlen = snprintf(echo_service_str, sizeof(echo_service_str), "%" PRIx64 "%s", getNodeId(),
-            ECHO_SERVICE_SUFFIX);
+    size_t topic_strlen = snprintf(echo_service_str, sizeof(echo_service_str),
+                                   "%016" PRIx64 "%s", getNodeId(), ECHO_SERVICE_SUFFIX);
     if(topic_strlen > 0) {
         bm_service_register(topic_strlen, echo_service_str, echo_service_handler);
     } else {

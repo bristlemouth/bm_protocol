@@ -249,7 +249,8 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 if(cbor_value_get_uint64(&it,&temp) != CborNoError){
                     break;
                 }
-                printf("Node Id: %" PRIx64 " Value:%" PRIu32 "\n", msg->header.source_node_id, temp);
+                printf("Node Id: %016" PRIx64 " Value:%" PRIu32 "\n",
+                       msg->header.source_node_id, temp);
                 break;
             }
             case cfg::ConfigDataTypes_e::INT32 : {
@@ -257,7 +258,8 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 if(cbor_value_get_int64(&it,&temp) != CborNoError){
                     break;
                 }
-                printf("Node Id: %" PRIx64 " Value:%" PRId64 "\n", msg->header.source_node_id, temp);
+                printf("Node Id: %016" PRIx64 " Value:%" PRId64 "\n",
+                       msg->header.source_node_id, temp);
                 break;
             }
             case cfg::ConfigDataTypes_e::FLOAT : {
@@ -265,7 +267,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 if(cbor_value_get_float(&it,&temp) != CborNoError){
                     break;
                 }
-                printf("Node Id: %" PRIx64 " Value:%f\n", msg->header.source_node_id, temp);
+                printf("Node Id: %016" PRIx64 " Value:%f\n", msg->header.source_node_id, temp);
                 break;
             }
             case cfg::ConfigDataTypes_e::STR : {
@@ -280,7 +282,8 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                         break;
                     }
                     buffer[buffer_len] = '\0';
-                    printf("Node Id: %" PRIx64 " Value:%s\n", msg->header.source_node_id, buffer);
+                    printf("Node Id: %016" PRIx64 " Value:%s\n", msg->header.source_node_id,
+                           buffer);
                 } while(0);
                 vPortFree(buffer);
                 break;
@@ -293,7 +296,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                     if(cbor_value_copy_byte_string(&it,buffer, &buffer_len, NULL) != CborNoError){
                         break;
                     }
-                    printf("Node Id: %" PRIx64 " Value: ", msg->header.source_node_id);
+                    printf("Node Id: %016" PRIx64 " Value: ", msg->header.source_node_id);
                     for(size_t i  = 0; i < buffer_len; i++) {
                         printf("0x%02x:",buffer[i]);
                         if(i % 8 == 0){
@@ -306,7 +309,7 @@ static void bcmp_process_value_message(bm_common_config_value_t * msg) {
                 break;
             }
             case cfg::ConfigDataTypes_e::ARRAY: {
-                printf("Node Id: %" PRIx64 " Value: Array\n", msg->header.source_node_id);
+                printf("Node Id: %016" PRIx64 " Value: Array\n", msg->header.source_node_id);
                 size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
                 uint8_t *buffer = static_cast<uint8_t *>(pvPortMalloc(buffer_len));
                 configASSERT(buffer);
@@ -384,8 +387,8 @@ static void bcmp_process_del_response_message(bm_common_config_delete_key_respon
     char * keyprintbuf = (char * )pvPortMalloc(msg->key_length + 1);
     memcpy(keyprintbuf, msg->key, msg->key_length);
     keyprintbuf[msg->key_length] = '\0';
-    printf("Node Id:%" PRIx64 " Key Delete Response - Key: %s, Partition: %d, Success %d\n", msg->header.source_node_id,
-            keyprintbuf, msg->partition, msg->success);
+    printf("Node Id: %016" PRIx64 " Key Delete Response - Key: %s, Partition: %d, Success %d\n",
+           msg->header.source_node_id, keyprintbuf, msg->partition, msg->success);
     vPortFree(keyprintbuf);
 }
 
@@ -420,8 +423,9 @@ bool bcmp_process_config_message(bcmp_message_type_t bcmp_msg_type, uint8_t *pay
             }
             case BCMP_CONFIG_STATUS_RESPONSE: {
                 bm_common_config_status_response_t *msg = reinterpret_cast<bm_common_config_status_response_t *>(payload);
-                printf("Response msg -- Node Id:%" PRIx64 ",Partition:%d, Commit Status:%d\n",
-                    msg->header.source_node_id, msg->partition, msg->committed);
+                printf("Response msg -- Node Id: %016" PRIx64
+                       ", Partition: %d, Commit Status: %d\n",
+                       msg->header.source_node_id, msg->partition, msg->committed);
                 printf("Num Keys: %d\n",msg->num_keys);
                 bm_common_config_status_key_data_t * key = reinterpret_cast<bm_common_config_status_key_data_t*>(msg->keyData);
                 for(int i = 0; i < msg->num_keys; i++){

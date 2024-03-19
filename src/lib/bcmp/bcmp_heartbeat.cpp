@@ -35,7 +35,7 @@ err_t bcmp_process_heartbeat(bcmp_heartbeat_t *heartbeat, const ip_addr_t *src, 
   // Print node's uptime in seconds.milliseconds
   // uint64_t uptime_s = heartbeat->time_since_boot_us/1e6;
   // uint32_t uptime_ms = (uint32_t)(heartbeat->time_since_boot_us/1000 - (uptime_s * 1000));
-  // printf("❤️  from %"PRIx64" (%"PRIu64".%03"PRIu32") [%02X]\n", ip_to_nodeid(src), uptime_s, uptime_ms, dst_port);
+  // printf("❤️  from %016"PRIx64" (%"PRIu64".%03"PRIu32") [%02X]\n", ip_to_nodeid(src), uptime_s, uptime_ms, dst_port);
 
   bm_neighbor_t *neighbor = bcmp_update_neighbor(ip_to_nodeid(src), dst_port);
   if(neighbor) {
@@ -45,7 +45,7 @@ err_t bcmp_process_heartbeat(bcmp_heartbeat_t *heartbeat, const ip_addr_t *src, 
       if(neighbor_discovery_cb) {
         neighbor_discovery_cb(true,neighbor);
       }
-      printf("🏘📡 Updating neighbor info! %" PRIx64 "\n", neighbor->node_id);
+      printf("🏘📡 Updating neighbor info! %016" PRIx64 "\n", neighbor->node_id);
       bcmp_request_info(neighbor->info.node_id, &multicast_ll_addr);
     }
 

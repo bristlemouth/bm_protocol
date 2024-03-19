@@ -100,10 +100,10 @@ bool bcmp_time_process_time_message(bcmp_message_type_t bcmp_msg_type, uint8_t* 
                 bcmp_system_time_response_t * resp = reinterpret_cast<bcmp_system_time_response_t *>(payload);
                 utcDateTime_t datetime;
                 dateTimeFromUtc(resp->utc_time_us, &datetime);
-                printf("Response time node ID:%" PRIx64 " to %d/%d/%d %02d:%02d:%02d.%03" PRIu32 "\n", resp->header.source_node_id,
-                    datetime.year, datetime.month, datetime.day,
-                    datetime.hour, datetime.min, datetime.sec,
-                    datetime.usec);
+                printf("Response time node ID: %016" PRIx64
+                       " to %d/%d/%d %02d:%02d:%02d.%03" PRIu32 "\n",
+                       resp->header.source_node_id, datetime.year, datetime.month, datetime.day,
+                       datetime.hour, datetime.min, datetime.sec, datetime.usec);
                 break;
             }
             case BCMP_SYSTEM_TIME_SET: {

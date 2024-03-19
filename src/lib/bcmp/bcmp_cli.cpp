@@ -64,11 +64,9 @@ static void print_subscriptions(uint64_t node_id, const char* topic, uint16_t to
 }
 
 void print_neighbor_basic(bm_neighbor_t *neighbor) {
-  printf("%" PRIx64 " |   %u  | %7s | %0.3f\n",
-         neighbor->node_id,
-         neighbor->port,
-         neighbor->online ? "online": "offline",
-         (float)((xTaskGetTickCount() - neighbor->last_heartbeat_ticks))/1000.0);
+  printf("%016" PRIx64 " |   %u  | %7s | %0.3f\n", neighbor->node_id, neighbor->port,
+         neighbor->online ? "online" : "offline",
+         (float)((xTaskGetTickCount() - neighbor->last_heartbeat_ticks)) / 1000.0);
 }
 
 static BaseType_t cmd_bcmp_fn(char *writeBuffer,
@@ -496,7 +494,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer,
       if(!bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id)){
         printf("Failed to send discovery request.\n");
       } else {
-        printf("Sent discovery request to %" PRIx64 "\n", node_id);
+        printf("Sent discovery request to %016" PRIx64 "\n", node_id);
       }
     }
     else if (strncmp("sub", command, command_str_len) == 0) {

@@ -20,7 +20,8 @@ bool AanderaaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(sub);
-  int topic_strlen = snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "%s", node_id, subtag);
+  int topic_strlen =
+      snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
     rval = bm_sub_wl(sub, topic_strlen, aanderaSubCallback);
   }
@@ -33,7 +34,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
                                         uint8_t version) {
   (void)type;
   (void)version;
-  printf("Aanderaa data received from node %" PRIx64 " On topic: %.*s\n", node_id, topic_len,
+  printf("Aanderaa data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
   Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(sensorControllerFindSensorById(node_id));
   if (aanderaa && aanderaa->type == SENSOR_TYPE_AANDERAA) {
@@ -59,7 +60,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
         if ((current_timestamp - aanderaa->last_timestamp > DEFAULT_AANDERAA_READING_PERIOD_MS + 30000u) ||
             aanderaa->reading_count == 1U) {
-          printf("Updating aanderaa %" PRIx64 " node position, current_time = %" PRIu32
+          printf("Updating aanderaa %016" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, aanderaa->last_timestamp, aanderaa->reading_count);
           aanderaa->node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
@@ -68,28 +69,28 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
 
         size_t log_buflen = snprintf(
             log_buf, SENSOR_LOG_BUF_SIZE,
-            "%" PRIx64 ","   // Node Id
-            "%" PRIi8 ","    // node_position
-            "aanderaa,"      // node_app_name
-            "%" PRIu64 ","   // reading_uptime_millis
-            "%" PRIu64 "."   // reading_time_utc_ms seconds part
-            "%03" PRIu32 "," // reading_time_utc_ms millis part
-            "%" PRIu64 "."   // sensor_reading_time_ms seconds part
-            "%03" PRIu32 "," // sensor_reading_time_ms millis part
-            "%.3f,"          // abs_speed_cm_s
-            "%.3f,"          // direction_deg_m
-            "%.3f,"          // north_cm_s
-            "%.3f,"          // east_cm_s
-            "%.3f,"          // heading_deg_m
-            "%.3f,"          // tilt_x_deg
-            "%.3f,"          // tilt_y_deg
-            "%.3f,"          // single_ping_std_cm_s
-            "%.3f,"          // transducer_strength_db
-            "%.3f,"          // ping_count
-            "%.3f,"          // abs_tilt_deg
-            "%.3f,"          // max_tilt_deg
-            "%.3f,"          // std_tilt_deg
-            "%.3f\n",       // temperature_deg_c
+            "%016" PRIx64 "," // Node Id
+            "%" PRIi8 ","     // node_position
+            "aanderaa,"       // node_app_name
+            "%" PRIu64 ","    // reading_uptime_millis
+            "%" PRIu64 "."    // reading_time_utc_ms seconds part
+            "%03" PRIu32 ","  // reading_time_utc_ms millis part
+            "%" PRIu64 "."    // sensor_reading_time_ms seconds part
+            "%03" PRIu32 ","  // sensor_reading_time_ms millis part
+            "%.3f,"           // abs_speed_cm_s
+            "%.3f,"           // direction_deg_m
+            "%.3f,"           // north_cm_s
+            "%.3f,"           // east_cm_s
+            "%.3f,"           // heading_deg_m
+            "%.3f,"           // tilt_x_deg
+            "%.3f,"           // tilt_y_deg
+            "%.3f,"           // single_ping_std_cm_s
+            "%.3f,"           // transducer_strength_db
+            "%.3f,"           // ping_count
+            "%.3f,"           // abs_tilt_deg
+            "%.3f,"           // max_tilt_deg
+            "%.3f,"           // std_tilt_deg
+            "%.3f\n",         // temperature_deg_c
             node_id, aanderaa->node_position, d.header.reading_uptime_millis, reading_time_sec,
             reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
             d.abs_speed_cm_s, d.direction_deg_m, d.north_cm_s, d.east_cm_s, d.heading_deg_m,
@@ -173,18 +174,18 @@ void AanderaaSensor::aggregate(void) {
     int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                          "%" PRIx64 "," // Node Id
-                          "%" PRIi8 ","  // node_position
-                          "aanderaa,"    // node_app_name
-                          "%s,"          // timestamp(ticks/UTC)
-                          "%" PRIu32 "," // reading_count
-                          "%.3f,"        // abs_speed_mean_cm_s
-                          "%.3f,"        // abs_speed_std_cm_s
-                          "%.3f,"        // direction_circ_mean_rad
-                          "%.3f,"        // direction_circ_std_rad
-                          "%.3f,"        // temp_mean_deg_c
-                          "%.3f,"        // abs_tilt_mean_rad
-                          "%.3f\n",      // std_tilt_mean_rad
+                          "%016" PRIx64 "," // Node Id
+                          "%" PRIi8 ","     // node_position
+                          "aanderaa,"       // node_app_name
+                          "%s,"             // timestamp(ticks/UTC)
+                          "%" PRIu32 ","    // reading_count
+                          "%.3f,"           // abs_speed_mean_cm_s
+                          "%.3f,"           // abs_speed_std_cm_s
+                          "%.3f,"           // direction_circ_mean_rad
+                          "%.3f,"           // direction_circ_std_rad
+                          "%.3f,"           // temp_mean_deg_c
+                          "%.3f,"           // abs_tilt_mean_rad
+                          "%.3f\n",         // std_tilt_mean_rad
                           node_id, node_position, timeStrbuf, agg.reading_count,
                           agg.abs_speed_mean_cm_s, agg.abs_speed_std_cm_s,
                           agg.direction_circ_mean_rad, agg.direction_circ_std_rad,

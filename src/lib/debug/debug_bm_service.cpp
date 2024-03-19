@@ -67,7 +67,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, 
       }
       printf("Service: %.*s\n", service_strlen, service);
       printf("Reply: \n");
-      printf(" * Node id: %" PRIx64 "\n", reply.node_id);
+      printf(" * Node id: %016" PRIx64 "\n", reply.node_id);
       printf(" * Git SHA: 0x%08" PRIx32 "\n", reply.git_sha);
       printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply.sys_config_crc);
       printf(" * App name: %.*s\n", reply.app_name_strlen, reply.app_name);
@@ -95,7 +95,7 @@ static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen
       }
       printf("Service: %.*s\n", service_strlen, service);
       printf("Reply: \n");
-      printf(" * Node id: %" PRIx64 "\n", reply.node_id);
+      printf(" * Node id: %016" PRIx64 "\n", reply.node_id);
       printf(" * Partition: %" PRIu32 "\n", reply.partition_id);
       printf(" * Success: %d\n", reply.success);
       printf(" * CBOR encoded map len: %" PRIu32 "\n", reply.cbor_encoded_map_len);

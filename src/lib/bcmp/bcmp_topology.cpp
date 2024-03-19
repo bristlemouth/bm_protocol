@@ -650,9 +650,9 @@ void networkTopologyPrint(networkTopology_t* networkTopology){
         }
       }
       if (temp_entry->is_root) {
-        printf("(root)%" PRIx64 "", temp_entry->neighbor_table_reply->node_id);
+        printf("(root)%016" PRIx64 "", temp_entry->neighbor_table_reply->node_id);
       } else {
-        printf("%" PRIx64 "", temp_entry->neighbor_table_reply->node_id);
+        printf("%016" PRIx64 "", temp_entry->neighbor_table_reply->node_id);
       }
       if (temp_entry->nextNode){
         bcmp_neighbor_table_reply_t *temp_table = temp_entry->neighbor_table_reply;
