@@ -2,7 +2,7 @@
 
 #include "bm_service_request.h"
 
-typedef bool (*device_test_f)(void *in_data, uint32_t in_len, void *out_data,
+typedef bool (*device_test_f)(void *in_data, uint32_t in_len, uint8_t **out_data,
                               uint32_t &out_len);
 
 void device_test_service_init(device_test_f f);

@@ -72,7 +72,7 @@ static bool aanderaaTestReply(bool ack, uint32_t msg_id, size_t service_strlen,
   printf("Received reply for service: %.*s\n", service_strlen, service);
   if (ack) {
     DeviceTestSvcReplyMsg::Data reply;
-    if (DeviceTestSvcReplyMsg::decode(reply, reply_data, reply_len)) {
+    if (DeviceTestSvcReplyMsg::decode(reply, reply_data, reply_len) == CborNoError) {
       uint8_t *retries = static_cast<uint8_t *>(reply.data);
       printf("aanderaaTestReply:\n"
              "* MsgId: %u\n"
