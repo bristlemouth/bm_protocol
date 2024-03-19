@@ -71,7 +71,10 @@ static bool device_test_service_handler(size_t service_strlen, const char *servi
     }
     DeviceTestSvcReplyMsg::Data rep = {false, 0, NULL};
     do {
-      rep.success = _device_test_func(req.data, req.data_len, &rep.data, rep.data_len);
+      rep.data = _device_test_func(rep.success, req.data, req.data_len, rep.data_len);
+      if (rep.data == NULL) {
+        configASSERT(rep.data_len == 0);
+      }
       size_t encoded_len;
       // Will return CborErrorOutOfMemory if buffer_len is too small
       if (DeviceTestSvcReplyMsg::encode(rep, reply_data, buffer_len, &encoded_len) !=

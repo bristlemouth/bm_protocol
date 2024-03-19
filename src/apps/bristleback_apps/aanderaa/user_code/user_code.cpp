@@ -212,22 +212,19 @@ static int createAanderaaDataTopic(void) {
   return topiclen;
 }
 
-static bool aanderaaWakeupTest(void *in_data, uint32_t in_len, uint8_t **out_data,
-                               uint32_t &out_len) {
+static uint8_t *aanderaaWakeupTest(bool &success, void *in_data, uint32_t in_len,
+                                   uint32_t &out_len) {
   static constexpr char wakeup_cmd[] = "X\r\n";
   static constexpr char wake_seq[] = "!";
   static constexpr char err_seq[] = "*\t";
-  configASSERT(out_data);
-  configASSERT(*out_data == NULL);
   (void)in_data;
   (void)in_len;
   uint8_t retries = 0;
-  bool success = false;
+  success = false;
   // Freed by the caller
-  *out_data = static_cast<uint8_t *>(pvPortMalloc(sizeof(uint8_t)));
-  configASSERT(*out_data);
-  uint8_t *out_data_ptr = static_cast<uint8_t *>(*out_data);
+  uint8_t *result = static_cast<uint8_t *>(pvPortMalloc(sizeof(uint8_t)));
   out_len = 1;
+  configASSERT(result);
   do {
     PLUART::write((uint8_t *)wakeup_cmd, strlen(wakeup_cmd));
     vTaskDelay(AANDERAA_WAKEUP_CMD_DELAY);
@@ -241,13 +238,13 @@ static bool aanderaaWakeupTest(void *in_data, uint32_t in_len, uint8_t **out_dat
   } while (!success && retries++ <= 3);
   if (!success) {
     printf("Failed to wake up Aanderaa after %u retries\n", retries);
-    *out_data_ptr = 0;
+    *result = 0;
   } else {
     // 0 is a failure, 1 is a success, 2+ is a success with retries
     printf("Aanderaa woke up after %u retries\n", retries);
-    *out_data_ptr = retries + 1;
+    *result = retries + 1;
   }
-  return success;
+  return result;
 }
 
 void setup(void) {
