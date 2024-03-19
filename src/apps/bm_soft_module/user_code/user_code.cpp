@@ -121,10 +121,12 @@ void loop(void) {
       bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf, encoded_len, 0);
     } else {
       bm_printf(0, "Failed to encode data message\n");
+      bm_fprintf(0, soft_log, "Failed to encode data message\n");
       printf("Failed to encode data message\n");
     }
   } else {
     bm_printf(0, "SOFT Read Failed\n");
+    bm_fprintf(0, soft_log, "SOFT Read Failed\n");
   }
 
   // Delay between readings
