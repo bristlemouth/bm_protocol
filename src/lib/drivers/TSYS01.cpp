@@ -65,13 +65,17 @@ bool TSYS01::getTemperature(float &temperature) {
     }
     spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
     if (!spiTransactionSuccess) {
-      bm_printf(0, "TSYS01 reading error while starting ADC");
-      bm_fprintf(0, "soft.log", "TSYS01 reading error while starting ADC\n");
+      bm_printf(0, "TSYS01 reading error while starting ADC, spiTransactionSuccess: %d",
+                spiTransactionSuccess);
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while starting ADC, spiTransactionSuccess: %d\n",
+                 spiTransactionSuccess);
     }
     spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
     if (!spiTransactionSuccess) {
-      bm_printf(0, "TSYS01 reading error while reading ADC");
-      bm_fprintf(0, "soft.log", "TSYS01 reading error while reading ADC\n");
+      bm_printf(0, "TSYS01 reading error while reading ADC, spiTransactionSuccess: %d",
+                spiTransactionSuccess);
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while reading ADC, spitTransactopnSuccess: %d\n",
+                 spiTransactionSuccess);
     }
     // round() macro returns a long (4 bytes)
     uint32_t adc16 =
@@ -101,8 +105,10 @@ bool TSYS01::validatePROM() {
   for (uint8_t i = 0; i < PROM_ADDR_CNT; i++) {
     spiTransactionSuccess &= readData(PROM_ADDR_0 + (i * 2), data, sizeof(data));
     if (!spiTransactionSuccess) {
-      bm_printf(0, "TSYS01 reading error while validating PROM");
-      bm_fprintf(0, "soft.log", "TSYS01 reading error while validating PROM\n");
+      bm_printf(0, "TSYS01 reading error while validating PROM, spiTransactionSuccess: %d",
+                spiTransactionSuccess);
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while validating PROM, spiTransactionSuccess: %d\n",
+                 spiTransactionSuccess);
     }
     checksum += data[0] + data[1];
     if (i && i < 6) {
@@ -166,6 +172,11 @@ bool TSYS01::readData(uint8_t address, uint8_t data[], size_t dataSize) {
 
   for (uint32_t index = 0; index < dataSize; index++) {
     data[index] = rxData[1 + index];
+  }
+
+  if (status != SPI_OK) {
+    bm_printf(0, "TSYS01 reading error while reading data, status: %d", status);
+    bm_fprintf(0, "soft.log", "TSYS01 reading error while reading data, status: %d\n", status);
   }
 
   return (status == SPI_OK);

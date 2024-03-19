@@ -2,6 +2,9 @@
 #include "protected_spi.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "bm_printf.h"
+
+#define SPI_DEBUG 1
 
 #define MAX_NUM_SPI (3)
 
@@ -59,11 +62,11 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
     }
 
 #ifdef SPI_DEBUG
-    printf("%s [%s] ", __func__, interface->name);
+    bm_printf(0, "%s [%s] ", __func__, interface->name);
     if(txBuff != NULL) {
-      printf("TX(%u) ", len);
+      bm_printf(0, "TX(%u) ", len);
       for(uint16_t idx = 0; idx < len; idx++) {
-        printf("%02X ", txBuff[idx]);
+        bm_printf(0, "%02X ", txBuff[idx]);
       }
     }
 #endif
@@ -109,13 +112,13 @@ SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t le
 
 #ifdef SPI_DEBUG
     if(rxBuff != NULL) {
-      printf("RX(%u) ", len);
+      bm_printf(0, "RX(%u) ", len);
       for(uint16_t idx = 0; idx < len; idx++) {
-        printf("%02X ", rxBuff[idx]);
+        bm_printf(0, "%02X ", rxBuff[idx]);
       }
     }
 
-    logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
+    // logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
 #endif
 
     if(interface->lpm_mask) {
@@ -227,7 +230,7 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
       }
     }
 
-    logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
+    // logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
 #endif
 
     if(interface->lpm_mask) {
