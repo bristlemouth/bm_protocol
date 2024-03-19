@@ -59,28 +59,33 @@ bool TSYS01::getTemperature(float &temperature) {
   bool rval = false;
 
   do {
-    bm_printf(0, "Starting a TSYS01 reading\n");
     // For SPI we need a way to check if the device is present.
     if (!validatePROM()) {
       break;
     }
     spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
-    bm_printf(0, "Read doCommand done, spiTransactionSuccess: %d\n", spiTransactionSuccess);
+    if (!spiTransactionSuccess) {
+      bm_printf(0, "TSYS01 reading error while starting ADC\n");
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while starting ADC\n");
+    }
     spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
-    bm_printf(0, "Read data done, spiTransactionSuccess: %d\n", spiTransactionSuccess);
+    if (!spiTransactionSuccess) {
+      bm_printf(0, "TSYS01 reading error while reading ADC\n");
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while reading ADC\n");
+    }
     // round() macro returns a long (4 bytes)
     uint32_t adc16 =
         round(((float)(((uint32_t)data[0]) << 16 | ((uint32_t)data[1]) << 8 | data[2])) / 256);
     for (uint8_t i = 0; i < CALIB_CNT; i++) {
       temp += _calibrations[i] * pow(adc16, 4 - i);
     }
-    bm_printf(0, "Temp: %f\n", temp);
 
     if (spiTransactionSuccess && temp > TEMP_MIN && temp < TEMP_MAX) {
       temperature = temp + calibrationOffsetDegC;
       rval = true;
     } else {
-      bm_printf(0, "TSYS01 reading error\n");
+      bm_printf(0, "TSYS01 reading error while getting temperature\n");
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while getting temperature\n");
     }
   } while (0);
 
@@ -95,6 +100,10 @@ bool TSYS01::validatePROM() {
                           CALIB_0_CONST};
   for (uint8_t i = 0; i < PROM_ADDR_CNT; i++) {
     spiTransactionSuccess &= readData(PROM_ADDR_0 + (i * 2), data, sizeof(data));
+    if (!spiTransactionSuccess) {
+      bm_printf(0, "TSYS01 reading error while validating PROM\n");
+      bm_fprintf(0, "soft.log", "TSYS01 reading error while validating PROM\n");
+    }
     checksum += data[0] + data[1];
     if (i && i < 6) {
       uint16_t kCoeff = ((uint16_t)data[0]) << 8 | data[1];
@@ -107,7 +116,6 @@ bool TSYS01::validatePROM() {
       _calibrations[i] = calibrations[i];
     }
   }
-  bm_printf(0, "PROM VALIDATION Result: %d\n", rval);
   return rval;
 }
 
@@ -123,9 +131,8 @@ bool TSYS01::checkPROM() {
   bool rval = validatePROM();
 
   if (!rval) {
-    bm_printf(0, "TSYS01 reading error while checking PROM\n");
-  } else {
-    bm_printf(0, "TSYS01 PROM check passed\n");
+    bm_printf(0, "TSYS01 CHECK PROM Failed\n");
+    bm_fprintf(0, "soft.log", "TSYS01 CHECK PROM Failed\n");
   }
 
   return rval;
