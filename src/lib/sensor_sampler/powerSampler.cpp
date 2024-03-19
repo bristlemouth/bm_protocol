@@ -68,6 +68,7 @@ static bool powerSample() {
       taskEXIT_CRITICAL();
     } else {
       printf("ERR Failed to sample power monitor %u!", dev_num);
+      bm_printf(0, "ERR Failed to sample power monitor %u!", dev_num);
     }
     rval &= success;
   }
