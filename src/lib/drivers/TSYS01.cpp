@@ -65,12 +65,12 @@ bool TSYS01::getTemperature(float &temperature) {
     }
     spiTransactionSuccess &= doCommand(START_ADC_TEMP_CONV, ADC_CONV_WAIT_TIME_MS);
     if (!spiTransactionSuccess) {
-      bm_printf(0, "TSYS01 reading error while starting ADC\n");
+      bm_printf(0, "TSYS01 reading error while starting ADC");
       bm_fprintf(0, "soft.log", "TSYS01 reading error while starting ADC\n");
     }
     spiTransactionSuccess &= readData(READ_ADC_TEMP, data, sizeof(data));
     if (!spiTransactionSuccess) {
-      bm_printf(0, "TSYS01 reading error while reading ADC\n");
+      bm_printf(0, "TSYS01 reading error while reading ADC");
       bm_fprintf(0, "soft.log", "TSYS01 reading error while reading ADC\n");
     }
     // round() macro returns a long (4 bytes)
@@ -84,7 +84,7 @@ bool TSYS01::getTemperature(float &temperature) {
       temperature = temp + calibrationOffsetDegC;
       rval = true;
     } else {
-      bm_printf(0, "TSYS01 reading error while getting temperature\n");
+      bm_printf(0, "TSYS01 reading error while getting temperature");
       bm_fprintf(0, "soft.log", "TSYS01 reading error while getting temperature\n");
     }
   } while (0);
@@ -101,7 +101,7 @@ bool TSYS01::validatePROM() {
   for (uint8_t i = 0; i < PROM_ADDR_CNT; i++) {
     spiTransactionSuccess &= readData(PROM_ADDR_0 + (i * 2), data, sizeof(data));
     if (!spiTransactionSuccess) {
-      bm_printf(0, "TSYS01 reading error while validating PROM\n");
+      bm_printf(0, "TSYS01 reading error while validating PROM");
       bm_fprintf(0, "soft.log", "TSYS01 reading error while validating PROM\n");
     }
     checksum += data[0] + data[1];
@@ -115,6 +115,9 @@ bool TSYS01::validatePROM() {
     for (int i = 0; i < NUM_CALIB; i++) {
       _calibrations[i] = calibrations[i];
     }
+  } else {
+    bm_printf(0, "TSYS01 PROM checksum failed, checksum: %d", checksum);
+    bm_fprintf(0, "soft.log", "TSYS01 PROM checksum failed, checksum: %d\n", checksum);
   }
   return rval;
 }
@@ -131,7 +134,7 @@ bool TSYS01::checkPROM() {
   bool rval = validatePROM();
 
   if (!rval) {
-    bm_printf(0, "TSYS01 CHECK PROM Failed\n");
+    bm_printf(0, "TSYS01 CHECK PROM Failed");
     bm_fprintf(0, "soft.log", "TSYS01 CHECK PROM Failed\n");
   }
 
