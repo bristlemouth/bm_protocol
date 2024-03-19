@@ -235,7 +235,8 @@ static uint8_t *aanderaaWakeupTest(bool &success, void *in_data, uint32_t in_len
         break;
       }
     }
-  } while (!success && retries++ <= 3);
+    retries++;
+  } while (!success && retries <= 3);
   if (!success) {
     printf("Failed to wake up Aanderaa after %u retries\n", retries);
     *result = 0;
