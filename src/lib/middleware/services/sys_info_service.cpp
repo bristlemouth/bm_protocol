@@ -27,7 +27,7 @@ void sys_info_service_init(Configuration &sys_config) {
   _sys_config = &sys_config;
   static char sys_info_service_str[BM_SERVICE_MAX_SERVICE_STRLEN];
   size_t topic_strlen = snprintf(sys_info_service_str, sizeof(sys_info_service_str),
-                                 "%" PRIx64 "%s", getNodeId(), SYS_INFO_SERVICE_SUFFIX);
+                                 "%016" PRIx64 "%s", getNodeId(), SYS_INFO_SERVICE_SUFFIX);
   if (topic_strlen > 0) {
     bm_service_register(topic_strlen, sys_info_service_str, sys_info_service_handler);
   } else {
@@ -48,7 +48,7 @@ bool sys_info_service_request(uint64_t target_node_id, bm_service_reply_cb reply
   char *target_service_str = static_cast<char *>(pvPortMalloc(BM_SERVICE_MAX_SERVICE_STRLEN));
   configASSERT(target_service_str);
   size_t target_service_strlen =
-      snprintf(target_service_str, BM_SERVICE_MAX_SERVICE_STRLEN, "%" PRIx64 "%s",
+      snprintf(target_service_str, BM_SERVICE_MAX_SERVICE_STRLEN, "%016" PRIx64 "%s",
                target_node_id, SYS_INFO_SERVICE_SUFFIX);
   if (target_service_strlen > 0) {
     rval = bm_service_request(target_service_strlen, target_service_str, 0, NULL, reply_cb,

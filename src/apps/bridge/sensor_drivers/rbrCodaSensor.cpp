@@ -21,7 +21,8 @@ bool RbrCodaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(sub);
-  int topic_strlen = snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%" PRIx64 "%s", node_id, subtag);
+  int topic_strlen =
+      snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
     rval = bm_sub_wl(sub, topic_strlen, rbrCodaSubCallback);
   }
@@ -34,7 +35,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
                                        uint8_t version) {
   (void)type;
   (void)version;
-  printf("RBR CODA data received from node %" PRIx64 " On topic: %.*s\n", node_id, topic_len,
+  printf("RBR CODA data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
   RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id));
   if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR_CODA) {
@@ -56,7 +57,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
         if ((current_timestamp - rbr_coda->last_timestamp > DEFAULT_RBR_CODA_READING_PERIOD_MS + 1000u) ||
             rbr_coda->reading_count == 1U) {
-          printf("Updating rbr_coda %" PRIx64 " node position, current_time = %" PRIu32
+          printf("Updating rbr_coda %016" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, rbr_coda->last_timestamp, rbr_coda->reading_count);
           rbr_coda->node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
@@ -75,21 +76,22 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
           sensor_type_str = "RBR.UNKNOWN";
         }
 
-        size_t log_buflen = snprintf(
-            log_buf, SENSOR_LOG_BUF_SIZE,
-            "%" PRIx64 ","   // Node Id
-            "%" PRIi8 ","    // node_position
-            "%s,"            // node_app_name
-            "%" PRIu64 ","   // reading_uptime_millis
-            "%" PRIu64 "."   // reading_time_utc_ms seconds part
-            "%03" PRIu32 "," // reading_time_utc_ms millis part
-            "%" PRIu64 "."   // sensor_reading_time_ms seconds part
-            "%03" PRIu32 "," // sensor_reading_time_ms millis part
-            "%.3f,"          // temperature_deg_c
-            "%.3f\n",        // pressure_ubar
-            node_id, rbr_coda->node_position, sensor_type_str, rbr_data.header.reading_uptime_millis,
-            reading_time_sec, reading_time_millis, sensor_reading_time_sec,
-            sensor_reading_time_millis, rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar);
+        size_t log_buflen =
+            snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                     "%016" PRIx64 "," // Node Id
+                     "%" PRIi8 ","     // node_position
+                     "%s,"             // node_app_name
+                     "%" PRIu64 ","    // reading_uptime_millis
+                     "%" PRIu64 "."    // reading_time_utc_ms seconds part
+                     "%03" PRIu32 ","  // reading_time_utc_ms millis part
+                     "%" PRIu64 "."    // sensor_reading_time_ms seconds part
+                     "%03" PRIu32 ","  // sensor_reading_time_ms millis part
+                     "%.3f,"           // temperature_deg_c
+                     "%.3f\n",         // pressure_ubar
+                     node_id, rbr_coda->node_position, sensor_type_str,
+                     rbr_data.header.reading_uptime_millis, reading_time_sec,
+                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
+                     rbr_data.temperature_deg_c, rbr_data.pressure_deci_bar);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
@@ -156,14 +158,14 @@ void RbrCodaSensor::aggregate(void) {
     }
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                          "%" PRIx64 "," // Node Id
-                          "%" PRIi8 ","  // node_position
-                          "%s,"          // node_app_name
-                          "%s,"          // timeStamp(ticks/UTC)
-                          "%" PRIu32 "," // reading_count
-                          "%.3f,"        // temp_mean_deg_c
-                          "%.3f,"        // pressure_mean_deci_bar
-                          "%.3f\n",      // pressure_stdev_deci_bar
+                          "%016" PRIx64 "," // Node Id
+                          "%" PRIi8 ","     // node_position
+                          "%s,"             // node_app_name
+                          "%s,"             // timeStamp(ticks/UTC)
+                          "%" PRIu32 ","    // reading_count
+                          "%.3f,"           // temp_mean_deg_c
+                          "%.3f,"           // pressure_mean_deci_bar
+                          "%.3f\n",         // pressure_stdev_deci_bar
                           node_id, node_position, sensor_type_str, time_str, aggs.reading_count,
                           aggs.temp_mean_deg_c, aggs.pressure_mean_deci_bar,
                           aggs.pressure_stdev_deci_bar);

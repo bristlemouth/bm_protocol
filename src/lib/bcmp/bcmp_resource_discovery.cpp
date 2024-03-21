@@ -132,7 +132,7 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(bcmp_resourc
         if ((element != NULL) && (element->fp != NULL)) {
             element->fp(repl);
         } else {
-            printf("Node Id %" PRIx64 " resource table:\n", src_node_id);
+            printf("Node Id %016" PRIx64 " resource table:\n", src_node_id);
             uint16_t num_pubs = repl->num_pubs;
             size_t offset = 0;
             printf("\tPublishers:\n");

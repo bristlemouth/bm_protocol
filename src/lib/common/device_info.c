@@ -201,7 +201,7 @@ uint64_t getNodeId() {
 const char * getNodeIdStr() {
   static bool nodeidStrGenerated = false;
   if (!nodeidStrGenerated) {
-    snprintf(nodeidStr, sizeof(nodeidStr), "%" PRIx64 "", getNodeId());
+    snprintf(nodeidStr, sizeof(nodeidStr), "%016" PRIx64 "", getNodeId());
     nodeidStrGenerated = true;
   }
 

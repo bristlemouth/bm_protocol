@@ -691,7 +691,7 @@ static void report_builder_task(void *parameters) {
                   if (element == NULL) {
                     if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
                       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                                     "No data for node %" PRIx64
+                                     "No data for node %016" PRIx64
                                      " in report period, adding it to the list\n",
                                      _ctx._report_period_node_list[i]);
                       switch (_ctx._report_period_sensor_type_list[i]) {
@@ -736,7 +736,7 @@ static void report_builder_task(void *parameters) {
                         _ctx._report_period_node_list[i]);
                   } else {
                     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                                   "Found data for node %" PRIx64
+                                   "Found data for node %016" PRIx64
                                    " adding it to the the report\n",
                                    _ctx._report_period_node_list[i]);
                   }
@@ -819,7 +819,7 @@ static void report_builder_task(void *parameters) {
       case REPORT_BUILDER_SAMPLE_MESSAGE: {
         if (_ctx._samplesPerReport > 0) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                         "Adding sample for %" PRIx64 " to list\n", item.node_id);
+                         "Adding sample for %016" PRIx64 " to list\n", item.node_id);
           _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
               item.node_id, item.sensor_type, item.sensor_data, item.sensor_data_size,
               _ctx._samplesPerReport, _ctx._sample_counter);

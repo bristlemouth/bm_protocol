@@ -294,8 +294,8 @@ static const DebugGpio_t debugGpioPins[] = {
 static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
   configASSERT(neighbor);
   const char *action = (discovered) ? "added" : "lost";
-  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Neighbor %" PRIx64 " %s\n",
-                 neighbor->node_id, action);
+  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                 "Neighbor %016" PRIx64 " %s\n", neighbor->node_id, action);
 }
 
 static void defaultTask(void *parameters) {

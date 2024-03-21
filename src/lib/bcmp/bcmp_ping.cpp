@@ -57,7 +57,8 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
     _expected_payload_len = payload_len;
   }
 
-  printf("PING (%" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id, echo_req->payload_len);
+  printf("PING (%016" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id,
+         echo_req->payload_len);
 
   err_t rval = bcmp_tx(addr, BCMP_ECHO_REQUEST, reinterpret_cast<uint8_t*>(echo_req), echo_len, 0);
 
@@ -129,7 +130,9 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
     }
 
     uint64_t diff = uptimeGetMicroSeconds() - _ping_request_time;
-    printf("🏓 %" PRIu16 " bytes from %" PRIx64 " bcmp_seq=%" PRIu32 " time=%" PRIu64 " ms\n", echo_reply->payload_len, echo_reply->node_id, echo_reply->seq_num, diff/1000);
+    printf("🏓 %" PRIu16 " bytes from %016" PRIx64 " bcmp_seq=%" PRIu32 " time=%" PRIu64
+           " ms\n",
+           echo_reply->payload_len, echo_reply->node_id, echo_reply->seq_num, diff / 1000);
     rval = ERR_OK;
 
   } while (0);

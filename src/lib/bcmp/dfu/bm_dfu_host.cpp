@@ -195,7 +195,7 @@ void s_host_req_update_entry(void) {
     host_ctx.bytes_remaining = host_ctx.img_info.image_size;
     host_ctx.client_node_id = img_info_evt->addresses.dst_node_id;
 
-    printf("DFU Client Node Id: %" PRIx64 "\n", host_ctx.client_node_id);
+    printf("DFU Client Node Id: %016" PRIx64 "\n", host_ctx.client_node_id);
 
     host_ctx.ack_retry_num = 0;
     /* Request Client Firmware Update */

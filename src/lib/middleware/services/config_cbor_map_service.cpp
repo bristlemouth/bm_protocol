@@ -21,8 +21,8 @@ void config_cbor_map_service_init(cfg::Configuration& hw_cfg, cfg::Configuration
   _hw_config = &hw_cfg;
   _usr_config = &user_config;
   static char config_map_str[BM_SERVICE_MAX_SERVICE_STRLEN];
-  size_t topic_strlen = snprintf(config_map_str, sizeof(config_map_str),
-                                 "%" PRIx64 "%s", getNodeId(), CONFIG_MAP_SUFFIX);
+  size_t topic_strlen = snprintf(config_map_str, sizeof(config_map_str), "%016" PRIx64 "%s",
+                                 getNodeId(), CONFIG_MAP_SUFFIX);
   if (topic_strlen > 0) {
     bm_service_register(topic_strlen, config_map_str, config_map_service_handler);
   } else {
@@ -35,7 +35,7 @@ bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition
   char *target_service_str = static_cast<char *>(pvPortMalloc(BM_SERVICE_MAX_SERVICE_STRLEN));
   configASSERT(target_service_str);
   size_t target_service_strlen =
-      snprintf(target_service_str, BM_SERVICE_MAX_SERVICE_STRLEN, "%" PRIx64 "%s",
+      snprintf(target_service_str, BM_SERVICE_MAX_SERVICE_STRLEN, "%016" PRIx64 "%s",
                target_node_id, CONFIG_MAP_SUFFIX);
   ConfigCborMapSrvRequestMsg::Data req = {partition_id};
   static constexpr size_t cbor_buflen = sizeof(ConfigCborMapSrvRequestMsg::Data) + 25; // Abitrary padding.

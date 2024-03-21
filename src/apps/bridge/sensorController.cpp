@@ -130,7 +130,7 @@ static void runController(void *param) {
             if (_ctx._node_list[i] != getNodeId()) {
               if (!sys_info_service_request(_ctx._node_list[i], node_info_reply_cb,
                                             NODE_INFO_TIMEOUT_MS)) {
-                printf("Failed to send sys_info request to node %" PRIx64 "\n",
+                printf("Failed to send sys_info request to node %016" PRIx64 "\n",
                        _ctx._node_list[i]);
               }
             }
@@ -175,9 +175,9 @@ void abstractSensorAddSensorSub(AbstractSensor *sensor) {
     curr->next = sensor;
   }
   if (!sensor->subscribe()) {
-    printf("Failed to subscribe to sensor node %" PRIx64 "\n", sensor->node_id);
+    printf("Failed to subscribe to sensor node %016" PRIx64 "\n", sensor->node_id);
   } else {
-    printf("New sensor node found %" PRIx64 "\n", sensor->node_id);
+    printf("New sensor node found %016" PRIx64 "\n", sensor->node_id);
   }
 }
 
