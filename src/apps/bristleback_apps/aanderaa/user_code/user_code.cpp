@@ -38,7 +38,7 @@ static const char tx_tickle_data[] = ";\r\n";
 
 // Config flag to enable a tx test for manufacturing.
 static uint32_t mfg_tx_test_enable = 0;
-#define MFG_TEST_TX_PERIOD_MS (1000)
+#define MFG_TEST_TX_PERIOD_MS (30 * 1000)
 
 /// Default mote configurations and local variables
 // How many minutes to collect readings for before shipping an aggregation.
