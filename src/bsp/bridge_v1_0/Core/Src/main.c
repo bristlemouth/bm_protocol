@@ -100,13 +100,13 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C1_Init();
+  MX_GPDMA1_Init();
   MX_USART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_SPI3_Init();
   MX_SPI2_Init();
   MX_IWDG_Init();
-  MX_GPDMA1_Init();
+  MX_I2C1_Init();
   MX_RTC_Init();
   MX_ICACHE_Init();
   MX_USART3_UART_Init();
@@ -145,7 +145,7 @@ void SystemClock_Config(void)
   /** Configure LSE Drive Capability
   */
   HAL_PWR_EnableBkUpAccess();
-  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
+  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_HIGH);
 
   /** Initializes the CPU, AHB and APB buses clocks
   */
