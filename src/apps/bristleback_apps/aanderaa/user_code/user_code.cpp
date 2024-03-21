@@ -36,6 +36,10 @@
 // Use a No-op ";" command to tickle the Aanderaa
 static const char tx_tickle_data[] = ";\r\n";
 
+// Config flag to enable a tx test for manufacturing.
+static uint32_t mfg_tx_test_enable = 0;
+#define MFG_TEST_TX_PERIOD_MS (30 * 1000)
+
 /// Default mote configurations and local variables
 // How many minutes to collect readings for before shipping an aggregation.
 #define DEFAULT_CURRENT_AGG_PERIOD_MIN (0)
@@ -225,6 +229,8 @@ void setup(void) {
                                         payload_wd_to_s);
   systemConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
                                         baud_rate);
+  systemConfigurationPartition->getConfig("mfgTxTestModeEnable", strlen("mfgTxTestModeEnable"),
+                                        mfg_tx_test_enable);
 
   max_readings_in_agg = (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
 
@@ -281,6 +287,10 @@ static double getDoubleOrNaN(Value value) {
   } else {
     return value.data.double_val;
   }
+}
+static void mfgTestSendTxWakeup(void) {
+  static constexpr char wakeup_data[] = "X\r\n";
+  PLUART::write((uint8_t *)wakeup_data, strlen(wakeup_data));
 }
 #endif
 
@@ -384,6 +394,16 @@ void loop(void) {
   (void)readings_skipped;
   spoof_aanderaa();
 #else // FAKE_AANDERAA
+
+  // Manufacturing TX test mode
+  if(mfg_tx_test_enable) {
+    static uint32_t mfgTxTimerMs = uptimeGetMs();
+    if(uptimeGetMs() - mfgTxTimerMs >= MFG_TEST_TX_PERIOD_MS) {
+      mfgTxTimerMs = uptimeGetMs();
+      mfgTestSendTxWakeup();
+    }
+  }
+
   // If there is a line to read, read it ad then parse it
   if (PLUART::lineAvailable()) {
     SensorWatchdog::SensorWatchdogPet(AANDERAA_WATCHDOG_ID);
