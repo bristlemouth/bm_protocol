@@ -49,9 +49,9 @@ bool validSensorDataString(const char *s, size_t strlen) {
 bool validSensorData(DataType_e type, double val) {
   switch (type) {
   case TEMPERATURE: // in degrees C
-    return val >= -5.0 && val <= 50.0;
+    return val >= -40.0 && val <= 125.0;
   case PRESSURE: // in decibar
-    return val >= 5.0 && val <= 85.0;
+    return val >= 5.0 && val <= 200.0;
   default:
     return false;
   }

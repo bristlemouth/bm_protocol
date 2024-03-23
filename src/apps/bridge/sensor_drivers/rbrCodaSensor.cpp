@@ -45,7 +45,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
         rbr_coda->temp_deg_c.addSample(rbr_data.temperature_deg_c);
-        rbr_coda->pressure_ubar.addSample(rbr_data.pressure_deci_bar);
+        rbr_coda->pressure_deci_bar.addSample(rbr_data.pressure_deci_bar);
         rbr_coda->reading_count++;
         // Large floats get formatted in scientific notation,
         // so we print integer seconds and millis separately.
@@ -87,7 +87,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
                      "%" PRIu64 "."    // sensor_reading_time_ms seconds part
                      "%03" PRIu32 ","  // sensor_reading_time_ms millis part
                      "%.3f,"           // temperature_deg_c
-                     "%.3f\n",         // pressure_ubar
+                     "%.3f\n",         // pressure_deci_bar
                      node_id, rbr_coda->node_position, sensor_type_str,
                      rbr_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
@@ -119,14 +119,18 @@ void RbrCodaSensor::aggregate(void) {
     aggs.sensor_type = rbrCodaGetSensorType(node_id);
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
-      aggs.pressure_mean_deci_bar = pressure_ubar.getMean();
-      aggs.pressure_stdev_deci_bar = pressure_ubar.getStd(aggs.pressure_mean_deci_bar);
+      aggs.pressure_mean_deci_bar = pressure_deci_bar.getMean();
+      aggs.pressure_stdev_deci_bar = pressure_deci_bar.getStd(aggs.pressure_mean_deci_bar);
       aggs.reading_count = reading_count;
 
-      if (aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN ||
-          aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
+      if (aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN) {
+        aggs.temp_mean_deg_c = -HUGE_VAL;
+      } else if (aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
+        aggs.temp_mean_deg_c = HUGE_VAL;
+      } else {
         aggs.temp_mean_deg_c = NAN;
       }
+
       if (aggs.pressure_mean_deci_bar < PRESSURE_SAMPLE_MEMBER_MIN ||
           aggs.pressure_mean_deci_bar > PRESSURE_SAMPLE_MEMBER_MAX) {
         aggs.pressure_mean_deci_bar = NAN;
@@ -177,7 +181,7 @@ void RbrCodaSensor::aggregate(void) {
     reportBuilderAddToQueue(node_id, SENSOR_TYPE_RBR_CODA, static_cast<void *>(&aggs),
                             sizeof(rbr_coda_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     temp_deg_c.clear();
-    pressure_ubar.clear();
+    pressure_deci_bar.clear();
     reading_count = 0;
     xSemaphoreGive(_mutex);
   } else {
@@ -200,7 +204,7 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   new_sub->next = NULL;
   new_sub->rbr_coda_agg_period_ms = rbr_coda_agg_period_ms;
   new_sub->temp_deg_c.initBuffer(averager_max_samples);
-  new_sub->pressure_ubar.initBuffer(averager_max_samples);
+  new_sub->pressure_deci_bar.initBuffer(averager_max_samples);
   new_sub->reading_count = 0;
   return new_sub;
 }
