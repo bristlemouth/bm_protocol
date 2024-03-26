@@ -346,9 +346,7 @@ void loop(void) {
                   current_tx_data[i].max, current_tx_data[i].mean, current_tx_data[i].stdev);
     }
     printf("DEBUG - wrote %d chars to buffer.", buffer_offset);
-    if (sensorBmLogEnable) {
-      bm_fprintf(0, "aanderaa_agg.log", "%s\n", stats_print_buffer);
-    }
+    bm_fprintf(0, "aanderaa_agg.log", "%s\n", stats_print_buffer);
     bm_printf(0, "[aanderaa-agg] | %s", stats_print_buffer);
     printf("[aanderaa-agg] | %s\n", stats_print_buffer);
     // Update variables tracking start time of agg period in ticks and RTC.
@@ -427,8 +425,10 @@ void loop(void) {
 
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, AANDERAA_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-               rtcTimeBuffer, read_len, payload_buffer);
+    if (sensorBmLogEnable) {
+      bm_fprintf(0, AANDERAA_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
+                 rtcTimeBuffer, read_len, payload_buffer);
+    }
     bm_printf(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
     printf("[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
