@@ -28,6 +28,7 @@ static constexpr char soft_cfg_cal_temp_c[] = "calTempC";
 static constexpr char soft_cfg_cal_time_epoch[] = "calTimeEpoch";
 static constexpr char soft_cfg_cal_offset_milli_c[] = "calOffsetMilliC";
 static constexpr char soft_cfg_reading_period_ms[] = "softReadingPeriodMs";
+static constexpr char sensor_bm_log_enable[] = "sensorBmLogEnable";
 
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
@@ -40,6 +41,7 @@ static uint32_t cal_time_epoch = 0;
 static char bmSoftTopic[BM_TOPIC_MAX_LEN];
 static int bmSoftTopicStrLen;
 static float calibrationOffsetDegC = 0.0;
+static uint32_t sensorBmLogEnable = false;
 
 static bool BmSoftWatchdogHandler(void *arg);
 static bool BmSoftStartAndValidate(void);
@@ -92,6 +94,10 @@ static void getConfigs() {
   } else {
     printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay_ms);
   }
+
+  sysConfigurationPartition->getConfig(sensor_bm_log_enable, strlen(sensor_bm_log_enable),
+                                       sensorBmLogEnable);
+  printf("sensorBmLogEnable: %" PRIu32 "\n", sensorBmLogEnable);
 }
 
 void setup(void) {
@@ -122,6 +128,10 @@ void loop(void) {
     printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, temperature);
     bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
+    if (sensorBmLogEnable) {
+      bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
+                 rtcTimeBuffer, temperature);
+    }
     static BmSoftDataMsg::Data d;
     d.header.version = 1;
     if (rtcValid) {
