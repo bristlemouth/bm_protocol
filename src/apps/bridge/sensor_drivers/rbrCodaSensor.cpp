@@ -390,11 +390,11 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
               break;
             }
             key_str[len] = '\0';
+            if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
+              printf("Failed to advance sys_cfg_map past string key\n");
+              break;
+            }
             if (strcmp(key_str, "rbrCodaType") == 0) {
-              if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
-                printf("Failed to advance the sys_cfg_map\n");
-                break;
-              }
               if (!cbor_value_is_unsigned_integer(&sys_cfg_map)) {
                 printf("expected uint but it is not a string\n");
                 break;
@@ -421,7 +421,7 @@ BmRbrDataMsg::SensorType_t RbrCodaSensor::rbrCodaGetSensorType(uint64_t node_id)
               break;
             }
             if (cbor_value_advance(&sys_cfg_map) != CborNoError) {
-              printf("Failed to advance the sys_cfg_map\n");
+              printf("Failed to advance sys_cfg_map past a value\n");
               break;
             }
           }
