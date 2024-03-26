@@ -23,8 +23,18 @@
 #define LED_PERIOD_MS 1000
 
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
-#define AANDERAA_WATCHDOG_ID "Aanderaa"
-#define AANDERAA_RAW_LOG "aanderaa_raw.log"
+static constexpr char AANDERAA_WATCHDOG_ID[] = "Aanderaa";
+static constexpr char AANDERAA_RAW_LOG[] = "aanderaa_raw.log";
+static constexpr char s_current_agg_period_min[] = "currentAggPeriodMin";
+static constexpr char s_n_skip_readings[] = "nSkipReadings";
+static constexpr char s_reading_interval_ms[] = "readingIntervalMs";
+static constexpr char s_payload_wd_to_s[] = "payloadWdToS";
+static constexpr char s_pl_uart_baud_rate[] = "plUartBaudRate";
+static constexpr char s_mfg_tx_test_enable[] = "mfgTxTestModeEnable";
+static constexpr char s_sensor_bm_log_enable[] = "sensorBmLogEnable";
+
+// Enable logging of sensor data to the BM log.
+static uint32_t sensorBmLogEnable = 0;
 
 // How long to hold Aanderaa off when attempting FTL recovery.
 // -- Measured 1 second via trial & error and scope grabs: https://www.notion.so/sofarocean/FTL-recovery-works-Manually-stop-aanderaa-to-test-edb988cab3a3467caf2aab9f980fcb11
@@ -56,7 +66,7 @@ static uint8_t readings_skipped = 0;
 
 // The reading interval in ms the Aanderaa is configured for.
 // - Currently, must take care to manually set Aanderaa and this setting to the same values.
-#define DEFAULT_CURRENT_READING_INTERVAL_MS (60*1000)
+#define DEFAULT_CURRENT_READING_INTERVAL_MS (60 * 1000)
 static uint32_t reading_interval_ms = DEFAULT_CURRENT_READING_INTERVAL_MS;
 
 // Baud rate for the Payload UART interface
@@ -115,9 +125,8 @@ static const char lineHeader[] = "MEASUREMENT";
 //   We've got luxurious amounts of RAM on this chip, and it's much easier to avoid roll-overs and precision issues
 //   by using it vs. troubleshooting them because we prematurely optimized things.
 static const ValueType valueTypes[NUM_PARAMS_TO_AGG] = {
+    TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
     TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
-    TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
-    TYPE_DOUBLE,
 #ifdef AANDERAA_BLUE
     TYPE_DOUBLE
 #endif
@@ -219,20 +228,23 @@ void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
   configASSERT(systemConfigurationPartition);
-  systemConfigurationPartition->getConfig("currentAggPeriodMin", strlen("currentAggPeriodMin"),
-                                        current_agg_period_min);
-  systemConfigurationPartition->getConfig("nSkipReadings", strlen("nSkipReadings"),
-                                        n_skip_readings);
-  systemConfigurationPartition->getConfig("readingIntervalMs", strlen("readingIntervalMs"),
-                                        reading_interval_ms);
-  systemConfigurationPartition->getConfig("payloadWdToS", strlen("payloadWdToS"),
-                                        payload_wd_to_s);
-  systemConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
-                                        baud_rate);
-  systemConfigurationPartition->getConfig("mfgTxTestModeEnable", strlen("mfgTxTestModeEnable"),
-                                        mfg_tx_test_enable);
+  systemConfigurationPartition->getConfig(
+      s_current_agg_period_min, strlen(s_current_agg_period_min), current_agg_period_min);
+  systemConfigurationPartition->getConfig(s_n_skip_readings, strlen(s_n_skip_readings),
+                                          n_skip_readings);
+  systemConfigurationPartition->getConfig(s_reading_interval_ms, strlen(s_reading_interval_ms),
+                                          reading_interval_ms);
+  systemConfigurationPartition->getConfig(s_payload_wd_to_s, strlen(s_payload_wd_to_s),
+                                          payload_wd_to_s);
+  systemConfigurationPartition->getConfig(s_pl_uart_baud_rate, strlen(s_pl_uart_baud_rate),
+                                          baud_rate);
+  systemConfigurationPartition->getConfig(s_mfg_tx_test_enable, strlen(s_mfg_tx_test_enable),
+                                          mfg_tx_test_enable);
+  systemConfigurationPartition->getConfig(s_sensor_bm_log_enable,
+                                          strlen(s_sensor_bm_log_enable), sensorBmLogEnable);
 
-  max_readings_in_agg = (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
+  max_readings_in_agg =
+      (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
 
   // Protect folks from bricking units in the field.
   // If someone sets the current agg period minutes too high,
@@ -274,6 +286,8 @@ void setup(void) {
   printf("\tmax_readings_in_agg: %llu\n", max_readings_in_agg);
   printf("\tpayload_wd_to_s: %u\n", payload_wd_to_s);
   printf("\tbaud_rate: %u\n", baud_rate);
+  printf("\tmfg_tx_test_enable: %u\n", mfg_tx_test_enable);
+  printf("\tsensorBmLogEnable: %u\n", sensorBmLogEnable);
 
   SensorWatchdog::SensorWatchdogAdd(AANDERAA_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     aanderaaSensorWatchdogHandler,
@@ -396,9 +410,9 @@ void loop(void) {
 #else // FAKE_AANDERAA
 
   // Manufacturing TX test mode
-  if(mfg_tx_test_enable) {
+  if (mfg_tx_test_enable) {
     static uint32_t mfgTxTimerMs = uptimeGetMs();
-    if(uptimeGetMs() - mfgTxTimerMs >= MFG_TEST_TX_PERIOD_MS) {
+    if (uptimeGetMs() - mfgTxTimerMs >= MFG_TEST_TX_PERIOD_MS) {
       mfgTxTimerMs = uptimeGetMs();
       mfgTestSendTxWakeup();
     }
@@ -411,8 +425,10 @@ void loop(void) {
 
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, AANDERAA_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-               rtcTimeBuffer, read_len, payload_buffer);
+    if (sensorBmLogEnable) {
+      bm_fprintf(0, AANDERAA_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
+                 rtcTimeBuffer, read_len, payload_buffer);
+    }
     bm_printf(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
     printf("[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
@@ -452,7 +468,7 @@ void loop(void) {
     d.std_tilt_deg = getDoubleOrNaN(parser.getValue(STD_TILT));
     d.temperature_deg_c = getDoubleOrNaN(parser.getValue(TEMP));
     RTCTimeAndDate_t datetime;
-    if(rtcGet(&datetime) == pdPASS){
+    if (rtcGet(&datetime) == pdPASS) {
       d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
     }
 
@@ -465,7 +481,8 @@ void loop(void) {
     }
 
     // Now let's aggregate those values into statistics
-    if (current_data[0].getNumSamples() >= max_readings_in_agg && max_readings_in_agg > N_SAMPLES_PAD) {
+    if (current_data[0].getNumSamples() >= max_readings_in_agg &&
+        max_readings_in_agg > N_SAMPLES_PAD) {
       printf("ERR - No more room in current reading buffer, already have %d readings!\n",
              max_readings_in_agg);
       return;
@@ -496,7 +513,7 @@ static void spoof_aanderaa() {
         sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
     size_t encoded_len = 0;
     RTCTimeAndDate_t datetime;
-    if(rtcGet(&datetime) == pdPASS) {
+    if (rtcGet(&datetime) == pdPASS) {
       d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
       srand(d.header.reading_time_utc_ms & 0xFFFFFFFF);
     }
@@ -533,64 +550,72 @@ static void spoof_aanderaa() {
 
     printf("parsed values:\n");
     current_data[ABS_SPEED].addSample(d.abs_speed_cm_s);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_SPEED], d.abs_speed_cm_s,
-      current_data[ABS_SPEED].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[ABS_SPEED].getMin(), current_data[ABS_SPEED].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_SPEED],
+           d.abs_speed_cm_s, current_data[ABS_SPEED].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[ABS_SPEED].getMin(),
+           current_data[ABS_SPEED].getMax());
 
     current_data[ABS_TILT].addSample(d.abs_tilt_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_TILT], d.abs_tilt_deg,
-      current_data[ABS_TILT].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[ABS_TILT].getMin(), current_data[ABS_TILT].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_TILT],
+           d.abs_tilt_deg, current_data[ABS_TILT].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[ABS_TILT].getMin(),
+           current_data[ABS_TILT].getMax());
 
     current_data[DIRECTION].addSample(d.direction_deg_m);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[DIRECTION], d.direction_deg_m,
-      current_data[DIRECTION].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[DIRECTION].getMin(), current_data[DIRECTION].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[DIRECTION],
+           d.direction_deg_m, current_data[DIRECTION].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[DIRECTION].getMin(),
+           current_data[DIRECTION].getMax());
 
     current_data[EAST].addSample(d.east_cm_s);
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[EAST], d.east_cm_s,
-      current_data[EAST].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[EAST].getMin(), current_data[EAST].getMax());
+           current_data[EAST].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
+           current_data[EAST].getMin(), current_data[EAST].getMax());
 
     current_data[HEADING].addSample(d.heading_deg_m);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[HEADING], d.heading_deg_m,
-      current_data[HEADING].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[HEADING].getMin(), current_data[HEADING].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[HEADING],
+           d.heading_deg_m, current_data[HEADING].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[HEADING].getMin(),
+           current_data[HEADING].getMax());
 
     current_data[NORTH].addSample(d.north_cm_s);
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[NORTH], d.north_cm_s,
-      current_data[NORTH].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[NORTH].getMin(), current_data[NORTH].getMax());
+           current_data[NORTH].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
+           current_data[NORTH].getMin(), current_data[NORTH].getMax());
 
     current_data[PING_COUNT].addSample(d.ping_count);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[PING_COUNT], d.ping_count,
-      current_data[PING_COUNT].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[PING_COUNT].getMin(), current_data[PING_COUNT].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[PING_COUNT],
+           d.ping_count, current_data[PING_COUNT].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[PING_COUNT].getMin(),
+           current_data[PING_COUNT].getMax());
 
     current_data[TILT_X].addSample(d.tilt_x_deg);
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TILT_X], d.tilt_x_deg,
-      current_data[TILT_X].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[TILT_X].getMin(), current_data[TILT_X].getMax());
+           current_data[TILT_X].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
+           current_data[TILT_X].getMin(), current_data[TILT_X].getMax());
 
     current_data[TILT_Y].addSample(d.tilt_y_deg);
     printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TILT_Y], d.tilt_y_deg,
-      current_data[TILT_Y].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[TILT_Y].getMin(), current_data[TILT_Y].getMax());
+           current_data[TILT_Y].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
+           current_data[TILT_Y].getMin(), current_data[TILT_Y].getMax());
 
     current_data[MAX_TILT].addSample(d.max_tilt_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[MAX_TILT], d.max_tilt_deg,
-      current_data[MAX_TILT].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[MAX_TILT].getMin(), current_data[MAX_TILT].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[MAX_TILT],
+           d.max_tilt_deg, current_data[MAX_TILT].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[MAX_TILT].getMin(),
+           current_data[MAX_TILT].getMax());
 
     current_data[STD_TILT].addSample(d.std_tilt_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[STD_TILT], d.std_tilt_deg,
-      current_data[STD_TILT].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[STD_TILT].getMin(), current_data[STD_TILT].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[STD_TILT],
+           d.std_tilt_deg, current_data[STD_TILT].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[STD_TILT].getMin(),
+           current_data[STD_TILT].getMax());
 
     current_data[TEMP].addSample(d.temperature_deg_c);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TEMP], d.temperature_deg_c,
-      current_data[TEMP].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
-      current_data[TEMP].getMin(), current_data[TEMP].getMax());
+    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TEMP],
+           d.temperature_deg_c, current_data[TEMP].getNumSamples(),
+           max_readings_in_agg - N_SAMPLES_PAD, current_data[TEMP].getMin(),
+           current_data[TEMP].getMax());
   }
 }
 #endif // FAKE_AANDERAA
