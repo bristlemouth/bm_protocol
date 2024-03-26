@@ -102,9 +102,10 @@ void SoftSensor::aggregate(void) {
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       soft_aggs.temp_mean_deg_c = temp_deg_c.getMean();
       soft_aggs.reading_count = reading_count;
-      if (soft_aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN ||
-          soft_aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
-        soft_aggs.temp_mean_deg_c = NAN;
+      if (soft_aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN) {
+        soft_aggs.temp_mean_deg_c = -HUGE_VAL;
+      } else if (soft_aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
+        soft_aggs.temp_mean_deg_c = HUGE_VAL;
       }
     }
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
