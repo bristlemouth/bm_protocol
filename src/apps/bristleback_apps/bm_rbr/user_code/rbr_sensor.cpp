@@ -27,6 +27,11 @@ void RbrSensor::init(BmRbrDataMsg::SensorType_t type) {
       _parsers[i]->init();
     }
   }
+
+  systemConfigurationPartition->getConfig(sensor_bm_log_enable, strlen(sensor_bm_log_enable),
+                                          _sensorBmLogEnable);
+  printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
+
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
   PLUART::setBaud(BAUD_RATE);
@@ -143,8 +148,10 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       rtcGet(&time_and_date);
       char rtcTimeBuffer[32] = {};
       rtcPrint(rtcTimeBuffer, NULL);
-      bm_fprintf(0, RBR_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-                 rtcTimeBuffer, read_len, _payload_buffer);
+      if (_sensorBmLogEnable) {
+        bm_fprintf(0, RBR_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
+                   rtcTimeBuffer, read_len, _payload_buffer);
+      }
       bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
                 read_len, _payload_buffer);
       printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,

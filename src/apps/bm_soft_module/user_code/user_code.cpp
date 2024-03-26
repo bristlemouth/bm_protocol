@@ -41,7 +41,7 @@ static uint32_t cal_time_epoch = 0;
 static char bmSoftTopic[BM_TOPIC_MAX_LEN];
 static int bmSoftTopicStrLen;
 static float calibrationOffsetDegC = 0.0;
-static uint32_t sensorBmLogEnable = false;
+static uint32_t sensorBmLogEnable = 0;
 
 static bool BmSoftWatchdogHandler(void *arg);
 static bool BmSoftStartAndValidate(void);
