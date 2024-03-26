@@ -8,7 +8,7 @@ public:
   RbrSensor()
       : _type(BmRbrDataMsg::SensorType_t::UNKNOWN),
         _stored_type(BmRbrDataMsg::SensorType_t::UNKNOWN), _sensorDropDebounceCount(0),
-        _parserTwoArguments(",", 256, parserValueTypeOne, 2),
+        _sensorBmLogEnable(false), _parserTwoArguments(",", 256, parserValueTypeOne, 2),
         _parserThreeArguments(",", 256, parserValueTypeTwo, 3){};
   void init(BmRbrDataMsg::SensorType_t type);
   bool probeType(uint32_t timeout_ms = 1000);
@@ -26,11 +26,13 @@ private:
   static constexpr char typeCommand[] = "outputformat channelslist\n";
   static constexpr uint8_t SENSOR_DROP_DEBOUNCE_MAX_COUNT = 3;
   static constexpr uint8_t NUM_PARSERS = 4;
+  static constexpr char sensor_bm_log_enable[] = "sensorBmLogEnable";
 
 private:
   BmRbrDataMsg::SensorType_t _type;
   BmRbrDataMsg::SensorType_t _stored_type;
   uint8_t _sensorDropDebounceCount = 0;
+  uint32_t _sensorBmLogEnable = 0;
   OrderedSeparatorLineParser _parserTwoArguments;
   OrderedSeparatorLineParser _parserThreeArguments;
   OrderedSeparatorLineParser *_parsers[NUM_PARSERS] = {
