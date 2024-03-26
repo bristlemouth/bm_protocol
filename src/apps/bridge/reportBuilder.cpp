@@ -799,10 +799,11 @@ static void report_builder_task(void *parameters) {
               bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                              "No nodes to send data for\n");
             }
-            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                           "Clearing the list\n");
-            _ctx._reportBuilderLinkedList.clear();
           }
+          // Always clear the list and reset the sample counter when _ctx._sample_counter >= _ctx._samplesPerReport
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "Clearing the list\n");
+          _ctx._reportBuilderLinkedList.clear();
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "Clearing the sample counter\n");
           _ctx._sample_counter = 0;
