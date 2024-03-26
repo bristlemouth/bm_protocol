@@ -117,6 +117,7 @@ void RbrCodaSensor::aggregate(void) {
                                     .reading_count = 0,
                                     .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN};
     aggs.sensor_type = rbrCodaGetSensorType(node_id);
+    latest_sensor_type = aggs.sensor_type;
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
       aggs.pressure_mean_deci_bar = pressure_deci_bar.getMean();
@@ -127,8 +128,6 @@ void RbrCodaSensor::aggregate(void) {
         aggs.temp_mean_deg_c = -HUGE_VAL;
       } else if (aggs.temp_mean_deg_c > TEMP_SAMPLE_MEMBER_MAX) {
         aggs.temp_mean_deg_c = HUGE_VAL;
-      } else {
-        aggs.temp_mean_deg_c = NAN;
       }
 
       if (aggs.pressure_mean_deci_bar < PRESSURE_SAMPLE_MEMBER_MIN ||
