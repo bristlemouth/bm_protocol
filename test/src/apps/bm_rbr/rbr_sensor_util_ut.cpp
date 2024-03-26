@@ -32,19 +32,19 @@ TEST(rbrSensorUtilTest, InvalidString) {
 
 TEST(rbrSensorUtilTest, validData) {
   EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, 17.7684));
-  EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, 50.0));
-  EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, -5.0));
-  EXPECT_TRUE(validSensorData(DataType_e::PRESSURE, 85.0));
+  EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, 125.0));
+  EXPECT_TRUE(validSensorData(DataType_e::TEMPERATURE, -40.0));
+  EXPECT_TRUE(validSensorData(DataType_e::PRESSURE, 200.0));
   EXPECT_TRUE(validSensorData(DataType_e::PRESSURE, 5.0));
   EXPECT_TRUE(validSensorData(DataType_e::PRESSURE, 45));
 }
 
 TEST(rbrSensorUtilTest, InvalidData) {
-  EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, 50.1));
-  EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, -5.1));
+  EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, 125.1));
+  EXPECT_FALSE(validSensorData(DataType_e::TEMPERATURE, -40.1));
   EXPECT_FALSE(validSensorData(DataType_e::PRESSURE, -10));
   EXPECT_FALSE(validSensorData(DataType_e::PRESSURE, 4.9));
-  EXPECT_FALSE(validSensorData(DataType_e::PRESSURE, 85.1));
+  EXPECT_FALSE(validSensorData(DataType_e::PRESSURE, 200.1));
 }
 
 TEST(rbrSensorUtilTest, validOutputFormat) {
