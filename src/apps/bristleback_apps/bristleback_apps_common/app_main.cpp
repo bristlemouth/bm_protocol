@@ -278,6 +278,8 @@ static const DebugGpio_t debugGpioPins[] = {
     {"flash_cs", &FLASH_CS, GPIO_OUT},
     {"boot_led", &BOOT_LED, GPIO_IN},
     {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+    {"payload_tx", &PAYLOAD_TX, GPIO_OUT},
+    {"payload_rx", &PAYLOAD_RX, GPIO_OUT},
 };
 
 /* USER CODE EXECUTED HERE */
