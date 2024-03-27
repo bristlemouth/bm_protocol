@@ -21,6 +21,8 @@
 #include "middleware.h"
 #include "task_priorities.h"
 
+#include "bm_printf.h"
+
 #ifdef STRESS_TEST_ENABLE
 #include "stress.h"
 #endif
@@ -30,7 +32,10 @@ static struct netif     netif;
 // Callback function in case of link changes.
 // Will notify relevant subsystems of link change event
 void bm_link_change_cb(uint8_t port, bool state) {
-    printf("bm port%u %s\n",
+    bm_printf(0, "bm port%u %s\n",
+                port,
+                state ? "up" : "down");
+    bm_fprintf(0, "port.log", "bm port%u %s\n",
                 port,
                 state ? "up" : "down");
 
