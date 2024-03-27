@@ -12,34 +12,46 @@
 #include "uptime.h"
 #include "util.h"
 
+#include "debug_configuration.h"
+
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 
+// app_main passes a handle to the user config partition in NVM.
+extern cfg::Configuration *systemConfigurationPartition;
+
+static uint32_t tx_pin_state = 0;
+static uint32_t rx_pin_state = 0;
+
+static constexpr char s_tx_pin_state[] = "txPinState";
+static constexpr char s_rx_pin_state[] = "rxPinState";
+
+
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
+  configASSERT(systemConfigurationPartition);
+  systemConfigurationPartition->getConfig(s_tx_pin_state, strlen(s_tx_pin_state), tx_pin_state);
+  systemConfigurationPartition->getConfig(s_rx_pin_state, strlen(s_rx_pin_state), rx_pin_state);
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
-  static u_int32_t ledPulseTimer = uptimeGetMs();
-  static u_int32_t ledOnTimer = 0;
-  static bool ledState = false;
+
+  static uint32_t tx_pin_state_prev = 0;
+  static uint32_t rx_pin_state_prev = 0;
+
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!ledState &&
-      ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    // bristlefin.setLed(1, Bristlefin::LED_GREEN);
-    ledOnTimer = uptimeGetMs();
-    ledPulseTimer += LED_PERIOD_MS;
-    ledState = true;
+  systemConfigurationPartition->getConfig(s_tx_pin_state, strlen(s_tx_pin_state), tx_pin_state);
+  systemConfigurationPartition->getConfig(s_rx_pin_state, strlen(s_rx_pin_state), rx_pin_state);
+
+
+  if (tx_pin_state != tx_pin_state_prev) {
+    IOWrite(&PAYLOAD_TX, tx_pin_state);
+    tx_pin_state_prev = tx_pin_state;
   }
-  // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (ledState &&
-           ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    // bristlefin.setLed(1, Bristlefin::LED_OFF);
-    ledState = false;
+  if (rx_pin_state != rx_pin_state_prev) {
+    IOWrite(&PAYLOAD_TX, rx_pin_state);
+    rx_pin_state_prev = rx_pin_state;
   }
+
 }
