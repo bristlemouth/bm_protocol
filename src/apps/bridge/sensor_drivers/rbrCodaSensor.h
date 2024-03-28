@@ -36,7 +36,7 @@ typedef struct RbrCodaSensor : public AbstractSensor {
   static constexpr double PRESSURE_SAMPLE_MEMBER_MIN = 5;
   static constexpr double PRESSURE_SAMPLE_MEMBER_MAX = 200;
   static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MIN = 0;
-  static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MAX = 3.2766;
+  static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MAX = 3.2765;
 
 public:
   bool subscribe() override;
