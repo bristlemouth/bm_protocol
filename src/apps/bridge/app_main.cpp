@@ -149,6 +149,8 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
+static BridgePowerController *_main_bridge_power_controller;
+
 extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
@@ -267,6 +269,15 @@ static void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t t
     } else {
       printf("Unrecognized version: %u and type: %u\n", version, type);
     }
+  } else if (strncmp(APP_PUB_SUB_RTC_ZERO_TOPIC, topic, topic_len) == 0) {
+    if (type == APP_PUB_SUB_RTC_ZERO_TYPE && version == APP_PUB_SUB_RTC_ZERO_VERSION) {
+      // turn off the power controller!
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                 "RTC 0 detected, turning off power controller!\n");
+      _main_bridge_power_controller->powerControlEnable(false);
+    } else {
+      printf("Unrecognized version: %u and type: %u\n", version, type);
+    }
   } else {
     printf("Topic: %.*s\n", topic_len, topic);
     printf("Data: %.*s\n", data_len, data);
@@ -373,7 +384,7 @@ static void defaultTask(void *parameters) {
       pwrcfg.subsampleDurationMs, static_cast<bool>(pwrcfg.subsampleEnabled),
       static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
       (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S));
-
+  _main_bridge_power_controller = &bridge_power_controller;
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user,
           &debug_configuration_system, &debug_configuration_hardware);
   topology_sampler_init(&bridge_power_controller, &debug_configuration_hardware,
@@ -392,6 +403,7 @@ static void defaultTask(void *parameters) {
   bm_sub(APP_PUB_SUB_PRINTF_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_LAST_NET_CFG_TOPIC, handle_subscriptions);
+  bm_sub(APP_PUB_SUB_RTC_ZERO_TOPIC, handle_subscriptions);
   bcmp_neighbor_register_discovery_callback(neighborDiscoveredCb);
 
 #ifdef USE_MICROPYTHON
