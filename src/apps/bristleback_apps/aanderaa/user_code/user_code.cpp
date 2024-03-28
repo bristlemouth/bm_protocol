@@ -19,6 +19,11 @@
 #include "usart.h"
 #include "util.h"
 
+#define APP_PUB_SUB_RTC_ZERO_TOPIC "rtc/zero"
+#define APP_PUB_SUB_RTC_ZERO_TYPE 1
+#define APP_PUB_SUB_RTC_ZERO_VERSION 1
+#define APP_PUB_SUB_ZERO_DETECTED "zero_detected"
+
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 
@@ -169,6 +174,8 @@ static char payload_buffer[2048];
 static char aanderaaTopic[BM_TOPIC_MAX_LEN];
 static int aanderaaTopicStrLen;
 
+static bool sent_rtc_zero = false;
+
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
 static OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, lineHeader);
@@ -311,6 +318,18 @@ static void mfgTestSendTxWakeup(void) {
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
+
+  if (!sent_rtc_zero && !isRTCSet() && uptimeGetMs() > 10000) {
+    // Send a message to the RTC zero topic to indicate that the RTC has been zeroed.
+    if (bm_pub_wl(APP_PUB_SUB_RTC_ZERO_TOPIC, strlen(APP_PUB_SUB_RTC_ZERO_TOPIC),
+                  APP_PUB_SUB_ZERO_DETECTED, strlen(APP_PUB_SUB_ZERO_DETECTED),
+                  APP_PUB_SUB_RTC_ZERO_TYPE, APP_PUB_SUB_RTC_ZERO_VERSION)) {
+      sent_rtc_zero = true;
+    }
+    bm_printf(0, "RTC zero detected\n");
+    bm_fprintf(0, "rtc_zero.log", "RTC zero detected\n");
+  }
+
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
   if (CURRENT_AGG_PERIOD_MS > 0 &&
