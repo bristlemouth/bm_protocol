@@ -7,12 +7,13 @@
 #include "device_info.h"
 #include "external_flash_partitions.h"
 #include "flash_map_backend/flash_map_backend.h"
+#include "lpm.h"
 #include "reset_reason.h"
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
+#include "topology_sampler.h"
 #include "util.h"
 #include <stdio.h>
-#include "lpm.h"
 
 typedef struct __attribute__((__packed__)) {
   uint32_t magic;
@@ -27,6 +28,7 @@ typedef struct __attribute__((__packed__)) {
 #define REBOOT_MAGIC (0xbaadc0de)
 #define POWER_CONTROLLER_TIMEOUT_MS (5 * 1000)
 #define INTERNAL_FLASH_PAGE_SIZE (0x2000)
+#define TOPOLOGY_TIMEOUT_MS (5 * 1000)
 
 typedef struct {
   NvmPartition *dfu_cli_partition;
@@ -46,8 +48,7 @@ static void _ncp_dfu_finish(bool success, bm_dfu_err_t err, uint64_t node_id) {
   }
 }
 
-static void _update_success_cb(bool success, bm_dfu_err_t err,
-                               uint64_t node_id) {
+static void _update_success_cb(bool success, bm_dfu_err_t err, uint64_t node_id) {
   _ncp_dfu_finish(success, err, node_id);
 }
 
@@ -68,9 +69,8 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
     uint32_t bytes_remaining = dfu_start->image_size;
     while (bytes_remaining) {
       size_t chunk_size = MIN(bytes_remaining, COPY_BUFFER_SIZE);
-      if (!_ctx.dfu_cli_partition->read(offset + DFU_IMG_START_OFFSET_BYTES,
-                                        copy_buffer, chunk_size,
-                                        FLASH_WRITE_READ_TIMEOUT_MS)) {
+      if (!_ctx.dfu_cli_partition->read(offset + DFU_IMG_START_OFFSET_BYTES, copy_buffer,
+                                        chunk_size, FLASH_WRITE_READ_TIMEOUT_MS)) {
         printf("Failed to read dfu partition\n");
         break;
       }
@@ -92,9 +92,31 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
   return rval;
 }
 
-static bool _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
-  bool rval = false;
+static bm_dfu_err_t _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
+  bm_dfu_err_t rval = BM_DFU_ERR_ABORTED;
   do {
+    uint64_t node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+    size_t node_list_size = sizeof(node_list);
+    uint32_t num_nodes;
+    if (!topology_sampler_get_node_list(node_list, node_list_size, num_nodes,
+                                        TOPOLOGY_TIMEOUT_MS)) {
+      rval = BM_DFU_ERR_UNKNOWN_NODE_ID;
+      break;
+    }
+
+    // Check if the node_id is in the list
+    uint32_t i;
+    for (i = 0; i < num_nodes; i++) {
+      if (node_list[i] == dfu_start->node_id) {
+        break;
+      }
+    }
+    // If we didn't find the node_id in the list, return an error
+    if (i == num_nodes) {
+      rval = BM_DFU_ERR_UNKNOWN_NODE_ID;
+      break;
+    }
+
     bm_dfu_img_info_t info = {
         .image_size = dfu_start->image_size,
         .chunk_size = dfu_start->chunk_size,
@@ -104,19 +126,22 @@ static bool _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
         .filter_key = dfu_start->filter_key,
         .gitSHA = dfu_start->gitSHA,
     };
-    rval = bm_dfu_initiate_update(info, dfu_start->node_id, _update_success_cb,
-                                  NODE_UPDATE_TIMEOUT_MS);
+    if (!bm_dfu_initiate_update(info, dfu_start->node_id, _update_success_cb,
+                                NODE_UPDATE_TIMEOUT_MS)) {
+      break;
+    }
+    rval = BM_DFU_ERR_NONE;
   } while (0);
   return rval;
 }
 
 bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
   bool rval = false;
+  bm_dfu_err_t err = BM_DFU_ERR_ABORTED;
   do {
     uint16_t computed_crc16;
-    if (!_ctx.dfu_cli_partition->crc16(DFU_IMG_START_OFFSET_BYTES,
-                                       dfu_start->image_size, computed_crc16,
-                                       IMG_CRC_TIMEOUT_MS)) {
+    if (!_ctx.dfu_cli_partition->crc16(DFU_IMG_START_OFFSET_BYTES, dfu_start->image_size,
+                                       computed_crc16, IMG_CRC_TIMEOUT_MS)) {
       break;
     }
     if (computed_crc16 != dfu_start->crc16) {
@@ -134,23 +159,24 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
         _ctx.power_controller_was_enabled = false;
       }
       // Wait for the power control to set the bus ON
-      if (_ctx.power_controller->waitForSignal(
-              true, pdMS_TO_TICKS(POWER_CONTROLLER_TIMEOUT_MS))) {
+      if (_ctx.power_controller->waitForSignal(true,
+                                               pdMS_TO_TICKS(POWER_CONTROLLER_TIMEOUT_MS))) {
         printf("Bus is ON! Queueing node update\n");
-        rval = _do_bcmp_update(dfu_start);
+        err = _do_bcmp_update(dfu_start);
+        rval = (err == BM_DFU_ERR_NONE);
       }
     }
   } while (0);
   if (!rval) {
-    _ncp_dfu_finish(rval, BM_DFU_ERR_ABORTED, dfu_start->node_id);
+    _ncp_dfu_finish(rval, err, dfu_start->node_id);
   }
   return rval;
 }
 
 bool ncp_dfu_chunk_cb(uint32_t offset, size_t length, uint8_t *data) {
   bool rval = false;
-  if (_ctx.dfu_cli_partition->write(DFU_IMG_START_OFFSET_BYTES + offset, data,
-                                    length, FLASH_WRITE_READ_TIMEOUT_MS)) {
+  if (_ctx.dfu_cli_partition->write(DFU_IMG_START_OFFSET_BYTES + offset, data, length,
+                                    FLASH_WRITE_READ_TIMEOUT_MS)) {
     if (bm_serial_dfu_send_chunk(offset, 0, NULL) == BM_SERIAL_OK) {
       rval = true;
     }
@@ -160,8 +186,7 @@ bool ncp_dfu_chunk_cb(uint32_t offset, size_t length, uint8_t *data) {
   return rval;
 }
 
-void ncp_dfu_init(NvmPartition *dfu_cli_partition,
-                  BridgePowerController *power_controller) {
+void ncp_dfu_init(NvmPartition *dfu_cli_partition, BridgePowerController *power_controller) {
   configASSERT(dfu_cli_partition);
   configASSERT(power_controller);
   _ctx.dfu_cli_partition = dfu_cli_partition;
