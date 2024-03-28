@@ -272,9 +272,14 @@ static void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t t
   } else if (strncmp(APP_PUB_SUB_RTC_ZERO_TOPIC, topic, topic_len) == 0) {
     if (type == APP_PUB_SUB_RTC_ZERO_TYPE && version == APP_PUB_SUB_RTC_ZERO_VERSION) {
       // turn off the power controller!
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                 "RTC 0 detected, turning off power controller!\n");
-      _main_bridge_power_controller->powerControlEnable(false);
+      if (!isRTCSet()) {
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                  "RTC 0 detected, turning off power controller!\n");
+        _main_bridge_power_controller->powerControlEnable(false);
+      } else {
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                  "RTC 0 detected, but RTC is not even set on the bridge!\n");
+      }
     } else {
       printf("Unrecognized version: %u and type: %u\n", version, type);
     }
