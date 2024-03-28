@@ -41,6 +41,11 @@ extern "C" {
 #define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TYPE 1
 #define APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_VERSION 1
 
+#define APP_PUB_SUB_RTC_ZERO_TOPIC "rtc/zero"
+#define APP_PUB_SUB_RTC_ZERO_TYPE 1
+#define APP_PUB_SUB_RTC_ZERO_VERSION 1
+#define APP_PUB_SUB_ZERO_DETECTED "zero_detected"
+
 typedef struct app_pub_sub_bm_bridge_sensor_report_data {
   uint32_t bm_config_crc32;
   size_t cbor_buffer_len;
