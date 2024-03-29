@@ -7,6 +7,8 @@
 #include "debug.h"
 #include "device_info.h"
 #include "rbr_sensor.h"
+#include "memfault_platform_core.h"
+#include "reset_reason.h"
 #include "sensorWatchdog.h"
 #include "uptime.h"
 #include "util.h"
@@ -33,6 +35,8 @@ static uint64_t last_payload_power_on_time = 0;
 static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
 
+static bool sent_reset_reason = false;
+
 void setup(void) {
   configASSERT(systemConfigurationPartition);
   uint32_t sensor_type = static_cast<uint32_t>(BmRbrDataMsg::SensorType_t::UNKNOWN);
@@ -55,6 +59,19 @@ void loop(void) {
   // Read and handle line from sensor
   // which may be data or a command response
   static BmRbrDataMsg::Data d;
+  static uint32_t last_probe_time_ms = uptimeGetMs();
+
+  if (uptimeGetMs() > 10000 && !sent_reset_reason) {
+    sent_reset_reason = true;
+    ResetReason_t resetReason = checkResetReason();
+    uint32_t pc = memfault_get_pc();
+    uint32_t lr = memfault_get_lr();
+    bm_printf(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+  }
+
+
   if (rbr_sensor.getData(d)) {
     SensorWatchdog::SensorWatchdogPet(BM_RBR_WATCHDOG_ID);
     static uint8_t cbor_buf[BM_RBR_DATA_MSG_MAX_SIZE];
