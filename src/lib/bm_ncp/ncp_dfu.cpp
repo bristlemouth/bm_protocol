@@ -112,7 +112,7 @@ static bm_dfu_err_t _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
       }
     }
     // If we didn't find the node_id in the list, return an error
-    if (i == num_nodes) {
+    if (i >= num_nodes) {
       rval = BM_DFU_ERR_UNKNOWN_NODE_ID;
       break;
     }
