@@ -142,9 +142,11 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
     uint16_t computed_crc16;
     if (!_ctx.dfu_cli_partition->crc16(DFU_IMG_START_OFFSET_BYTES, dfu_start->image_size,
                                        computed_crc16, IMG_CRC_TIMEOUT_MS)) {
+      err = BM_DFU_ERR_BAD_CRC;
       break;
     }
     if (computed_crc16 != dfu_start->crc16) {
+      err = BM_DFU_ERR_BAD_CRC;
       break;
     }
     if (getNodeId() == dfu_start->node_id) {
