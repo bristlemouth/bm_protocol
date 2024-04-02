@@ -110,7 +110,7 @@ typedef struct {
 // Queue used to handle all tx/rx/irq events
 static QueueHandle_t    _eth_evt_queue;
 static bool _adin_thread_paused = false;
-static rxMsgEvt_t* adin_rx_buf_mem[RX_QUEUE_NUM_ENTRIES_RAW];
+static rxMsgEvt_t* adin_rx_buf_mem[RX_QUEUE_NUM_ENTRIES];
 static void free_tx_msg_req(txMsgEvt_t *txMsg);
 static rxMsgEvt_t *createRxMsgReq(adin2111_DeviceHandle_t hDevice, uint16_t buf_len);
 static bool resume_pause_adin_task(bool start, TaskHandle_t task_to_notify, uint32_t timeout_ms);
