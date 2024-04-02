@@ -42,7 +42,7 @@ extern "C" {
 #endif
 /*! Size of the Rx queue, can be previously defined by the application. */
 #if !defined(RX_QUEUE_NUM_ENTRIES)
-#define RX_QUEUE_NUM_ENTRIES            (8)
+#define RX_QUEUE_NUM_ENTRIES            (8*4)
 #endif
 
 /*! Actual size of the Rx queue. */
@@ -400,7 +400,7 @@ typedef enum
  */
 typedef enum
 {
-    ADI_MAC_HTX_FIFO_SIZE_0K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_0K),     /*!< 0kB Host Tx FIFO.   */  
+    ADI_MAC_HTX_FIFO_SIZE_0K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_0K),     /*!< 0kB Host Tx FIFO.   */
     ADI_MAC_HTX_FIFO_SIZE_2K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_2K),     /*!< 2kB Host Tx FIFO.   */
     ADI_MAC_HTX_FIFO_SIZE_4K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_4K),     /*!< 4kB Host Tx FIFO.   */
     ADI_MAC_HTX_FIFO_SIZE_6K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_6K),     /*!< 6kB Host Tx FIFO.   */
