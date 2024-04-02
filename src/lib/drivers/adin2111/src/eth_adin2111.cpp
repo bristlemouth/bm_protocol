@@ -110,7 +110,7 @@ typedef struct {
 // Queue used to handle all tx/rx/irq events
 static QueueHandle_t    _eth_evt_queue;
 static bool _adin_thread_paused = false;
-static rxMsgEvt_t* adin_rx_buf_mem[RX_QUEUE_NUM_ENTRIES];
+static rxMsgEvt_t* adin_rx_buf_mem[RX_QUEUE_NUM_ENTRIES_RAW];
 static void free_tx_msg_req(txMsgEvt_t *txMsg);
 static rxMsgEvt_t *createRxMsgReq(adin2111_DeviceHandle_t hDevice, uint16_t buf_len);
 static bool resume_pause_adin_task(bool start, TaskHandle_t task_to_notify, uint32_t timeout_ms);
@@ -457,7 +457,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
         }
 
         // Allocate RX buffers for ADIN (Only need to do this once)
-        for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
+        for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES_RAW; idx++) {
             adin_rx_buf_mem[idx] = createRxMsgReq(hDevice, MAX_FRAME_BUF_SIZE);
             configASSERT(adin_rx_buf_mem[idx]);
 
@@ -768,7 +768,7 @@ int adin2111_power_cb(const void * devHandle, bool on, uint8_t port_mask) {
             if (rval != ADI_ETH_SUCCESS) {
                 break;
             }
-            for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
+            for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES_RAW; idx++) {
                 // Submit rx buffer to ADIN's RX queue
                 rval = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
                 if (rval != ADI_ETH_SUCCESS) {
