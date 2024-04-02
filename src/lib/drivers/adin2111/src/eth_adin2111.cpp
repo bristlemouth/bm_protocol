@@ -457,7 +457,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice, adin_rx_callb
         }
 
         // Allocate RX buffers for ADIN (Only need to do this once)
-        for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES_RAW; idx++) {
+        for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
             adin_rx_buf_mem[idx] = createRxMsgReq(hDevice, MAX_FRAME_BUF_SIZE);
             configASSERT(adin_rx_buf_mem[idx]);
 
@@ -768,7 +768,7 @@ int adin2111_power_cb(const void * devHandle, bool on, uint8_t port_mask) {
             if (rval != ADI_ETH_SUCCESS) {
                 break;
             }
-            for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES_RAW; idx++) {
+            for(uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
                 // Submit rx buffer to ADIN's RX queue
                 rval = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
                 if (rval != ADI_ETH_SUCCESS) {
