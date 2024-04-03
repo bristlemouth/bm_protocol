@@ -125,6 +125,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     for (cursor = networkTopology->front, counter = 0;
          (cursor != NULL) && (counter < _node_list.num_nodes);
          cursor = cursor->nextNode, counter++) {
+      vTaskDelay(pdMS_TO_TICKS(10));
       _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
       if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
                                     NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
