@@ -42,7 +42,7 @@ extern "C" {
 #endif
 /*! Size of the Rx queue, can be previously defined by the application. */
 #if !defined(RX_QUEUE_NUM_ENTRIES)
-#define RX_QUEUE_NUM_ENTRIES            (8)
+#define RX_QUEUE_NUM_ENTRIES            (64)
 #endif
 
 /*! Actual size of the Rx queue. */
