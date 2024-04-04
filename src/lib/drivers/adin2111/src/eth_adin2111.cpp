@@ -296,6 +296,9 @@ static void adin2111_thread(void *parameters) {
                     break;
                 }
                 case EVT_ETH_RX:{
+                    // Sometimes we get a RX event when we're paused. In order to make
+                    // sure we don't leak memory, lets resubmit the buffer just like
+                    // we would do if the adin was not paused.
                     rxMsgEvt_t *rxMsg = static_cast<rxMsgEvt_t *>(event.data);
                     // Re-submit buffer into ADIN's RX queue
                     adi_eth_Result_e result = adin2111_SubmitRxBuffer(rxMsg->dev, &rxMsg->bufDesc);
