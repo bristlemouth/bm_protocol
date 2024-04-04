@@ -295,6 +295,15 @@ static void adin2111_thread(void *parameters) {
                     free_tx_msg_req(static_cast<txMsgEvt_t *>(event.data));
                     break;
                 }
+                case EVT_ETH_RX:{
+                    rxMsgEvt_t *rxMsg = static_cast<rxMsgEvt_t *>(event.data);
+                    // Re-submit buffer into ADIN's RX queue
+                    adi_eth_Result_e result = adin2111_SubmitRxBuffer(rxMsg->dev, &rxMsg->bufDesc);
+                    if (result != ADI_ETH_SUCCESS) {
+                        printf("Unable to re-submit RX Buffer\n");
+                    }
+                    break;
+                }
                 default: {
                     if(event.data){
                         vPortFree(event.data);

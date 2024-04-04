@@ -126,7 +126,6 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
          (cursor != NULL) && (counter < _node_list.num_nodes);
          cursor = cursor->nextNode, counter++) {
       _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
-      vTaskDelay(pdMS_TO_TICKS(10));
       if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
                                     NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
         printf("Failed to send sys info request to node: %" PRIu64 "\n",
