@@ -134,9 +134,11 @@ void RbrCodaSensor::aggregate(void) {
           aggs.pressure_mean_deci_bar > PRESSURE_SAMPLE_MEMBER_MAX) {
         aggs.pressure_mean_deci_bar = NAN;
       }
-      if (aggs.pressure_stdev_deci_bar < PRESSURE_STDEV_SAMPLE_MEMBER_MIN ||
-          aggs.pressure_stdev_deci_bar > PRESSURE_STDEV_SAMPLE_MEMBER_MAX) {
+
+      if (aggs.pressure_stdev_deci_bar < PRESSURE_STDEV_SAMPLE_MEMBER_MIN) {
         aggs.pressure_stdev_deci_bar = NAN;
+      } else if (aggs.pressure_stdev_deci_bar > PRESSURE_STDEV_SAMPLE_MEMBER_MAX) {
+        aggs.pressure_stdev_deci_bar = HUGE_VAL;
       }
     }
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
