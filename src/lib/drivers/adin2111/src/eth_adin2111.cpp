@@ -295,6 +295,19 @@ static void adin2111_thread(void *parameters) {
                     free_tx_msg_req(static_cast<txMsgEvt_t *>(event.data));
                     break;
                 }
+                case EVT_ETH_RX:{
+                    // Sometimes we get a RX event when we're paused. In order to make
+                    // sure we don't leak memory, lets resubmit the buffer just like
+                    // we would do if the adin was not paused.
+                    rxMsgEvt_t *rxMsg = static_cast<rxMsgEvt_t *>(event.data);
+                    // Re-submit buffer into ADIN's RX queue
+                    adi_eth_Result_e result = adin2111_SubmitRxBuffer(rxMsg->dev, &rxMsg->bufDesc);
+                    if (result != ADI_ETH_SUCCESS) {
+                        printf("Unable to re-submit RX Buffer\n");
+                        configASSERT(0);
+                    }
+                    break;
+                }
                 default: {
                     if(event.data){
                         vPortFree(event.data);
@@ -347,6 +360,7 @@ static void adin2111_thread(void *parameters) {
                 adi_eth_Result_e result = adin2111_SubmitRxBuffer(rxMsg->dev, &rxMsg->bufDesc);
                 if (result != ADI_ETH_SUCCESS) {
                     printf("Unable to re-submit RX Buffer\n");
+                    configASSERT(0);
                 }
 
                 break;
@@ -773,6 +787,7 @@ int adin2111_power_cb(const void * devHandle, bool on, uint8_t port_mask) {
                 rval = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
                 if (rval != ADI_ETH_SUCCESS) {
                     printf("Unable to re-submit RX Buffer\n");
+                    configASSERT(0);
                     break;
                 }
             }

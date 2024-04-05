@@ -400,7 +400,7 @@ typedef enum
  */
 typedef enum
 {
-    ADI_MAC_HTX_FIFO_SIZE_0K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_0K),     /*!< 0kB Host Tx FIFO.   */  
+    ADI_MAC_HTX_FIFO_SIZE_0K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_0K),     /*!< 0kB Host Tx FIFO.   */
     ADI_MAC_HTX_FIFO_SIZE_2K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_2K),     /*!< 2kB Host Tx FIFO.   */
     ADI_MAC_HTX_FIFO_SIZE_4K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_4K),     /*!< 4kB Host Tx FIFO.   */
     ADI_MAC_HTX_FIFO_SIZE_6K  = (MAC_FIFO_SIZE_HTX_SIZE_TXSIZE_6K),     /*!< 6kB Host Tx FIFO.   */
