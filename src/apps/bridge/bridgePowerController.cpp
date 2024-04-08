@@ -16,12 +16,13 @@
 BridgePowerController::BridgePowerController(
     IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs,
     uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subsamplingEnabled,
-    bool powerControllerEnabled, uint32_t alignmentS)
+    bool powerControllerEnabled, uint32_t alignmentS, bool ticksSamplingEnabled)
     : _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
       _sampleIntervalS(sampleIntervalMs / 1000), _sampleDurationS(sampleDurationMs / 1000),
       _subsampleIntervalS(subsampleIntervalMs / 1000),
       _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
-      _subsampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
+      _subsampleIntervalStartS(0), _alignmentS(alignmentS),
+      _ticksSamplingEnabled(ticksSamplingEnabled), _rtcSet(false), _initDone(false),
       _subsamplingEnabled(subsamplingEnabled), _configError(false), _adin_handle(NULL) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S || _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");

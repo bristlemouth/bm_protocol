@@ -92,6 +92,20 @@ power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
                      strlen(AppConfig::ALIGNMENT_INTERVAL_5MIN), pwrcfg.alignmentInterval5Min);
     save_config = true;
   }
+
+  pwrcfg.ticksSamplingEnabled = BridgePowerController::DEFAULT_TICKS_SAMPLING_ENABLED;
+  if (!syscfg.getConfig(AppConfig::kTicksSamplingEnabled,
+                        strlen(AppConfig::kTicksSamplingEnabled),
+                        pwrcfg.ticksSamplingEnabled)) {
+    bridgeLogPrint(
+        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+        "Failed to get alignment ticks sampling enabled from config, using default value and "
+        "writing to config: %" PRIu32 "ms\n",
+        pwrcfg.ticksSamplingEnabled);
+    syscfg.setConfig(AppConfig::kTicksSamplingEnabled, strlen(AppConfig::kTicksSamplingEnabled),
+                     pwrcfg.ticksSamplingEnabled);
+    save_config = true;
+  }
   if (save_config) {
     syscfg.saveConfig(false);
   }
