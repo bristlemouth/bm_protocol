@@ -22,7 +22,7 @@ BridgePowerController::BridgePowerController(
       _subsampleIntervalS(subsampleIntervalMs / 1000),
       _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
       _subsampleIntervalStartS(0), _alignmentS(alignmentS),
-      _ticksSamplingEnabled(ticksSamplingEnabled), _rtcSet(false), _initDone(false),
+      _ticksSamplingEnabled(ticksSamplingEnabled), _timebaseSet(false), _initDone(false),
       _subsamplingEnabled(subsamplingEnabled), _configError(false), _adin_handle(NULL) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S || _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
@@ -75,7 +75,7 @@ BridgePowerController::BridgePowerController(
 void BridgePowerController::powerControlEnable(bool enable) {
   _powerControlEnabled = enable;
   if (enable) {
-    uint32_t currentCycleS = getEpochS();
+    uint32_t currentCycleS = getCurrentTimeS();
     if (_sampleIntervalStartS < currentCycleS) {
       _sampleIntervalStartS =
           _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
@@ -168,11 +168,13 @@ void BridgePowerController::_update(void) {
                      _powerControlEnabled, _sampleDurationS, _sampleIntervalS,
                      _subsamplingEnabled, _subsampleDurationS, _subsampleIntervalS,
                      _alignmentS);
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Using %s timebase\n",
+                     _ticksSamplingEnabled ? "ticks" : "RTC");
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                      "Bridge State Init Complete\n");
-      checkAndUpdateRTC();
-      uint32_t currentCycleS = getEpochS();
-      if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
+      checkAndUpdateTimebase();
+      uint32_t currentCycleS = getCurrentTimeS();
+      if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
         time_to_sleep_ms =
             MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
         // The default state until first sample interval depends
@@ -180,8 +182,8 @@ void BridgePowerController::_update(void) {
         powerBusAndSetSignal(!_powerControlEnabled);
       }
       _initDone = true;
-    } else if (_powerControlEnabled && _rtcSet) { // Sampling Enabled
-      uint32_t currentCycleS = getEpochS();
+    } else if (_powerControlEnabled && _timebaseSet) { // Sampling Enabled
+      uint32_t currentCycleS = getCurrentTimeS();
       uint32_t sampleTimeRemainingS =
           timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
       if (sampleTimeRemainingS) {
@@ -238,7 +240,7 @@ void BridgePowerController::_update(void) {
                          "Bridge State Disabled - bus on\n");
           powerBusAndSetSignal(true);
         }
-      } else if (!_rtcSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
+      } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
         if (enabled) { // If our RTC is not set and we've enabled the power manager, we should disable the VBUS
           bridgeLogPrint(
               BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
@@ -247,14 +249,14 @@ void BridgePowerController::_update(void) {
         }
 
         // Align the first sample to UTC when the RTC finally gets set
-        checkAndUpdateRTC();
-        uint32_t currentCycleS = getEpochS();
-        if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
+        checkAndUpdateTimebase();
+        uint32_t currentCycleS = getCurrentTimeS();
+        if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
           time_to_sleep_ms =
               MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
         }
       }
-      checkAndUpdateRTC();
+      checkAndUpdateTimebase();
     }
 
   } while (0);
@@ -295,20 +297,24 @@ bool BridgePowerController::getAdinDevice() {
   return rval;
 }
 
-void BridgePowerController::checkAndUpdateRTC() {
-  if (isRTCSet() && !_rtcSet) {
-    printf("Bridge Power Controller RTC is set.\n");
+void BridgePowerController::checkAndUpdateTimebase() {
+  if ((isRTCSet() && !_timebaseSet) || _ticksSamplingEnabled) {
+    printf("Bridge Power Controller timebase is set.\n");
     _sampleIntervalStartS =
-        _alignNextInterval(getEpochS(), _sampleIntervalStartS, _sampleIntervalS);
+        _alignNextInterval(getCurrentTimeS(), _sampleIntervalStartS, _sampleIntervalS);
     _subsampleIntervalStartS = _sampleIntervalStartS;
-    _rtcSet = true;
+    _timebaseSet = true;
   }
 }
 
-uint32_t BridgePowerController::getEpochS() {
-  RTCTimeAndDate_t datetime;
-  rtcGet(&datetime);
-  return static_cast<uint32_t>(rtcGetMicroSeconds(&datetime) * 1e-6);
+uint32_t BridgePowerController::getCurrentTimeS() {
+  if (_ticksSamplingEnabled) {
+    return pdTICKS_TO_MS(xTaskGetTickCount()) * 1e-3;
+  } else {
+    RTCTimeAndDate_t datetime;
+    rtcGet(&datetime);
+    return static_cast<uint32_t>(rtcGetMicroSeconds(&datetime) * 1e-6);
+  }
 }
 
 /*!

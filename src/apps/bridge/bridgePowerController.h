@@ -35,8 +35,8 @@ private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
   bool getAdinDevice();
-  void checkAndUpdateRTC();
-  uint32_t getEpochS();
+  void checkAndUpdateTimebase();
+  uint32_t getCurrentTimeS();
 
 public:
   static constexpr uint32_t OFF = (1 << 0);
@@ -78,7 +78,7 @@ private:
   uint32_t _alignmentS;
   bool _ticksSamplingEnabled;
 
-  bool _rtcSet;
+  bool _timebaseSet;
   bool _initDone;
   bool _subsamplingEnabled;
   bool _configError;
