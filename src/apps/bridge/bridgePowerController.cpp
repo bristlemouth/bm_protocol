@@ -241,14 +241,14 @@ void BridgePowerController::_update(void) {
           powerBusAndSetSignal(true);
         }
       } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
-        if (enabled) { // If our RTC is not set and we've enabled the power manager, we should disable the VBUS
-          bridgeLogPrint(
-              BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-              "Bridge State Disabled - controller enabled, but RTC is not yet set - bus off\n");
+        if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "Bridge State Disabled - controller enabled, but timebase is not yet "
+                         "set - bus off\n");
           powerBusAndSetSignal(false);
         }
 
-        // Align the first sample to UTC when the RTC finally gets set
+        // Align the first sample to UTC or tick offset when the timebase finally gets set
         checkAndUpdateTimebase();
         uint32_t currentCycleS = getCurrentTimeS();
         if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
@@ -298,7 +298,7 @@ bool BridgePowerController::getAdinDevice() {
 }
 
 void BridgePowerController::checkAndUpdateTimebase() {
-  if ((isRTCSet() && !_timebaseSet) || _ticksSamplingEnabled) {
+  if ((isRTCSet() || _ticksSamplingEnabled) && !_timebaseSet) {
     printf("Bridge Power Controller timebase is set.\n");
     _sampleIntervalStartS =
         _alignNextInterval(getCurrentTimeS(), _sampleIntervalStartS, _sampleIntervalS);
