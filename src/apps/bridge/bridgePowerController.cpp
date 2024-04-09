@@ -16,12 +16,13 @@
 BridgePowerController::BridgePowerController(
     IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs,
     uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subsamplingEnabled,
-    bool powerControllerEnabled, uint32_t alignmentS)
+    bool powerControllerEnabled, uint32_t alignmentS, bool ticksSamplingEnabled)
     : _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
       _sampleIntervalS(sampleIntervalMs / 1000), _sampleDurationS(sampleDurationMs / 1000),
       _subsampleIntervalS(subsampleIntervalMs / 1000),
       _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
-      _subsampleIntervalStartS(0), _alignmentS(alignmentS), _rtcSet(false), _initDone(false),
+      _subsampleIntervalStartS(0), _alignmentS(alignmentS),
+      _ticksSamplingEnabled(ticksSamplingEnabled), _timebaseSet(false), _initDone(false),
       _subsamplingEnabled(subsamplingEnabled), _configError(false), _adin_handle(NULL) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S || _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
@@ -66,15 +67,15 @@ BridgePowerController::BridgePowerController(
 }
 
 /*!
-* Enable / disable the power control. If the power control is disabled (and RTC is set) the bus is ON.
-* If the the power control is disabled and RTC is not set, the bus is OFF
+* Enable / disable the power control. If the power control is disabled (and timebase is set) the bus is ON.
+* If the the power control is disabled and timebase is not set, the bus is OFF
 * If power control is enabled, bus control is set by the min/max control parameters.
 * \param[in] : enable - true if power control is enabled, false if off.
 */
 void BridgePowerController::powerControlEnable(bool enable) {
   _powerControlEnabled = enable;
   if (enable) {
-    uint32_t currentCycleS = getEpochS();
+    uint32_t currentCycleS = getCurrentTimeS();
     if (_sampleIntervalStartS < currentCycleS) {
       _sampleIntervalStartS =
           _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
@@ -138,9 +139,10 @@ void BridgePowerController::subsampleEnable(bool enable) { _subsamplingEnabled =
 
 bool BridgePowerController::isSubsampleEnabled() { return _subsamplingEnabled; }
 
-static void stateLogPrintTarget(const char *state, uint32_t target) {
+void BridgePowerController::stateLogPrintTarget(const char *state, uint32_t target) {
   bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                 "Bridge State %s until %" PRIu32 " epoch seconds\n", state, target);
+                 "Bridge State %s until %" PRIu32 " %s seconds\n", state, target,
+                 (_ticksSamplingEnabled) ? "uptime" : "epoch");
 }
 
 void BridgePowerController::_update(void) {
@@ -167,11 +169,13 @@ void BridgePowerController::_update(void) {
                      _powerControlEnabled, _sampleDurationS, _sampleIntervalS,
                      _subsamplingEnabled, _subsampleDurationS, _subsampleIntervalS,
                      _alignmentS);
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Using %s timebase\n",
+                     _ticksSamplingEnabled ? "ticks" : "RTC");
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                      "Bridge State Init Complete\n");
-      checkAndUpdateRTC();
-      uint32_t currentCycleS = getEpochS();
-      if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
+      checkAndUpdateTimebase();
+      uint32_t currentCycleS = getCurrentTimeS();
+      if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
         time_to_sleep_ms =
             MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
         // The default state until first sample interval depends
@@ -179,8 +183,8 @@ void BridgePowerController::_update(void) {
         powerBusAndSetSignal(!_powerControlEnabled);
       }
       _initDone = true;
-    } else if (_powerControlEnabled && _rtcSet) { // Sampling Enabled
-      uint32_t currentCycleS = getEpochS();
+    } else if (_powerControlEnabled && _timebaseSet) { // Sampling Enabled
+      uint32_t currentCycleS = getCurrentTimeS();
       uint32_t sampleTimeRemainingS =
           timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
       if (sampleTimeRemainingS) {
@@ -237,23 +241,23 @@ void BridgePowerController::_update(void) {
                          "Bridge State Disabled - bus on\n");
           powerBusAndSetSignal(true);
         }
-      } else if (!_rtcSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
-        if (enabled) { // If our RTC is not set and we've enabled the power manager, we should disable the VBUS
-          bridgeLogPrint(
-              BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-              "Bridge State Disabled - controller enabled, but RTC is not yet set - bus off\n");
+      } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
+        if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "Bridge State Disabled - controller enabled, but timebase is not yet "
+                         "set - bus off\n");
           powerBusAndSetSignal(false);
         }
 
-        // Align the first sample to UTC when the RTC finally gets set
-        checkAndUpdateRTC();
-        uint32_t currentCycleS = getEpochS();
-        if (_rtcSet && _sampleIntervalStartS > currentCycleS) {
+        // Align the first sample to UTC or tick offset when the timebase finally gets set
+        checkAndUpdateTimebase();
+        uint32_t currentCycleS = getCurrentTimeS();
+        if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
           time_to_sleep_ms =
               MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
         }
       }
-      checkAndUpdateRTC();
+      checkAndUpdateTimebase();
     }
 
   } while (0);
@@ -294,20 +298,24 @@ bool BridgePowerController::getAdinDevice() {
   return rval;
 }
 
-void BridgePowerController::checkAndUpdateRTC() {
-  if (isRTCSet() && !_rtcSet) {
-    printf("Bridge Power Controller RTC is set.\n");
+void BridgePowerController::checkAndUpdateTimebase() {
+  if ((isRTCSet() || _ticksSamplingEnabled) && !_timebaseSet) {
+    printf("Bridge Power Controller timebase is set.\n");
     _sampleIntervalStartS =
-        _alignNextInterval(getEpochS(), _sampleIntervalStartS, _sampleIntervalS);
+        _alignNextInterval(getCurrentTimeS(), _sampleIntervalStartS, _sampleIntervalS);
     _subsampleIntervalStartS = _sampleIntervalStartS;
-    _rtcSet = true;
+    _timebaseSet = true;
   }
 }
 
-uint32_t BridgePowerController::getEpochS() {
-  RTCTimeAndDate_t datetime;
-  rtcGet(&datetime);
-  return static_cast<uint32_t>(rtcGetMicroSeconds(&datetime) * 1e-6);
+uint32_t BridgePowerController::getCurrentTimeS() {
+  if (_ticksSamplingEnabled) {
+    return pdTICKS_TO_MS(xTaskGetTickCount()) * 1e-3;
+  } else {
+    RTCTimeAndDate_t datetime;
+    rtcGet(&datetime);
+    return static_cast<uint32_t>(rtcGetMicroSeconds(&datetime) * 1e-6);
+  }
 }
 
 /*!
@@ -315,7 +323,7 @@ uint32_t BridgePowerController::getEpochS() {
  *
  * Given the current epoch time, the last interval start time, and the
  * duration of an interval, return the start time of the next interval
- * aligned to UTC according to the alignment config value.
+ * aligned to uptime or UTC according to the alignment config value.
  *
  * \param[in] nowEpochS - The current time in seconds since epoch.
  * \param[in] lastIntervalStartS - The start time of the last interval in seconds since epoch.
@@ -327,12 +335,12 @@ uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
                                                    uint32_t sampleIntervalS) {
   uint32_t alignedEpoch = lastIntervalStartS + sampleIntervalS;
   while (alignedEpoch < nowEpochS) {
-    // If the aligned epoch is in the past, the RTC must have just jumped forward.
+    // If the aligned epoch is in the past, the timebase must have just jumped forward.
     // We need to add sample intervals until we reach the future.
     alignedEpoch += sampleIntervalS;
   }
 
-  // If an alignment is configured, we need to align sampling intervals to UTC.
+  // If an alignment is configured, we need to align sampling intervals to uptime or UTC.
   if (_alignmentS != 0) {
     uint32_t remainder = alignedEpoch % _alignmentS;
     if (remainder != 0) {
@@ -342,8 +350,8 @@ uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
       // but the code would get much more complicated.
       alignedEpoch += adjustment;
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                     "Aligning next sample interval to UTC by delaying an additional %" PRIu32
-                     " seconds to %" PRIu32 "\n",
+                     "Aligning next sample interval to %s by delaying an additional %" PRIu32
+                     " seconds to %" PRIu32 "\n", (_ticksSamplingEnabled) ? "uptime" : "UTC",
                      adjustment, alignedEpoch);
     }
   }

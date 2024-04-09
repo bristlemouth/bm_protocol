@@ -19,12 +19,14 @@ constexpr const char *SAMPLES_PER_REPORT = "samplesPerReport";
 constexpr const char *CURRENT_READING_PERIOD_MS = "currentReadingPeriodMs";
 constexpr const char *SOFT_READING_PERIOD_MS = "softReadingPeriodMs";
 constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
+constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
 
 } // namespace AppConfig
 
 struct power_config_s {
   uint32_t sampleIntervalMs, sampleDurationMs, subsampleIntervalMs, subsampleDurationMs,
-      subsampleEnabled, bridgePowerControllerEnabled, alignmentInterval5Min;
+      subsampleEnabled, bridgePowerControllerEnabled, alignmentInterval5Min,
+      ticksSamplingEnabled;
 };
 
 power_config_s getPowerConfigs(cfg::Configuration &syscfg);

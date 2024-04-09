@@ -11,13 +11,12 @@
 class BridgePowerController {
 public:
   explicit BridgePowerController(
-      IOPinHandle_t &BusPowerPin,
-      uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000,
       uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000,
       uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S * 1000,
       bool subsamplingEnabled = false, bool powerControllerEnabled = false,
-      uint32_t alignmentS = DEFAULT_ALIGNMENT_S);
+      uint32_t alignmentS = DEFAULT_ALIGNMENT_S, bool ticksSamplingEnabled = false);
   void powerControlEnable(bool enable);
   bool isPowerControlEnabled();
   void subsampleEnable(bool enable);
@@ -36,8 +35,9 @@ private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
   bool getAdinDevice();
-  void checkAndUpdateRTC();
-  uint32_t getEpochS();
+  void checkAndUpdateTimebase();
+  uint32_t getCurrentTimeS();
+  void stateLogPrintTarget(const char *state, uint32_t target);
 
 public:
   static constexpr uint32_t OFF = (1 << 0);
@@ -49,7 +49,8 @@ public:
   static constexpr uint32_t DEFAULT_SUBSAMPLE_INTERVAL_S = (60);
   static constexpr uint32_t DEFAULT_SUBSAMPLE_DURATION_S = (30);
   static constexpr uint32_t MIN_SAMPLE_DURATION_S = (6);
-  static constexpr uint32_t MIN_SAMPLE_INTERVAL_S = (6); // Set to 6s to allow for enough time for devices to broadcast for the topology.
+  static constexpr uint32_t MIN_SAMPLE_INTERVAL_S =
+      (6); // Set to 6s to allow for enough time for devices to broadcast for the topology.
   static constexpr uint32_t MAX_SAMPLE_INTERVAL_S = (24 * 60 * 60);
   static constexpr uint32_t MAX_SAMPLE_DURATION_S = (24 * 60 * 60);
   static constexpr uint32_t MIN_SUBSAMPLE_INTERVAL_S = (6);
@@ -60,6 +61,7 @@ public:
   static constexpr uint32_t ALIGNMENT_INCREMENT_S = (5 * 60);
   static constexpr uint32_t MAX_ALIGNMENT_S = (24 * 60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_5_MIN_INTERVAL = (1);
+  static constexpr uint32_t DEFAULT_TICKS_SAMPLING_ENABLED = (0);
 
 private:
   static constexpr uint32_t MIN_TASK_SLEEP_MS = (1000);
@@ -75,8 +77,9 @@ private:
   uint32_t _sampleIntervalStartS;
   uint32_t _subsampleIntervalStartS;
   uint32_t _alignmentS;
+  bool _ticksSamplingEnabled;
 
-  bool _rtcSet;
+  bool _timebaseSet;
   bool _initDone;
   bool _subsamplingEnabled;
   bool _configError;
