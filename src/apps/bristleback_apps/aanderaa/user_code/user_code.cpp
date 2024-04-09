@@ -176,7 +176,7 @@ static char payload_buffer[2048];
 static char aanderaaTopic[BM_TOPIC_MAX_LEN];
 static int aanderaaTopicStrLen;
 
-// static bool sent_rtc_zero = false;
+static bool sent_rtc_zero = false;
 static bool sent_reset_reason = false;
 
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
@@ -322,16 +322,17 @@ void loop(void) {
   /* USER LOOP CODE GOES HERE */
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
 
-  // if (!sent_rtc_zero && !isRTCSet() && uptimeGetMs() > 10000) {
-  //   // Send a message to the RTC zero topic to indicate that the RTC has been zeroed.
-  //   if (bm_pub_wl(APP_PUB_SUB_RTC_ZERO_TOPIC, strlen(APP_PUB_SUB_RTC_ZERO_TOPIC),
-  //                 APP_PUB_SUB_ZERO_DETECTED, strlen(APP_PUB_SUB_ZERO_DETECTED),
-  //                 APP_PUB_SUB_RTC_ZERO_TYPE, APP_PUB_SUB_RTC_ZERO_VERSION)) {
-  //     sent_rtc_zero = true;
-  //   }
-  //   bm_printf(0, "RTC zero detected\n");
-  //   bm_fprintf(0, "rtc_zero.log", "RTC zero detected\n");
-  // }
+  if (!sent_rtc_zero && !isRTCSet() && uptimeGetMs() > 15000) {
+    // // Send a message to the RTC zero topic to indicate that the RTC has been zeroed.
+    // if (bm_pub_wl(APP_PUB_SUB_RTC_ZERO_TOPIC, strlen(APP_PUB_SUB_RTC_ZERO_TOPIC),
+    //               APP_PUB_SUB_ZERO_DETECTED, strlen(APP_PUB_SUB_ZERO_DETECTED),
+    //               APP_PUB_SUB_RTC_ZERO_TYPE, APP_PUB_SUB_RTC_ZERO_VERSION)) {
+    //   sent_rtc_zero = true;
+    // }
+    sent_rtc_zero = true;
+    bm_printf(0, "RTC zero detected\n");
+    bm_fprintf(0, "rtc_zero.log", "RTC zero detected\n");
+  }
   if (uptimeGetMs() > 10000 && !sent_reset_reason) {
     sent_reset_reason = true;
     ResetReason_t resetReason = checkResetReason();
