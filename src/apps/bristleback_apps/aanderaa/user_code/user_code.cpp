@@ -176,7 +176,7 @@ static char payload_buffer[2048];
 static char aanderaaTopic[BM_TOPIC_MAX_LEN];
 static int aanderaaTopicStrLen;
 
-static bool sent_rtc_zero = false;
+// static bool sent_rtc_zero = false;
 static bool sent_reset_reason = false;
 
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
