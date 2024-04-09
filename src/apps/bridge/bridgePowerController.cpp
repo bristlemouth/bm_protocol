@@ -67,8 +67,8 @@ BridgePowerController::BridgePowerController(
 }
 
 /*!
-* Enable / disable the power control. If the power control is disabled (and RTC is set) the bus is ON.
-* If the the power control is disabled and RTC is not set, the bus is OFF
+* Enable / disable the power control. If the power control is disabled (and timebase is set) the bus is ON.
+* If the the power control is disabled and timebase is not set, the bus is OFF
 * If power control is enabled, bus control is set by the min/max control parameters.
 * \param[in] : enable - true if power control is enabled, false if off.
 */
@@ -334,7 +334,7 @@ uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
                                                    uint32_t sampleIntervalS) {
   uint32_t alignedEpoch = lastIntervalStartS + sampleIntervalS;
   while (alignedEpoch < nowEpochS) {
-    // If the aligned epoch is in the past, the RTC must have just jumped forward.
+    // If the aligned epoch is in the past, the timebase must have just jumped forward.
     // We need to add sample intervals until we reach the future.
     alignedEpoch += sampleIntervalS;
   }
