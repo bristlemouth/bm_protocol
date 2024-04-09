@@ -323,7 +323,7 @@ uint32_t BridgePowerController::getCurrentTimeS() {
  *
  * Given the current epoch time, the last interval start time, and the
  * duration of an interval, return the start time of the next interval
- * aligned to UTC according to the alignment config value.
+ * aligned to uptime or UTC according to the alignment config value.
  *
  * \param[in] nowEpochS - The current time in seconds since epoch.
  * \param[in] lastIntervalStartS - The start time of the last interval in seconds since epoch.
@@ -340,7 +340,7 @@ uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
     alignedEpoch += sampleIntervalS;
   }
 
-  // If an alignment is configured, we need to align sampling intervals to UTC.
+  // If an alignment is configured, we need to align sampling intervals to uptime or UTC.
   if (_alignmentS != 0) {
     uint32_t remainder = alignedEpoch % _alignmentS;
     if (remainder != 0) {
