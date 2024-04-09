@@ -139,9 +139,10 @@ void BridgePowerController::subsampleEnable(bool enable) { _subsamplingEnabled =
 
 bool BridgePowerController::isSubsampleEnabled() { return _subsamplingEnabled; }
 
-static void stateLogPrintTarget(const char *state, uint32_t target) {
+void BridgePowerController::stateLogPrintTarget(const char *state, uint32_t target) {
   bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                 "Bridge State %s until %" PRIu32 " epoch seconds\n", state, target);
+                 "Bridge State %s until %" PRIu32 " %s seconds\n", state, target,
+                 (_ticksSamplingEnabled) ? "uptime" : "epoch");
 }
 
 void BridgePowerController::_update(void) {

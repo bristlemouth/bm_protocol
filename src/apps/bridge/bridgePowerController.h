@@ -37,6 +37,7 @@ private:
   bool getAdinDevice();
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
+  void stateLogPrintTarget(const char *state, uint32_t target);
 
 public:
   static constexpr uint32_t OFF = (1 << 0);
