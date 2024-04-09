@@ -350,8 +350,8 @@ uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
       // but the code would get much more complicated.
       alignedEpoch += adjustment;
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                     "Aligning next sample interval to UTC by delaying an additional %" PRIu32
-                     " seconds to %" PRIu32 "\n",
+                     "Aligning next sample interval to %s by delaying an additional %" PRIu32
+                     " seconds to %" PRIu32 "\n", (_ticksSamplingEnabled) ? "uptime" : "UTC",
                      adjustment, alignedEpoch);
     }
   }
