@@ -80,7 +80,7 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       success = handleDataString(_payload_buffer, read_len, d);
     } else {
       bm_fprintf(0, RBR_RAW_LOG, "Invalid line from sensor: %.*s\n", read_len, _payload_buffer);
-      bm_printf(0, "Invalid line from sensor: %.*s\n", read_len, _payload_buffer);
+      bm_printf(0, "Invalid line from sensor: %.*s", read_len, _payload_buffer);
       printf("Invalid line from sensor: %.*s\n", read_len, _payload_buffer);
     }
   }
@@ -89,10 +89,10 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
   if (_awaitingProbeResponse && uptimeGetMs() - _lastProbeTime >= PROBE_TYPE_TIMEOUT_MS) {
     _awaitingProbeResponse = false;
     _sensorDropDebounceCount++;
-    if (_sensorDropDebounceCount >= SENSOR_DROP_DEBOUNCE_MAX_COUNT) {
+    if (_sensorDropDebounceCount == SENSOR_DROP_DEBOUNCE_MAX_COUNT) {
       _type = BmRbrDataMsg::SensorType::UNKNOWN;
       bm_fprintf(0, RBR_RAW_LOG, "RBR sensor was lost\n");
-      bm_printf(0, "RBR sensor was lost\n");
+      bm_printf(0, "RBR sensor was lost");
       printf("RBR sensor was lost\n");
     }
   }
@@ -104,7 +104,7 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
   // If the sensor was previously lost, print a message that it is back online.
   if (_sensorDropDebounceCount >= SENSOR_DROP_DEBOUNCE_MAX_COUNT) {
     bm_fprintf(0, RBR_RAW_LOG, "RBR sensor online\n");
-    bm_printf(0, "RBR sensor online\n");
+    bm_printf(0, "RBR sensor online");
     printf("RBR sensor online\n");
   }
   _sensorDropDebounceCount = 0;
@@ -118,7 +118,7 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
           CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
           static_cast<uint32_t>(BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE));
       bm_fprintf(0, RBR_RAW_LOG, "Detected temp & pressure sensor, saving config\n");
-      bm_printf(0, "Detected temp & pressure sensor, saving config\n");
+      bm_printf(0, "Detected temp & pressure sensor, saving config");
       printf("Detected temp & pressure sensor, saving config.\n");
       systemConfigurationPartition->saveConfig(); // reboot
     }
@@ -129,7 +129,7 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
           CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
           static_cast<uint32_t>(BmRbrDataMsg::SensorType::PRESSURE));
       bm_fprintf(0, RBR_RAW_LOG, "Detected pressure sensor, saving config\n");
-      bm_printf(0, "Detected pressure sensor, saving config\n");
+      bm_printf(0, "Detected pressure sensor, saving config");
       printf("Detected pressure sensor, saving config.\n");
       systemConfigurationPartition->saveConfig(); // reboot
     }
@@ -140,14 +140,14 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
           CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
           static_cast<uint32_t>(BmRbrDataMsg::SensorType::TEMPERATURE));
       bm_fprintf(0, RBR_RAW_LOG, "Detected temp sensor, saving config\n");
-      bm_printf(0, "Detected temp sensor, saving config\n");
+      bm_printf(0, "Detected temp sensor, saving config");
       printf("Detected temp sensor, saving config.\n");
       systemConfigurationPartition->saveConfig(); // reboot
     }
     _type = BmRbrDataMsg::SensorType::TEMPERATURE;
   } else {
     bm_fprintf(0, RBR_RAW_LOG, "Invalid outputformat: %s\n", s);
-    bm_printf(0, "Invalid outputformat: %s\n", s);
+    bm_printf(0, "Invalid outputformat: %s", s);
     printf("Invalid outputformat: %s\n", s);
   }
 }

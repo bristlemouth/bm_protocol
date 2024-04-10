@@ -65,7 +65,7 @@ void loop(void) {
 static bool BmRbrWatchdogHandler(void *arg) {
   (void)arg;
   bm_fprintf(0, RbrSensor::RBR_RAW_LOG, "DEBUG - attempting FTL recovery\n");
-  bm_printf(0, "DEBUG - attempting FTL recovery\n");
+  bm_printf(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
   IOWrite(&BB_PL_BUCK_EN, 1);
   vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
