@@ -71,11 +71,10 @@ bool validSensorOutputformat(const char *s, size_t len) {
     if (len == 0) {
       break;
     }
-    if (strnstr(s, "outputformat channelslist =", len) == NULL) {
+    if (strstr(s, "outputformat channelslist =") == NULL) {
       break;
     }
-    if (strnstr(s, "pressure(dbar)", len) == NULL &&
-        strnstr(s, "temperature(C)", len) == NULL) {
+    if (strstr(s, "pressure(dbar)") == NULL && strstr(s, "temperature(C)") == NULL) {
       break;
     }
     valid = true;
@@ -89,7 +88,7 @@ void preprocessLine(char *str, uint16_t &len) {
   if (!len) {
     return;
   }
-  char *readyString = strnstr(str, readystr, len);
+  char *readyString = strstr(str, readystr);
   if (readyString) {
     char *endReady = readyString + strlen(readystr);
     if (endReady < str + len) {
