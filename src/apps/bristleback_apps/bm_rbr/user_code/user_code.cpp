@@ -14,7 +14,7 @@
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
 // Note that PROBE_TIME_PERIOD_MS should be different than the watchdog timeout
-// to avoid trying to probe while the sensor powered down.
+// to avoid always trying to probe while the sensor is powered down.
 static constexpr uint32_t PROBE_TIME_PERIOD_MS = 8 * 1000;
 static constexpr uint32_t BM_RBR_DATA_MSG_MAX_SIZE = 256;
 static constexpr uint8_t NO_MAX_TRIGGER = 0;
@@ -28,11 +28,11 @@ static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
 
 void setup(void) {
-  /* USER ONE-TIME SETUP CODE GOES HERE */
   configASSERT(systemConfigurationPartition);
   uint32_t sensor_type = static_cast<uint32_t>(BmRbrDataMsg::SensorType_t::UNKNOWN);
-  systemConfigurationPartition->getConfig("rbrCodaType", strlen("rbrCodaType"), sensor_type);
-  rbr_sensor.init(static_cast<BmRbrDataMsg::SensorType_t>(sensor_type));
+  systemConfigurationPartition->getConfig(RbrSensor::CFG_RBR_TYPE,
+                                          strlen(RbrSensor::CFG_RBR_TYPE), sensor_type);
+  rbr_sensor.init(static_cast<BmRbrDataMsg::SensorType_t>(sensor_type), PROBE_TIME_PERIOD_MS);
   SensorWatchdog::SensorWatchdogAdd(BM_RBR_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmRbrWatchdogHandler, NO_MAX_TRIGGER,
                                     RbrSensor::RBR_RAW_LOG);
@@ -43,9 +43,9 @@ void setup(void) {
 }
 
 void loop(void) {
-  /* USER LOOP CODE GOES HERE */
+  // Read and handle line from sensor
+  // which may be data or a command response
   static BmRbrDataMsg::Data d;
-  static uint32_t last_probe_time_ms = uptimeGetMs();
   if (rbr_sensor.getData(d)) {
     SensorWatchdog::SensorWatchdogPet(BM_RBR_WATCHDOG_ID);
     static uint8_t cbor_buf[BM_RBR_DATA_MSG_MAX_SIZE];
@@ -57,10 +57,9 @@ void loop(void) {
       printf("Failed to encode data message\n");
     }
   }
-  if (uptimeGetMs() - last_probe_time_ms > PROBE_TIME_PERIOD_MS) {
-    rbr_sensor.probeType();
-    last_probe_time_ms = uptimeGetMs();
-  }
+
+  // Probe sensor type periodically, write only, no read
+  rbr_sensor.maybeProbeType();
 }
 
 static bool BmRbrWatchdogHandler(void *arg) {

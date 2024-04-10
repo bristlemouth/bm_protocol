@@ -11,21 +11,21 @@ static bool validSpecialChar(char c);
 /*!
     * @brief Check if the sensor data string is valid
     * @param[in] s The sensor data string
-    * @param[in] strlen The length of the sensor data string
+    * @param[in] len The length of the sensor data string
     * @return True if the sensor data string is valid, false otherwise
     */
-bool validSensorDataString(const char *s, size_t strlen) {
+bool validSensorDataString(const char *s, size_t len) {
   configASSERT(s);
   bool rval = false;
   do {
     // 78 determined by 1.5 the maximum length of the longest sensor data string
     // coming from the RBRcoda3 T.ODO sensor
     // https://rbr-global.com/wp-content/uploads/2023/12/RBR-Sensors-RUG-0003296revN.pdf
-    if (strlen == 0 || strlen > 78) {
+    if (len == 0 || len > 78) {
       break;
     }
     bool invalid = false;
-    for (size_t i = 0; i < strlen; i++) {
+    for (size_t i = 0; i < len; i++) {
       if ((!isdigit(s[i]) && !isspace(s[i]) && !validSpecialChar(s[i]))) {
         invalid = true;
         break;
@@ -60,26 +60,27 @@ bool validSensorData(DataType_e type, double val) {
 /*!
     * @brief Check if the sensor output format configuration is valid
     * @param[in] s The sensor output format
-    * @param[in] strlen The length of the sensor output format
+    * @param[in] len The length of the sensor output format
     * @return True if the sensor output format is valid, false otherwise
     * @note See outputformat channelslist in https://rbr-global.com/wp-content/uploads/2023/12/RBR-Sensors-RUG-0003296revN.pdf
 */
-bool validSensorOutputformat(const char *s, size_t strlen) {
+bool validSensorOutputformat(const char *s, size_t len) {
   configASSERT(s);
-  bool rval = false;
+  bool valid = false;
   do {
-    if (strlen == 0) {
+    if (len == 0) {
       break;
     }
-    if (strstr(s, "outputformat channelslist =") == NULL) {
+    if (strnstr(s, "outputformat channelslist =", len) == NULL) {
       break;
     }
-    if (strstr(s, "pressure(dbar)") == NULL && strstr(s, "temperature(C)") == NULL) {
+    if (strnstr(s, "pressure(dbar)", len) == NULL &&
+        strnstr(s, "temperature(C)", len) == NULL) {
       break;
     }
-    rval = true;
+    valid = true;
   } while (0);
-  return rval;
+  return valid;
 }
 
 void preprocessLine(char *str, uint16_t &len) {
@@ -88,7 +89,7 @@ void preprocessLine(char *str, uint16_t &len) {
   if (!len) {
     return;
   }
-  char *readyString = strstr(str, readystr);
+  char *readyString = strnstr(str, readystr, len);
   if (readyString) {
     char *endReady = readyString + strlen(readystr);
     if (endReady < str + len) {
