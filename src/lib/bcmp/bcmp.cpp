@@ -74,6 +74,8 @@ typedef struct {
 
 } bcmp_queue_item_t;
 
+uint8_t bcmp_port_tracker = 0;
+
 static bcmpContext_t _ctx;
 
 static bool _message_list_add_message(bcmp_request_element *message);
@@ -93,7 +95,8 @@ static bool _message_is_sequenced_request(uint16_t type);
   \return none
 */
 void bcmp_link_change(uint8_t port, bool state) {
-  (void)port; // Not using the port for now
+  // (void)port; // Not using the port for now
+  bcmp_port_tracker = state ? bcmp_port_tracker | (1 << port) : bcmp_port_tracker & ~(1 << port);
   if(state) {
     // Send heartbeat since we just connected to someone and (re)start the
     // heartbeat timer
