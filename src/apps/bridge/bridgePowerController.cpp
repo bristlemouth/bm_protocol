@@ -197,13 +197,15 @@ void BridgePowerController::_update(void) {
             time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
             break;
           } else {
-            uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
+            const uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
             _subsampleIntervalStartS = nextSubsampleEpochS;
-            stateLogPrintTarget("Subsampling Off", nextSubsampleEpochS);
-            time_to_sleep_ms =
-                (currentCycleS < nextSubsampleEpochS)
-                    ? MAX((nextSubsampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
-                    : MIN_TASK_SLEEP_MS;
+            const uint32_t secondsUntilNextSubsample =
+                nextSubsampleEpochS > currentCycleS ? nextSubsampleEpochS - currentCycleS : 0;
+            // Check whether this is the last subsample within a sample duration
+            // If so, only sleep until sampling off, to align the next sample
+            const uint32_t timeToSleepS = MIN(sampleTimeRemainingS, secondsUntilNextSubsample);
+            stateLogPrintTarget("Subsampling Off", currentCycleS + timeToSleepS);
+            time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
             // Prevent bus thrash
             if (nextSubsampleEpochS > currentCycleS) {
               powerBusAndSetSignal(false);
@@ -351,8 +353,8 @@ uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
       alignedEpoch += adjustment;
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                      "Aligning next sample interval to %s by delaying an additional %" PRIu32
-                     " seconds to %" PRIu32 "\n", (_ticksSamplingEnabled) ? "uptime" : "UTC",
-                     adjustment, alignedEpoch);
+                     " seconds to %" PRIu32 "\n",
+                     (_ticksSamplingEnabled) ? "uptime" : "UTC", adjustment, alignedEpoch);
     }
   }
 
