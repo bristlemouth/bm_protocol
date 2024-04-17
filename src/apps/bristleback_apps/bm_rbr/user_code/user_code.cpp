@@ -24,6 +24,11 @@ static RbrSensor rbr_sensor;
 static char bmRbrTopic[BM_TOPIC_MAX_LEN];
 static int bmRbrTopicStrLen;
 
+// Configurable VOUT off duration when we want to reboot the RBR sensor.
+// We do this to recover from FTL: Failure To Launch.
+static constexpr char CFG_FTL_RECOVERY_MS[] = "ftlRecoveryMs";
+static uint32_t ftl_recovery_ms = 800;
+
 static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
 
@@ -32,6 +37,8 @@ void setup(void) {
   uint32_t sensor_type = static_cast<uint32_t>(BmRbrDataMsg::SensorType_t::UNKNOWN);
   systemConfigurationPartition->getConfig(RbrSensor::CFG_RBR_TYPE,
                                           strlen(RbrSensor::CFG_RBR_TYPE), sensor_type);
+  systemConfigurationPartition->getConfig(CFG_FTL_RECOVERY_MS, strlen(CFG_FTL_RECOVERY_MS),
+                                          ftl_recovery_ms);
   rbr_sensor.init(static_cast<BmRbrDataMsg::SensorType_t>(sensor_type), PROBE_TIME_PERIOD_MS);
   SensorWatchdog::SensorWatchdogAdd(BM_RBR_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmRbrWatchdogHandler, NO_MAX_TRIGGER,
@@ -68,7 +75,7 @@ static bool BmRbrWatchdogHandler(void *arg) {
   bm_printf(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
   IOWrite(&BB_PL_BUCK_EN, 1);
-  vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
+  vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
   rbr_sensor.flush();
   IOWrite(&BB_PL_BUCK_EN, 0);
   return true;
