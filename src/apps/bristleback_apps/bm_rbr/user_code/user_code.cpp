@@ -28,6 +28,7 @@ static int bmRbrTopicStrLen;
 // We do this to recover from FTL: Failure To Launch.
 static constexpr char CFG_FTL_RECOVERY_MS[] = "ftlRecoveryMs";
 static uint32_t ftl_recovery_ms = 800;
+static uint64_t last_payload_power_on_time = 0;
 
 static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
@@ -47,6 +48,7 @@ void setup(void) {
   IOWrite(&BB_VBUS_EN, 0);
   vTaskDelay(pdMS_TO_TICKS(100)); // Wait for Vbus to stabilize
   IOWrite(&BB_PL_BUCK_EN, 0);
+  last_payload_power_on_time = uptimeGetMs();
 }
 
 void loop(void) {
@@ -66,7 +68,7 @@ void loop(void) {
   }
 
   // Probe sensor type periodically, write only, no read
-  rbr_sensor.maybeProbeType();
+  rbr_sensor.maybeProbeType(last_payload_power_on_time);
 }
 
 static bool BmRbrWatchdogHandler(void *arg) {
@@ -78,6 +80,7 @@ static bool BmRbrWatchdogHandler(void *arg) {
   vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
   rbr_sensor.flush();
   IOWrite(&BB_PL_BUCK_EN, 0);
+  last_payload_power_on_time = uptimeGetMs();
   return true;
 }
 

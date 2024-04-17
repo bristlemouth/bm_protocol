@@ -56,8 +56,10 @@ void RbrSensor::init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_
 /*!
 * @brief Probe the sensor type if enough time has passed.
 */
-void RbrSensor::maybeProbeType(void) {
-  if (uptimeGetMs() - _lastProbeTime >= _minProbePeriodMs) {
+void RbrSensor::maybeProbeType(uint64_t last_power_on_time) {
+  uint64_t now = uptimeGetMs();
+  if (now - _lastProbeTime >= _minProbePeriodMs &&
+      now - last_power_on_time > _minProbePeriodMs) {
     PLUART::write((uint8_t *)typeCommand, strlen(typeCommand));
     _lastProbeTime = uptimeGetMs();
     _awaitingProbeResponse = true;

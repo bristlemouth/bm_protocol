@@ -12,7 +12,7 @@ public:
         _awaitingProbeResponse(false), _parserTwoArguments(",", 256, parserValueTypeOne, 2),
         _parserThreeArguments(",", 256, parserValueTypeTwo, 3){};
   void init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_ms);
-  void maybeProbeType(void);
+  void maybeProbeType(uint64_t last_power_on_time);
   bool getData(BmRbrDataMsg::Data &d);
   void flush(void);
 
