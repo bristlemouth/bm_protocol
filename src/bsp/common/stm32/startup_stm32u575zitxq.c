@@ -184,6 +184,139 @@ void MDF1_FLT5_IRQHandler         (void) __attribute__ ((weak, alias("Default_Ha
 void CORDIC_IRQHandler            (void) __attribute__ ((weak, alias("Default_Handler")));
 void FMAC_IRQHandler              (void) __attribute__ ((weak, alias("Default_Handler")));
 
+
+//
+// ISR Tracing notes:
+// To enable you must:
+// * define TRACE_ENABLE and TRACE_ISR for build
+// * Uncomment ISR_TRACE_WRAPPER for functions you want to trace
+// * Wrap each relevant IRQHandler in vector table with ISR_TRACE(xxxx_IRQHandler)
+//
+#ifdef TRACE_ISR
+// ISR_TRACE_WRAPPER(WWDG_IRQHandler);
+// ISR_TRACE_WRAPPER(PVD_PVM_IRQHandler);
+// ISR_TRACE_WRAPPER(RTC_IRQHandler);
+// ISR_TRACE_WRAPPER(RTC_S_IRQHandler);
+// ISR_TRACE_WRAPPER(TAMP_IRQHandler);
+// ISR_TRACE_WRAPPER(RAMCFG_IRQHandler);
+// ISR_TRACE_WRAPPER(FLASH_IRQHandler);
+// ISR_TRACE_WRAPPER(FLASH_S_IRQHandler);
+// ISR_TRACE_WRAPPER(GTZC_IRQHandler);
+// ISR_TRACE_WRAPPER(RCC_IRQHandler);
+// ISR_TRACE_WRAPPER(RCC_S_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI0_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI1_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI2_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI3_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI4_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI5_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI6_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI7_IRQHandler);
+ISR_TRACE_WRAPPER(EXTI8_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI9_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI10_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI11_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI12_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI13_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI14_IRQHandler);
+// ISR_TRACE_WRAPPER(EXTI15_IRQHandler);
+ISR_TRACE_WRAPPER(IWDG_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel0_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel1_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel2_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel3_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel4_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel5_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel6_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel7_IRQHandler);
+// ISR_TRACE_WRAPPER(ADC1_IRQHandler);
+// ISR_TRACE_WRAPPER(DAC1_IRQHandler);
+// ISR_TRACE_WRAPPER(FDCAN1_IT0_IRQHandler);
+// ISR_TRACE_WRAPPER(FDCAN1_IT1_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM1_BRK_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM1_UP_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM1_TRG_COM_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM1_CC_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM2_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM3_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM4_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM5_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM6_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM7_IRQHandler);
+ISR_TRACE_WRAPPER(TIM8_BRK_IRQHandler);
+ISR_TRACE_WRAPPER(TIM8_UP_IRQHandler);
+ISR_TRACE_WRAPPER(TIM8_TRG_COM_IRQHandler);
+ISR_TRACE_WRAPPER(TIM8_CC_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C1_EV_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C1_ER_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C2_EV_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C2_ER_IRQHandler);
+// ISR_TRACE_WRAPPER(SPI1_IRQHandler);
+ISR_TRACE_WRAPPER(SPI2_IRQHandler);
+// ISR_TRACE_WRAPPER(USART1_IRQHandler);
+// ISR_TRACE_WRAPPER(USART2_IRQHandler);
+ISR_TRACE_WRAPPER(USART3_IRQHandler);
+// ISR_TRACE_WRAPPER(UART4_IRQHandler);
+// ISR_TRACE_WRAPPER(UART5_IRQHandler);
+ISR_TRACE_WRAPPER(LPUART1_IRQHandler);
+// ISR_TRACE_WRAPPER(LPTIM1_IRQHandler);
+// ISR_TRACE_WRAPPER(LPTIM2_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM15_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM16_IRQHandler);
+// ISR_TRACE_WRAPPER(TIM17_IRQHandler);
+// ISR_TRACE_WRAPPER(COMP_IRQHandler);
+// ISR_TRACE_WRAPPER(OTG_FS_IRQHandler);
+// ISR_TRACE_WRAPPER(CRS_IRQHandler);
+// ISR_TRACE_WRAPPER(FMC_IRQHandler);
+// ISR_TRACE_WRAPPER(OCTOSPI1_IRQHandler);
+// ISR_TRACE_WRAPPER(PWR_S3WU_IRQHandler);
+// ISR_TRACE_WRAPPER(SDMMC1_IRQHandler);
+// ISR_TRACE_WRAPPER(SDMMC2_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel8_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel9_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel10_IRQHandler);
+// ISR_TRACE_WRAPPER(GPDMA1_Channel11_IRQHandler);
+ISR_TRACE_WRAPPER(GPDMA1_Channel12_IRQHandler);
+ISR_TRACE_WRAPPER(GPDMA1_Channel13_IRQHandler);
+ISR_TRACE_WRAPPER(GPDMA1_Channel14_IRQHandler);
+ISR_TRACE_WRAPPER(GPDMA1_Channel15_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C3_EV_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C3_ER_IRQHandler);
+// ISR_TRACE_WRAPPER(SAI1_IRQHandler);
+// ISR_TRACE_WRAPPER(SAI2_IRQHandler);
+// ISR_TRACE_WRAPPER(TSC_IRQHandler);
+// ISR_TRACE_WRAPPER(RNG_IRQHandler);
+// ISR_TRACE_WRAPPER(FPU_IRQHandler);
+// ISR_TRACE_WRAPPER(HASH_IRQHandler);
+// ISR_TRACE_WRAPPER(LPTIM3_IRQHandler);
+// ISR_TRACE_WRAPPER(SPI3_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C4_ER_IRQHandler);
+// ISR_TRACE_WRAPPER(I2C4_EV_IRQHandler);
+// ISR_TRACE_WRAPPER(MDF1_FLT0_IRQHandler);
+// ISR_TRACE_WRAPPER(MDF1_FLT1_IRQHandler);
+// ISR_TRACE_WRAPPER(MDF1_FLT2_IRQHandler);
+// ISR_TRACE_WRAPPER(MDF1_FLT3_IRQHandler);
+// ISR_TRACE_WRAPPER(UCPD1_IRQHandler);
+// ISR_TRACE_WRAPPER(ICACHE_IRQHandler);
+// ISR_TRACE_WRAPPER(LPTIM4_IRQHandler);
+// ISR_TRACE_WRAPPER(DCACHE1_IRQHandler);
+// ISR_TRACE_WRAPPER(ADF1_IRQHandler);
+// ISR_TRACE_WRAPPER(ADC4_IRQHandler);
+// ISR_TRACE_WRAPPER(LPDMA1_Channel0_IRQHandler);
+// ISR_TRACE_WRAPPER(LPDMA1_Channel1_IRQHandler);
+// ISR_TRACE_WRAPPER(LPDMA1_Channel2_IRQHandler);
+// ISR_TRACE_WRAPPER(LPDMA1_Channel3_IRQHandler);
+// ISR_TRACE_WRAPPER(DMA2D_IRQHandler);
+// ISR_TRACE_WRAPPER(DCMI_PSSI_IRQHandler);
+// ISR_TRACE_WRAPPER(OCTOSPI2_IRQHandler);
+// ISR_TRACE_WRAPPER(MDF1_FLT4_IRQHandler);
+// ISR_TRACE_WRAPPER(MDF1_FLT5_IRQHandler);
+// ISR_TRACE_WRAPPER(CORDIC_IRQHandler);
+// ISR_TRACE_WRAPPER(FMAC_IRQHandler);
+#else
+#define ISR_TRACE(NAME) NAME
+#endif
+
 /*----------------------------------------------------------------------------
   Exception / Interrupt Vector table
  *----------------------------------------------------------------------------*/
@@ -226,7 +359,7 @@ __attribute__ ((section(".isr_vector")))
   EXTI5_IRQHandler,
   EXTI6_IRQHandler,
   EXTI7_IRQHandler,
-  EXTI8_IRQHandler,
+  ISR_TRACE(EXTI8_IRQHandler),
   EXTI9_IRQHandler,
   EXTI10_IRQHandler,
   EXTI11_IRQHandler,
@@ -234,7 +367,7 @@ __attribute__ ((section(".isr_vector")))
   EXTI13_IRQHandler,
   EXTI14_IRQHandler,
   EXTI15_IRQHandler,
-  IWDG_IRQHandler,
+  ISR_TRACE(IWDG_IRQHandler),
   0,
   GPDMA1_Channel0_IRQHandler,
   GPDMA1_Channel1_IRQHandler,
@@ -258,22 +391,22 @@ __attribute__ ((section(".isr_vector")))
   TIM5_IRQHandler,
   TIM6_IRQHandler,
   TIM7_IRQHandler,
-  TIM8_BRK_IRQHandler,
-  TIM8_UP_IRQHandler,
-  TIM8_TRG_COM_IRQHandler,
-  TIM8_CC_IRQHandler,
+  ISR_TRACE(TIM8_BRK_IRQHandler),
+  ISR_TRACE(TIM8_UP_IRQHandler),
+  ISR_TRACE(TIM8_TRG_COM_IRQHandler),
+  ISR_TRACE(TIM8_CC_IRQHandler),
   I2C1_EV_IRQHandler,
   I2C1_ER_IRQHandler,
   I2C2_EV_IRQHandler,
   I2C2_ER_IRQHandler,
   SPI1_IRQHandler,
-  SPI2_IRQHandler,
+  ISR_TRACE(SPI2_IRQHandler),
   USART1_IRQHandler,
   USART2_IRQHandler,
-  USART3_IRQHandler,
+  ISR_TRACE(USART3_IRQHandler),
   UART4_IRQHandler,
   UART5_IRQHandler,
-  LPUART1_IRQHandler,
+  ISR_TRACE(LPUART1_IRQHandler),
   LPTIM1_IRQHandler,
   LPTIM2_IRQHandler,
   TIM15_IRQHandler,
@@ -291,10 +424,10 @@ __attribute__ ((section(".isr_vector")))
   GPDMA1_Channel9_IRQHandler,
   GPDMA1_Channel10_IRQHandler,
   GPDMA1_Channel11_IRQHandler,
-  GPDMA1_Channel12_IRQHandler,
-  GPDMA1_Channel13_IRQHandler,
-  GPDMA1_Channel14_IRQHandler,
-  GPDMA1_Channel15_IRQHandler,
+  ISR_TRACE(GPDMA1_Channel12_IRQHandler),
+  ISR_TRACE(GPDMA1_Channel13_IRQHandler),
+  ISR_TRACE(GPDMA1_Channel14_IRQHandler),
+  ISR_TRACE(GPDMA1_Channel15_IRQHandler),
   I2C3_EV_IRQHandler,
   I2C3_ER_IRQHandler,
   SAI1_IRQHandler,

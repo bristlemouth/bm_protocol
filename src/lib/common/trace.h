@@ -10,7 +10,7 @@
 
 #ifdef TRACE_USE_COREDEBUG
 // TODO - figure out how to make processor independent
-#include "stm32l496xx.h"
+#include "stm32u575xx.h"
 #endif
 
 // TODO - allow overriding by application
