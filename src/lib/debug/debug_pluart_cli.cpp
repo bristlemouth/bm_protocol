@@ -63,9 +63,25 @@ static BaseType_t plUartCliCommand( char *writeBuffer,
         printf("ERR Invalid parameters\n");
         break;
       }
+      // TODO - move this to an appropriate place in PLUART and guard with RS485 Half-Duplex flag
+      /// For more context see: https://www.notion.so/bristlemouth/Internal-Bristlemouth-VEMCO-Receiver-Integration-043988c56f84454db1a31381fd825beb?pvs=4#85bbbf0ea1cf43a69e7624427f5e2356
+      // Disable the Rx-enable (so we don't listen to ourselves).
+      // Enable the Tx-enable (DE).
+      IOWrite(&GPIO1, 1); // GPIO1 is connected to DE
+      IOWrite(&GPIO2, 1); // GPIO2 is connected to RE
+      // A 62 us setup delay is required, 1ms is the smallest thread-safe non-blocking RTOS delay we have?
+      vTaskDelay(1);
+      // TODO - make the termination configurable.
       const char* termination = {"\r\n"};
       PLUART::write((uint8_t*)argDataStr, strlen(argDataStr));
       PLUART::write((uint8_t*)termination, strlen(termination));
+      // TODO - use postTxCb to disable Tx driver and enable receive when Tx is complete.
+      /// Bodging in a 10ms hard-coded delay, which works for the RxLive, but will not work for all HD RS485 devices
+      vTaskDelay(10);
+      // Enable the Rx-receiver.
+      // Disable the Tx-driver (DE). This is to save power, and may be required for some devices.
+      IOWrite(&GPIO1, 0); // GPIO1 is connected to DE
+      IOWrite(&GPIO2, 0); // GPIO2 is connected to RE
     } else {
       printf("ERROR - Unsupported op!: %s\n", opStr);
     }
