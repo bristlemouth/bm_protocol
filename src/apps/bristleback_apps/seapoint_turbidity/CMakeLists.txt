@@ -66,7 +66,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/aanderaa_data_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/bm_turbidity_data_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/sensor_header_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
@@ -111,7 +111,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
     ${SRC_DIR}/lib/common/LineParser.cpp
-    ${SRC_DIR}/lib/common/OrderedKVPLineParser.cpp
+    ${SRC_DIR}/lib/common/OrderedSeparatorLineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc16.c
     ${SRC_DIR}/third_party/crc/crc32.c
@@ -244,6 +244,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/seapoint_turbidity_sensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
