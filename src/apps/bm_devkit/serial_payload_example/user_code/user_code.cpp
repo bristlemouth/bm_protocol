@@ -16,8 +16,11 @@
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
-#define DEFAULT_BAUD_RATE 9600
-#define DEFAULT_LINE_TERM 10 // FL / '\n', 0x0A
+#define DEFAULT_BAUD_RATE 115200
+/// NOTE - the RxLive uses Carriage Return for line term for incoming commands.
+/// It will terminate response lines with \r\n
+/// TODO - allow configuration of different Tx term and multi-char Rx line breaks
+#define DEFAULT_LINE_TERM 13 // CR / '\r', 0x0D
 #define BYTES_CLUSTER_MS 50
 
 // app_main passes a handle to the user config partition in NVM.
@@ -42,6 +45,8 @@ void setup(void) {
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
   PLUART::setBaud(baud_rate_config);
+  // Set the RS485 transceiver to Half-Duplex (HFIO = 1)
+  IOWrite(&BF_HFIO, 1);
   // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
   // Enable parsing lines and passing to user app.
