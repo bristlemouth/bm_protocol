@@ -19,7 +19,7 @@ static int seapoint_turbidity_topic_str_len;
 
 static int createSeapointTurbidityDataTopic(void) {
   int topic_str_len = snprintf(seapoint_turbidity_topic, BM_TOPIC_MAX_LEN,
-                               "sensor/%016" PRIx64 "/sofar/bm_sts_data", getNodeId());
+                               "sensor/%016" PRIx64 "/sofar/spt_sts_data", getNodeId());
   configASSERT(topic_str_len > 0 && topic_str_len < BM_TOPIC_MAX_LEN);
   return topic_str_len;
 }
