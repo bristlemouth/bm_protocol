@@ -69,12 +69,12 @@ bool SeapointTurbiditySensor::getData(BmTurbidityDataMsg::Data &d) {
     rtcPrint(rtc_time_str, NULL);
 
     if (_sensorBmLogEnable) {
-      bm_fprintf(0, SEAPOINT_TURBIDITY_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line:%.*s\n",
+      bm_fprintf(0, SEAPOINT_TURBIDITY_RAW_LOG, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
                  uptimeGetMs(), rtc_time_str, read_len, _payload_buffer);
     }
-    bm_printf(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line:%.*s\n", uptimeGetMs(),
+    bm_printf(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtc_time_str, read_len, _payload_buffer);
-    printf(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line:%.*s\n", uptimeGetMs(),
+    printf("turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
            rtc_time_str, read_len, _payload_buffer);
 
     if (_parser.parseLine(_payload_buffer, read_len)) {
