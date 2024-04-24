@@ -29,20 +29,22 @@ bool SeapointTurbiditySensor::subscribe() {
   return rval;
 }
 
-void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
-                                     const uint8_t *data, uint16_t data_len, uint8_t type,
-                                     uint8_t version) {
+void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, const char *topic,
+                                                           uint16_t topic_len,
+                                                           const uint8_t *data,
+                                                           uint16_t data_len, uint8_t type,
+                                                           uint8_t version) {
   (void)type;
   (void)version;
   printf("Seapoint Turbidity data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
-  SeapointTurbidity_t *turbidity_sensor = static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id));
+  SeapointTurbidity_t *turbidity_sensor =
+      static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id));
   if (turbidity_sensor && turbidity_sensor->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
     if (xSemaphoreTake(turbidity_sensor->_mutex, portMAX_DELAY)) {
       static BmSeapointTurbidityDataMsg::Data turbidity_data;
       if (BmSeapointTurbidityDataMsg::decode(turbidity_data, data, data_len) == CborNoError) {
-        char *log_buf =
-            static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
+        char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
         turbidity_sensor->turbidity_s_ftu.addSample(turbidity_data.s_signal);
         turbidity_sensor->turbidity_r_ftu.addSample(turbidity_data.r_signal);
@@ -71,16 +73,16 @@ void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, con
 
         size_t log_buflen =
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                     "%016" PRIx64 "," // Node Id
-                     "%" PRIi8 ","     // node_position
-                     "seapoint_turbidity,"        // node_app_name
-                     "%" PRIu64 ","    // reading_uptime_millis
-                     "%" PRIu64 "."    // reading_time_utc_ms seconds part
-                     "%03" PRIu32 ","  // reading_time_utc_ms millis part
-                     "%" PRIu64 "."    // sensor_reading_time_ms seconds part
-                     "%03" PRIu32 ","  // sensor_reading_time_ms millis part
-                     "%.4f,"           // s_signal
-                     "%.3f\n",         // r_signal
+                     "%016" PRIx64 ","     // Node Id
+                     "%" PRIi8 ","         // node_position
+                     "seapoint_turbidity," // node_app_name
+                     "%" PRIu64 ","        // reading_uptime_millis
+                     "%" PRIu64 "."        // reading_time_utc_ms seconds part
+                     "%03" PRIu32 ","      // reading_time_utc_ms millis part
+                     "%" PRIu64 "."        // sensor_reading_time_ms seconds part
+                     "%03" PRIu32 ","      // sensor_reading_time_ms millis part
+                     "%.4f,"               // s_signal
+                     "%.3f\n",             // r_signal
                      node_id, turbidity_sensor->node_position,
                      turbidity_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
@@ -105,9 +107,8 @@ void SeapointTurbiditySensor::aggregate(void) {
   configASSERT(log_buf);
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
     size_t log_buflen = 0;
-    seapoint_turbidity_aggregations_t turbidity_aggs = {.turbidity_s_mean_ftu = NAN,
-                                             .turbidity_r_mean_ftu = NAN,
-                                             .reading_count = 0};
+    seapoint_turbidity_aggregations_t turbidity_aggs = {
+        .turbidity_s_mean_ftu = NAN, .turbidity_r_mean_ftu = NAN, .reading_count = 0};
     if (turbidity_s_ftu.getNumSamples() > MIN_READINGS_FOR_AGGREGATION) {
       turbidity_aggs.turbidity_s_mean_ftu = turbidity_s_ftu.getMean();
       turbidity_aggs.turbidity_r_mean_ftu = turbidity_r_ftu.getMean();
@@ -132,23 +133,25 @@ void SeapointTurbiditySensor::aggregate(void) {
 
     int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
-    log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                          "%016" PRIx64 ","     // Node Id
-                          "%" PRIi8 ","         // node_position
-                          "seapoint_turbidity," // node_app_name
-                          "%s,"                 // timestamp(ticks/UTC)
-                          "%" PRIu32 ","        // reading_count
-                          "%.4f,"               // turbidity_s_mean_ftu
-                          "%.3f\n",             // turbidity_r_mean_ftu
-                          node_id, node_position, time_str, turbidity_aggs.reading_count,
-                          turbidity_aggs.turbidity_s_mean_ftu, turbidity_aggs.turbidity_r_mean_ftu);
+    log_buflen =
+        snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
+                 "%016" PRIx64 ","     // Node Id
+                 "%" PRIi8 ","         // node_position
+                 "seapoint_turbidity," // node_app_name
+                 "%s,"                 // timestamp(ticks/UTC)
+                 "%" PRIu32 ","        // reading_count
+                 "%.4f,"               // turbidity_s_mean_ftu
+                 "%.3f\n",             // turbidity_r_mean_ftu
+                 node_id, node_position, time_str, turbidity_aggs.reading_count,
+                 turbidity_aggs.turbidity_s_mean_ftu, turbidity_aggs.turbidity_r_mean_ftu);
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
     } else {
       printf("ERROR: Failed to print Seapoint Turbidity aggregation to log\n");
     }
-    reportBuilderAddToQueue(node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY, static_cast<void *>(&turbidity_aggs),
-                            sizeof(seapoint_turbidity_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    reportBuilderAddToQueue(
+        node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY, static_cast<void *>(&turbidity_aggs),
+        sizeof(seapoint_turbidity_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     turbidity_s_ftu.clear();
@@ -162,8 +165,9 @@ void SeapointTurbiditySensor::aggregate(void) {
 }
 
 SeapointTurbidity_t *createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_period_ms,
-                          uint32_t averager_max_samples) {
-  SeapointTurbidity_t *new_sub = static_cast<SeapointTurbidity_t *>(pvPortMalloc(sizeof(SeapointTurbidity_t)));
+                                                uint32_t averager_max_samples) {
+  SeapointTurbidity_t *new_sub =
+      static_cast<SeapointTurbidity_t *>(pvPortMalloc(sizeof(SeapointTurbidity_t)));
   new_sub = new (new_sub) SeapointTurbidity_t();
   configASSERT(new_sub);
 
