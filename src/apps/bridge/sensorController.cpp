@@ -276,7 +276,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
             abstractSensorAddSensorSub(rbr_coda_sub);
           }
         }
-      } else if (strncmp(reply.app_name, "spt_sts", MIN(reply.app_name_strlen, strlen("spt_sts"))) == 0) {
+      } else if (strncmp(reply.app_name, "spt_sts",
+                         MIN(reply.app_name_strlen, strlen("spt_sts"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
           uint32_t spt_sts_agg_period_ms =
               (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
@@ -284,7 +285,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                    strlen(AppConfig::SAMPLE_DURATION_MS),
                                    spt_sts_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (spt_sts_agg_period_ms / _ctx.spt_sts_reading_period_ms) + SptSts_t::N_SAMPLES_PAD;
+              (spt_sts_agg_period_ms / _ctx.spt_sts_reading_period_ms) +
+              SptSts_t::N_SAMPLES_PAD;
           SptSts_t *spt_sts_sub =
               createSptStsSub(reply.node_id, spt_sts_agg_period_ms, AVERAGER_MAX_SAMPLES);
           if (spt_sts_sub) {
