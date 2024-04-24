@@ -7,7 +7,7 @@
 #include "rbrCodaSensor.h"
 #include "reportBuilder.h"
 #include "softSensor.h"
-#include "sptStsSensor.h"
+#include "seapointTurbiditySensor.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "task_priorities.h"
@@ -171,7 +171,7 @@ static void runController(void *param) {
             RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
             rbr_coda->aggregate();
           } else if (curr->type == SENSOR_TYPE_seapoint_turbidity) {
-            SptStsSensor *seapoint_turbidity = static_cast<SptStsSensor *>(curr);
+            SeapointTurbiditySensor *seapoint_turbidity = static_cast<SeapointTurbiditySensor *>(curr);
             seapoint_turbidity->aggregate();
           }
           curr = curr->next;
@@ -286,9 +286,9 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                    seapoint_turbidity_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
               (seapoint_turbidity_agg_period_ms / _ctx.seapoint_turbidity_reading_period_ms) +
-              SptSts_t::N_SAMPLES_PAD;
-          SptSts_t *seapoint_turbidity_sub =
-              createSptStsSub(reply.node_id, seapoint_turbidity_agg_period_ms, AVERAGER_MAX_SAMPLES);
+              SeapointTurbidity_t::N_SAMPLES_PAD;
+          SeapointTurbidity_t *seapoint_turbidity_sub =
+              createSeapointTurbiditySub(reply.node_id, seapoint_turbidity_agg_period_ms, AVERAGER_MAX_SAMPLES);
           if (seapoint_turbidity_sub) {
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
           }

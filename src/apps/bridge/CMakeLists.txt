@@ -258,7 +258,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/aanderaaSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/rbrCodaSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/softSensor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/sptStsSensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/seapointTurbiditySensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensorController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cbor_sensor_report_encoder.cpp

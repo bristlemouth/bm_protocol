@@ -7,15 +7,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define SPT_STS_NUM_SAMPLE_MEMBERS 2
+#define SEAPOINT_TURBIDITY_NUM_SAMPLE_MEMBERS 2
 
-typedef struct spt_sts_aggregations_s {
+typedef struct seapoint_turbidity_aggregations_s {
   double turbidity_s_mean_ftu;
   double turbidity_r_mean_ftu;
   uint32_t reading_count;
-} spt_sts_aggregations_t;
+} seapoint_turbidity_aggregations_t;
 
-typedef struct SptStsSensor : public AbstractSensor {
+typedef struct SeapointTurbiditySensor : public AbstractSensor {
   uint32_t agg_period_ms;
   AveragingSampler turbidity_s_ftu;
   AveragingSampler turbidity_r_ftu;
@@ -39,12 +39,12 @@ public:
   void aggregate(void);
 
 private:
-  static void sptStsSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
+  static void SeapointTurbiditySubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                              const uint8_t *data, uint16_t data_len, uint8_t type,
                              uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/sofar/spt_sts_data";
-} SptSts_t;
+  static constexpr char subtag[] = "/sofar/seapoint_turbidity_data";
+} SeapointTurbidity_t;
 
-SptSts_t* createSptStsSub(uint64_t node_id, uint32_t agg_period_ms, uint32_t averager_max_samples);
+SeapointTurbidity_t* createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_period_ms, uint32_t averager_max_samples);

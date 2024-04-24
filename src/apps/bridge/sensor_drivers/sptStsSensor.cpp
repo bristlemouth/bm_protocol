@@ -1,4 +1,4 @@
-#include "sptStsSensor.h"
+#include "seapointTurbiditySensor.h"
 #include "app_config.h"
 #include "avgSampler.h"
 #include "bm_network.h"
@@ -16,28 +16,28 @@
 
 #define DEFAULT_TURBIDITY_READING_PERIOD_MS 1000 // 1 second
 
-bool SptStsSensor::subscribe() {
+bool SeapointTurbiditySensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(sub);
   int topic_strlen =
       snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
-    rval = bm_sub_wl(sub, topic_strlen, sptStsSubCallback);
+    rval = bm_sub_wl(sub, topic_strlen, seapointTurbiditySubCallback);
   }
   vPortFree(sub);
   return rval;
 }
 
-void SptStsSensor::sptStsSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
+void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                      const uint8_t *data, uint16_t data_len, uint8_t type,
                                      uint8_t version) {
   (void)type;
   (void)version;
   printf("Seapoint Turbidity data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
-  SptSts_t *turbidity_sensor = static_cast<SptSts_t *>(sensorControllerFindSensorById(node_id));
-  if (turbidity_sensor && turbidity_sensor->type == SENSOR_TYPE_SPT_STS) {
+  SeapointTurbidity_t *turbidity_sensor = static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id));
+  if (turbidity_sensor && turbidity_sensor->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
     if (xSemaphoreTake(turbidity_sensor->_mutex, portMAX_DELAY)) {
       static BmTurbidityDataMsg::Data turbidity_data;
       if (BmTurbidityDataMsg::decode(turbidity_data, data, data_len) == CborNoError) {
@@ -100,12 +100,12 @@ void SptStsSensor::sptStsSubCallback(uint64_t node_id, const char *topic, uint16
   }
 }
 
-void SptStsSensor::aggregate(void) {
+void SeapointTurbiditySensor::aggregate(void) {
   char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
   configASSERT(log_buf);
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
     size_t log_buflen = 0;
-    spt_sts_aggregations_t turbidity_aggs = {.turbidity_s_mean_ftu = NAN,
+    seapoint_turbidity_aggregations_t turbidity_aggs = {.turbidity_s_mean_ftu = NAN,
                                              .turbidity_r_mean_ftu = NAN,
                                              .reading_count = 0};
     if (turbidity_s_ftu.getNumSamples() > MIN_READINGS_FOR_AGGREGATION) {
@@ -147,8 +147,8 @@ void SptStsSensor::aggregate(void) {
     } else {
       printf("ERROR: Failed to print Seapoint Turbidity aggregation to log\n");
     }
-    reportBuilderAddToQueue(node_id, SENSOR_TYPE_SPT_STS, static_cast<void *>(&turbidity_aggs),
-                            sizeof(spt_sts_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY, static_cast<void *>(&turbidity_aggs),
+                            sizeof(seapoint_turbidity_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
     memset(log_buf, 0, SENSOR_LOG_BUF_SIZE);
     // Clear the buffers
     turbidity_s_ftu.clear();
@@ -161,17 +161,17 @@ void SptStsSensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-SptSts_t *createSptStsSub(uint64_t node_id, uint32_t agg_period_ms,
+SeapointTurbidity_t *createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_period_ms,
                           uint32_t averager_max_samples) {
-  SptSts_t *new_sub = static_cast<SptSts_t *>(pvPortMalloc(sizeof(SptSts_t)));
-  new_sub = new (new_sub) SptSts_t();
+  SeapointTurbidity_t *new_sub = static_cast<SeapointTurbidity_t *>(pvPortMalloc(sizeof(SeapointTurbidity_t)));
+  new_sub = new (new_sub) SeapointTurbidity_t();
   configASSERT(new_sub);
 
   new_sub->_mutex = xSemaphoreCreateMutex();
   configASSERT(new_sub->_mutex);
 
   new_sub->node_id = node_id;
-  new_sub->type = SENSOR_TYPE_SPT_STS;
+  new_sub->type = SENSOR_TYPE_SEAPOINT_TURBIDITY;
   new_sub->next = NULL;
   new_sub->agg_period_ms = agg_period_ms;
   new_sub->turbidity_s_ftu.initBuffer(averager_max_samples);
