@@ -29,10 +29,10 @@ typedef struct SptStsSensor : public AbstractSensor {
   // 2 minutes is the minimum bridge on period and the soft by default is sampling at 2Hz. So 2*120 + 30 = 270.
   static constexpr uint32_t N_SAMPLES_PAD = 270;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
-  static constexpr double S_SAMPLE_MEMBER_MIN = -20;
-  static constexpr double S_SAMPLE_MEMBER_MAX = 61.88;
-  static constexpr double R_SAMPLE_MEMBER_MIN = -20;
-  static constexpr double R_SAMPLE_MEMBER_MAX = 61.88;
+  static constexpr double S_SAMPLE_MEMBER_MIN = 0;
+  static constexpr double S_SAMPLE_MEMBER_MAX = 16000;
+  static constexpr double R_SAMPLE_MEMBER_MIN = 0;
+  static constexpr double R_SAMPLE_MEMBER_MAX = 180000;
 
 public:
   bool subscribe() override;
