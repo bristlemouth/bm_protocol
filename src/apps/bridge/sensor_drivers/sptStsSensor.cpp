@@ -14,7 +14,7 @@
 #include "util.h"
 #include <new>
 
-#define DEFAULT_TURBIDITY_READING_PERIOD_MS 1000 // 1 second TODO - verify this value
+#define DEFAULT_TURBIDITY_READING_PERIOD_MS 1000 // 1 second
 
 bool SptStsSensor::subscribe() {
   bool rval = false;
@@ -73,7 +73,7 @@ void SptStsSensor::sptStsSubCallback(uint64_t node_id, const char *topic, uint16
             snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
                      "%016" PRIx64 "," // Node Id
                      "%" PRIi8 ","     // node_position
-                     "spt_sts,"        // node_app_name
+                     "seapoint_turbidity,"        // node_app_name
                      "%" PRIu64 ","    // reading_uptime_millis
                      "%" PRIu64 "."    // reading_time_utc_ms seconds part
                      "%03" PRIu32 ","  // reading_time_utc_ms millis part
@@ -133,13 +133,13 @@ void SptStsSensor::aggregate(void) {
     int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
 
     log_buflen = snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                          "%016" PRIx64 ","  // Node Id
-                          "%" PRIi8 ","      // node_position
-                          "spt_sts,"         // node_app_name
-                          "%s,"              // timestamp(ticks/UTC)
-                          "%" PRIu32 ","     // reading_count
-                          "%.4f,"            // turbidity_s_mean_ftu
-                          "%.3f\n",          // turbidity_r_mean_ftu
+                          "%016" PRIx64 ","     // Node Id
+                          "%" PRIi8 ","         // node_position
+                          "seapoint_turbidity," // node_app_name
+                          "%s,"                 // timestamp(ticks/UTC)
+                          "%" PRIu32 ","        // reading_count
+                          "%.4f,"               // turbidity_s_mean_ftu
+                          "%.3f\n",             // turbidity_r_mean_ftu
                           node_id, node_position, time_str, turbidity_aggs.reading_count,
                           turbidity_aggs.turbidity_s_mean_ftu, turbidity_aggs.turbidity_r_mean_ftu);
     if (log_buflen > 0) {
