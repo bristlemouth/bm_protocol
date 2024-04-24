@@ -7,6 +7,7 @@
 #include "rbrCodaSensor.h"
 #include "reportBuilder.h"
 #include "softSensor.h"
+#include "sptStsSensor.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "task_priorities.h"
@@ -16,6 +17,7 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500          // default is 500 ms (2 HZ)
 #define DEFAULT_RBR_CODA_READING_PERIOD_MS 500      // default is 500 ms (2 HZ)
+#define DEFAULT_SPT_STS_READING_PERIOD_MS 1000      // default is 1 second: 1000 ms (1 HZ)
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -29,7 +31,8 @@ typedef struct sensorControllerCtx {
   cfg::Configuration *_sys_cfg;
   uint32_t current_reading_period_ms;
   uint32_t soft_reading_period_ms;
-  uint32_t rbr_coda_agg_period_ms;
+  uint32_t rbr_coda_reading_period_ms;
+  uint32_t spt_sts_reading_period_ms;
 } sensorsControllerCtx_t;
 
 static sensorsControllerCtx_t _ctx;
@@ -83,18 +86,33 @@ void sensorControllerInit(BridgePowerController *power_controller,
     save_config = true;
   }
 
-  _ctx.rbr_coda_agg_period_ms = DEFAULT_RBR_CODA_READING_PERIOD_MS;
+  _ctx.rbr_coda_reading_period_ms = DEFAULT_RBR_CODA_READING_PERIOD_MS;
   if (!_ctx._sys_cfg->getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
                                 strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
-                                _ctx.rbr_coda_agg_period_ms)) {
+                                _ctx.rbr_coda_reading_period_ms)) {
     bridgeLogPrint(
         BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
         "Failed to get coda reading period from config, using default value and writing "
         "to config: %" PRIu32 "ms\n",
-        _ctx.rbr_coda_agg_period_ms);
+        _ctx.rbr_coda_reading_period_ms);
     _ctx._sys_cfg->setConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
                              strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
-                             _ctx.rbr_coda_agg_period_ms);
+                             _ctx.rbr_coda_reading_period_ms);
+    save_config = true;
+  }
+
+  _ctx.spt_sts_reading_period_ms = DEFAULT_SPT_STS_READING_PERIOD_MS;
+  if (!_ctx._sys_cfg->getConfig(AppConfig::TURBIDITY_READING_PERIOD_MS,
+                                strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
+                                _ctx.spt_sts_reading_period_ms)) {
+    bridgeLogPrint(
+        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+        "Failed to get spt_sts reading period from config, using default value and writing "
+        "to config: %" PRIu32 "ms\n",
+        _ctx.spt_sts_reading_period_ms);
+    _ctx._sys_cfg->setConfig(AppConfig::TURBIDITY_READING_PERIOD_MS,
+                             strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
+                             _ctx.spt_sts_reading_period_ms);
     save_config = true;
   }
   if (save_config) {
@@ -152,6 +170,9 @@ static void runController(void *param) {
           } else if (curr->type == SENSOR_TYPE_RBR_CODA) {
             RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
             rbr_coda->aggregate();
+          } else if (curr->type == SENSOR_TYPE_SPT_STS) {
+            SptStsSensor *spt_sts = static_cast<SptStsSensor *>(curr);
+            spt_sts->aggregate();
           }
           curr = curr->next;
         }
@@ -253,6 +274,21 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
               createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES);
           if (rbr_coda_sub) {
             abstractSensorAddSensorSub(rbr_coda_sub);
+          }
+        }
+      } else if (strncmp(reply.app_name, "spt_sts", MIN(reply.app_name_strlen, strlen("spt_sts"))) == 0) {
+        if (!sensorControllerFindSensorById(reply.node_id)) {
+          uint32_t spt_sts_agg_period_ms =
+              (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
+          _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS,
+                                   strlen(AppConfig::SAMPLE_DURATION_MS),
+                                   spt_sts_agg_period_ms);
+          uint32_t AVERAGER_MAX_SAMPLES =
+              (spt_sts_agg_period_ms / _ctx.spt_sts_reading_period_ms) + SptSts_t::N_SAMPLES_PAD;
+          SptSts_t *spt_sts_sub =
+              createSptStsSub(reply.node_id, spt_sts_agg_period_ms, AVERAGER_MAX_SAMPLES);
+          if (spt_sts_sub) {
+            abstractSensorAddSensorSub(spt_sts_sub);
           }
         }
       }
