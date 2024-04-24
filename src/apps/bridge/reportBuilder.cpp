@@ -270,7 +270,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     element->sample_counter++;
     break;
   }
-  case SENSOR_TYPE_seapoint_turbidity: {
+  case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
     if (element->sample_counter < sample_counter) {
       // Back fill the sensor_data with NANs if we are not on the right sample counter
       // We use the element->sample_counter to track within each element how many samples
@@ -619,10 +619,10 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
-  case SENSOR_TYPE_seapoint_turbidity: {
+  case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
     seapoint_turbidity_aggregations_t seapoint_turbidity_sample =
         (static_cast<seapoint_turbidity_aggregations_t *>(sensor_data))[sample_index];
-    if (sensor_report_encoder_open_sample(context, seapoint_turbidity_NUM_SAMPLE_MEMBERS,
+    if (sensor_report_encoder_open_sample(context, SEAPOINT_TURBIDITY_NUM_SAMPLE_MEMBERS,
                                           "bm_seapoint_turbidity_v0") != CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to open seapoint_turbidity sample in addSamplesToReport\n");
@@ -777,7 +777,7 @@ static void report_builder_task(void *parameters) {
                             (_ctx._sample_counter - 1));
                         break;
                       }
-                      case SENSOR_TYPE_seapoint_turbidity: {
+                      case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
                         _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
                             _ctx._report_period_node_list[i],
                             _ctx._report_period_sensor_type_list[i], NULL,

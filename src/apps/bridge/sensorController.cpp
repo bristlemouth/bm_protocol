@@ -170,7 +170,7 @@ static void runController(void *param) {
           } else if (curr->type == SENSOR_TYPE_RBR_CODA) {
             RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
             rbr_coda->aggregate();
-          } else if (curr->type == SENSOR_TYPE_seapoint_turbidity) {
+          } else if (curr->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
             SeapointTurbiditySensor *seapoint_turbidity = static_cast<SeapointTurbiditySensor *>(curr);
             seapoint_turbidity->aggregate();
           }

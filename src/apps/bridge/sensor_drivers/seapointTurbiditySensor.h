@@ -39,7 +39,7 @@ public:
   void aggregate(void);
 
 private:
-  static void SeapointTurbiditySubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
+  static void seapointTurbiditySubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                              const uint8_t *data, uint16_t data_len, uint8_t type,
                              uint8_t version);
 
