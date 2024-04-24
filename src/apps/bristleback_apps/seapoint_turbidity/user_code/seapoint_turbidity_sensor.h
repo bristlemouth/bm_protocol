@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "OrderedSeparatorLineParser.h"
-#include "bm_turbidity_data_msg.h"
+#include "bm_seapoint_turbidity_data_msg.h"
 
 class SeapointTurbiditySensor {
   public:
@@ -12,7 +12,7 @@ class SeapointTurbiditySensor {
     void flush(void);
 
   public:
-    static constexpr char SEAPOINT_TURBIDITY_RAW_LOG[] = "sts_raw.log";
+    static constexpr char SEAPOINT_TURBIDITY_RAW_LOG[] = "seapoint_turbidity_raw.log";
 
   private:
     static constexpr uint32_t BAUD_RATE = 115200;
