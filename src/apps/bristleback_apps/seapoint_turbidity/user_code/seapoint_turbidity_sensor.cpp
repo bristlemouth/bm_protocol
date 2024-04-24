@@ -53,12 +53,12 @@ void SeapointTurbiditySensor::init() {
  * This function checks if a line of data is available from the sensor. If available, it reads the line into a buffer.
  * It then logs the data along with the current system uptime and RTC time.
  * The function then attempts to parse the data from the buffer. If the parsing is successful and the data is of the correct type,
- * it populates the passed BmTurbidityDataMsg::Data structure with the parsed data and the current system time.
+ * it populates the passed BmSeapointTurbidityDataMsg::Data structure with the parsed data and the current system time.
  *
- * @param d Reference to a BmTurbidityDataMsg::Data structure where the parsed data will be stored.
+ * @param d Reference to a BmSeapointTurbidityDataMsg::Data structure where the parsed data will be stored.
  * @return Returns true if data was successfully retrieved and parsed, false otherwise.
  */
-bool SeapointTurbiditySensor::getData(BmTurbidityDataMsg::Data &d) {
+bool SeapointTurbiditySensor::getData(BmSeapointTurbidityDataMsg::Data &d) {
   bool success = false;
   if (PLUART::lineAvailable()) {
     uint16_t read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));

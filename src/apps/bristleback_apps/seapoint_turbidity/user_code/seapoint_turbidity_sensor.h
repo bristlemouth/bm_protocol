@@ -8,7 +8,7 @@ class SeapointTurbiditySensor {
     SeapointTurbiditySensor()
         : _parser(",", 256, PARSER_VALUE_TYPE, 2){};
     void init();
-    bool getData(BmTurbidityDataMsg::Data &d);
+    bool getData(BmSeapointTurbidityDataMsg::Data &d);
     void flush(void);
 
   public:
