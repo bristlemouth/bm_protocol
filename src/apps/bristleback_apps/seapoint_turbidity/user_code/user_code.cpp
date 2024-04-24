@@ -35,11 +35,11 @@ void setup(void) {
 
 void loop(void) {
   // Read and handle line from sensor
-  static BmTurbidityDataMsg::Data d;
+  static BmSeapointTurbidityDataMsg::Data d;
   if (seapoint_turbidity_sensor.getData(d)) {
     static uint8_t cbor_buf[BM_SEAPOINT_TURBIDITY_DATA_MSG_MAX_SIZE];
     size_t encoded_len = 0;
-    if (BmTurbidityDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
+    if (BmSeapointTurbidityDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
       bm_pub_wl(seapoint_turbidity_topic, seapoint_turbidity_topic_str_len, cbor_buf, encoded_len, 0);
     } else {
       printf("Failed to encode turbidity data message\n");
