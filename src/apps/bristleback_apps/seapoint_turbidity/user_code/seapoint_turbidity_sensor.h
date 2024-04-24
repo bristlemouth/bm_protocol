@@ -7,12 +7,12 @@ class SeapointTurbiditySensor {
   public:
     SeapointTurbiditySensor()
         : _parser(",", 256, PARSER_VALUE_TYPE, 2){};
-    void init(); // TODO - needs scoping if needed
+    void init();
     bool getData(BmTurbidityDataMsg::Data &d);
-    void flush(void); // TODO - needs scoping if needed
+    void flush(void);
 
   public:
-    static constexpr char SEAPOINT_TURBIDITY_RAW_LOG[] = "sts_raw.log";
+    static constexpr char SEAPOINT_TURBIDITY_RAW_LOG[] = "seapoint_turbidity_raw.log";
 
   private:
     static constexpr uint32_t BAUD_RATE = 115200;

@@ -19,7 +19,7 @@ static int seapoint_turbidity_topic_str_len;
 
 static int createSeapointTurbidityDataTopic(void) {
   int topic_str_len = snprintf(seapoint_turbidity_topic, BM_TOPIC_MAX_LEN,
-                               "sensor/%016" PRIx64 "/sofar/spt_sts_data", getNodeId());
+                               "sensor/%016" PRIx64 "/sofar/seapoint_turbidity_data", getNodeId());
   configASSERT(topic_str_len > 0 && topic_str_len < BM_TOPIC_MAX_LEN);
   return topic_str_len;
 }
@@ -29,7 +29,7 @@ void setup(void) {
   seapoint_turbidity_sensor.init();
   seapoint_turbidity_topic_str_len = createSeapointTurbidityDataTopic();
   IOWrite(&BB_VBUS_EN, 0);
-  vTaskDelay(pdMS_TO_TICKS(100)); // Wait for Vbus to stabilize
+  vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
   IOWrite(&BB_PL_BUCK_EN, 0);
 }
 
