@@ -87,7 +87,7 @@
   description: BM Turbidity - Release
   type: build_fw
   args:
-    app: spt_sts
+    app: seapoint_turbidity
     bsp: bm_mote_bristleback_v1_0
     build_type: Release
   sign: true

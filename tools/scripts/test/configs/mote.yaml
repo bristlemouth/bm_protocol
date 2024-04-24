@@ -126,7 +126,7 @@
 - name: bm_turbidity on bm_mote_bristleback_v1_0
   type: build_fw
   args:
-    app: spt_sts
+    app: seapoint_turbidity
     bsp: bm_mote_bristleback_v1_0
     build_type: Release
     use_bootloader: True
