@@ -270,7 +270,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     element->sample_counter++;
     break;
   }
-  case SENSOR_TYPW_SPT_STS: {
+  case SENSOR_TYPE_SPT_STS: {
     if (element->sample_counter < sample_counter) {
       // Back fill the sensor_data with NANs if we are not on the right sample counter
       // We use the element->sample_counter to track within each element how many samples
@@ -628,14 +628,14 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                      "Failed to open spt_sts sample in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encode_add_sample_member(context, encode_double_sample_member,
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                &spt_sts_sample.turbidity_s_mean_ftu) !=
         CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to add spt_sts sample member in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encode_add_sample_member(context, encode_double_sample_member,
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
                                                &spt_sts_sample.turbidity_r_mean_ftu) !=
         CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,

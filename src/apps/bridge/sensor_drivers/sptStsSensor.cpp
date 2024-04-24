@@ -42,9 +42,10 @@ void SptStsSensor::sptStsSubCallback(uint64_t node_id, const char *topic, uint16
       static BmTurbidityDataMsg::Data turbidity_data;
       if (BmTurbidityDataMsg::decode(turbidity_data, data, data_len) == CborNoError) {
         char *log_buf =
-            static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE)) configASSERT(log_buf);
-        turbidity_sensor->turbidity_s_ftu.addSample(turbidity_data.turbidity_s_ftu);
-        turbidity_sensor->turbidity_r_ftu.addSample(turbidity_data.turbidity_r_ftu);
+            static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
+        configASSERT(log_buf);
+        turbidity_sensor->turbidity_s_ftu.addSample(turbidity_data.s_signal);
+        turbidity_sensor->turbidity_r_ftu.addSample(turbidity_data.r_signal);
         turbidity_sensor->reading_count++;
         // Large floats get formatted in scientific notation,
         // so we print integer seconds and millis separately.
@@ -78,12 +79,12 @@ void SptStsSensor::sptStsSubCallback(uint64_t node_id, const char *topic, uint16
                      "%03" PRIu32 ","  // reading_time_utc_ms millis part
                      "%" PRIu64 "."    // sensor_reading_time_ms seconds part
                      "%03" PRIu32 ","  // sensor_reading_time_ms millis part
-                     "%.4f,"           // turbidity_s_ftu
-                     "%.3f\n",         // turbidity_r_ftu
+                     "%.4f,"           // s_signal
+                     "%.3f\n",         // r_signal
                      node_id, turbidity_sensor->node_position,
                      turbidity_data.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     turbidity_data.turbidity_s_ftu, turbidity_data.turbidity_r_ftu);
+                     turbidity_data.s_signal, turbidity_data.r_signal);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
