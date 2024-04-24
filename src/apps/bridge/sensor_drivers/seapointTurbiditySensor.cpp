@@ -3,7 +3,7 @@
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_pubsub.h"
-#include "bm_turbidity_data_msg.h"
+#include "bm_seapoint_turbidity_data_msg.h"
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
@@ -39,8 +39,8 @@ void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, con
   SeapointTurbidity_t *turbidity_sensor = static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id));
   if (turbidity_sensor && turbidity_sensor->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
     if (xSemaphoreTake(turbidity_sensor->_mutex, portMAX_DELAY)) {
-      static BmTurbidityDataMsg::Data turbidity_data;
-      if (BmTurbidityDataMsg::decode(turbidity_data, data, data_len) == CborNoError) {
+      static BmSeapointTurbidityDataMsg::Data turbidity_data;
+      if (BmSeapointTurbidityDataMsg::decode(turbidity_data, data, data_len) == CborNoError) {
         char *log_buf =
             static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
