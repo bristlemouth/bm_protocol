@@ -29,7 +29,7 @@ void setup(void) {
   seapoint_turbidity_sensor.init();
   seapoint_turbidity_topic_str_len = createSeapointTurbidityDataTopic();
   IOWrite(&BB_VBUS_EN, 0);
-  vTaskDelay(pdMS_TO_TICKS(100)); // Wait for Vbus to stabilize
+  vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
   IOWrite(&BB_PL_BUCK_EN, 0);
 }
 
