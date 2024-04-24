@@ -1,6 +1,6 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
-#include "bm_turbidity_data_msg.h"
+#include "bm_seapoint_turbidity_data_msg.h"
 #include "bm_printf.h"
 #include "bm_pubsub.h"
 #include "bsp.h"
@@ -10,7 +10,7 @@
 #include "uptime.h"
 #include "util.h"
 
-static constexpr uint32_t BM_TURBIDITY_DATA_MSG_MAX_SIZE = 256;
+static constexpr uint32_t BM_SEAPOINT_TURBIDITY_DATA_MSG_MAX_SIZE = 256;
 
 extern cfg::Configuration *systemConfigurationPartition;
 static SeapointTurbiditySensor seapoint_turbidity_sensor;
@@ -37,7 +37,7 @@ void loop(void) {
   // Read and handle line from sensor
   static BmTurbidityDataMsg::Data d;
   if (seapoint_turbidity_sensor.getData(d)) {
-    static uint8_t cbor_buf[BM_TURBIDITY_DATA_MSG_MAX_SIZE];
+    static uint8_t cbor_buf[BM_SEAPOINT_TURBIDITY_DATA_MSG_MAX_SIZE];
     size_t encoded_len = 0;
     if (BmTurbidityDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
       bm_pub_wl(seapoint_turbidity_topic, seapoint_turbidity_topic_str_len, cbor_buf, encoded_len, 0);

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "OrderedSeparatorLineParser.h"
-#include "bm_turbidity_data_msg.h"
+#include "bm_seapoint_turbidity_data_msg.h"
 
 class SeapointTurbiditySensor {
   public:

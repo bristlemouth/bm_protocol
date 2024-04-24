@@ -83,8 +83,8 @@
     build_type: Release
   sign: true
 
-- name: bm_turbidity_release
-  description: BM Turbidity - Release
+- name: seapoint_turbidity_release
+  description: BM Seapoint Turbidity - Release
   type: build_fw
   args:
     app: seapoint_turbidity

@@ -123,7 +123,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
 
-- name: bm_turbidity on bm_mote_bristleback_v1_0
+- name: seapoint_turbidity on bm_mote_bristleback_v1_0
   type: build_fw
   args:
     app: seapoint_turbidity
