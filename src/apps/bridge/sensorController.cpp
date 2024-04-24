@@ -263,15 +263,15 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "bm_rbr",
                          MIN(reply.app_name_strlen, strlen("bm_rbr"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          uint32_t rbr_coda_reading_period_ms =
+          uint32_t rbr_coda_agg_period_ms =
               (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
           _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS,
                                    strlen(AppConfig::SAMPLE_DURATION_MS),
-                                   rbr_coda_reading_period_ms);
+                                   rbr_coda_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (rbr_coda_reading_period_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
+              (rbr_coda_agg_period_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
           RbrCoda_t *rbr_coda_sub =
-              createRbrCodaSub(reply.node_id, rbr_coda_reading_period_ms, AVERAGER_MAX_SAMPLES);
+              createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES);
           if (rbr_coda_sub) {
             abstractSensorAddSensorSub(rbr_coda_sub);
           }
