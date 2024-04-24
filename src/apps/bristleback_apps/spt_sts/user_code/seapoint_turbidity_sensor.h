@@ -12,7 +12,7 @@ class SeapointTurbiditySensor {
     void flush(void); // TODO - needs scoping if needed
 
   public:
-    static constexpr char SEAPOINT_TURBIDITY_RAW_LOG[] = "turbidity_raw.log";
+    static constexpr char SEAPOINT_TURBIDITY_RAW_LOG[] = "sts_raw.log";
 
   private:
     static constexpr uint32_t BAUD_RATE = 115200;
