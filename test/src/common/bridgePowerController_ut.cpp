@@ -428,6 +428,173 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   EXPECT_EQ(xTaskGetTickCount(), curtime);
 }
 
+// Sample duration ends at 19 minutes, which is after subsample duration ends at 16 minutes,
+// and before the next aligned sample interval starts at 20 minutes.
+// Observed bug to fix: wake earlier than 19 minutes, sample time still remains
+TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
+  const uint32_t kTwentyMinutes = 1200000;
+  const uint32_t kNineteenMinutes = 1140000;
+  const uint32_t kFiveMinutes = 300000;
+  const uint32_t kOneMinute = 60000;
+  BridgePowerController powerController(FAKE_VBUS_EN, kTwentyMinutes, kNineteenMinutes,
+                                        kFiveMinutes, kOneMinute, true, true);
+  powerController._update();
+  // Init sequence powers the bus on for two minutes
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 1);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
+  // 2 min + MIN_TASK_SLEEP_MS
+  uint32_t curtime = 2 * kOneMinute + 1000;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bridge Controller is now intitialized, but RTC is not set
+  // Bus turns off
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[1], 0);
+  curtime += 1000;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // RTC gets set
+  y = 2024;
+  m = 4;
+  d = 16;
+  H = 1;
+  M = 45;
+  S = 44;
+  rtcGetMicroSeconds_fake.return_val = 1713231944000000;
+  isRTCSet_fake.return_val = true;
+  powerController._update();
+  EXPECT_EQ(isRTCSet_fake.call_count, 5);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
+  curtime += 856000; // 14 minutes 16 seconds, to align with hour 2
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  H = 2;
+  M = 0;
+  S = 0;
+  rtcGetMicroSeconds_fake.return_val = 1713232800000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 3);
+  // The bus stays on for one minute until the next Subample Off time
+  curtime += kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Time for a bus down cycle
+  M = 1;
+  rtcGetMicroSeconds_fake.return_val = 1713232860000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 6);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[3], 0);
+
+  // Task waits through the Subsampling off period until the next interval starts
+  curtime += 4 * kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus up for next Subsample
+  M = 5;
+  rtcGetMicroSeconds_fake.return_val = 1713233100000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 7);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 5);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[4], 1);
+  curtime += kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Turn off for subsampling
+  M = 6;
+  rtcGetMicroSeconds_fake.return_val = 1713233160000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 6);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[5], 0);
+  curtime += 4 * kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus on
+  M = 10;
+  rtcGetMicroSeconds_fake.return_val = 1713233400000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 9);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 7);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 1);
+  curtime += kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus off
+  M = 11;
+  rtcGetMicroSeconds_fake.return_val = 1713233460000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 10);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 8);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[7], 0);
+  curtime += 4 * kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus on
+  M = 15;
+  rtcGetMicroSeconds_fake.return_val = 1713233700000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 11);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 9);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[8], 1);
+  curtime += kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus off, sleep until end of sample duration
+  M = 16;
+  rtcGetMicroSeconds_fake.return_val = 1713233760000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 12);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 10);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[9], 0);
+  curtime += 3 * kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Replicate the bug: wake early
+  M = 18;
+  S = 59;
+  rtcGetMicroSeconds_fake.return_val = 1713233939000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 12);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 10);
+  curtime += 1000;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Stay off and align next sample
+  M = 19;
+  S = 0;
+  rtcGetMicroSeconds_fake.return_val = 1713233940000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 13);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 10);
+  curtime += kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus on
+  M = 20;
+  rtcGetMicroSeconds_fake.return_val = 1713234000000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 14);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 11);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[10], 1);
+  curtime += kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // Bus off
+  M = 21;
+  rtcGetMicroSeconds_fake.return_val = 1713234060000000;
+  powerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 15);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 12);
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[11], 0);
+  curtime += 4 * kOneMinute;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+}
+
 TEST_F(BridgePowerControllerTest, goldenPath) {
   BridgePowerController BridgePowerController(
       FAKE_VBUS_EN, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
@@ -466,12 +633,19 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   xTaskSetTickCount(0); // Convinience tick set for checking sleep.
   BridgePowerController.powerControlEnable(true);
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
   EXPECT_EQ(fake_io_write_func_fake.call_count, 1);
 
+  // Controller waits until the next aligned sample start
+  uint32_t curtime = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000;
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
   // The bus stays on until the next Sample Off time
-  uint32_t curtime =
-      (BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S + SAMPLE_DURATION_S) * 1000;
+  rtcGetMicroSeconds_fake.return_val = curtime * 1000;
+  BridgePowerController._update();
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, 1);
+  curtime += SAMPLE_DURATION_S * 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtime);
 
   // Time for a bus down cycle
@@ -544,14 +718,18 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   // Enable the scheduler
   BridgePowerController.powerControlEnable(true);
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
   EXPECT_EQ(fake_io_write_func_fake.call_count, 1);
 
-  // The bus stays on until the next Sample Off time
-  // Aligns to the next interval
-  EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
-  curtime += ((BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S + SAMPLE_DURATION_S) * 1000) -
+  // Controller waits until the next aligned sample start
+  curtime += (BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000) -
              (2 * POWER_CONTROLLER_MIN_DELAY_MS);
+  EXPECT_EQ(xTaskGetTickCount(), curtime);
+
+  // The bus stays on until the next Sample Off time
+  BridgePowerController._update();
+  EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
+  curtime += SAMPLE_DURATION_S * 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtime);
 
   // Time for a bus down cycle

@@ -185,10 +185,27 @@ void BridgePowerController::_update(void) {
       _initDone = true;
     } else if (_powerControlEnabled && _timebaseSet) { // Sampling Enabled
       uint32_t currentCycleS = getCurrentTimeS();
+      if (currentCycleS < _sampleIntervalStartS) {
+        time_to_sleep_ms = (_sampleIntervalStartS - currentCycleS) * 1000;
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                       "Controller task woke early at %" PRIu32 ", will wait %" PRIu32 " ms\n",
+                       currentCycleS, time_to_sleep_ms);
+        break;
+      }
       uint32_t sampleTimeRemainingS =
           timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
       if (sampleTimeRemainingS) {
         if (_subsamplingEnabled) { // Subsampling Enabled
+          if (currentCycleS < _subsampleIntervalStartS) {
+            const uint32_t secondsUntilNextSubsample = _subsampleIntervalStartS - currentCycleS;
+            const uint32_t timeToSleepS = MIN(sampleTimeRemainingS, secondsUntilNextSubsample);
+            time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                           "Controller task woke early at %" PRIu32 ", will wait %" PRIu32
+                           " ms\n",
+                           currentCycleS, time_to_sleep_ms);
+            break;
+          }
           uint32_t subsampleTimeRemainingS = timeRemainingGeneric(
               _subsampleIntervalStartS, currentCycleS, _subsampleDurationS);
           if (subsampleTimeRemainingS) {
