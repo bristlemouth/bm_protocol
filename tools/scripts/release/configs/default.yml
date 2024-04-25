@@ -82,3 +82,12 @@
     bsp: bm_mote_bristleback_v1_0
     build_type: Release
   sign: true
+
+- name: seapoint_turbidity_release
+  description: BM Seapoint Turbidity - Release
+  type: build_fw
+  args:
+    app: seapoint_turbidity
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+  sign: true
