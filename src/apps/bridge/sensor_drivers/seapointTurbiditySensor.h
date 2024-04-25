@@ -23,15 +23,10 @@ typedef struct SeapointTurbiditySensor : public AbstractSensor {
   int8_t node_position;
   uint32_t last_timestamp;
 
-  // TODO - recalculate these values AND the MIN/MAX values - see the spec sheet
   // Extra sample padding to account for timing slop. Calculated as the sample frequency + 2 minutes bridge on period + some extra slop.
   // 2 minutes is the minimum bridge on period and the turbidity sensor by default is sampling at 1Hz. So 1*120 + 30 = 150.
   static constexpr uint32_t N_SAMPLES_PAD = 150;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
-  static constexpr double S_SAMPLE_MEMBER_MIN = 0;
-  static constexpr double S_SAMPLE_MEMBER_MAX = 16000;
-  static constexpr double R_SAMPLE_MEMBER_MIN = 0;
-  static constexpr double R_SAMPLE_MEMBER_MAX = 180000;
 
 public:
   bool subscribe() override;

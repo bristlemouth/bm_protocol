@@ -113,16 +113,6 @@ void SeapointTurbiditySensor::aggregate(void) {
       turbidity_aggs.turbidity_s_mean_ftu = turbidity_s_ftu.getMean();
       turbidity_aggs.turbidity_r_mean_ftu = turbidity_r_ftu.getMean();
       turbidity_aggs.reading_count = reading_count;
-      if (turbidity_aggs.turbidity_s_mean_ftu < S_SAMPLE_MEMBER_MIN) {
-        turbidity_aggs.turbidity_s_mean_ftu = -HUGE_VAL;
-      } else if (turbidity_aggs.turbidity_s_mean_ftu > S_SAMPLE_MEMBER_MAX) {
-        turbidity_aggs.turbidity_s_mean_ftu = HUGE_VAL;
-      }
-      if (turbidity_aggs.turbidity_r_mean_ftu < R_SAMPLE_MEMBER_MIN) {
-        turbidity_aggs.turbidity_r_mean_ftu = -HUGE_VAL;
-      } else if (turbidity_aggs.turbidity_r_mean_ftu > R_SAMPLE_MEMBER_MAX) {
-        turbidity_aggs.turbidity_r_mean_ftu = HUGE_VAL;
-      }
     }
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
     char time_str[TIME_STR_BUFSIZE];
