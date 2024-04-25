@@ -20,6 +20,7 @@ constexpr const char *CURRENT_READING_PERIOD_MS = "currentReadingPeriodMs";
 constexpr const char *SOFT_READING_PERIOD_MS = "softReadingPeriodMs";
 constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
 constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
+constexpr const char *TURBIDITY_READING_PERIOD_MS = "turbidityReadingPeriodMs";
 
 } // namespace AppConfig
 

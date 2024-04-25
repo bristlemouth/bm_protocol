@@ -12,6 +12,7 @@
 #include "semphr.h"
 #include "sensorController.h"
 #include "softSensor.h"
+#include "seapointTurbiditySensor.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
@@ -67,6 +68,9 @@ static rbr_coda_aggregations_t RBR_CODA_NAN_AGG = {.temp_mean_deg_c = NAN,
                                                    .reading_count = 0,
                                                    .sensor_type =
                                                        BmRbrDataMsg::SensorType::UNKNOWN};
+
+static seapoint_turbidity_aggregations_t seapoint_turbidity_NAN_AGG = {
+    .turbidity_s_mean_ftu = NAN, .turbidity_r_mean_ftu = NAN, .reading_count = 0};
 
 class ReportBuilderLinkedList {
 private:
@@ -262,6 +266,29 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
       memcpy(&(static_cast<rbr_coda_aggregations_t *>(
                  element->sensor_data))[element->sample_counter],
              &RBR_CODA_NAN_AGG, sizeof(rbr_coda_aggregations_t));
+    }
+    element->sample_counter++;
+    break;
+  }
+  case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
+    if (element->sample_counter < sample_counter) {
+      // Back fill the sensor_data with NANs if we are not on the right sample counter
+      // We use the element->sample_counter to track within each element how many samples
+      // the element has received.
+      for (; element->sample_counter < sample_counter; element->sample_counter++) {
+        memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
+                   element->sensor_data))[element->sample_counter],
+               &seapoint_turbidity_NAN_AGG, sizeof(seapoint_turbidity_aggregations_t));
+      }
+    }
+    if (sensor_data != NULL) {
+      memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
+                 element->sensor_data))[element->sample_counter],
+             sensor_data, sizeof(seapoint_turbidity_aggregations_t));
+    } else {
+      memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
+                 element->sensor_data))[element->sample_counter],
+             &seapoint_turbidity_NAN_AGG, sizeof(seapoint_turbidity_aggregations_t));
     }
     element->sample_counter++;
     break;
@@ -592,6 +619,37 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
+  case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
+    seapoint_turbidity_aggregations_t seapoint_turbidity_sample =
+        (static_cast<seapoint_turbidity_aggregations_t *>(sensor_data))[sample_index];
+    if (sensor_report_encoder_open_sample(context, SEAPOINT_TURBIDITY_NUM_SAMPLE_MEMBERS,
+                                          "bm_seapoint_turbidity_v0") != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to open seapoint_turbidity sample in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                               &seapoint_turbidity_sample.turbidity_s_mean_ftu) !=
+        CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add seapoint_turbidity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                               &seapoint_turbidity_sample.turbidity_r_mean_ftu) !=
+        CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add seapoint_turbidity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_close_sample(context) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to close sample in addSamplesToReport\n");
+      break;
+    }
+    rval = true;
+    break;
+  }
   default: {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Received invalid sensor type in addSamplesToReport\n");
@@ -716,6 +774,14 @@ static void report_builder_task(void *parameters) {
                             _ctx._report_period_node_list[i],
                             _ctx._report_period_sensor_type_list[i], NULL,
                             sizeof(rbr_coda_aggregations_t), _ctx._samplesPerReport,
+                            (_ctx._sample_counter - 1));
+                        break;
+                      }
+                      case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
+                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
+                            _ctx._report_period_node_list[i],
+                            _ctx._report_period_sensor_type_list[i], NULL,
+                            sizeof(seapoint_turbidity_aggregations_t), _ctx._samplesPerReport,
                             (_ctx._sample_counter - 1));
                         break;
                       }
