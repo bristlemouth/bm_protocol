@@ -9,7 +9,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_hal_timebase_tim.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_it.c
         # ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/syscalls.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/sysmem.c
+        # ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/sysmem.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/system_stm32u5xx.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_cortex.c

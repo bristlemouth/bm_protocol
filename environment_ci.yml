@@ -10,28 +10,24 @@ channels:
   - defaults
 dependencies:
   # Don't forget to update compiler version check when updating compiler here!
-  # Change src/CMakeLists.txt
-  - arm-none-eabi-gcc=10.3_2021.10
-  # - multi-arch-gdb=11.2
-  # - openocd-xpack=0.11.0_5
-  - cmake-xpack=3.20.6_2
-  - make=4.2.1
-  - python=3.10.11
-  - pyserial
+  # Change COMPILER_VERSION near top of src/CMakeLists.txt
+  - arm-none-eabi-gcc=13.2
+  - clang-tools=18.1
+  - cmake=3.29
   - cppcheck
+  - gcovr
+  - make=4.3
   - pre_commit
+  - pyserial
+  - python=3.10
   - pip
   - pip:
-      - memfault-cli==0.17.0
-      - python-dotenv
-      - gitpython
-      - pytest
-      - cryptography>=2.6
-      - intelhex
-      - click
       - cbor2
+      - click
+      - cryptography>=42.0
+      - gitpython
+      - intelhex
+      - memfault-cli==1.0
+      - pytest
+      - python-dotenv
 
-  # - lcov=1.15
-  - clang-tools=11.0.0
-  # - cppcheck=2.1
-  - gcovr
