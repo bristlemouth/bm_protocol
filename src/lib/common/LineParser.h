@@ -6,6 +6,7 @@
 #define BRISTLEMOUTH_LINEPARSER_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 // Define ValueType as an enum
 typedef enum {
@@ -36,7 +37,7 @@ public:
   bool init();
   bool parseLine(const char* line, uint16_t len);
   const Value* getValues() { return (const Value*)_values; }
-  Value getValue(u_int16_t index);
+  Value getValue(uint16_t index);
 protected:
   bool parseValueFromToken(const char* token, size_t index);
 private:

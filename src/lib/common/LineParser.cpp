@@ -63,7 +63,7 @@ bool LineParser::parseLine(const char* line, uint16_t len) {
   return values_parsed;
 }
 
-Value LineParser::getValue(u_int16_t index) {
+Value LineParser::getValue(uint16_t index) {
   Value retVal = {TYPE_INVALID, {0}};
 
   if (_values == nullptr) {
