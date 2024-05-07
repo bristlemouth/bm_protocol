@@ -59,7 +59,6 @@ void loop(void) {
   // Read and handle line from sensor
   // which may be data or a command response
   static BmRbrDataMsg::Data d;
-  static uint32_t last_probe_time_ms = uptimeGetMs();
 
   if (uptimeGetMs() > 10000 && !sent_reset_reason) {
     sent_reset_reason = true;
