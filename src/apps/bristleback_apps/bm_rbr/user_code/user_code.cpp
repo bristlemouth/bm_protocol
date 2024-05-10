@@ -13,6 +13,8 @@
 #include "uptime.h"
 #include "util.h"
 
+traceEvent_t user_traceEvents[TRACE_BUFF_LEN];
+
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
 // Note that PROBE_TIME_PERIOD_MS should be different than the watchdog timeout
@@ -68,6 +70,7 @@ void loop(void) {
     bm_printf(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    bm_printf(0, "Trace buffer:\n");
   }
 
 

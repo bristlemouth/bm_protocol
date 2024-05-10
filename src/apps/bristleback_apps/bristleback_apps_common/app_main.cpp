@@ -49,7 +49,9 @@
 #include "stm32_rtc.h"
 #include "stress.h"
 #include "timer_callback_handler.h"
+#include "trace.h"
 #include "usb.h"
+#include "user_code.h"
 #include "util.h"
 #include "w25.h"
 #include "watchdog.h"
@@ -338,6 +340,8 @@ static void defaultTask(void *parameters) {
 
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
+
+  memcpy(user_traceEvents, traceEvents, sizeof(traceEvents));
 
   startIWDGTask();
   startSerial();
