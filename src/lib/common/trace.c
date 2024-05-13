@@ -8,7 +8,7 @@
 #error TRACE_BUFF_LEN MUST be a power of 2!!!
 #endif
 
-traceEvent_t traceEvents[TRACE_BUFF_LEN] __attribute__((section(".noinit")));
+traceEvent_t traceEvents[TRACE_BUFF_LEN] __attribute__((section(".trace")));
 uint32_t traceEventIdx = 0;
 
 // Only initialize coredebug if we're using it
