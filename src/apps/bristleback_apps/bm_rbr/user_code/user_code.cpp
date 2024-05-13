@@ -73,6 +73,7 @@ void loop(void) {
     bm_printf(0, "Trace buffer:");
     bm_fprintf(0, "trace.log", "Trace buffer:\n");
     for (uint16_t i = 0; i < TRACE_BUFF_LEN; i++) {
+      vTaskDelay(5);
       bm_printf(0, "timestamp: %" PRIu32 ", Event type: %d, Arg: 0x%" PRIx32 "", user_traceEvents[i].timestamp, user_traceEvents[i].eventType, user_traceEvents[i].arg);
       bm_fprintf(0, "trace.log", "timestamp: %" PRIu32 ", Event type: %d, Arg: 0x%" PRIx32 "\n", user_traceEvents[i].timestamp, user_traceEvents[i].eventType, user_traceEvents[i].arg);
     }
