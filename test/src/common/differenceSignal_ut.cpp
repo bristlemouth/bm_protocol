@@ -51,6 +51,7 @@ TEST_F(DifferenceSignalTest, Normal) {
 
   // 2nd round of samples
   ds.clear();
+  EXPECT_FALSE(ds.isFull());
   const double samples2[] = {12334.2, 14375.6, 11375.0, 15345.1, 12338.3};
   const double key2[] = {0.0, 2041.4, -3000.6, 3970.1, -3006.8};
   for (uint32_t sample = 0; sample < 5; sample++) {
