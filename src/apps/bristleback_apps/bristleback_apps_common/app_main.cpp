@@ -154,6 +154,8 @@ extern "C" int main(void) {
   // Before doing anything, check if we should enter ROM bootloader
   // enterBootloaderIfNeeded();
 
+  memcpy(user_traceEvents, traceEvents, sizeof(traceEvents));
+
   HAL_Init();
 
   SystemClock_Config();
@@ -340,8 +342,6 @@ static void defaultTask(void *parameters) {
 
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
-
-  memcpy(user_traceEvents, traceEvents, sizeof(traceEvents));
 
   startIWDGTask();
   startSerial();
