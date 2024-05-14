@@ -41,3 +41,5 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
 }
 
 void DifferenceSignal::clear() { r_i = 0; }
+
+bool DifferenceSignal::isFull() { return r_i == r_n; }

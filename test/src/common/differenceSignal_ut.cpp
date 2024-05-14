@@ -47,6 +47,7 @@ TEST_F(DifferenceSignalTest, Normal) {
     EXPECT_NEAR(d_n[i], key[i], 0.00001);
   }
   EXPECT_EQ(size, 5);
+  EXPECT_TRUE(ds.isFull());
 
   // 2nd round of samples
   ds.clear();
@@ -85,6 +86,7 @@ TEST_F(DifferenceSignalTest, HalfFull) {
     EXPECT_NEAR(d_n[i], key[i], 0.00001);
   }
   EXPECT_EQ(size, 3);
+  EXPECT_FALSE(ds.isFull());
 }
 
 TEST_F(DifferenceSignalTest, Full) {
@@ -102,6 +104,7 @@ TEST_F(DifferenceSignalTest, Full) {
     EXPECT_NEAR(d_n[i], key[i], 0.00001);
   }
   EXPECT_EQ(size, 5);
+  EXPECT_TRUE(ds.isFull());
 }
 
 TEST_F(DifferenceSignalTest, BadEncode) {
