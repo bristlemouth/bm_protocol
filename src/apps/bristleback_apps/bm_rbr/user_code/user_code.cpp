@@ -62,7 +62,7 @@ void loop(void) {
   // which may be data or a command response
   static BmRbrDataMsg::Data d;
 
-  if (uptimeGetMs() > 10000 && !sent_reset_reason) {
+  if (uptimeGetMs() > 5000 && !sent_reset_reason) {
     sent_reset_reason = true;
     ResetReason_t resetReason = checkResetReason();
     uint32_t pc = memfault_get_pc();
@@ -73,10 +73,11 @@ void loop(void) {
     bm_printf(0, "Trace buffer:");
     bm_fprintf(0, "trace.log", "Trace buffer:\n");
     for (uint16_t i = 0; i < TRACE_BUFF_LEN; i++) {
-      vTaskDelay(10);
+      vTaskDelay(100);
       bm_printf(0, "timestamp: %" PRIu32 ", Event type: %d, Arg: 0x%" PRIx32 "", user_traceEvents[i].timestamp, user_traceEvents[i].eventType, user_traceEvents[i].arg);
       bm_fprintf(0, "trace.log", "timestamp: %" PRIu32 ", Event type: %d, Arg: 0x%" PRIx32 "\n", user_traceEvents[i].timestamp, user_traceEvents[i].eventType, user_traceEvents[i].arg);
     }
+    bm_printf(0, "End of trace buffer");
   }
 
 
