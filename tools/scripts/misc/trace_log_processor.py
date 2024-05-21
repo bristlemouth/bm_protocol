@@ -100,7 +100,7 @@ def trace_time_parsing(trace_file):
 def trace_live_parsing():
     start_times = []
     end_times = []
-    ser = serial.Serial('/dev/cu.usbmodem11301')
+    ser = serial.Serial('/dev/cu.usbmodem1201')
     reset_reason_line = None
     while True:
         line = ser.readline().decode(errors='replace').strip()
