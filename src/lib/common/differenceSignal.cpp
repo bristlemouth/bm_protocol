@@ -44,7 +44,7 @@ void DifferenceSignal::clear() { r_i = 0; }
 
 bool DifferenceSignal::isFull() { return r_i == r_n; }
 
-double DifferenceSignal::mean() {
+double DifferenceSignal::signalMean() {
     if(!r_i) {
         return 0.0;
     }

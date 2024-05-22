@@ -9,7 +9,7 @@ public:
   bool encodeDifferenceSignalToBuffer(double *d_n, size_t &numSamples);
   void clear();
   bool isFull();
-  double mean();
+  double signalMean();
 
 private:
   uint32_t r_i;
