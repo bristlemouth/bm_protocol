@@ -1,6 +1,10 @@
 #include "differenceSignal.h"
 #include "FreeRTOS.h"
 
+/*!
+ * @brief Constructor for DifferenceSignal class
+ * @param numTotalSamples[in] Number of total samples of the signal to be stored
+ */
 DifferenceSignal::DifferenceSignal(uint32_t numTotalSamples) : r_i(0) {
   configASSERT(numTotalSamples > 0);
   r_n = numTotalSamples;
@@ -8,6 +12,11 @@ DifferenceSignal::DifferenceSignal(uint32_t numTotalSamples) : r_i(0) {
   configASSERT(r);
 }
 
+/*!
+ * @brief Adds a sample to the signal
+ * @param sample[in] The sample to be added
+ * @return True if the sample was added, false if the buffer is full
+ */
 bool DifferenceSignal::addSample(double sample) {
   if (r_i < r_n) {
     r[r_i++] = sample;
@@ -16,6 +25,12 @@ bool DifferenceSignal::addSample(double sample) {
   return false;
 }
 
+/*!
+ * @brief Encodes the difference signal to a buffer
+ * @param d_n[out] The buffer to store the difference signal
+ * @param numSamples[in, out] In: The buffer sample size, Out: The number of samples encoded into the buffer
+ * @return True if the difference signal was encoded, false otherwise
+ */
 bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSamples) {
   configASSERT(d_n);
   configASSERT(numSamples > 0);
@@ -39,10 +54,21 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
   return rval;
 }
 
+/*!
+ * @brief Clears the signal buffer
+ */
 void DifferenceSignal::clear() { r_i = 0; }
 
+/*!
+ * @brief Checks if the signal buffer is full
+ * @return True if the buffer is full, false otherwise
+ */
 bool DifferenceSignal::isFull() { return r_i == r_n; }
 
+/*!
+ * @brief Calculates the mean of the signal
+ * @return The mean of the signal
+ */
 double DifferenceSignal::signalMean() {
     if(!r_i) {
         return 0.0;
@@ -54,6 +80,11 @@ double DifferenceSignal::signalMean() {
     return sum / r_i;
 }
 
+/*!
+ * @brief Gets the reference signal
+ * @param r0[out] The reference signal
+ * @return True if the reference signal was retrieved, false otherwise
+ */
 bool DifferenceSignal::getReferenceSignal(double &r0) {
     if (!r_i) {
         return false;
