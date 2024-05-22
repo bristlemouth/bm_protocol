@@ -121,3 +121,12 @@ TEST_F(DifferenceSignalTest, BadEncode) {
 }
 
 TEST_F(DifferenceSignalTest, BadInit) { EXPECT_DEATH(DifferenceSignal ds(0), ""); }
+
+TEST_F(DifferenceSignalTest, Mean) {
+  const double samples[] = {1015.6, 1214.3, 1036.6, 1101.1, 1022.7};
+  DifferenceSignal ds(5);
+  for (uint32_t sample = 0; sample < 5; sample++) {
+    EXPECT_TRUE(ds.addSample(samples[sample]));
+  }
+  EXPECT_NEAR(ds.mean(), 1078.06, 0.00001);
+}

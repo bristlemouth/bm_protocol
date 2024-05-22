@@ -43,3 +43,14 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
 void DifferenceSignal::clear() { r_i = 0; }
 
 bool DifferenceSignal::isFull() { return r_i == r_n; }
+
+double DifferenceSignal::mean() {
+    if(!r_i) {
+        return 0.0;
+    }
+    double sum = 0.0;
+    for (uint32_t i = 0; i < r_i; i++) {
+        sum += r[i];
+    }
+    return sum / r_i;
+}
