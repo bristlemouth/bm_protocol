@@ -35,7 +35,7 @@ protected:
 
 TEST_F(DifferenceSignalTest, Normal) {
   const double samples[] = {1015.6, 1214.3, 1036.6, 1101.1, 1022.7};
-  const double key[] = {0.0, 198.7, -177.7, 64.5, -78.4};
+  const double key[] = {198.7, -177.7, 64.5, -78.4};
   DifferenceSignal ds(5);
   for (uint32_t sample = 0; sample < 5; sample++) {
     EXPECT_TRUE(ds.addSample(samples[sample]));
@@ -43,26 +43,31 @@ TEST_F(DifferenceSignalTest, Normal) {
   double d_n[5];
   size_t size = 5;
   EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
-  for (uint32_t i = 0; i < 5; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     EXPECT_NEAR(d_n[i], key[i], 0.00001);
   }
-  EXPECT_EQ(size, 5);
+  EXPECT_EQ(size, 4);
   EXPECT_TRUE(ds.isFull());
+  double r0;
+  EXPECT_EQ(ds.getReferenceSignal(r0), true);
+  EXPECT_NEAR(r0, 1015.6, 0.00001);
 
   // 2nd round of samples
   ds.clear();
   EXPECT_FALSE(ds.isFull());
   const double samples2[] = {12334.2, 14375.6, 11375.0, 15345.1, 12338.3};
-  const double key2[] = {0.0, 2041.4, -3000.6, 3970.1, -3006.8};
+  const double key2[] = {2041.4, -3000.6, 3970.1, -3006.8};
   for (uint32_t sample = 0; sample < 5; sample++) {
     EXPECT_TRUE(ds.addSample(samples2[sample]));
   }
   size = 5;
   EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
-  for (uint32_t i = 0; i < 5; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     EXPECT_NEAR(d_n[i], key2[i], 0.00001);
   }
-  EXPECT_EQ(size, 5);
+  EXPECT_EQ(size, 4);
+  EXPECT_EQ(ds.getReferenceSignal(r0), true);
+  EXPECT_NEAR(r0, 12334.2, 0.00001);
 }
 
 TEST_F(DifferenceSignalTest, Empty) {
@@ -75,7 +80,7 @@ TEST_F(DifferenceSignalTest, Empty) {
 
 TEST_F(DifferenceSignalTest, HalfFull) {
   const double samples[] = {1015.6, 1214.3, 1036.6};
-  const double key[] = {0.0, 198.7, -177.7};
+  const double key[] = {198.7, -177.7};
   DifferenceSignal ds(5);
   for (uint32_t sample = 0; sample < 3; sample++) {
     EXPECT_TRUE(ds.addSample(samples[sample]));
@@ -83,16 +88,16 @@ TEST_F(DifferenceSignalTest, HalfFull) {
   double d_n[5];
   size_t size = 5;
   EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
-  for (uint32_t i = 0; i < 3; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     EXPECT_NEAR(d_n[i], key[i], 0.00001);
   }
-  EXPECT_EQ(size, 3);
+  EXPECT_EQ(size, 2);
   EXPECT_FALSE(ds.isFull());
 }
 
 TEST_F(DifferenceSignalTest, Full) {
   const double samples[] = {1015.6, 1214.3, 1036.6, 1101.1, 1022.7};
-  const double key[] = {0.0, 198.7, -177.7, 64.5, -78.4};
+  const double key[] = {198.7, -177.7, 64.5, -78.4};
   DifferenceSignal ds(5);
   for (uint32_t sample = 0; sample < 5; sample++) {
     EXPECT_TRUE(ds.addSample(samples[sample]));
@@ -101,10 +106,10 @@ TEST_F(DifferenceSignalTest, Full) {
   double d_n[5];
   size_t size = 5;
   EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
-  for (uint32_t i = 0; i < 5; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     EXPECT_NEAR(d_n[i], key[i], 0.00001);
   }
-  EXPECT_EQ(size, 5);
+  EXPECT_EQ(size, 4);
   EXPECT_TRUE(ds.isFull());
 }
 

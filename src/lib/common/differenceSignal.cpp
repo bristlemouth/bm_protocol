@@ -27,11 +27,10 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
     if (!r_i) {
       break;
     }
-    d_n[0] = 0.0;
     for (uint32_t i = 1; i < r_i; i++) {
-      d_n[i] = r[i] - r[i - 1];
+      d_n[i-1] = r[i] - r[i - 1];
     }
-    numSamples = r_i;
+    numSamples = r_i - 1;
     rval = true;
   } while (0);
   if (!rval) {
@@ -53,4 +52,12 @@ double DifferenceSignal::signalMean() {
         sum += r[i];
     }
     return sum / r_i;
+}
+
+bool DifferenceSignal::getReferenceSignal(double &r0) {
+    if (!r_i) {
+        return false;
+    }
+    r0 = r[0];
+    return true;
 }
