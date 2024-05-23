@@ -170,9 +170,6 @@ void serialEnable(SerialHandle_t *handle) {
 #ifndef NO_UART
   // Don't do uart specific stuff for USB :D
   if(!HANDLE_IS_USB(handle)) {
-    if (!LL_USART_IsEnabledIT_ERROR((USART_TypeDef *)handle->device)) {
-      LL_USART_EnableIT_ERROR((USART_TypeDef *)handle->device);
-    }
     // Check for and clear any overrun flags
     if(usart_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
       usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
@@ -263,7 +260,7 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   }
 
   // Let the RTOS know if a task needs to be woken up
-
+  // portYIELD_FROM_ISR(higherPriorityTaskWoken);
   // TODO - call this from actual irqhandler?
   return higherPriorityTaskWoken;
 }
