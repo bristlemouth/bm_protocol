@@ -170,6 +170,9 @@ void serialEnable(SerialHandle_t *handle) {
 #ifndef NO_UART
   // Don't do uart specific stuff for USB :D
   if(!HANDLE_IS_USB(handle)) {
+    if (!LL_USART_IsEnabledIT_ERROR((USART_TypeDef *)handle->device)) {
+      LL_USART_EnableIT_ERROR((USART_TypeDef *)handle->device);
+    }
     // Check for and clear any overrun flags
     if(usart_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
       usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
@@ -218,7 +221,7 @@ void serialDisable(SerialHandle_t *handle) {
 // Takes an SerialHandle_t and receives serial data into a stream buffer
 // as well as takes data from another stream buffer to send
 // This function is meant to be called from all the USARTx_IRQHandler functions
-void serialGenericUartIRQHandler(SerialHandle_t *handle) {
+BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
   configASSERT(handle != NULL);
@@ -259,21 +262,10 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
   }
 
-  if (LL_USART_IsActiveFlag_FE((USART_TypeDef *)handle->device)) {
-    // TODO - handle framing error
-    LL_USART_ClearFlag_FE((USART_TypeDef *)handle->device);
-    // configASSERT(0);
-  }
-
-  if (LL_USART_IsActiveFlag_NE((USART_TypeDef *)handle->device)) {
-    // TODO - handle noise error
-    LL_USART_ClearFlag_NE((USART_TypeDef *)handle->device);
-    // configASSERT(0);
-  }
-
   // Let the RTOS know if a task needs to be woken up
-  portYIELD_FROM_ISR(higherPriorityTaskWoken);
+
   // TODO - call this from actual irqhandler?
+  return higherPriorityTaskWoken;
 }
 #endif
 

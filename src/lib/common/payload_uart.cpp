@@ -212,11 +212,9 @@ BaseType_t init(uint8_t task_priority) {
 }
 
 extern "C" void LPUART1_IRQHandler(void) {
-  configASSERT(&uart_handle);
-  TickType_t ticks_pre = xTaskGetTickCountFromISR();
-  serialGenericUartIRQHandler(&uart_handle);
-  TickType_t ticks_post = xTaskGetTickCountFromISR();
-  configASSERT(ticks_post == ticks_pre);
+
+  BaseType_t higherPriorityTaskWoken = serialGenericUartIRQHandler(&uart_handle);
+  portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
 } // namespace PLUART

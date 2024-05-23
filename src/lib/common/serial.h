@@ -96,7 +96,7 @@ typedef struct {
 BaseType_t serialGenericRxBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
 size_t serialGenericGetTxBytes(SerialHandle_t *handle, uint8_t *buffer, size_t len);
 size_t serialGenericGetTxBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
-void serialGenericUartIRQHandler(SerialHandle_t *handle);
+BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle);
 void serialPutcharUnbuffered(SerialHandle_t *handle, char character);
 
 void serialEnable(SerialHandle_t *handle);
