@@ -30,6 +30,7 @@ bool DifferenceSignal::addSample(double sample) {
  * @param d_n[out] The buffer to store the difference signal
  * @param numSamples[in, out] In: The buffer sample size, Out: The number of samples encoded into the buffer
  * @return True if the difference signal was encoded, false otherwise
+ * @note Caller must ensure that the buffer is large enough to store the requested samples
  */
 bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSamples) {
   configASSERT(d_n);
