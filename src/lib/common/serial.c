@@ -259,6 +259,18 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
   }
 
+  if (LL_USART_IsActiveFlag_FE((USART_TypeDef *)handle->device)) {
+    // TODO - handle framing error
+    LL_USART_ClearFlag_FE((USART_TypeDef *)handle->device);
+    configASSERT(0);
+  }
+
+  if (LL_USART_IsActiveFlag_NE((USART_TypeDef *)handle->device)) {
+    // TODO - handle noise error
+    LL_USART_ClearFlag_NE((USART_TypeDef *)handle->device);
+    configASSERT(0);
+  }
+
   // Let the RTOS know if a task needs to be woken up
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
   // TODO - call this from actual irqhandler?
