@@ -332,6 +332,9 @@ target_sources(differenceSignal
     ${SRC_DIR}/lib/common/differenceSignal.cpp
 
     # Support files
+    
+    # Mock
+    ${TEST_DIR}/stubs/mock_FreeRTOS.c
 
     # Unit test wrapper for test
     differenceSignal_ut.cpp
@@ -345,4 +348,3 @@ add_test(
   COMMAND
     differenceSignal
   )
-

@@ -62,6 +62,9 @@
 #include "util.h"
 #include "w25.h"
 #include "watchdog.h"
+#ifdef RAW_PRESSURE_ENABLE
+#include "rbrPressureProcessor.h"
+#endif // RAW_PRESSURE_ENABLE
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
 #endif
@@ -398,6 +401,14 @@ static void defaultTask(void *parameters) {
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
+
+#ifdef RAW_PRESSURE_ENABLE
+  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
+  rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
+                            raw_pressure_cfg.diffBitDepth,
+                            raw_pressure_cfg.maxRawReports,
+                            raw_pressure_cfg.rawDepthThresholdUbar);
+#endif // RAW_PRESSURE_ENABLE
 
   // // Re-enable low power mode
   lpmPeripheralInactive(LPM_BOOT);
