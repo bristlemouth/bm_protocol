@@ -36,16 +36,14 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
   configASSERT(numSamples > 0);
   bool rval = false;
   do {
-    if (numSamples < (r_i)) {
-      break;
-    }
     if (!r_i) {
       break;
     }
-    for (uint32_t i = 1; i < r_i; i++) {
+    size_t dn_len = r_i - 1;
+    numSamples = (numSamples < dn_len) ? numSamples : dn_len;
+    for (uint32_t i = 1; i < numSamples+1; i++) {
       d_n[i-1] = r[i] - r[i - 1];
     }
-    numSamples = r_i - 1;
     rval = true;
   } while (0);
   if (!rval) {

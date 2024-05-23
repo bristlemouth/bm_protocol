@@ -125,6 +125,38 @@ TEST_F(DifferenceSignalTest, BadEncode) {
   EXPECT_DEATH(ds.encodeDifferenceSignalToBuffer(d_n, size), "");
 }
 
+TEST_F(DifferenceSignalTest, SmallBuffer) {
+  const double samples[] = {1015.6, 1214.3, 1036.6, 1101.1, 1022.7};
+  const double key[] = {198.7};
+  DifferenceSignal ds(5);
+  for (uint32_t sample = 0; sample < 5; sample++) {
+    EXPECT_TRUE(ds.addSample(samples[sample]));
+  }
+  double d_n[1];
+  size_t size = 1;
+  EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
+  EXPECT_EQ(size, 1);
+  for (uint32_t i = 0; i < size; i++) {
+    EXPECT_NEAR(d_n[i], key[i], 0.00001);
+  }
+}
+
+TEST_F(DifferenceSignalTest, SmallBuffer2) {
+  const double samples[] = {1015.6, 1214.3, 1036.6, 1101.1, 1022.7};
+  const double key[] = {198.7, -177.7, 64.5, -78.4};
+  DifferenceSignal ds(5);
+  for (uint32_t sample = 0; sample < 5; sample++) {
+    EXPECT_TRUE(ds.addSample(samples[sample]));
+  }
+  double d_n[4];
+  size_t size = 4;
+  EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
+  EXPECT_EQ(size, 4);
+  for (uint32_t i = 0; i < size; i++) {
+    EXPECT_NEAR(d_n[i], key[i], 0.00001);
+  }
+}
+
 TEST_F(DifferenceSignalTest, BadInit) { EXPECT_DEATH(DifferenceSignal ds(0), ""); }
 
 TEST_F(DifferenceSignalTest, signalMean) {
