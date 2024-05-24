@@ -267,7 +267,7 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   // TODO - call this from actual irqhandler?
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1000));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
 
   return higherPriorityTaskWoken;
 }
