@@ -119,8 +119,8 @@
 // (meaning that the value of configTICK_INTERRUPT_PRIORITY must not be numerically lower).
 //
 #ifndef configTICK_INTERRUPT_PRIORITY
-// #define configTICK_INTERRUPT_PRIORITY configLIBRARY_LOWEST_INTERRUPT_PRIORITY // default only; see above
-#define configTICK_INTERRUPT_PRIORITY 14
+#define configTICK_INTERRUPT_PRIORITY configLIBRARY_LOWEST_INTERRUPT_PRIORITY // default only; see above
+// #define configTICK_INTERRUPT_PRIORITY 14
 #endif
 
 //      Symbol configTICK_USES_LSI, optionally defined in FreeRTOSConfig.h, is defined only when LPTIM should

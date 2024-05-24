@@ -219,6 +219,9 @@ void serialDisable(SerialHandle_t *handle) {
 // as well as takes data from another stream buffer to send
 // This function is meant to be called from all the USARTx_IRQHandler functions
 BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
+
+  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
   configASSERT(handle != NULL);
@@ -262,6 +265,10 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   // Let the RTOS know if a task needs to be woken up
   // portYIELD_FROM_ISR(higherPriorityTaskWoken);
   // TODO - call this from actual irqhandler?
+  uint32_t post_cpu_cycles = DWT->CYCCNT;
+
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1000));
+
   return higherPriorityTaskWoken;
 }
 #endif
