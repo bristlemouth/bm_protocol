@@ -30,6 +30,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "stm32u5xx.h"
+#include "trace.h"
 
 //      This FreeRTOS port "extension" for STM32 uses LPTIM to generate the OS tick instead of the systick
 // timer.  The benefit of the LPTIM is that it continues running in "stop" mode as long as its clock source
@@ -555,6 +556,8 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             // must either reduce the execution times of your ISRs, decrease their priorities, or increase the
             // priority of the tick ISR.  See the description of configTICK_INTERRUPT_PRIORITY for details.
             //
+            fullTicksLeft = xFullTicksLeft;
+            expectedTicks = xExpectedIdleTime;
             configASSERT( xFullTicksLeft <= xExpectedIdleTime );
 
             if (xFullTicksLeft != 0)

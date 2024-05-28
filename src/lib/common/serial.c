@@ -266,7 +266,8 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   // portYIELD_FROM_ISR(higherPriorityTaskWoken);
   // TODO - call this from actual irqhandler?
   uint32_t post_cpu_cycles = DWT->CYCCNT;
-
+  lpuart_start = pre_cpu_cycles;
+  lpuart_stop = post_cpu_cycles;
   configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
 
   return higherPriorityTaskWoken;

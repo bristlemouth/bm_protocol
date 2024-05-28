@@ -10,6 +10,10 @@
 
 traceEvent_t traceEvents[TRACE_BUFF_LEN] __attribute__((section(".trace")));
 uint32_t traceEventIdx = 0;
+uint32_t fullTicksLeft __attribute__((section(".trace")));
+uint32_t expectedTicks __attribute__((section(".trace")));
+uint32_t lpuart_start __attribute__((section(".trace")));
+uint32_t lpuart_stop __attribute__((section(".trace")));
 
 // Only initialize coredebug if we're using it
 #ifdef TRACE_USE_COREDEBUG

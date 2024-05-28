@@ -14,6 +14,10 @@
 #include "util.h"
 
 traceEvent_t user_traceEvents[TRACE_BUFF_LEN];
+uint32_t user_expectedTicks = 0;
+uint32_t user_fullTicksLeft = 0;
+uint32_t user_lpuart_start_cpu_cycles = 0;
+uint32_t user_lpuart_stop_cpu_cycles = 0;
 
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
@@ -73,6 +77,10 @@ void loop(void) {
     bm_printf(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    bm_fprintf(0, "reset.log", "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "", user_fullTicksLeft, user_expectedTicks);
+    bm_printf(0, "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "", user_fullTicksLeft, user_expectedTicks);
+    bm_fprintf(0, "reset.log", "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
+    bm_printf(0, "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
     if (traceBuffEnable) {
       bm_printf(0, "Trace buffer:");
       bm_fprintf(0, "trace.log", "Trace buffer:\n");

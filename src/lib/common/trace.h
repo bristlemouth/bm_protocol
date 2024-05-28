@@ -50,6 +50,10 @@ typedef struct {
 
 extern traceEvent_t traceEvents[TRACE_BUFF_LEN];
 extern uint32_t traceEventIdx;
+extern uint32_t fullTicksLeft;
+extern uint32_t expectedTicks;
+extern uint32_t lpuart_start;
+extern uint32_t lpuart_stop;
 
 #ifdef TRACE_USE_COREDEBUG
 // Switch between arm trace counter and tickCount if needed!
