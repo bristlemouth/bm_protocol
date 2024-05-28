@@ -555,7 +555,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             // must either reduce the execution times of your ISRs, decrease their priorities, or increase the
             // priority of the tick ISR.  See the description of configTICK_INTERRUPT_PRIORITY for details.
             //
-            configASSERT( xFullTicksLeft < xExpectedIdleTime );
+            configASSERT( xFullTicksLeft <= xExpectedIdleTime );
 
             if (xFullTicksLeft != 0)
             {
