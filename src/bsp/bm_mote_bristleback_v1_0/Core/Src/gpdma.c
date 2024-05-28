@@ -36,9 +36,9 @@ void MX_GPDMA1_Init(void)
   __HAL_RCC_GPDMA1_CLK_ENABLE();
 
   /* GPDMA1 interrupt Init */
-    HAL_NVIC_SetPriority(GPDMA1_Channel12_IRQn, 6, 0);
+    HAL_NVIC_SetPriority(GPDMA1_Channel12_IRQn, 15, 0);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel12_IRQn);
-    HAL_NVIC_SetPriority(GPDMA1_Channel13_IRQn, 6, 0);
+    HAL_NVIC_SetPriority(GPDMA1_Channel13_IRQn, 15, 0);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel13_IRQn);
     HAL_NVIC_SetPriority(GPDMA1_Channel14_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel14_IRQn);
