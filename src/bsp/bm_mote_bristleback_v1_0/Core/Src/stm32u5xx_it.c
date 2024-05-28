@@ -111,7 +111,7 @@ void EXTI8_IRQHandler(void)
   /* USER CODE BEGIN EXTI8_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END EXTI8_IRQn 1 */
 }
 
@@ -127,7 +127,7 @@ void TIM8_UP_IRQHandler(void)
   /* USER CODE BEGIN TIM8_UP_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END TIM8_UP_IRQn 1 */
 }
 
@@ -143,7 +143,7 @@ void SPI2_IRQHandler(void)
   /* USER CODE BEGIN SPI2_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END SPI2_IRQn 1 */
 }
 
@@ -159,7 +159,7 @@ void GPDMA1_Channel12_IRQHandler(void)
   /* USER CODE BEGIN GPDMA1_Channel12_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel12_IRQn 1 */
 }
 
@@ -175,7 +175,7 @@ void GPDMA1_Channel13_IRQHandler(void)
   /* USER CODE BEGIN GPDMA1_Channel13_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel13_IRQn 1 */
 }
 
@@ -191,7 +191,7 @@ void GPDMA1_Channel14_IRQHandler(void)
   /* USER CODE BEGIN GPDMA1_Channel14_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel14_IRQn 1 */
 }
 
@@ -207,7 +207,7 @@ void GPDMA1_Channel15_IRQHandler(void)
   /* USER CODE BEGIN GPDMA1_Channel15_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel15_IRQn 1 */
 }
 
@@ -223,7 +223,7 @@ void SPI3_IRQHandler(void)
   /* USER CODE BEGIN SPI3_IRQn 1 */
   uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160000 < 1));
+  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END SPI3_IRQn 1 */
 }
 
