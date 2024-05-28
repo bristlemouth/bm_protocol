@@ -319,7 +319,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     }
 
     /* SPI3 interrupt Init */
-    HAL_NVIC_SetPriority(SPI3_IRQn, 6, 0);
+    HAL_NVIC_SetPriority(SPI3_IRQn, 15, 0);
     HAL_NVIC_EnableIRQ(SPI3_IRQn);
   /* USER CODE BEGIN SPI3_MspInit 1 */
 
