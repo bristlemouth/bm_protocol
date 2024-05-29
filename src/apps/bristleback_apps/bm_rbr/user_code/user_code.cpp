@@ -77,9 +77,9 @@ void loop(void) {
     bm_printf(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
-    bm_fprintf(0, "reset.log", "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "", user_fullTicksLeft, user_expectedTicks);
+    bm_fprintf(0, "reset.log", "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "\n", user_fullTicksLeft, user_expectedTicks);
     bm_printf(0, "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "", user_fullTicksLeft, user_expectedTicks);
-    bm_fprintf(0, "reset.log", "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
+    bm_fprintf(0, "reset.log", "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000\n", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
     bm_printf(0, "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
     if (traceBuffEnable) {
       bm_printf(0, "Trace buffer:");
