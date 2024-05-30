@@ -46,7 +46,7 @@ static void iWDGTask( void *parameters ) {
 
   for(;;) {
     watchdogFeed();
-    vTaskDelay(2 * 1000);
+    vTaskDelay(500);
   }
 }
 
