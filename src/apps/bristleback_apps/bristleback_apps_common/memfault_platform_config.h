@@ -18,4 +18,4 @@
 // Send memfault metric updates every six hours
 #define MEMFAULT_METRICS_HEARTBEAT_INTERVAL_SECS (6 * 60 * 60)
 
-#define MEMFAULT_WATCHDOG_SW_TIMEOUT_SECS 30
+#define MEMFAULT_WATCHDOG_SW_TIMEOUT_SECS 1

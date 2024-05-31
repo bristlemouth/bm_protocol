@@ -53,6 +53,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usb.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_lptim.c
         ${COMMON_BSP_DIR}/stm32/startup_stm32u575zitxq.c
         PARENT_SCOPE)
 set(BSP_INCLUDES
@@ -70,6 +71,8 @@ set(BSP_DEFINES
         STM32U575xx
         MEMFAULT_COREDUMP_STORAGE_WRITE_SIZE=512
         BSP_MOTE_BRISTLEBACK_V1_0
+        MEMFAULT_SOFWARE_WATCHDOG_SOURCE=LPTIM2_BASE
+        MEMFAULT_EXC_HANDLER_WATCHDOG=LPTIM2_IRQHandler
         PARENT_SCOPE)
 
 set(BSP_CPU_FLAGS

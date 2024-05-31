@@ -108,6 +108,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/htuSampler.cpp

@@ -347,6 +347,8 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
+  memfault_platform_boot();
+
   startIWDGTask();
   startSerial();
 
@@ -360,7 +362,7 @@ static void defaultTask(void *parameters) {
 
   gpioISRStartTask();
 
-  memfault_platform_boot();
+
   memfault_platform_start();
 
   pca9535StartIRQTask();
