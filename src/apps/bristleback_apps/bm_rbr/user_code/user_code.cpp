@@ -81,7 +81,7 @@ void loop(void) {
     bm_printf(0, "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "", user_fullTicksLeft, user_expectedTicks);
     bm_fprintf(0, "reset.log", "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000\n", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
     bm_printf(0, "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
-    if (traceBuffEnable) {
+    if (traceBuffEnable && resetReason == ResetReason_t::RESET_REASON_MEM_FAULT) {
       bm_printf(0, "Trace buffer:");
       bm_fprintf(0, "trace.log", "Trace buffer:\n");
       for (uint16_t i = 0; i < TRACE_BUFF_LEN; i++) {
