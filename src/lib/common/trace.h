@@ -16,7 +16,7 @@
 // TODO - allow overriding by application
 // NOTE: TRACE_BUFF_LEN MUST be a power of 2!
 #ifndef TRACE_BUFF_LEN
-#define TRACE_BUFF_LEN (128)
+#define TRACE_BUFF_LEN (1024)
 #endif
 
 #define TRACE_BUFF_MASK (TRACE_BUFF_LEN - 1)

@@ -220,7 +220,7 @@ void serialDisable(SerialHandle_t *handle) {
 // This function is meant to be called from all the USARTx_IRQHandler functions
 BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
 
-  IOWrite(&BB_PL_BUCK_EN, 1);
+  // IOWrite(&BB_PL_BUCK_EN, 1);
 
   uint32_t pre_cpu_cycles = DWT->CYCCNT;
 
@@ -272,7 +272,7 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   lpuart_stop = post_cpu_cycles;
   configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
 
-  IOWrite(&BB_PL_BUCK_EN, 0);
+  // IOWrite(&BB_PL_BUCK_EN, 0);
 
   return higherPriorityTaskWoken;
 }
