@@ -60,7 +60,7 @@ void setup(void) {
   bmRbrTopicStrLen = createBmRbrDataTopic();
   IOWrite(&BB_VBUS_EN, 0);
   vTaskDelay(pdMS_TO_TICKS(100)); // Wait for Vbus to stabilize
-  IOWrite(&BB_PL_BUCK_EN, 0);
+  // IOWrite(&BB_PL_BUCK_EN, 0);
   last_payload_power_on_time = uptimeGetMs();
 }
 
@@ -115,10 +115,10 @@ static bool BmRbrWatchdogHandler(void *arg) {
   bm_fprintf(0, RbrSensor::RBR_RAW_LOG, "DEBUG - attempting FTL recovery\n");
   bm_printf(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
-  IOWrite(&BB_PL_BUCK_EN, 1);
+  // IOWrite(&BB_PL_BUCK_EN, 1);
   vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
   rbr_sensor.flush();
-  IOWrite(&BB_PL_BUCK_EN, 0);
+  // IOWrite(&BB_PL_BUCK_EN, 0);
   last_payload_power_on_time = uptimeGetMs();
   return true;
 }

@@ -31,6 +31,7 @@
 #include "task.h"
 #include "stm32u5xx.h"
 #include "trace.h"
+#include "bsp.h"
 
 //      This FreeRTOS port "extension" for STM32 uses LPTIM to generate the OS tick instead of the systick
 // timer.  The benefit of the LPTIM is that it continues running in "stop" mode as long as its clock source
@@ -425,6 +426,8 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
       // of the sleep period.  We identify the end of the sleep period by recognizing that the tick ISR has
       // modified usIdealCmp for the next tick after the sleep period ends.
       //
+      IOWrite(&BB_PL_BUCK_EN, 0);
+
       do
       {
          //      Give the application a chance to arrange for the deepest sleep it can tolerate right now.
@@ -464,6 +467,8 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
          // __ISB() is not needed here.  The CPSID instruction used by  __disable_irq() is self synchronizing.
 
       } while (usIdealCmp == ulExpectedEndCmp && eTaskConfirmSleepModeStatus() != eAbortSleep);
+
+      IOWrite(&BB_PL_BUCK_EN, 1);
 
       //      Re-enable interrupts.  We try our best to support short ISR latency, especially for interrupt
       // priorities higher than configMAX_SYSCALL_INTERRUPT_PRIORITY.
