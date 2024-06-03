@@ -285,10 +285,10 @@ set(APP_DEFINES
     # Uncomment/change these to enable tracing!
     TRACE_ENABLE
     TRACE_BUFF_LEN=1024
-    # TRACE_TASKS
+    TRACE_TASKS
     TRACE_USE_COREDEBUG
     TRACE_ISR
-    # TRACE_SERIAL
+    TRACE_SERIAL
 
     # Add network stress test functions
     STRESS_TEST_ENABLE

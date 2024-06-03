@@ -111,7 +111,7 @@ void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len);
 xQueueHandle serialGetTxQueue();
 
 #ifdef TRACE_SERIAL
-inline void traceAddSerial(SerialHandle_t *handle, uint8_t byte, bool tx, bool isr) {
+static inline void traceAddSerial(SerialHandle_t *handle, uint8_t byte, bool tx, bool isr) {
   uint32_t arg = 0;
   arg = (uint32_t)handle & 0xFFFF;
   if(tx) {
