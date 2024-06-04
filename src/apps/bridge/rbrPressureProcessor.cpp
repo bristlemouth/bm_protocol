@@ -121,6 +121,7 @@ static void runTask(void *param) {
           // Compute 2nd order difference signal
           DifferenceSignal::differenceSignalFromBuffer(d_n, diffSignalCapacity, d0);
           // TODO - CBOR Encode and send to Spotter
+          _reportMetaData.nRawReportsSent++;
         }
       } while (0);
 
