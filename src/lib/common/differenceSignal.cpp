@@ -42,8 +42,8 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
     }
     size_t dn_len = r_i - 1;
     numSamples = (numSamples < dn_len) ? numSamples : dn_len;
-    for (uint32_t i = 1; i < numSamples+1; i++) {
-      d_n[i-1] = r[i] - r[i - 1];
+    for (uint32_t i = 1; i < numSamples + 1; i++) {
+      d_n[i - 1] = r[i] - r[i - 1];
     }
     rval = true;
   } while (0);
@@ -69,14 +69,14 @@ bool DifferenceSignal::isFull() { return r_i == r_n; }
  * @return The mean of the signal
  */
 double DifferenceSignal::signalMean() {
-    if(!r_i) {
-        return 0.0;
-    }
-    double sum = 0.0;
-    for (uint32_t i = 0; i < r_i; i++) {
-        sum += r[i];
-    }
-    return sum / r_i;
+  if (!r_i) {
+    return 0.0;
+  }
+  double sum = 0.0;
+  for (uint32_t i = 0; i < r_i; i++) {
+    sum += r[i];
+  }
+  return sum / r_i;
 }
 
 /*!
@@ -85,9 +85,27 @@ double DifferenceSignal::signalMean() {
  * @return True if the reference signal was retrieved, false otherwise
  */
 bool DifferenceSignal::getReferenceSignal(double &r0) {
-    if (!r_i) {
-        return false;
+  if (!r_i) {
+    return false;
+  }
+  r0 = r[0];
+  return true;
+}
+
+bool DifferenceSignal::differenceSignalFromBuffer(double *d_n, size_t &numSamples, double &r0) {
+  configASSERT(d_n);
+  configASSERT(numSamples > 0);
+  bool rval = false;
+  do {
+    if (!numSamples) {
+      break;
     }
-    r0 = r[0];
-    return true;
+    r0 = d_n[0];
+    for (size_t i = 1; i < numSamples; i++) {
+      d_n[i - 1] = d_n[i] - d_n[i - 1];
+    }
+    numSamples--;
+    rval = true;
+  } while (0);
+  return rval;
 }

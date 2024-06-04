@@ -167,3 +167,32 @@ TEST_F(DifferenceSignalTest, signalMean) {
   }
   EXPECT_NEAR(ds.signalMean(), 1078.06, 0.00001);
 }
+
+TEST_F(DifferenceSignalTest, orderTwoSignal) {
+  const double samples[] = {1015.6, 1214.3, 1036.6, 1101.1, 1022.7};
+  const double key[] = {198.7, -177.7, 64.5, -78.4};
+  DifferenceSignal ds(5);
+  for (uint32_t sample = 0; sample < 5; sample++) {
+    EXPECT_TRUE(ds.addSample(samples[sample]));
+  }
+  double d_n[5];
+  size_t size = 5;
+  EXPECT_TRUE(ds.encodeDifferenceSignalToBuffer(d_n, size));
+  for (uint32_t i = 0; i < size; i++) {
+    EXPECT_NEAR(d_n[i], key[i], 0.00001);
+  }
+  EXPECT_EQ(size, 4);
+  EXPECT_TRUE(ds.isFull());
+  double r0;
+  EXPECT_EQ(ds.getReferenceSignal(r0), true);
+  EXPECT_NEAR(r0, 1015.6, 0.00001);
+
+  // 2nd Order Signal
+  const double key2[] = {-376.4, 242.2, -142.9};
+  EXPECT_TRUE(DifferenceSignal::differenceSignalFromBuffer(d_n, size, r0));
+  EXPECT_EQ(size, 3);
+  EXPECT_NEAR(r0, 198.7, 0.00001);
+  for (uint32_t i = 0; i < size; i++) {
+    EXPECT_NEAR(d_n[i], key2[i], 0.00001);
+  }
+}

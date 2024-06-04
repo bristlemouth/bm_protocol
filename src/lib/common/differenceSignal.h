@@ -11,6 +11,7 @@ public:
   void clear();
   bool isFull();
   double signalMean();
+  static bool differenceSignalFromBuffer(double *d_n, size_t &numSamples, double &r0);
 
 private:
   uint32_t r_i;
