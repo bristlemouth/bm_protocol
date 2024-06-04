@@ -155,6 +155,7 @@ extern "C" int main(void) {
   // enterBootloaderIfNeeded();
 
   memcpy(user_traceEvents, traceEvents, sizeof(traceEvents));
+  memset(traceEvents, 0, sizeof(traceEvents));
   user_fullTicksLeft = fullTicksLeft;
   user_expectedTicks = expectedTicks;
   user_lpuart_start_cpu_cycles = lpuart_start;
