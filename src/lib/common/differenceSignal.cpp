@@ -111,6 +111,7 @@ bool DifferenceSignal::getReferenceSignal(double &r0) {
     rval = true;
   } while (0);
   xSemaphoreGive(_mutex);
+  return rval;
 }
 
 /*!
