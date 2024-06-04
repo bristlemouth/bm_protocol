@@ -122,6 +122,10 @@ static void runTask(void *param) {
         if (diffSignal.encodeDifferenceSignalToBuffer(d_n, diffSignalCapacity)) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "%s Encoded difference signal to buffer \n", kRbrPressureProcessorTag);
+          double r0, d0;
+          diffSignal.getReferenceSignal(r0);
+          // Compute 2nd order difference signal
+          DifferenceSignal::differenceSignalFromBuffer(d_n, diffSignalCapacity, d0);
           // TODO - CBOR Encode and send to Spotter
         }
       } while (0);
