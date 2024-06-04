@@ -20,8 +20,6 @@ typedef struct PressureProcessorContext {
   QueueHandle_t q;
   EventGroupHandle_t eg;
   TimerHandle_t sendTimer;
-  TimerHandle_t checkRbrQueueTimer;
-  uint32_t lastReceiveTimestampMs;
   uint32_t rawSampleS;
   uint32_t diffBitDepth;
   uint32_t maxRawReports;
@@ -44,7 +42,6 @@ static constexpr char kRbrPressureProcessorTag[] = "[RbrPressureProcessor]";
 
 static void runTask(void *param);
 static void diffSigSendTimerCallback(TimerHandle_t xTimer);
-static void rbrCheckTimerCallback(TimerHandle_t xTimer);
 
 static PressureProcessorContext_t _ctx;
 #ifndef CI_TEST
@@ -63,9 +60,6 @@ void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
   _ctx.sendTimer = xTimerCreate("rbrRawSendTimer", pdMS_TO_TICKS(_ctx.rawSampleS * 1000),
                                 pdFALSE, NULL, diffSigSendTimerCallback);
   configASSERT(_ctx.sendTimer);
-  _ctx.checkRbrQueueTimer = xTimerCreate("rbrQueueCheckTimer", pdMS_TO_TICKS(1000), pdTRUE,
-                                         NULL, rbrCheckTimerCallback);
-  configASSERT(_ctx.checkRbrQueueTimer);
   _ctx.diffBitDepth = diffBitDepth;
   _ctx.maxRawReports = maxRawReports;
   _ctx.rawDepthThresholdUbar = rawDepthThresholdUbar;
@@ -80,12 +74,12 @@ void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
 
 void rbrPressureProcessorStart(void) {
   configASSERT(xTimerStart(_ctx.sendTimer, 10) == pdPASS);
-  configASSERT(xTimerStart(_ctx.checkRbrQueueTimer, 10) == pdPASS);
   _ctx.started = true;
 }
 
 bool rbrPressureProcessorAddSample(BmRbrDataMsg::Data &rbr_data, uint32_t timeout_ms) {
   if (_ctx.started && xQueueSend(_ctx.q, &rbr_data, pdMS_TO_TICKS(timeout_ms)) == pdTRUE) {
+    xEventGroupSetBits(_ctx.eg, kQRcv);
     return true;
   }
   return false;
@@ -134,32 +128,13 @@ static void runTask(void *param) {
     }
     if (bits & kQRcv) {
       if (xQueueReceive(_ctx.q, &rbr_data, 0) == pdTRUE) {
-        if (!_ctx.lastReceiveTimestampMs ||
-            (abs(abs(static_cast<int64_t>(rbr_data.header.sensor_reading_time_ms) -
-                     static_cast<int64_t>(_ctx.lastReceiveTimestampMs)) -
-                 kRbrSamplePeriodMs) < kRbrSamplePeriodErrMs)) {
-          if (diffSignal.addSample(rbr_data.pressure_deci_bar)) {
-            _ctx.lastReceiveTimestampMs = rbr_data.header.sensor_reading_time_ms;
-            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                           "%s Added sample %.2f to Diff signal \n", kRbrPressureProcessorTag,
-                           rbr_data.pressure_deci_bar);
-          } else {
-            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                           "%s Unable to add sample to Diff signal \n",
-                           kRbrPressureProcessorTag);
-          }
+        if (diffSignal.addSample(rbr_data.pressure_deci_bar)) {
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "%s Added sample %.2f to Diff signal \n", kRbrPressureProcessorTag,
+                         rbr_data.pressure_deci_bar);
         } else {
-          if (!diffSignal.addSample(NAN)) {
-            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                           "%s Sample too old, unable to add sample to Diff signal \n",
-                           kRbrPressureProcessorTag);
-          }
-        }
-      } else {
-        if (!diffSignal.addSample(NAN)) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                         "%s No sample availible, unable to add sample to Diff signal \n",
-                         kRbrPressureProcessorTag);
+                         "%s Unable to add sample to Diff signal \n", kRbrPressureProcessorTag);
         }
       }
     }
@@ -169,10 +144,5 @@ static void runTask(void *param) {
 static void diffSigSendTimerCallback(TimerHandle_t xTimer) {
   (void)xTimer;
   xEventGroupSetBits(_ctx.eg, kTimEx);
-  xTimerStop(_ctx.checkRbrQueueTimer, 0);
   _ctx.started = false;
-}
-static void rbrCheckTimerCallback(TimerHandle_t xTimer) {
-  (void)xTimer;
-  xEventGroupSetBits(_ctx.eg, kQRcv);
 }
