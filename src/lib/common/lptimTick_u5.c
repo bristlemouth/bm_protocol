@@ -426,7 +426,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
       // of the sleep period.  We identify the end of the sleep period by recognizing that the tick ISR has
       // modified usIdealCmp for the next tick after the sleep period ends.
       //
-      // IOWrite(&BB_PL_BUCK_EN, 0);
+      IOWrite(&BB_PL_BUCK_EN, 0);
 
       do
       {
@@ -468,7 +468,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 
       } while (usIdealCmp == ulExpectedEndCmp && eTaskConfirmSleepModeStatus() != eAbortSleep);
 
-      // IOWrite(&BB_PL_BUCK_EN, 1);
+      IOWrite(&BB_PL_BUCK_EN, 1);
 
       //      Re-enable interrupts.  We try our best to support short ISR latency, especially for interrupt
       // priorities higher than configMAX_SYSCALL_INTERRUPT_PRIORITY.

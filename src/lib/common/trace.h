@@ -42,6 +42,7 @@ typedef struct {
   uint32_t          timestamp; // Timestamp of trace event
   traceEventType_t  eventType; // Event type
   void              *arg;      // Additional information for trace event
+  uint64_t         count;
 #ifdef TRACE_SMALL
 } __attribute__((packed)) traceEvent_t;
 #else
@@ -54,6 +55,7 @@ extern uint32_t fullTicksLeft;
 extern uint32_t expectedTicks;
 extern uint32_t lpuart_start;
 extern uint32_t lpuart_stop;
+static uint64_t total_traces_count = 0;
 
 #ifdef TRACE_USE_COREDEBUG
 // Switch between arm trace counter and tickCount if needed!
@@ -69,6 +71,8 @@ __STATIC_FORCEINLINE void traceAdd(traceEventType_t eventType, void *arg) {
   traceEvents[traceEventIdx].timestamp = traceGetCount();
   traceEvents[traceEventIdx].eventType = eventType;
   traceEvents[traceEventIdx].arg = arg;
+  traceEvents[traceEventIdx].count = total_traces_count;
+  total_traces_count++;
 
   // Move on to next trace event
   traceEventIdx++;
