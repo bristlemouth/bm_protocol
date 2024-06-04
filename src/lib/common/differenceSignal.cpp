@@ -92,6 +92,13 @@ bool DifferenceSignal::getReferenceSignal(double &r0) {
   return true;
 }
 
+/*!
+ * @brief Creates a difference signal from a buffer
+ * @param d_n[in, out] The buffer containing the signal
+ * @param numSamples[in, out] In: The num samples in the buffer, Out: The number of samples in the buffer
+ * @param r0[out] The reference signal
+ * @return True if the difference signal was created, false otherwise
+ */
 bool DifferenceSignal::differenceSignalFromBuffer(double *d_n, size_t &numSamples, double &r0) {
   configASSERT(d_n);
   configASSERT(numSamples > 0);
