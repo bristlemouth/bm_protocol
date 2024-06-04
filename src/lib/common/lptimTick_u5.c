@@ -426,7 +426,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
       // of the sleep period.  We identify the end of the sleep period by recognizing that the tick ISR has
       // modified usIdealCmp for the next tick after the sleep period ends.
       //
-      IOWrite(&BB_PL_BUCK_EN, 0);
 
       do
       {
@@ -444,6 +443,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
          //
          TickType_t xModifiableIdleTime = xExpectedIdleTime;
          configPRE_SLEEP_PROCESSING( xModifiableIdleTime );
+         IOWrite(&BB_PL_BUCK_EN, 0);
          if (xModifiableIdleTime > 0)
          {
             //      Wait for an interrupt.
@@ -453,7 +453,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             __ISB();
          }
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
-
+         IOWrite(&BB_PL_BUCK_EN, 1);
          //      Re-enable interrupts, and then execute the ISR tied to the interrupt that brought the MCU out
          // of sleep mode.
          //
@@ -468,7 +468,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 
       } while (usIdealCmp == ulExpectedEndCmp && eTaskConfirmSleepModeStatus() != eAbortSleep);
 
-      IOWrite(&BB_PL_BUCK_EN, 1);
 
       //      Re-enable interrupts.  We try our best to support short ISR latency, especially for interrupt
       // priorities higher than configMAX_SYSCALL_INTERRUPT_PRIORITY.
