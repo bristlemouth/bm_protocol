@@ -55,7 +55,7 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 _ram_start = 0x20000000;
 _ram_size = 768K;
 _noinit_size = 512;
-_trace_size = 10240;
+_trace_size = 20480;
 
 /* Highest address of the user mode stack */
 _estack = (_ram_start + _ram_size) - _noinit_size;    /* end of RAM minus a bit */
