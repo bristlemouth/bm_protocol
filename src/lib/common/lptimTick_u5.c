@@ -443,7 +443,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
          //
          TickType_t xModifiableIdleTime = xExpectedIdleTime;
          configPRE_SLEEP_PROCESSING( xModifiableIdleTime );
-         IOWrite(&BB_PL_BUCK_EN, 0);
+         // IOWrite(&BB_PL_BUCK_EN, 0);
          if (xModifiableIdleTime > 0)
          {
             //      Wait for an interrupt.
@@ -453,7 +453,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             __ISB();
          }
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
-         IOWrite(&BB_PL_BUCK_EN, 1);
+         // IOWrite(&BB_PL_BUCK_EN, 1);
          //      Re-enable interrupts, and then execute the ISR tied to the interrupt that brought the MCU out
          // of sleep mode.
          //
@@ -560,8 +560,8 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             // must either reduce the execution times of your ISRs, decrease their priorities, or increase the
             // priority of the tick ISR.  See the description of configTICK_INTERRUPT_PRIORITY for details.
             //
-            fullTicksLeft = xFullTicksLeft;
-            expectedTicks = xExpectedIdleTime;
+            // fullTicksLeft = xFullTicksLeft;
+            // expectedTicks = xExpectedIdleTime;
             configASSERT( xFullTicksLeft <= xExpectedIdleTime );
 
             if (xFullTicksLeft != 0)
