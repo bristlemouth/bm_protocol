@@ -1,7 +1,11 @@
 #include "rbrPressureProcessor.h"
 #include "FreeRTOS.h"
+#include "app_pub_sub.h"
 #include "bm_network.h"
+#include "bm_rbr_pressure_difference_signal_msg.h"
+#include "bm_serial.h"
 #include "bridgeLog.h"
+#include "device_info.h"
 #include "differenceSignal.h"
 #include "event_groups.h"
 #include "queue.h"
@@ -39,6 +43,9 @@ static constexpr uint32_t kRbrSamplePeriodMs = 500;
 static constexpr uint32_t kRbrSamplePeriodErrMs = 5;
 static constexpr uint32_t kNoInitMagic = 0xcafedaad;
 static constexpr char kRbrPressureProcessorTag[] = "[RbrPressureProcessor]";
+static constexpr size_t cbor_buffer_size = 1024;
+static constexpr char kRbrPressureHdrTopic[] = "/sofar/bm_rbr_data";
+static constexpr uint32_t kSampleChunkSize = 30;
 
 static void runTask(void *param);
 static void diffSigSendTimerCallback(TimerHandle_t xTimer);
@@ -95,6 +102,7 @@ static void runTask(void *param) {
   DifferenceSignal diffSignal(diffSignalCapacity);
   const size_t d_n_size = num_samples * sizeof(double);
   double *d_n = static_cast<double *>(pvPortMalloc(d_n_size));
+  uint8_t *cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_buffer_size));
   while (1) {
     EventBits_t bits = xEventGroupWaitBits(_ctx.eg, kAll, pdTRUE, pdFALSE, portMAX_DELAY);
     if (bits & kTimEx) {
@@ -121,6 +129,50 @@ static void runTask(void *param) {
           // Compute 2nd order difference signal
           DifferenceSignal::differenceSignalFromBuffer(d_n, diffSignalCapacity, d0);
           // TODO - CBOR Encode and send to Spotter
+          uint32_t samples_to_send = diffSignalCapacity;
+          static BmRbrPressureDifferenceSignalMsg::Data d;
+          uint32_t offset = 0;
+          uint32_t sequence_num = 0;
+          while (samples_to_send) {
+            uint32_t samples_to_send_now =
+                samples_to_send > kSampleChunkSize ? kSampleChunkSize : samples_to_send;
+            d.header.version = BmRbrPressureDifferenceSignalMsg::VERSION;
+            d.header.reading_time_utc_ms = rbr_data.header.reading_time_utc_ms;
+            d.header.reading_uptime_millis = rbr_data.header.reading_uptime_millis;
+            d.header.sensor_reading_time_ms = rbr_data.header.sensor_reading_time_ms;
+            d.total_samples = diffSignalCapacity + offset;
+            d.sequence_num = sequence_num;
+            d.num_samples = samples_to_send_now;
+            d.residual_0 = r0;
+            d.residual_1 = d0;
+            d.difference_signal = d_n;
+            size_t encoded_len = 0;
+            if (BmRbrPressureDifferenceSignalMsg::encode(d, cbor_buffer, cbor_buffer_size,
+                                                         &encoded_len) == CborNoError) {
+              if (bm_serial_pub(
+                      getNodeId(), APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_TOPIC,
+                      strlen(APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_TOPIC), cbor_buffer,
+                      encoded_len, APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_TYPE,
+                      APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_VERSION) == BM_SERIAL_OK) {
+                bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                               "%s Sent difference signal to Spotter \n",
+                               kRbrPressureProcessorTag);
+                offset += samples_to_send_now;
+                samples_to_send -= samples_to_send_now;
+                sequence_num++;
+              } else {
+                bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                               "%s Failed to publish difference signal to Spotter \n",
+                               kRbrPressureProcessorTag);
+                break;
+              }
+            } else {
+              bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                             "%s Failed to encode difference signal \n",
+                             kRbrPressureProcessorTag);
+            }
+            vTaskDelay(100);
+          }
           _reportMetaData.nRawReportsSent++;
         }
       } while (0);

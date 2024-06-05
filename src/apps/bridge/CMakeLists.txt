@@ -311,6 +311,7 @@ endif()
 if (RAW_PRESSURE_ENABLE STREQUAL 1)
 list(APPEND APP_FILES  ${CMAKE_CURRENT_SOURCE_DIR}/rbrPressureProcessor.cpp)
 list(APPEND APP_FILES  ${SRC_DIR}/lib/common/differenceSignal.cpp)
+list(APPEND APP_FILES  ${SRC_DIR}/lib/bm_common_messages/bm_rbr_pressure_difference_signal_msg.cpp)
 list(APPEND APP_DEFINES "RAW_PRESSURE_ENABLE")
 endif()
 
