@@ -25,7 +25,7 @@ public:
   static constexpr char CFG_RBR_TYPE[] = "rbrCodaType";
 
 private:
-  static constexpr uint32_t BAUD_RATE = 1200;
+  static constexpr uint32_t BAUD_RATE = 9600;
   static constexpr char LINE_TERM = '\n';
   static constexpr ValueType parserValueTypeOne[] = {TYPE_UINT64, TYPE_DOUBLE};
   static constexpr ValueType parserValueTypeTwo[] = {TYPE_UINT64, TYPE_DOUBLE, TYPE_DOUBLE};
