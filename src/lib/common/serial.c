@@ -226,6 +226,8 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
 
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
+  size_t bytesAvailable = 0;
+
   configASSERT(handle != NULL);
 
   // Process received bytes
@@ -242,19 +244,23 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
       usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
     uint8_t txByte;
     configASSERT(handle->getTxBytesFromISR);
-    size_t bytesAvailable = handle->getTxBytesFromISR(handle, &txByte, 1);
+    bytesAvailable = handle->getTxBytesFromISR(handle, &txByte, 1);
 
     if (bytesAvailable > 0) {
       // Transmit current byte
       usart_TransmitData8((USART_TypeDef *)handle->device, txByte);
-    } else   if(LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device)) {
+    } else {
+      usart_DisableIT_TXE((USART_TypeDef *)handle->device);
+    }
+  }
+
+  if (!bytesAvailable && LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device) && !usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
       // Disable this interrupt if there are no more bytes to transmit
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
-      usart_DisableIT_TXE((USART_TypeDef *)handle->device);
+      // usart_DisableIT_TXE((USART_TypeDef *)handle->device);
       if(handle->postTxCb){
         handle->postTxCb(handle);
       }
-    }
   }
 
   // Handle UART overrun error
