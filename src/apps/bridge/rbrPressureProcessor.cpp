@@ -30,12 +30,8 @@ typedef struct PressureProcessorContext {
   double rawDepthThresholdUbar;
   bool started;
   cfg::Configuration *usrCfg;
-} PressureProcessorContext_t;
-
-typedef struct reportMetaData {
-  uint32_t magic;
   uint32_t nRawReportsSent;
-} reportMetaData_t;
+} PressureProcessorContext_t;
 
 static constexpr EventBits_t kQRcv = 1 << 0;
 static constexpr EventBits_t kTimEx = 1 << 1;
@@ -54,16 +50,14 @@ static void runTask(void *param);
 static void diffSigSendTimerCallback(TimerHandle_t xTimer);
 
 static PressureProcessorContext_t _ctx;
-#ifndef CI_TEST
-static reportMetaData_t _reportMetaData __attribute__((section(".noinit")));
-#else  // CI_TEST
-static reportMetaData_t _reportMetaData;
-#endif // CI_TEST
 
 void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
                               uint32_t maxRawReports, double rawDepthThresholdUbar, cfg::Configuration *usrCfg) {
   configASSERT(usrCfg);
   _ctx.usrCfg = usrCfg;
+  if(!_ctx.usrCfg->getConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent), _ctx.nRawReportsSent)) {
+    _ctx.nRawReportsSent = 0;
+  }
   _ctx.q = xQueueCreate(10, sizeof(BmRbrDataMsg::Data));
   configASSERT(_ctx.q);
   _ctx.eg = xEventGroupCreate();
@@ -76,10 +70,6 @@ void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
   _ctx.maxRawReports = maxRawReports;
   _ctx.rawDepthThresholdUbar = rawDepthThresholdUbar;
   _ctx.started = false;
-  if (_reportMetaData.magic != kNoInitMagic) {
-    _reportMetaData.magic = kNoInitMagic;
-    _reportMetaData.nRawReportsSent = 0;
-  }
   configASSERT(xTaskCreate(runTask, "rbrPressureProcessor", configMINIMAL_STACK_SIZE * 4, NULL,
                            RBR_PROCESSOR_TASK_PRIORITY, NULL) == pdPASS);
 }
@@ -112,10 +102,10 @@ static void runTask(void *param) {
     EventBits_t bits = xEventGroupWaitBits(_ctx.eg, kAll, pdTRUE, pdFALSE, portMAX_DELAY);
     if (bits & kTimEx) {
       do {
-        if (_reportMetaData.nRawReportsSent >= _ctx.maxRawReports) {
+        if (_ctx.nRawReportsSent >= _ctx.maxRawReports) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                          "%s nRawReportsSent %" PRIu32 ">= maxRawReports %" PRIu32 "\n",
-                         kRbrPressureProcessorTag, _reportMetaData.nRawReportsSent,
+                         kRbrPressureProcessorTag, _ctx.nRawReportsSent,
                          _ctx.maxRawReports);
           break;
         }
@@ -178,9 +168,9 @@ static void runTask(void *param) {
             }
             vTaskDelay(100);
           }
-          _reportMetaData.nRawReportsSent++;
+          _ctx.nRawReportsSent++;
           _ctx.usrCfg->setConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent),
-                                 _reportMetaData.nRawReportsSent);
+                                 _ctx.nRawReportsSent);
           _ctx.usrCfg->saveConfig(false);
         }
       } while (0);
