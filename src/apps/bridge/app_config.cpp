@@ -2,6 +2,7 @@
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
 #include "rbrPressureProcessor.h"
+#include "rbrCodaSensor.h"
 
 power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
   power_config_s pwrcfg;
@@ -167,6 +168,19 @@ raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg) {
     syscfg.setConfig(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR,
                      strlen(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR),
                      cfg.rawDepthThresholdUbar);
+    save_config = true;
+  }
+  cfg.rbrCodaReadingPeriodMs = RbrCodaSensor::DEFAULT_RBR_CODA_READING_PERIOD_MS;
+  if (syscfg.getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+                                strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                                cfg.rbrCodaReadingPeriodMs)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                    "Failed to get rbr coda reading period from config, using default value and "
+                    "writing to config: %" PRIu32 "ms\n",
+                    cfg.rbrCodaReadingPeriodMs);
+    syscfg.setConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+                             strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                             cfg.rbrCodaReadingPeriodMs);
     save_config = true;
   }
   if (save_config) {

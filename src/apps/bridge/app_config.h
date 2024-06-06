@@ -40,7 +40,7 @@ power_config_s getPowerConfigs(cfg::Configuration &syscfg);
 
 #ifdef RAW_PRESSURE_ENABLE
 struct raw_pressure_config_s {
-  uint32_t rawSampleS, diffBitDepth, maxRawReports;
+  uint32_t rawSampleS, diffBitDepth, maxRawReports, rbrCodaReadingPeriodMs;
   float rawDepthThresholdUbar;
 };
 

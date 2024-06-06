@@ -17,9 +17,6 @@
 #include "rbrPressureProcessor.h"
 #endif // RAW_PRESSURE_ENABLE
 
-// TODO - get this from the sensor node itself
-#define DEFAULT_RBR_CODA_READING_PERIOD_MS 500 // 2Hz
-
 bool RbrCodaSensor::subscribe() {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));

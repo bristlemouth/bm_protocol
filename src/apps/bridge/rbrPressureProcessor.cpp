@@ -31,14 +31,12 @@ typedef struct PressureProcessorContext {
   bool started;
   cfg::Configuration *usrCfg;
   uint32_t nRawReportsSent;
+  uint32_t rbrCodaReadingPeriodMs;
 } PressureProcessorContext_t;
 
 static constexpr EventBits_t kQRcv = 1 << 0;
 static constexpr EventBits_t kTimEx = 1 << 1;
 static constexpr EventBits_t kAll = kQRcv | kTimEx;
-static constexpr uint32_t kRbrSamplePeriodMs = 500;
-static constexpr uint32_t kRbrSamplePeriodErrMs = 5;
-static constexpr uint32_t kNoInitMagic = 0xcafedaad;
 static constexpr char kRbrPressureProcessorTag[] = "[RbrPressureProcessor]";
 static constexpr size_t cbor_buffer_size = 1024;
 static constexpr char kRbrPressureHdrTopic[] = "/sofar/bm_rbr_data";
@@ -52,10 +50,13 @@ static void diffSigSendTimerCallback(TimerHandle_t xTimer);
 static PressureProcessorContext_t _ctx;
 
 void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
-                              uint32_t maxRawReports, double rawDepthThresholdUbar, cfg::Configuration *usrCfg) {
+                              uint32_t maxRawReports, double rawDepthThresholdUbar,
+                              cfg::Configuration *usrCfg, uint32_t rbrCodaReadingPeriodMs) {
   configASSERT(usrCfg);
   _ctx.usrCfg = usrCfg;
-  if(!_ctx.usrCfg->getConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent), _ctx.nRawReportsSent)) {
+  _ctx.rbrCodaReadingPeriodMs = rbrCodaReadingPeriodMs;
+  if (!_ctx.usrCfg->getConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent),
+                              _ctx.nRawReportsSent)) {
     _ctx.nRawReportsSent = 0;
   }
   _ctx.q = xQueueCreate(10, sizeof(BmRbrDataMsg::Data));
@@ -92,7 +93,7 @@ bool rbrPressureProcessorIsStarted(void) { return _ctx.started; }
 static void runTask(void *param) {
   (void)param;
   BmRbrDataMsg::Data rbr_data;
-  uint32_t num_samples = (_ctx.rawSampleS * 1000) / kRbrSamplePeriodMs;
+  uint32_t num_samples = (_ctx.rawSampleS * 1000) / _ctx.rbrCodaReadingPeriodMs;
   size_t diffSignalCapacity = num_samples;
   DifferenceSignal diffSignal(diffSignalCapacity);
   const size_t d_n_size = num_samples * sizeof(double);
@@ -105,8 +106,7 @@ static void runTask(void *param) {
         if (_ctx.nRawReportsSent >= _ctx.maxRawReports) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                          "%s nRawReportsSent %" PRIu32 ">= maxRawReports %" PRIu32 "\n",
-                         kRbrPressureProcessorTag, _ctx.nRawReportsSent,
-                         _ctx.maxRawReports);
+                         kRbrPressureProcessorTag, _ctx.nRawReportsSent, _ctx.maxRawReports);
           break;
         }
         double signalMean = diffSignal.signalMean();
