@@ -123,7 +123,6 @@ static void runTask(void *param) {
           diffSignal.getReferenceSignal(r0);
           // Compute 2nd order difference signal
           DifferenceSignal::differenceSignalFromBuffer(d_n, diffSignalCapacity, d0);
-          // TODO - CBOR Encode and send to Spotter
           uint32_t samples_to_send = diffSignalCapacity;
           static BmRbrPressureDifferenceSignalMsg::Data d;
           uint32_t offset = 0;
