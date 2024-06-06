@@ -48,6 +48,7 @@ static constexpr size_t cbor_buffer_size = 1024;
 static constexpr char kRbrPressureHdrTopic[] = "/sofar/bm_rbr_data";
 static constexpr uint32_t kSampleChunkSize = 30;
 static constexpr double decibar_to_ubar = 10000.0;
+static constexpr char kRBRnRawReportsSent[] = "RBRnRawReportsSent";
 
 static void runTask(void *param);
 static void diffSigSendTimerCallback(TimerHandle_t xTimer);
@@ -178,7 +179,9 @@ static void runTask(void *param) {
             vTaskDelay(100);
           }
           _reportMetaData.nRawReportsSent++;
-
+          _ctx.usrCfg->setConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent),
+                                 _reportMetaData.nRawReportsSent);
+          _ctx.usrCfg->saveConfig(false);
         }
       } while (0);
 
