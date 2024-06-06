@@ -22,10 +22,10 @@ constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
 constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
 constexpr const char *TURBIDITY_READING_PERIOD_MS = "turbidityReadingPeriodMs";
 #ifdef RAW_PRESSURE_ENABLE
-constexpr const char *RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S = "rawSampleS";
-constexpr const char *RBR_RAW_DIFFERENTIAL_BIT_DEPTH = "diffBitDepth";
-constexpr const char *RBR_MAX_RAW_REPORTS = "maxRawReports";
-constexpr const char *RBR_RAW_DEPTH_THRESHOLD_UBAR = "rawDepthThresholdUbar";
+constexpr const char *RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S = "RBRrawSampleS";
+constexpr const char *RBR_RAW_DIFFERENTIAL_BIT_DEPTH = "RBRdiffBitDepth";
+constexpr const char *RBR_MAX_RAW_REPORTS = "RBRmaxRawReports";
+constexpr const char *RBR_RAW_DEPTH_THRESHOLD_UBAR = "RBRdiffBitDepth";
 #endif // RAW_PRESSURE_ENABLE
 
 } // namespace AppConfig

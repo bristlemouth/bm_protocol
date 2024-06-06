@@ -407,7 +407,8 @@ static void defaultTask(void *parameters) {
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
                             raw_pressure_cfg.diffBitDepth,
                             raw_pressure_cfg.maxRawReports,
-                            raw_pressure_cfg.rawDepthThresholdUbar);
+                            raw_pressure_cfg.rawDepthThresholdUbar,
+                            &debug_configuration_user);
 #endif // RAW_PRESSURE_ENABLE
 
   // // Re-enable low power mode

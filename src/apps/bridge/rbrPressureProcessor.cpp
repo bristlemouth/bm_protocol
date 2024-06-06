@@ -29,6 +29,7 @@ typedef struct PressureProcessorContext {
   uint32_t maxRawReports;
   double rawDepthThresholdUbar;
   bool started;
+  cfg::Configuration *usrCfg;
 } PressureProcessorContext_t;
 
 typedef struct reportMetaData {
@@ -46,6 +47,7 @@ static constexpr char kRbrPressureProcessorTag[] = "[RbrPressureProcessor]";
 static constexpr size_t cbor_buffer_size = 1024;
 static constexpr char kRbrPressureHdrTopic[] = "/sofar/bm_rbr_data";
 static constexpr uint32_t kSampleChunkSize = 30;
+static constexpr double decibar_to_ubar = 10000.0;
 
 static void runTask(void *param);
 static void diffSigSendTimerCallback(TimerHandle_t xTimer);
@@ -58,7 +60,9 @@ static reportMetaData_t _reportMetaData;
 #endif // CI_TEST
 
 void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
-                              uint32_t maxRawReports, double rawDepthThresholdUbar) {
+                              uint32_t maxRawReports, double rawDepthThresholdUbar, cfg::Configuration *usrCfg) {
+  configASSERT(usrCfg);
+  _ctx.usrCfg = usrCfg;
   _ctx.q = xQueueCreate(10, sizeof(BmRbrDataMsg::Data));
   configASSERT(_ctx.q);
   _ctx.eg = xEventGroupCreate();
@@ -115,7 +119,7 @@ static void runTask(void *param) {
           break;
         }
         double signalMean = diffSignal.signalMean();
-        if (signalMean < _ctx.rawDepthThresholdUbar) {
+        if ((signalMean * decibar_to_ubar) < _ctx.rawDepthThresholdUbar) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                          "%s signalMean %lf < rawDepthThresholdUbar %lf \n",
                          kRbrPressureProcessorTag, signalMean, _ctx.rawDepthThresholdUbar);
@@ -174,6 +178,7 @@ static void runTask(void *param) {
             vTaskDelay(100);
           }
           _reportMetaData.nRawReportsSent++;
+
         }
       } while (0);
 
