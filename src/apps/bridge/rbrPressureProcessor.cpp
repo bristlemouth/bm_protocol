@@ -135,12 +135,12 @@ static void runTask(void *param) {
             d.header.reading_time_utc_ms = rbr_data.header.reading_time_utc_ms;
             d.header.reading_uptime_millis = rbr_data.header.reading_uptime_millis;
             d.header.sensor_reading_time_ms = rbr_data.header.sensor_reading_time_ms;
-            d.total_samples = diffSignalCapacity + offset;
+            d.total_samples = diffSignalCapacity;
             d.sequence_num = sequence_num;
             d.num_samples = samples_to_send_now;
             d.residual_0 = r0;
             d.residual_1 = d0;
-            d.difference_signal = d_n;
+            d.difference_signal = d_n + offset;
             size_t encoded_len = 0;
             if (BmRbrPressureDifferenceSignalMsg::encode(d, cbor_buffer, cbor_buffer_size,
                                                          &encoded_len) == CborNoError) {
