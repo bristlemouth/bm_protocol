@@ -1,8 +1,10 @@
 #include "app_config.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
-#include "rbrPressureProcessor.h"
 #include "rbrCodaSensor.h"
+#ifdef RAW_PRESSURE_ENABLE
+#include "rbrPressureProcessor.h"
+#endif // RAW_PRESSURE_ENABLE
 
 power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
   power_config_s pwrcfg;
