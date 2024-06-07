@@ -51,6 +51,12 @@ typedef struct app_pub_sub_bm_bridge_sensor_report_data {
 #define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_TYPE 1
 #define APP_PUB_SUB_BM_BRIDGE_SENSOR_REPORT_VERSION 1
 
+#ifdef RAW_PRESSURE_ENABLE
+#define APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_TOPIC "bridge/rbr_hdr_pressure_data"
+#define APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_TYPE 1
+#define APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_VERSION 1
+#endif // RAW_PRESSURE_ENABLE
+
 #ifdef __cplusplus
 }
 #endif

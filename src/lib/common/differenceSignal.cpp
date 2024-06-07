@@ -1,5 +1,4 @@
 #include "differenceSignal.h"
-#include "FreeRTOS.h"
 
 /*!
  * @brief Constructor for DifferenceSignal class
@@ -10,6 +9,8 @@ DifferenceSignal::DifferenceSignal(uint32_t numTotalSamples) : r_i(0) {
   r_n = numTotalSamples;
   r = static_cast<double *>(pvPortMalloc((r_n) * sizeof(double)));
   configASSERT(r);
+  _mutex = xSemaphoreCreateMutex();
+  configASSERT(_mutex);
 }
 
 /*!
@@ -18,11 +19,16 @@ DifferenceSignal::DifferenceSignal(uint32_t numTotalSamples) : r_i(0) {
  * @return True if the sample was added, false if the buffer is full
  */
 bool DifferenceSignal::addSample(double sample) {
-  if (r_i < r_n) {
-    r[r_i++] = sample;
-    return true;
-  }
-  return false;
+  bool rval = false;
+  xSemaphoreTake(_mutex, portMAX_DELAY);
+  do {
+    if (r_i < r_n) {
+      r[r_i++] = sample;
+      rval = true;
+    }
+  } while (0);
+  xSemaphoreGive(_mutex);
+  return rval;
 }
 
 /*!
@@ -36,6 +42,7 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
   configASSERT(d_n);
   configASSERT(numSamples > 0);
   bool rval = false;
+  xSemaphoreTake(_mutex, portMAX_DELAY);
   do {
     if (!r_i) {
       break;
@@ -47,6 +54,8 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
     }
     rval = true;
   } while (0);
+  xSemaphoreGive(_mutex);
+
   if (!rval) {
     numSamples = 0;
   }
@@ -56,7 +65,11 @@ bool DifferenceSignal::encodeDifferenceSignalToBuffer(double *d_n, size_t &numSa
 /*!
  * @brief Clears the signal buffer
  */
-void DifferenceSignal::clear() { r_i = 0; }
+void DifferenceSignal::clear() {
+  xSemaphoreTake(_mutex, portMAX_DELAY);
+  r_i = 0;
+  xSemaphoreGive(_mutex);
+}
 
 /*!
  * @brief Checks if the signal buffer is full
@@ -69,14 +82,17 @@ bool DifferenceSignal::isFull() { return r_i == r_n; }
  * @return The mean of the signal
  */
 double DifferenceSignal::signalMean() {
-  if (!r_i) {
-    return 0.0;
-  }
+  xSemaphoreTake(_mutex, portMAX_DELAY);
   double sum = 0.0;
+  double result = 0.0;
   for (uint32_t i = 0; i < r_i; i++) {
     sum += r[i];
   }
-  return sum / r_i;
+  if (r_i) {
+    result = sum / r_i;
+  }
+  xSemaphoreGive(_mutex);
+  return result;
 }
 
 /*!
@@ -85,11 +101,17 @@ double DifferenceSignal::signalMean() {
  * @return True if the reference signal was retrieved, false otherwise
  */
 bool DifferenceSignal::getReferenceSignal(double &r0) {
-  if (!r_i) {
-    return false;
-  }
-  r0 = r[0];
-  return true;
+  xSemaphoreTake(_mutex, portMAX_DELAY);
+  bool rval = false;
+  do {
+    if (!r_i) {
+      break;
+    }
+    r0 = r[0];
+    rval = true;
+  } while (0);
+  xSemaphoreGive(_mutex);
+  return rval;
 }
 
 /*!

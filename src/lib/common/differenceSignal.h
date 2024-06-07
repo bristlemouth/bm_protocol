@@ -1,4 +1,6 @@
 #pragma once
+#include "FreeRTOS.h"
+#include "semphr.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -14,6 +16,7 @@ public:
   static bool differenceSignalFromBuffer(double *d_n, size_t &numSamples, double &r0);
 
 private:
+  SemaphoreHandle_t _mutex;
   uint32_t r_i;
   uint32_t r_n;
   double *r;

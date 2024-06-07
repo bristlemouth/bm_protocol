@@ -12,6 +12,9 @@
 #include "util.h"
 #include <cinttypes>
 #include <stdio.h>
+#ifdef RAW_PRESSURE_ENABLE
+#include "rbrPressureProcessor.h"
+#endif // RAW_PRESSURE_ENABLE
 
 BridgePowerController::BridgePowerController(
     IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs,
@@ -231,6 +234,12 @@ void BridgePowerController::_update(void) {
           }
         } else { // Subsampling disabled
           stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
+#ifdef RAW_PRESSURE_ENABLE
+      if(!rbrPressureProcessorIsStarted()) {
+        rbrPressureProcessorStart();
+        printf("Started rbrPressureProcessor\n");
+      }
+#endif // RAW_PRESSURE_ENABLE
           powerBusAndSetSignal(true);
           time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
           break;

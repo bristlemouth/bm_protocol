@@ -1,7 +1,14 @@
 #include "gtest/gtest.h"
 
 #include "differenceSignal.h"
+#include "fff.h"
 #include "util.h"
+
+extern "C" {
+#include "mock_FreeRTOS.h"
+}
+
+DEFINE_FFF_GLOBALS;
 
 // The fixture for testing class Foo.
 class DifferenceSignalTest : public ::testing::Test {
@@ -23,6 +30,10 @@ protected:
   void SetUp() override {
     // Code here will be called immediately after the constructor (right
     // before each test).
+    RESET_FAKE(xQueueCreateMutex);
+    RESET_FAKE(xQueueSemaphoreTake);
+    xQueueCreateMutex_fake.return_val = (QueueHandle_t)0x1234;
+    xQueueSemaphoreTake_fake.return_val = pdTRUE;
   }
 
   void TearDown() override {

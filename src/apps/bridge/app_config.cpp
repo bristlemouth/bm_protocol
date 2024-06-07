@@ -1,6 +1,10 @@
 #include "app_config.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
+#include "rbrCodaSensor.h"
+#ifdef RAW_PRESSURE_ENABLE
+#include "rbrPressureProcessor.h"
+#endif // RAW_PRESSURE_ENABLE
 
 power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
   power_config_s pwrcfg;
@@ -97,13 +101,12 @@ power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
   if (!syscfg.getConfig(AppConfig::TICKS_SAMPLING_ENABLED,
                         strlen(AppConfig::TICKS_SAMPLING_ENABLED),
                         pwrcfg.ticksSamplingEnabled)) {
-    bridgeLogPrint(
-        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-        "Failed to get ticks sampling enabled from config, using default value and "
-        "writing to config: %" PRIu32 "ms\n",
-        pwrcfg.ticksSamplingEnabled);
-    syscfg.setConfig(AppConfig::TICKS_SAMPLING_ENABLED, strlen(AppConfig::TICKS_SAMPLING_ENABLED),
-                     pwrcfg.ticksSamplingEnabled);
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get ticks sampling enabled from config, using default value and "
+                   "writing to config: %" PRIu32 "ms\n",
+                   pwrcfg.ticksSamplingEnabled);
+    syscfg.setConfig(AppConfig::TICKS_SAMPLING_ENABLED,
+                     strlen(AppConfig::TICKS_SAMPLING_ENABLED), pwrcfg.ticksSamplingEnabled);
     save_config = true;
   }
   if (save_config) {
@@ -112,3 +115,80 @@ power_config_s getPowerConfigs(cfg::Configuration &syscfg) {
 
   return pwrcfg;
 }
+
+#ifdef RAW_PRESSURE_ENABLE
+raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg) {
+  raw_pressure_config_s cfg;
+
+  bool save_config = false;
+  cfg.rawSampleS = RbrPressureProcessor::DEFAULT_RAW_SAMPLE_S;
+  if (!syscfg.getConfig(AppConfig::RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S,
+                        strlen(AppConfig::RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S),
+                        cfg.rawSampleS)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get rbr pressure differential sample period from config, using "
+                   "default value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   cfg.rawSampleS);
+    syscfg.setConfig(AppConfig::RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S,
+                     strlen(AppConfig::RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S), cfg.rawSampleS);
+    save_config = true;
+  }
+  cfg.diffBitDepth = RbrPressureProcessor::DEFAULT_DIFF_BIT_DEPTH;
+  if (!syscfg.getConfig(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH,
+                        strlen(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH), cfg.diffBitDepth)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get rbr pressure differential bit depth from config, using "
+                   "default value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   cfg.diffBitDepth);
+    syscfg.setConfig(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH,
+                     strlen(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH), cfg.diffBitDepth);
+    save_config = true;
+  }
+  cfg.maxRawReports = RbrPressureProcessor::DEFAULT_MAX_RAW_REPORTS;
+  if (!syscfg.getConfig(AppConfig::RBR_MAX_RAW_REPORTS, strlen(AppConfig::RBR_MAX_RAW_REPORTS),
+                        cfg.maxRawReports)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get rbr pressure differential max raw reports from config, using "
+                   "default value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   cfg.maxRawReports);
+    syscfg.setConfig(AppConfig::RBR_MAX_RAW_REPORTS, strlen(AppConfig::RBR_MAX_RAW_REPORTS),
+                     cfg.maxRawReports);
+    save_config = true;
+  }
+  cfg.rawDepthThresholdUbar = RbrPressureProcessor::DEFAULT_RAW_DEPTH_THRESHOLD_UBAR;
+  if (!syscfg.getConfig(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR,
+                        strlen(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR),
+                        cfg.rawDepthThresholdUbar)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get rbr pressure differential threshold from config, using "
+                   "default value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   cfg.rawDepthThresholdUbar);
+    syscfg.setConfig(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR,
+                     strlen(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR),
+                     cfg.rawDepthThresholdUbar);
+    save_config = true;
+  }
+  cfg.rbrCodaReadingPeriodMs = RbrCodaSensor::DEFAULT_RBR_CODA_READING_PERIOD_MS;
+  if (syscfg.getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+                                strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                                cfg.rbrCodaReadingPeriodMs)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                    "Failed to get rbr coda reading period from config, using default value and "
+                    "writing to config: %" PRIu32 "ms\n",
+                    cfg.rbrCodaReadingPeriodMs);
+    syscfg.setConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+                             strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                             cfg.rbrCodaReadingPeriodMs);
+    save_config = true;
+  }
+  if (save_config) {
+    syscfg.saveConfig(false);
+  }
+
+  return cfg;
+}
+#endif // RAW_PRESSURE_ENABLE

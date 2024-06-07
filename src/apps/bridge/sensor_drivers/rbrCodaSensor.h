@@ -37,6 +37,7 @@ typedef struct RbrCodaSensor : public AbstractSensor {
   static constexpr double PRESSURE_SAMPLE_MEMBER_MAX = 200;
   static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MIN = 0;
   static constexpr double PRESSURE_STDEV_SAMPLE_MEMBER_MAX = 3.2765;
+  static constexpr uint32_t DEFAULT_RBR_CODA_READING_PERIOD_MS = 500; // 2Hz
 
 public:
   bool subscribe() override;

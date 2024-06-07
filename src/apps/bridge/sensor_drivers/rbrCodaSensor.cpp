@@ -13,9 +13,9 @@
 #include "topology_sampler.h"
 #include "util.h"
 #include <new>
-
-// TODO - get this from the sensor node itself
-#define DEFAULT_RBR_CODA_READING_PERIOD_MS 500 // 2Hz
+#ifdef RAW_PRESSURE_ENABLE
+#include "rbrPressureProcessor.h"
+#endif // RAW_PRESSURE_ENABLE
 
 bool RbrCodaSensor::subscribe() {
   bool rval = false;
@@ -42,6 +42,13 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
     if (xSemaphoreTake(rbr_coda->_mutex, portMAX_DELAY)) {
       static BmRbrDataMsg::Data rbr_data;
       if (BmRbrDataMsg::decode(rbr_data, data, data_len) == CborNoError) {
+#ifdef RAW_PRESSURE_ENABLE
+    if(rbrPressureProcessorIsStarted()) {
+      if(!rbrPressureProcessorAddSample(rbr_data, 1000)) {
+        printf("Failed to add sample to rbrPressureProcessor\n");
+      }
+    }
+#endif // RAW_PRESSURE_ENABLE
         char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
         rbr_coda->temp_deg_c.addSample(rbr_data.temperature_deg_c);
