@@ -50,7 +50,6 @@ typedef struct {
 
 extern traceEvent_t traceEvents[TRACE_BUFF_LEN];
 extern uint32_t traceEventIdx;
-// static uint64_t total_traces_count = 0;
 
 #ifdef TRACE_USE_COREDEBUG
 // Switch between arm trace counter and tickCount if needed!

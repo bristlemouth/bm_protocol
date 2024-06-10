@@ -225,7 +225,7 @@ placed into the low power state respectively. */
 #endif // configUSE_TICKLESS_IDLE == 2
 
 // Custom trace code
-#include "trace.h"
+// #include "trace.h"
 
 #ifdef __cplusplus
 }

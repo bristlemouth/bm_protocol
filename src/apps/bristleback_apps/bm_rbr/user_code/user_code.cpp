@@ -36,8 +36,6 @@ static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
 
 static bool sent_reset_reason = false;
-static constexpr char TRACE_BUFF_ENABLE[] = "traceBuffEnable";
-static uint32_t traceBuffEnable = 0;
 
 void setup(void) {
   configASSERT(systemConfigurationPartition);
@@ -50,11 +48,10 @@ void setup(void) {
   SensorWatchdog::SensorWatchdogAdd(BM_RBR_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmRbrWatchdogHandler, NO_MAX_TRIGGER,
                                     RbrSensor::RBR_RAW_LOG);
-  systemConfigurationPartition->getConfig(TRACE_BUFF_ENABLE, strlen(TRACE_BUFF_ENABLE), traceBuffEnable);
   bmRbrTopicStrLen = createBmRbrDataTopic();
   IOWrite(&BB_VBUS_EN, 0);
   vTaskDelay(pdMS_TO_TICKS(100)); // Wait for Vbus to stabilize
-  // IOWrite(&BB_PL_BUCK_EN, 0);
+  IOWrite(&BB_PL_BUCK_EN, 0);
   last_payload_power_on_time = uptimeGetMs();
 }
 
@@ -72,7 +69,6 @@ void loop(void) {
     bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
   }
-
 
   if (rbr_sensor.getData(d)) {
     SensorWatchdog::SensorWatchdogPet(BM_RBR_WATCHDOG_ID);

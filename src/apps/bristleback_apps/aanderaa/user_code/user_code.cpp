@@ -10,9 +10,7 @@
 #include "debug.h"
 #include "device_info.h"
 #include "lwip/inet.h"
-#include "memfault_platform_core.h"
 #include "payload_uart.h"
-#include "reset_reason.h"
 #include "sensorWatchdog.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
@@ -20,11 +18,6 @@
 #include "uptime.h"
 #include "usart.h"
 #include "util.h"
-
-#define APP_PUB_SUB_RTC_ZERO_TOPIC "rtc/zero"
-#define APP_PUB_SUB_RTC_ZERO_TYPE 1
-#define APP_PUB_SUB_RTC_ZERO_VERSION 1
-#define APP_PUB_SUB_ZERO_DETECTED "zero_detected"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -176,9 +169,6 @@ static char payload_buffer[2048];
 static char aanderaaTopic[BM_TOPIC_MAX_LEN];
 static int aanderaaTopicStrLen;
 
-static bool sent_rtc_zero = false;
-static bool sent_reset_reason = false;
-
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
 static OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, lineHeader);
@@ -321,27 +311,6 @@ static void mfgTestSendTxWakeup(void) {
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
-
-  if (!sent_rtc_zero && !isRTCSet() && uptimeGetMs() > 15000) {
-    // // Send a message to the RTC zero topic to indicate that the RTC has been zeroed.
-    // if (bm_pub_wl(APP_PUB_SUB_RTC_ZERO_TOPIC, strlen(APP_PUB_SUB_RTC_ZERO_TOPIC),
-    //               APP_PUB_SUB_ZERO_DETECTED, strlen(APP_PUB_SUB_ZERO_DETECTED),
-    //               APP_PUB_SUB_RTC_ZERO_TYPE, APP_PUB_SUB_RTC_ZERO_VERSION)) {
-    //   sent_rtc_zero = true;
-    // }
-    sent_rtc_zero = true;
-    bm_printf(0, "RTC zero detected\n");
-    bm_fprintf(0, "rtc_zero.log", "RTC zero detected\n");
-  }
-  if (uptimeGetMs() > 10000 && !sent_reset_reason) {
-    sent_reset_reason = true;
-    ResetReason_t resetReason = checkResetReason();
-    uint32_t pc = memfault_get_pc();
-    uint32_t lr = memfault_get_lr();
-    bm_printf(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
-    bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
-    printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
-  }
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
   if (CURRENT_AGG_PERIOD_MS > 0 &&

@@ -149,8 +149,6 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
-static BridgePowerController *_main_bridge_power_controller;
-
 extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
@@ -266,20 +264,6 @@ static void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t t
   } else if (strncmp(APP_PUB_SUB_LAST_NET_CFG_TOPIC, topic, topic_len) == 0) {
     if (type == APP_PUB_SUB_LAST_NET_CFG_TYPE && version == APP_PUB_SUB_LAST_NET_CFG_VERSION) {
       bm_topology_last_network_info_cb();
-    } else {
-      printf("Unrecognized version: %u and type: %u\n", version, type);
-    }
-  } else if (strncmp(APP_PUB_SUB_RTC_ZERO_TOPIC, topic, topic_len) == 0) {
-    if (type == APP_PUB_SUB_RTC_ZERO_TYPE && version == APP_PUB_SUB_RTC_ZERO_VERSION) {
-      // turn off the power controller!
-      if (isRTCSet()) {
-        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                  "RTC 0 detected, turning off power controller!\n");
-        _main_bridge_power_controller->powerControlEnable(false);
-      } else {
-        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                  "RTC 0 detected, but RTC is not even set on the bridge!\n");
-      }
     } else {
       printf("Unrecognized version: %u and type: %u\n", version, type);
     }
@@ -409,7 +393,6 @@ static void defaultTask(void *parameters) {
   bm_sub(APP_PUB_SUB_PRINTF_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_LAST_NET_CFG_TOPIC, handle_subscriptions);
-  bm_sub(APP_PUB_SUB_RTC_ZERO_TOPIC, handle_subscriptions);
   bcmp_neighbor_register_discovery_callback(neighborDiscoveredCb);
 
 #ifdef USE_MICROPYTHON
