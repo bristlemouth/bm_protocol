@@ -49,9 +49,7 @@
 #include "stm32_rtc.h"
 #include "stress.h"
 #include "timer_callback_handler.h"
-#include "trace.h"
 #include "usb.h"
-#include "user_code.h"
 #include "util.h"
 #include "w25.h"
 #include "watchdog.h"
@@ -153,13 +151,6 @@ extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
   // enterBootloaderIfNeeded();
-
-  memcpy(user_traceEvents, traceEvents, sizeof(traceEvents));
-  memset(traceEvents, 0, sizeof(traceEvents));
-  user_fullTicksLeft = fullTicksLeft;
-  user_expectedTicks = expectedTicks;
-  user_lpuart_start_cpu_cycles = lpuart_start;
-  user_lpuart_stop_cpu_cycles = lpuart_stop;
 
   HAL_Init();
 

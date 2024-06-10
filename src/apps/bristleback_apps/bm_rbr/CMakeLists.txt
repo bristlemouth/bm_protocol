@@ -58,7 +58,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/stress.c
-    ${SRC_DIR}/lib/common/trace.c
+    # ${SRC_DIR}/lib/common/trace.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/sensorWatchdog.cpp
@@ -283,12 +283,12 @@ set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
 
     # Uncomment/change these to enable tracing!
-    TRACE_ENABLE
-    TRACE_BUFF_LEN=1024
-    TRACE_TASKS
-    TRACE_USE_COREDEBUG
-    TRACE_ISR
-    TRACE_SERIAL
+    # TRACE_ENABLE
+    # TRACE_BUFF_LEN=1024
+    # TRACE_TASKS
+    # TRACE_USE_COREDEBUG
+    # TRACE_ISR
+    # TRACE_SERIAL
 
     # Add network stress test functions
     STRESS_TEST_ENABLE

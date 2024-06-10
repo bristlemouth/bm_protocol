@@ -30,8 +30,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "stm32u5xx.h"
-#include "trace.h"
-#include "bsp.h"
 
 //      This FreeRTOS port "extension" for STM32 uses LPTIM to generate the OS tick instead of the systick
 // timer.  The benefit of the LPTIM is that it continues running in "stop" mode as long as its clock source
@@ -121,8 +119,7 @@
 // (meaning that the value of configTICK_INTERRUPT_PRIORITY must not be numerically lower).
 //
 #ifndef configTICK_INTERRUPT_PRIORITY
-// #define configTICK_INTERRUPT_PRIORITY configLIBRARY_LOWEST_INTERRUPT_PRIORITY // default only; see above
-#define configTICK_INTERRUPT_PRIORITY 14
+#define configTICK_INTERRUPT_PRIORITY configLIBRARY_LOWEST_INTERRUPT_PRIORITY // default only; see above
 #endif
 
 //      Symbol configTICK_USES_LSI, optionally defined in FreeRTOSConfig.h, is defined only when LPTIM should
@@ -426,7 +423,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
       // of the sleep period.  We identify the end of the sleep period by recognizing that the tick ISR has
       // modified usIdealCmp for the next tick after the sleep period ends.
       //
-
       do
       {
          //      Give the application a chance to arrange for the deepest sleep it can tolerate right now.
@@ -443,7 +439,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
          //
          TickType_t xModifiableIdleTime = xExpectedIdleTime;
          configPRE_SLEEP_PROCESSING( xModifiableIdleTime );
-         IOWrite(&BB_PL_BUCK_EN, 0);
          if (xModifiableIdleTime > 0)
          {
             //      Wait for an interrupt.
@@ -453,7 +448,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             __ISB();
          }
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
-         IOWrite(&BB_PL_BUCK_EN, 1);
+
          //      Re-enable interrupts, and then execute the ISR tied to the interrupt that brought the MCU out
          // of sleep mode.
          //
@@ -467,7 +462,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
          // __ISB() is not needed here.  The CPSID instruction used by  __disable_irq() is self synchronizing.
 
       } while (usIdealCmp == ulExpectedEndCmp && eTaskConfirmSleepModeStatus() != eAbortSleep);
-
 
       //      Re-enable interrupts.  We try our best to support short ISR latency, especially for interrupt
       // priorities higher than configMAX_SYSCALL_INTERRUPT_PRIORITY.
@@ -560,8 +554,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             // must either reduce the execution times of your ISRs, decrease their priorities, or increase the
             // priority of the tick ISR.  See the description of configTICK_INTERRUPT_PRIORITY for details.
             //
-            fullTicksLeft = xFullTicksLeft;
-            expectedTicks = xExpectedIdleTime;
             configASSERT( xFullTicksLeft <= xExpectedIdleTime );
 
             if (xFullTicksLeft != 0)

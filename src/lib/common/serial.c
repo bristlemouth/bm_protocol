@@ -218,12 +218,7 @@ void serialDisable(SerialHandle_t *handle) {
 // Takes an SerialHandle_t and receives serial data into a stream buffer
 // as well as takes data from another stream buffer to send
 // This function is meant to be called from all the USARTx_IRQHandler functions
-BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
-
-  // IOWrite(&BB_PL_BUCK_EN, 0);
-
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
-
+void serialGenericUartIRQHandler(SerialHandle_t *handle) {
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
   size_t bytesAvailable = 0;
@@ -257,7 +252,6 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   if (!bytesAvailable && LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device) && !usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
       // Disable this interrupt if there are no more bytes to transmit
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
-      // usart_DisableIT_TXE((USART_TypeDef *)handle->device);
       if(handle->postTxCb){
         handle->postTxCb(handle);
       }
@@ -271,16 +265,7 @@ BaseType_t serialGenericUartIRQHandler(SerialHandle_t *handle) {
   }
 
   // Let the RTOS know if a task needs to be woken up
-  // portYIELD_FROM_ISR(higherPriorityTaskWoken);
-  // TODO - call this from actual irqhandler?
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
-  lpuart_start = pre_cpu_cycles;
-  lpuart_stop = post_cpu_cycles;
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
-
-  // IOWrite(&BB_PL_BUCK_EN, 1);
-
-  return higherPriorityTaskWoken;
+  portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 #endif
 

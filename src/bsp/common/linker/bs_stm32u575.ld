@@ -55,7 +55,6 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 _ram_start = 0x20000000;
 _ram_size = 768K;
 _noinit_size = 512;
-_trace_size = 20480;
 
 /* Highest address of the user mode stack */
 _estack = (_ram_start + _ram_size) - _noinit_size;    /* end of RAM minus a bit */
@@ -67,10 +66,9 @@ _memfault_coredump_size = _ram_size + 8K;
 /* Memories definition */
 MEMORY
 {
-  RAM	(xrw)	: ORIGIN = _ram_start,	LENGTH = _ram_size - _noinit_size - _trace_size
+  RAM	(xrw)	: ORIGIN = _ram_start,	LENGTH = _ram_size - _noinit_size
   SRAM4	(xrw)	: ORIGIN = 0x28000000,	LENGTH = 16K
   NOINIT (xrw)        : ORIGIN = _ram_start + _ram_size - _noinit_size, LENGTH = _noinit_size
-  TRACE (xrw)         : ORIGIN = _ram_start + _ram_size - _noinit_size - _trace_size, LENGTH = _trace_size
   BOOT_FLASH (rx)     : ORIGIN = FLASH_START, LENGTH = BOOTLOADER_SIZE
   APP_FLASH (rx)      : ORIGIN = FLASH_START + BOOTLOADER_SIZE, LENGTH = APP_SIZE
   COREDUMP_FLASH (rw) : ORIGIN = (FLASH_START + _flash_size - _memfault_coredump_size), LENGTH = _memfault_coredump_size
@@ -230,11 +228,6 @@ SECTIONS
     KEEP(*(*.noinit*))
   } > NOINIT
 
-  .trace (NOLOAD):
-  {
-    /* place all symbols in input sections that start with .trace */
-    KEEP(*(*.trace*))
-  } > TRACE
 }
 
 ASSERT(

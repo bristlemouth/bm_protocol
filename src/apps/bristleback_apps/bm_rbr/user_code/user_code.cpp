@@ -13,12 +13,6 @@
 #include "uptime.h"
 #include "util.h"
 
-traceEvent_t user_traceEvents[TRACE_BUFF_LEN];
-uint32_t user_expectedTicks = 0;
-uint32_t user_fullTicksLeft = 0;
-uint32_t user_lpuart_start_cpu_cycles = 0;
-uint32_t user_lpuart_stop_cpu_cycles = 0;
-
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
 // Note that PROBE_TIME_PERIOD_MS should be different than the watchdog timeout
@@ -77,20 +71,6 @@ void loop(void) {
     bm_printf(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     bm_fprintf(0, "reset.log", "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
     printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
-    bm_fprintf(0, "reset.log", "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "\n", user_fullTicksLeft, user_expectedTicks);
-    bm_printf(0, "Full ticks left: %" PRIu32 ", expected ticks: %" PRIu32 "", user_fullTicksLeft, user_expectedTicks);
-    bm_fprintf(0, "reset.log", "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000\n", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
-    bm_printf(0, "Last lpuart start: %" PRIu32 ", stop: %" PRIu32 " = %" PRIu32 "ms*1000", user_lpuart_start_cpu_cycles, user_lpuart_stop_cpu_cycles, ((user_lpuart_stop_cpu_cycles - user_lpuart_start_cpu_cycles)/160));
-    if (traceBuffEnable && resetReason == ResetReason_t::RESET_REASON_MEM_FAULT) {
-      bm_printf(0, "Trace buffer:");
-      bm_fprintf(0, "trace.log", "Trace buffer:\n");
-      for (uint16_t i = 0; i < TRACE_BUFF_LEN; i++) {
-        vTaskDelay(100);
-        bm_printf(0, "timestamp: %" PRIu32 ", Event type: %d, Arg: 0x%" PRIx32 "", user_traceEvents[i].timestamp, user_traceEvents[i].eventType, user_traceEvents[i].arg);
-        bm_fprintf(0, "trace.log", "timestamp: %" PRIu32 ", Event type: %d, Arg: 0x%" PRIx32 "\n", user_traceEvents[i].timestamp, user_traceEvents[i].eventType, user_traceEvents[i].arg);
-      }
-      bm_printf(0, "End of trace buffer");
-    }
   }
 
 
@@ -115,10 +95,10 @@ static bool BmRbrWatchdogHandler(void *arg) {
   bm_fprintf(0, RbrSensor::RBR_RAW_LOG, "DEBUG - attempting FTL recovery\n");
   bm_printf(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
-  // IOWrite(&BB_PL_BUCK_EN, 1);
+  IOWrite(&BB_PL_BUCK_EN, 1);
   vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
   rbr_sensor.flush();
-  // IOWrite(&BB_PL_BUCK_EN, 0);
+  IOWrite(&BB_PL_BUCK_EN, 0);
   last_payload_power_on_time = uptimeGetMs();
   return true;
 }

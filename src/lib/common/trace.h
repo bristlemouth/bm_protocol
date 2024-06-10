@@ -16,7 +16,7 @@
 // TODO - allow overriding by application
 // NOTE: TRACE_BUFF_LEN MUST be a power of 2!
 #ifndef TRACE_BUFF_LEN
-#define TRACE_BUFF_LEN (1024)
+#define TRACE_BUFF_LEN (128)
 #endif
 
 #define TRACE_BUFF_MASK (TRACE_BUFF_LEN - 1)
@@ -42,7 +42,6 @@ typedef struct {
   uint32_t          timestamp; // Timestamp of trace event
   traceEventType_t  eventType; // Event type
   void              *arg;      // Additional information for trace event
-  // uint64_t         count;
 #ifdef TRACE_SMALL
 } __attribute__((packed)) traceEvent_t;
 #else
@@ -51,10 +50,6 @@ typedef struct {
 
 extern traceEvent_t traceEvents[TRACE_BUFF_LEN];
 extern uint32_t traceEventIdx;
-extern uint32_t fullTicksLeft;
-extern uint32_t expectedTicks;
-extern uint32_t lpuart_start;
-extern uint32_t lpuart_stop;
 // static uint64_t total_traces_count = 0;
 
 #ifdef TRACE_USE_COREDEBUG
@@ -71,8 +66,6 @@ __STATIC_FORCEINLINE void traceAdd(traceEventType_t eventType, void *arg) {
   traceEvents[traceEventIdx].timestamp = traceGetCount();
   traceEvents[traceEventIdx].eventType = eventType;
   traceEvents[traceEventIdx].arg = arg;
-  // traceEvents[traceEventIdx].count = total_traces_count;
-  // total_traces_count++;
 
   // Move on to next trace event
   traceEventIdx++;

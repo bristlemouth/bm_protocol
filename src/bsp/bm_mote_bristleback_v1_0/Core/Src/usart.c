@@ -83,7 +83,7 @@ void MX_LPUART1_UART_Init(void)
   LL_LPUART_DisableFIFO(LPUART1);
   LL_LPUART_Enable(LPUART1);
   /* USER CODE BEGIN LPUART1_Init 2 */
-  LL_LPUART_EnableInStopMode(LPUART1);
+
   /* USER CODE END LPUART1_Init 2 */
 
 }

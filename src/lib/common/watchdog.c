@@ -49,7 +49,7 @@ static void iWDGTask( void *parameters ) {
 
   for(;;) {
     watchdogFeed();
-    vTaskDelay(500);
+    vTaskDelay(2 * 1000);
   }
 }
 

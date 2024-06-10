@@ -98,7 +98,6 @@ void DebugMon_Handler(void)
 void EXTI8_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI8_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
   BaseType_t rval = pdFALSE;
   /* USER CODE END EXTI8_IRQn 0 */
   if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_8) != RESET)
@@ -109,9 +108,7 @@ void EXTI8_IRQHandler(void)
     /* USER CODE END LL_EXTI_LINE_8_FALLING */
   }
   /* USER CODE BEGIN EXTI8_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END EXTI8_IRQn 1 */
 }
 
@@ -121,13 +118,11 @@ void EXTI8_IRQHandler(void)
 void TIM8_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM8_UP_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END TIM8_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim8);
   /* USER CODE BEGIN TIM8_UP_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END TIM8_UP_IRQn 1 */
 }
 
@@ -137,13 +132,11 @@ void TIM8_UP_IRQHandler(void)
 void SPI2_IRQHandler(void)
 {
   /* USER CODE BEGIN SPI2_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END SPI2_IRQn 0 */
   HAL_SPI_IRQHandler(&hspi2);
   /* USER CODE BEGIN SPI2_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END SPI2_IRQn 1 */
 }
 
@@ -153,13 +146,11 @@ void SPI2_IRQHandler(void)
 void GPDMA1_Channel12_IRQHandler(void)
 {
   /* USER CODE BEGIN GPDMA1_Channel12_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END GPDMA1_Channel12_IRQn 0 */
   HAL_DMA_IRQHandler(&handle_GPDMA1_Channel12);
   /* USER CODE BEGIN GPDMA1_Channel12_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel12_IRQn 1 */
 }
 
@@ -169,13 +160,11 @@ void GPDMA1_Channel12_IRQHandler(void)
 void GPDMA1_Channel13_IRQHandler(void)
 {
   /* USER CODE BEGIN GPDMA1_Channel13_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END GPDMA1_Channel13_IRQn 0 */
   HAL_DMA_IRQHandler(&handle_GPDMA1_Channel13);
   /* USER CODE BEGIN GPDMA1_Channel13_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel13_IRQn 1 */
 }
 
@@ -185,13 +174,11 @@ void GPDMA1_Channel13_IRQHandler(void)
 void GPDMA1_Channel14_IRQHandler(void)
 {
   /* USER CODE BEGIN GPDMA1_Channel14_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END GPDMA1_Channel14_IRQn 0 */
   HAL_DMA_IRQHandler(&handle_GPDMA1_Channel14);
   /* USER CODE BEGIN GPDMA1_Channel14_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel14_IRQn 1 */
 }
 
@@ -201,13 +188,11 @@ void GPDMA1_Channel14_IRQHandler(void)
 void GPDMA1_Channel15_IRQHandler(void)
 {
   /* USER CODE BEGIN GPDMA1_Channel15_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END GPDMA1_Channel15_IRQn 0 */
   HAL_DMA_IRQHandler(&handle_GPDMA1_Channel15);
   /* USER CODE BEGIN GPDMA1_Channel15_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END GPDMA1_Channel15_IRQn 1 */
 }
 
@@ -217,13 +202,11 @@ void GPDMA1_Channel15_IRQHandler(void)
 void SPI3_IRQHandler(void)
 {
   /* USER CODE BEGIN SPI3_IRQn 0 */
-  uint32_t pre_cpu_cycles = DWT->CYCCNT;
+
   /* USER CODE END SPI3_IRQn 0 */
   HAL_SPI_IRQHandler(&hspi3);
   /* USER CODE BEGIN SPI3_IRQn 1 */
-  uint32_t post_cpu_cycles = DWT->CYCCNT;
 
-  configASSERT(((post_cpu_cycles - pre_cpu_cycles)/160 < 1000));
   /* USER CODE END SPI3_IRQn 1 */
 }
 
