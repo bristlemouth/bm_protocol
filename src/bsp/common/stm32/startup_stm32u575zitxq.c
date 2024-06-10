@@ -427,7 +427,7 @@ __attribute__ ((section(".isr_vector")))
   GPDMA1_Channel12_IRQHandler,
   GPDMA1_Channel13_IRQHandler,
   GPDMA1_Channel14_IRQHandler,
-  ISR_TRACEGPDMA1_Channel15_IRQHandler,
+  GPDMA1_Channel15_IRQHandler,
   I2C3_EV_IRQHandler,
   I2C3_ER_IRQHandler,
   SAI1_IRQHandler,
