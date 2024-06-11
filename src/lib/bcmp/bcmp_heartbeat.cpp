@@ -4,12 +4,10 @@
 #include "bcmp_neighbors.h"
 #include "bcmp_heartbeat.h"
 #include "bcmp_info.h"
-#include "bm_printf.h"
 #include "device_info.h"
 #include "uptime.h"
 
 extern neighbor_discovery_callback_t neighbor_discovery_cb; // FIXME - https://github.com/wavespotter/bristlemouth/issues/384
-extern uint8_t bcmp_port_tracker;
 /*!
   Send heartbeat to neighbors
 
@@ -34,14 +32,9 @@ err_t bcmp_process_heartbeat(bcmp_heartbeat_t *heartbeat, const ip_addr_t *src, 
   configASSERT(heartbeat);
 
   // Print node's uptime in seconds.milliseconds
-  uint64_t uptime_s = heartbeat->time_since_boot_us/1e6;
-  uint32_t uptime_ms = (uint32_t)(heartbeat->time_since_boot_us/1000 - (uptime_s * 1000));
-  printf("❤️  from %016" PRIx64 " (%" PRIu64 ".%03" PRIu32 ") [%02X]\n", ip_to_nodeid(src), uptime_s, uptime_ms, dst_port);
-  bm_fprintf(0, "port.log", "❤️  from %016" PRIx64 " (%" PRIu64 ".%03" PRIu32 ") [%02X]\n", ip_to_nodeid(src), uptime_s, uptime_ms, dst_port);
-  bm_printf(0, "❤️  from %016" PRIx64 " (%" PRIu64 ".%03" PRIu32 ") [%02X]\n", ip_to_nodeid(src), uptime_s, uptime_ms, dst_port);
-  printf("ports status: 0x%" PRIx8 "\n", bcmp_port_tracker);
-  bm_fprintf(0, "port.log", "ports status: 0x%" PRIx8 "\n", bcmp_port_tracker);
-  bm_printf(0, "ports status: 0x%" PRIx8 "\n", bcmp_port_tracker);
+  // uint64_t uptime_s = heartbeat->time_since_boot_us/1e6;
+  // uint32_t uptime_ms = (uint32_t)(heartbeat->time_since_boot_us/1000 - (uptime_s * 1000));
+  // printf("❤️  from %016" PRIx64 " (%" PRIu64 ".%03" PRIu32 ") [%02X]\n", ip_to_nodeid(src), uptime_s, uptime_ms, dst_port);
 
   bm_neighbor_t *neighbor = bcmp_update_neighbor(ip_to_nodeid(src), dst_port);
   if(neighbor) {

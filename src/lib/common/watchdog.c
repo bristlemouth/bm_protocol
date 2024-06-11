@@ -5,7 +5,7 @@
 #include "task.h"
 #include "iwdg.h"
 #include "task_priorities.h"
-#include "memfault/ports/watchdog.h"
+// #include "memfault/ports/watchdog.h"
 
 static void iWDGTask( void *parameters );
 

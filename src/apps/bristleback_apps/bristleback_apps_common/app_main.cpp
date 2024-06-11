@@ -18,7 +18,6 @@
 #include "app_pub_sub.h"
 #include "bm_l2.h"
 #include "bm_pubsub.h"
-#include "bm_printf.h"
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
@@ -60,8 +59,6 @@
 /* USER FILE INCLUDES */
 #include "user_code.h"
 /* USER FILE INCLUDES END */
-
-#include "bcmp_neighbors.h"
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -232,8 +229,6 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
                              uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
-    bm_printf(0, "RECEIVED UTC MESSAGE!\n");
-    bm_fprintf(0, "rtc.log", "RECEIVED UTC MESSAGE!\n");
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
       utcDateTime_t time;
       const bm_common_pub_sub_utc_t *utc =
@@ -251,19 +246,14 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        bm_fprintf(0, "rtc.log", "Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
-               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
-               rtc_time.second, rtc_time.ms);
-        bm_printf(0, "Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
+        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
                rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
                rtc_time.second, rtc_time.ms);
       } else {
-        bm_fprintf(0, "rtc.log", "\n Failed to set RTC.\n");
-        bm_printf(0, "\n Failed to set RTC.\n");
+        printf("\n Failed to set RTC.\n");
       }
     } else {
-      bm_fprintf(0, "rtc.log", "Unrecognized version: %u and type: %u\n", version, type);
-      bm_printf(0, "Unrecognized version: %u and type: %u\n");
+      printf("Unrecognized version: %u and type: %u\n");
     }
   } else {
     printf("Topic: %.*s\n", topic_len, topic);
@@ -289,13 +279,6 @@ static const DebugGpio_t debugGpioPins[] = {
     {"boot_led", &BOOT_LED, GPIO_IN},
     {"vusb_detect", &VUSB_DETECT, GPIO_IN},
 };
-
-static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
-  configASSERT(neighbor);
-  const char *action = (discovered) ? "added" : "lost";
-  bm_fprintf(0, "port.log", "Neighbor %016" PRIx64 " %s\n", neighbor->node_id, action);
-  bm_printf(0, "Neighbor %016" PRIx64 " %s\n", neighbor->node_id, action);
-}
 
 /* USER CODE EXECUTED HERE */
 static void user_task(void *parameters);
@@ -339,6 +322,8 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
+  // If we ever include the SWWDG, we need to have the memfault
+  // platform boot before starting the watchdog task
   memfault_platform_boot();
 
   startIWDGTask();
@@ -412,15 +397,7 @@ static void defaultTask(void *parameters) {
   config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);
   SensorWatchdog::SensorWatchdogInit();
-
-  while (!bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions)) {
-    bm_fprintf(0, "rtc.log", "Failed to subscribe to %s\n", APP_PUB_SUB_UTC_TOPIC);
-    bm_fprintf(0, "rtc.log", "Waiting 1 second and trying again\n");
-    bm_printf(0, "Failed to subscribe to %s\n", APP_PUB_SUB_UTC_TOPIC);
-    bm_printf(0, "Waiting 1 second and trying again\n");
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-
+  bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
   // Turn of the bristleback leds
   IOWrite(&LED_GREEN, BB_LED_OFF);
@@ -430,9 +407,6 @@ static void defaultTask(void *parameters) {
           1); // 1 enables, 0 disables. Needed for I2C and I/O control.
   IOWrite(&BB_VBUS_EN, 1);    // 0 enables, 1 disables. Needed for VOUT and 5V.
   IOWrite(&BB_PL_BUCK_EN, 1); // 0 enables, 1 disables. Vout
-
-
-  bcmp_neighbor_register_discovery_callback(neighborDiscoveredCb);
 
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
