@@ -253,7 +253,7 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
         printf("\n Failed to set RTC.\n");
       }
     } else {
-      printf("Unrecognized version: %u and type: %u\n");
+      printf("Unrecognized version: %u and type: %u\n", version, type);
     }
   } else {
     printf("Topic: %.*s\n", topic_len, topic);
@@ -407,7 +407,6 @@ static void defaultTask(void *parameters) {
           1); // 1 enables, 0 disables. Needed for I2C and I/O control.
   IOWrite(&BB_VBUS_EN, 1);    // 0 enables, 1 disables. Needed for VOUT and 5V.
   IOWrite(&BB_PL_BUCK_EN, 1); // 0 enables, 1 disables. Vout
-
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif

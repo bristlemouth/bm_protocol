@@ -8,6 +8,7 @@
 #include "uptime.h"
 
 extern neighbor_discovery_callback_t neighbor_discovery_cb; // FIXME - https://github.com/wavespotter/bristlemouth/issues/384
+
 /*!
   Send heartbeat to neighbors
 

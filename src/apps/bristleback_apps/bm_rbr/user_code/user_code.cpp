@@ -55,7 +55,6 @@ void loop(void) {
   // Read and handle line from sensor
   // which may be data or a command response
   static BmRbrDataMsg::Data d;
-
   if (rbr_sensor.getData(d)) {
     SensorWatchdog::SensorWatchdogPet(BM_RBR_WATCHDOG_ID);
     static uint8_t cbor_buf[BM_RBR_DATA_MSG_MAX_SIZE];
