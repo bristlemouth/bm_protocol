@@ -157,7 +157,6 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
 bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::Data &d) {
   bool success = false;
   RTCTimeAndDate_t time_and_date = {};
-  bool rtc_is_set = isRTCSet();
   rtcGet(&time_and_date);
   char rtcTimeBuffer[32] = {};
   rtcPrint(rtcTimeBuffer, NULL);
@@ -186,11 +185,7 @@ bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::D
         break;
       }
       d.sensor_type = BmRbrDataMsg::SensorType::TEMPERATURE;
-      if (rtc_is_set) {
-        d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
-      } else {
-        d.header.reading_time_utc_ms = 0;
-      }
+      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
       d.header.reading_uptime_millis = uptimeGetMs();
       d.header.sensor_reading_time_ms = timeValue.data.uint64_val;
       d.temperature_deg_c = tempValue.data.double_val;
@@ -212,11 +207,8 @@ bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::D
         break;
       }
       d.sensor_type = BmRbrDataMsg::SensorType::PRESSURE;
-      if (rtc_is_set) {
-        d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
-      } else {
-        d.header.reading_time_utc_ms = 0;
-      }      d.header.reading_uptime_millis = uptimeGetMs();
+      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
+      d.header.reading_uptime_millis = uptimeGetMs();
       d.header.sensor_reading_time_ms = timeValue.data.uint64_val;
       d.temperature_deg_c = NAN;
       d.pressure_deci_bar = pressureValue.data.double_val;
@@ -244,11 +236,7 @@ bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::D
         break;
       }
       d.sensor_type = BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE;
-      if (rtc_is_set) {
-        d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
-      } else {
-        d.header.reading_time_utc_ms = 0;
-      }
+      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
       d.header.reading_uptime_millis = uptimeGetMs();
       d.header.sensor_reading_time_ms = timeValue.data.uint64_val;
       d.temperature_deg_c = tempValue.data.double_val;

@@ -165,7 +165,11 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
 
 uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate){
   int i;
-  uint64_t microseconds;
+  uint64_t microseconds = 0;
+
+  if (timeAndDate->year == 0) {
+    return microseconds;
+  }
 
   // microseconds from 1970 till 1 jan 00:00:00 of the given year
   microseconds = (timeAndDate->year - 1970) * (SECS_PER_DAY * 365);
