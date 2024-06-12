@@ -167,7 +167,7 @@ uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate){
   int i;
   uint64_t microseconds = 0;
 
-  if (timeAndDate->year == 0) {
+  if (!isRTCSet()) {
     return microseconds;
   }
 
