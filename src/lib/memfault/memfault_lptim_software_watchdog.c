@@ -196,13 +196,6 @@ int memfault_software_watchdog_enable(void) {
  * Thus, we refresh the count of our LPTIM peripheral by stopping / starting.
  */
 int memfault_software_watchdog_feed(void) {
-  // HAL_StatusTypeDef rv = HAL_LPTIM_Counter_Stop(&s_lptim_cfg);
-  // if (rv != HAL_OK) {
-  //   return rv;
-  // }
-  // // const uint32_t ticks = MEMFAULT_MIN((s_timeout_ms * MEMFAULT_LPTIM_HZ) / MEMFAULT_MS_PER_SEC,
-  // //                                   MEMFAULT_LPTIM_MAX_COUNT);
-  // return HAL_LPTIM_Counter_Start(&s_lptim_cfg);
   if ((s_lptim_cfg.Instance->CR & LPTIM_CR_COUNTRST) != 0) {
     // A COUNTRST is already in progress, no work to do
     return 0;
@@ -222,18 +215,10 @@ int memfault_software_watchdog_update_timeout(uint32_t timeout_ms) {
     return rv;
   }
 
-  // __HAL_LPTIM_CLEAR_FLAG(&s_lptim_cfg, LPTIM_IT_ARRM);
-  // __HAL_LPTIM_DISABLE_IT(&s_lptim_cfg, LPTIM_IT_ARRM);
-  // s_timeout_ms = timeout_ms;
-  // const uint32_t ticks = MEMFAULT_MIN((s_timeout_ms * MEMFAULT_LPTIM_HZ) / MEMFAULT_MS_PER_SEC,
-  //                                     MEMFAULT_LPTIM_MAX_COUNT);
-
   rv = HAL_LPTIM_Counter_Start_IT(&s_lptim_cfg);
   if (rv != HAL_OK) {
     return rv;
   }
-
-  // __HAL_LPTIM_ENABLE_IT(&s_lptim_cfg, LPTIM_IT_ARRM);
 
   return 0;
 }
