@@ -405,7 +405,6 @@ static void defaultTask(void *parameters) {
 #ifdef RAW_PRESSURE_ENABLE
   raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
-                            raw_pressure_cfg.diffBitDepth,
                             raw_pressure_cfg.maxRawReports,
                             raw_pressure_cfg.rawDepthThresholdUbar,
                             &debug_configuration_user, 

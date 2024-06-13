@@ -134,18 +134,6 @@ raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg) {
                      strlen(AppConfig::RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S), cfg.rawSampleS);
     save_config = true;
   }
-  cfg.diffBitDepth = RbrPressureProcessor::DEFAULT_DIFF_BIT_DEPTH;
-  if (!syscfg.getConfig(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH,
-                        strlen(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH), cfg.diffBitDepth)) {
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Failed to get rbr pressure differential bit depth from config, using "
-                   "default value and writing "
-                   "to config: %" PRIu32 "ms\n",
-                   cfg.diffBitDepth);
-    syscfg.setConfig(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH,
-                     strlen(AppConfig::RBR_RAW_DIFFERENTIAL_BIT_DEPTH), cfg.diffBitDepth);
-    save_config = true;
-  }
   cfg.maxRawReports = RbrPressureProcessor::DEFAULT_MAX_RAW_REPORTS;
   if (!syscfg.getConfig(AppConfig::RBR_MAX_RAW_REPORTS, strlen(AppConfig::RBR_MAX_RAW_REPORTS),
                         cfg.maxRawReports)) {
