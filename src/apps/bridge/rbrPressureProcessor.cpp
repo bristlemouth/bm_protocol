@@ -25,7 +25,6 @@ typedef struct PressureProcessorContext {
   EventGroupHandle_t eg;
   TimerHandle_t sendTimer;
   uint32_t rawSampleS;
-  uint32_t diffBitDepth;
   uint32_t maxRawReports;
   double rawDepthThresholdUbar;
   bool started;
@@ -49,7 +48,7 @@ static void diffSigSendTimerCallback(TimerHandle_t xTimer);
 
 static PressureProcessorContext_t _ctx;
 
-void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
+void rbrPressureProcessorInit(uint32_t rawSampleS,
                               uint32_t maxRawReports, double rawDepthThresholdUbar,
                               cfg::Configuration *usrCfg, uint32_t rbrCodaReadingPeriodMs) {
   configASSERT(usrCfg);
@@ -67,7 +66,6 @@ void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
   _ctx.sendTimer = xTimerCreate("rbrRawSendTimer", pdMS_TO_TICKS(_ctx.rawSampleS * 1000),
                                 pdFALSE, NULL, diffSigSendTimerCallback);
   configASSERT(_ctx.sendTimer);
-  _ctx.diffBitDepth = diffBitDepth;
   _ctx.maxRawReports = maxRawReports;
   _ctx.rawDepthThresholdUbar = rawDepthThresholdUbar;
   _ctx.started = false;
