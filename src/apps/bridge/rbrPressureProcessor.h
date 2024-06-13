@@ -9,12 +9,11 @@ extern "C" {
 
 namespace RbrPressureProcessor {
 constexpr uint32_t DEFAULT_RAW_SAMPLE_S = 275;
-constexpr uint32_t DEFAULT_DIFF_BIT_DEPTH = 16;
 constexpr uint32_t DEFAULT_MAX_RAW_REPORTS = 200;
 constexpr double DEFAULT_RAW_DEPTH_THRESHOLD_UBAR = 1500000.0;
 } // namespace RbrPressureProcessor
 
-void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t diffBitDepth,
+void rbrPressureProcessorInit(uint32_t rawSampleS,
                               uint32_t maxRawReports, double rawDepthThresholdUbar,
                               cfg::Configuration *usrCfg, uint32_t rbrCodaReadingPeriodMs);
 
