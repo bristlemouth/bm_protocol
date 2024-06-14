@@ -58,6 +58,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
     ${SRC_DIR}/lib/common/stress.c
+    # Uncomment to enable tracing (see trace.h and the APP_DEFINES below for more options)
     # ${SRC_DIR}/lib/common/trace.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
@@ -108,6 +109,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    # Uncomment to enable the software watchdog (see watchdog.c for more info)
     # ${SRC_DIR}/lib/memfault/memfault_lptim_software_watchdog.c
     ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/pressureSampler.cpp
@@ -282,7 +284,8 @@ set(APP_DEFINES
     APP_NAME="${APP_NAME}"
     CFG_TUSB_MCU=OPT_MCU_STM32U5
 
-    # Uncomment/change these to enable tracing!
+    # Make sure trace.c is included in the build above
+    # Uncomment/change these to enable tracing! (see trace.h for more options)
     # TRACE_ENABLE
     # TRACE_BUFF_LEN=1024
     # TRACE_TASKS

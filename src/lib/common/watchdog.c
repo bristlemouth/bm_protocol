@@ -6,9 +6,9 @@
 #include "iwdg.h"
 #include "task_priorities.h"
 
-// If you want to use the memfault watchdog, uncomment the following line
+// If you want to use the memfault watchdog, uncomment the following include,
 // enable the LPTIM2 clock, and uncomment the memfault_software_watchdog_enable()
-//call in startIWDGTask() and the memfault_software_watchdog_feed() call in watchdogFeed()
+// call in startIWDGTask() and the memfault_software_watchdog_feed() call in watchdogFeed()
 // #include "memfault/ports/watchdog.h"
 
 static void iWDGTask( void *parameters );
