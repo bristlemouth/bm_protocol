@@ -16,7 +16,6 @@
 // TODO: Once we have bcmp_config request reply, we should read this value from the modules.
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500          // default is 500 ms (2 HZ)
-#define DEFAULT_RBR_CODA_READING_PERIOD_MS 500      // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000      // default is 1 second: 1000 ms (1 HZ)
 
 TaskHandle_t sensor_controller_task_handle = NULL;
@@ -86,7 +85,7 @@ void sensorControllerInit(BridgePowerController *power_controller,
     save_config = true;
   }
 
-  _ctx.rbr_coda_reading_period_ms = DEFAULT_RBR_CODA_READING_PERIOD_MS;
+  _ctx.rbr_coda_reading_period_ms = RbrCodaSensor::DEFAULT_RBR_CODA_READING_PERIOD_MS;
   if (!_ctx._sys_cfg->getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
                                 strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
                                 _ctx.rbr_coda_reading_period_ms)) {

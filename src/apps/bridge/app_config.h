@@ -21,6 +21,11 @@ constexpr const char *SOFT_READING_PERIOD_MS = "softReadingPeriodMs";
 constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
 constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
 constexpr const char *TURBIDITY_READING_PERIOD_MS = "turbidityReadingPeriodMs";
+#ifdef RAW_PRESSURE_ENABLE
+constexpr const char *RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S = "rbrRawSampleS";
+constexpr const char *RBR_MAX_RAW_REPORTS = "rbrMaxRawReports";
+constexpr const char *RBR_RAW_DEPTH_THRESHOLD_UBAR = "rbrDepthThresholdUbar";
+#endif // RAW_PRESSURE_ENABLE
 
 } // namespace AppConfig
 
@@ -31,3 +36,12 @@ struct power_config_s {
 };
 
 power_config_s getPowerConfigs(cfg::Configuration &syscfg);
+
+#ifdef RAW_PRESSURE_ENABLE
+struct raw_pressure_config_s {
+  uint32_t rawSampleS, maxRawReports, rbrCodaReadingPeriodMs;
+  float rawDepthThresholdUbar;
+};
+
+raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg);
+#endif // RAW_PRESSURE_ENABLE

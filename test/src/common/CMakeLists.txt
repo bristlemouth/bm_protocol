@@ -312,3 +312,39 @@ add_test(
   COMMAND
     avgSampler
   )
+
+#
+# differenceSignal tests
+#
+add_executable(differenceSignal)
+target_include_directories(differenceSignal
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${TEST_DIR}/third_party/fff
+)
+
+target_sources(differenceSignal
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/common/differenceSignal.cpp
+
+    # Support files
+    
+    # Mock
+    ${TEST_DIR}/stubs/mock_FreeRTOS.c
+
+    # Unit test wrapper for test
+    differenceSignal_ut.cpp
+)
+
+target_link_libraries(differenceSignal gtest gmock gtest_main)
+
+add_test(
+  NAME
+    differenceSignal
+  COMMAND
+    differenceSignal
+  )
