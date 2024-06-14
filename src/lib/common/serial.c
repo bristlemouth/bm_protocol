@@ -245,12 +245,12 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
       // Transmit current byte
       usart_TransmitData8((USART_TypeDef *)handle->device, txByte);
     } else {
+      // Disable this interrupt if there are no more bytes to transmit
       usart_DisableIT_TXE((USART_TypeDef *)handle->device);
     }
   }
 
   if (!bytesAvailable && LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device) && !usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
-      // Disable this interrupt if there are no more bytes to transmit
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
       if(handle->postTxCb){
         handle->postTxCb(handle);
