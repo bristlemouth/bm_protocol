@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 
-#include "stm32l4xx_hal.h"
+#include "stm32u5xx_hal.h"
 
 #include "memfault/config.h"
 #include "memfault/core/compiler.h"
@@ -130,7 +130,7 @@ static void prv_lptim_irq_enable(void) {
 int memfault_software_watchdog_enable(void) {
   // We will drive the Low Power Timer (LPTIM) from the Low-speed internal (LSI) oscillator
   // (~32kHz). This source will run while in low power modes (just like the IWDG hardware watchdog)
-  const bool lsi_on = (RCC->CSR & RCC_CSR_LSION) == RCC_CSR_LSION;
+  const bool lsi_on = (RCC->BDCR & RCC_BDCR_LSION) == RCC_BDCR_LSION;
   if (!lsi_on) {
     __HAL_RCC_LSI_ENABLE();
 
@@ -169,15 +169,15 @@ int memfault_software_watchdog_enable(void) {
       .Trigger = {
         .Source = LPTIM_TRIGSOURCE_SOFTWARE,
       },
-      .OutputPolarity = LPTIM_OUTPUTPOLARITY_HIGH,
+      .Period = MEMFAULT_MIN((s_timeout_ms * MEMFAULT_LPTIM_HZ) / MEMFAULT_MS_PER_SEC,
+                                      MEMFAULT_LPTIM_MAX_COUNT),
       .UpdateMode = LPTIM_UPDATE_IMMEDIATE,
       .CounterSource = LPTIM_COUNTERSOURCE_INTERNAL,
-
+      .RepetitionCounter = 0,
       // NB: not used in config but HAL expects valid values here
       .Input1Source = LPTIM_INPUT1SOURCE_GPIO,
       .Input2Source = LPTIM_INPUT2SOURCE_GPIO,
     },
-    .State = HAL_LPTIM_STATE_RESET,
   };
   rv = HAL_LPTIM_Init(&s_lptim_cfg);
   if (rv != HAL_OK) {
@@ -196,13 +196,13 @@ int memfault_software_watchdog_enable(void) {
  * Thus, we refresh the count of our LPTIM peripheral by stopping / starting.
  */
 int memfault_software_watchdog_feed(void) {
-  HAL_StatusTypeDef rv = HAL_LPTIM_Counter_Stop(&s_lptim_cfg);
-  if (rv != HAL_OK) {
-    return rv;
+  if ((s_lptim_cfg.Instance->CR & LPTIM_CR_COUNTRST) != 0) {
+    // A COUNTRST is already in progress, no work to do
+    return 0;
   }
-  const uint32_t ticks = MEMFAULT_MIN((s_timeout_ms * MEMFAULT_LPTIM_HZ) / MEMFAULT_MS_PER_SEC,
-                                    MEMFAULT_LPTIM_MAX_COUNT);
-  return HAL_LPTIM_Counter_Start(&s_lptim_cfg, ticks);
+  __HAL_LPTIM_RESET_COUNTER(&s_lptim_cfg);
+
+  return 0;
 }
 
 int memfault_software_watchdog_update_timeout(uint32_t timeout_ms) {
@@ -210,23 +210,15 @@ int memfault_software_watchdog_update_timeout(uint32_t timeout_ms) {
     return -1;
   }
 
-  HAL_StatusTypeDef rv = HAL_LPTIM_Counter_Stop(&s_lptim_cfg);
+  HAL_StatusTypeDef rv = HAL_LPTIM_Counter_Stop_IT(&s_lptim_cfg);
   if (rv != HAL_OK) {
     return rv;
   }
 
-  __HAL_LPTIM_CLEAR_FLAG(&s_lptim_cfg, LPTIM_IT_ARRM);
-  __HAL_LPTIM_DISABLE_IT(&s_lptim_cfg, LPTIM_IT_ARRM);
-  s_timeout_ms = timeout_ms;
-  const uint32_t ticks = MEMFAULT_MIN((s_timeout_ms * MEMFAULT_LPTIM_HZ) / MEMFAULT_MS_PER_SEC,
-                                      MEMFAULT_LPTIM_MAX_COUNT);
-
-  rv = HAL_LPTIM_Counter_Start(&s_lptim_cfg, ticks);
+  rv = HAL_LPTIM_Counter_Start_IT(&s_lptim_cfg);
   if (rv != HAL_OK) {
     return rv;
   }
-
-  __HAL_LPTIM_ENABLE_IT(&s_lptim_cfg, LPTIM_IT_ARRM);
 
   return 0;
 }
