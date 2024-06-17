@@ -105,6 +105,5 @@ void pcapEnable() {
 void pcapDisable() {
   if(pcapSerialHandle) {
     pcapSerialHandle->enabled = false;
-    printf("PCAP Stream disabled!\n");
   }
 }
