@@ -41,10 +41,6 @@ xQueueHandle serialGetTxQueue() {
 void startSerial() {
   BaseType_t rval;
 
-  // SerialLog = logCreate("SER", "log", LOG_LEVEL_WARNING, LOG_DEST_CONSOLE);
-  // logLoadCfg(SerialLog, "lser");
-  // logInit(SerialLog);
-
   serialTxQueue = xQueueCreate(SERIAL_TX_QUEUE_SIZE, sizeof(SerialMessage_t));
   configASSERT(serialTxQueue != NULL);
 
