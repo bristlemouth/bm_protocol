@@ -167,6 +167,7 @@ static void processConsoleRxByte(void *serialHandle, uint8_t byte) {
 void serialConsoleEnable() {
   serialConsoleHandle->enabled = true;
   ulConsoleBuffIdx = 0;
+  serialConsoleHandle->flags &= ~SERIAL_TX_IN_PROGRESS;
   xStreamBufferReset(serialConsoleHandle->rxStreamBuffer);
   xStreamBufferReset(serialConsoleHandle->txStreamBuffer);
 }

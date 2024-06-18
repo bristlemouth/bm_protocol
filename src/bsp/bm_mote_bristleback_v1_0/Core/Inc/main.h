@@ -109,6 +109,7 @@ void SystemPower_Config_ext(void);
 #define FLASH_CS_GPIO_Port GPIOA
 #define VUSB_DETECT_Pin LL_GPIO_PIN_9
 #define VUSB_DETECT_GPIO_Port GPIOA
+#define VUSB_DETECT_EXTI_IRQn EXTI9_IRQn
 #define BB_3V3_EN_Pin LL_GPIO_PIN_10
 #define BB_3V3_EN_GPIO_Port GPIOA
 #define ADIN_CS_Pin LL_GPIO_PIN_15
