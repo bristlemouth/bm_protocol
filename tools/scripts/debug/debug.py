@@ -3,6 +3,7 @@
 from dotenv import load_dotenv, find_dotenv
 import argparse
 import git
+import platform
 import os
 import signal
 import socket
@@ -95,21 +96,35 @@ def run_openocd(args, port=3333):
         "init",
     ]
 
-    # https://stackoverflow.com/questions/5045771/python-how-to-prevent-subprocesses-from-receiving-ctrl-c-control-c-sigint
-    return subprocess.Popen(
-        openocd_cmd,
-        # Comment out the following two lines to print openocd output to console
-        # stdout=subprocess.DEVNULL,
-        # stderr=subprocess.STDOUT,
-        preexec_fn=os.setpgrp,
-    )
+    if platform.system() == "Windows" and platform.architecture()[0] == "64bit":
+        # Create a STARTUPINFO structure to specify that the subprocess should be run in a hidden window
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+        return subprocess.Popen(
+            openocd_cmd,
+            # Comment out the following two lines to print openocd output to console
+            # stdout=subprocess.DEVNULL,
+            # stderr=subprocess.STDOUT,
+            startupinfo=startupinfo
+        )
+    elif os.name == "posix":
+        # https://stackoverflow.com/questions/5045771/python-how-to-prevent-subprocesses-from-receiving-ctrl-c-control-c-sigint
+        return subprocess.Popen(
+            openocd_cmd,
+            # Comment out the following two lines to print openocd output to console
+            # stdout=subprocess.DEVNULL,
+            # stderr=subprocess.STDOUT,
+            preexec_fn=os.setpgrp,
+        )
 
 
 #
 # Run GDB with all the required scripts
 #
 def run_gdb(args, port=3333):
-    gdb_cmd = ["gdb"]
+    gdb_cmd = ["gdb-multiarch"]
 
     for source_dir in args.dirs:
         gdb_cmd.append(f"--directory={source_dir}")
