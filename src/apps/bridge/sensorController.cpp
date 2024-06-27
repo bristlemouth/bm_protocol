@@ -270,7 +270,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
           uint32_t AVERAGER_MAX_SAMPLES =
               (rbr_coda_agg_period_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
           RbrCoda_t *rbr_coda_sub =
-              createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES);
+              createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES, _ctx.rbr_coda_reading_period_ms);
           if (rbr_coda_sub) {
             abstractSensorAddSensorSub(rbr_coda_sub);
           }

@@ -62,7 +62,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
         uint32_t sensor_reading_time_millis = rbr_data.header.sensor_reading_time_ms % 1000U;
 
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - rbr_coda->last_timestamp > DEFAULT_RBR_CODA_READING_PERIOD_MS + 1000u) ||
+        if ((current_timestamp - rbr_coda->last_timestamp > rbr_coda->configured_reading_period_ms + 1000u) ||
             rbr_coda->reading_count == 1U) {
           printf("Updating rbr_coda %016" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
@@ -199,7 +199,7 @@ void RbrCodaSensor::aggregate(void) {
 }
 
 RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
-                            uint32_t averager_max_samples) {
+                            uint32_t averager_max_samples, uint32_t configured_reading_period_ms) {
   RbrCoda_t *new_sub = static_cast<RbrCoda_t *>(pvPortMalloc(sizeof(RbrCoda_t)));
   new_sub = new (new_sub) RbrCoda_t();
   configASSERT(new_sub);
@@ -214,6 +214,7 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   new_sub->temp_deg_c.initBuffer(averager_max_samples);
   new_sub->pressure_deci_bar.initBuffer(averager_max_samples);
   new_sub->reading_count = 0;
+  new_sub->configured_reading_period_ms = configured_reading_period_ms;
   return new_sub;
 }
 
