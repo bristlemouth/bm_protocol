@@ -405,77 +405,46 @@ add_custom_command(
 	BYPRODUCTS ${EXECUTABLE}.bin
 )
 
+#
+# Let me explain the horrible looking command that follows...
+# Since we compiled with -ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.
+# the elf file only has relative paths to all the source files.
+# When trying to generate the assembly listing intermixed with source code,
+# objdump can't find the source files. It looks in the current directory + the
+# relative path to the file. I tried using the --include= flag with no luck.
+#
+# The --prefix flag adds the cmake source directory, but then objdump appends
+# the whole path to the current build directory AND relative file paths...
+# The --prefix-strip=<n> command removes the first <n> directories from the
+# file paths. This number varies depending on where the code is being built,
+# and that's where `echo "$$PWD" | grep -o '/' - | wc -l | bc` comes in...
+# We first print the current working directory and feed it into grep, which
+# then searches for '/' and outputs each instance in a new line. `wc -l` then
+# outputs the actual number of lines. Unfortunately, it also outputs a bunch
+# of whitespace before the number. That's where `bc` comes in and strips the
+# whitespace away. I don't know how, but it was recommended in an SO post
+# here: https://stackoverflow.com/a/53177403
+#
+# The sed command at the end just strips the absolute path, once again,
+# to make the .lst file consistent across different build paths.
+#
+# If you come up with a better solution, please remove this :D
+#		
 if(CMAKE_HOST_WIN32)
-# Generate lst file
-add_custom_command(TARGET ${EXECUTABLE}
-        POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE} ${EXECUTABLE}.hex
-        COMMAND ${CMAKE_OBJCOPY} -O binary ${EXECUTABLE} ${EXECUTABLE}.bin
-
-#
-# Let me explain the horrible looking command that follows...
-# Since we compiled with -ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.
-# the elf file only has relative paths to all the source files.
-# When trying to generate the assembly listing intermixed with source code,
-# objdump can't find the source files. It looks in the current directory + the
-# relative path to the file. I tried using the --include= flag with no luck.
-#
-# The --prefix flag adds the cmake source directory, but then objdump appends
-# the whole path to the current build directory AND relative file paths...
-# The --prefix-strip=<n> command removes the first <n> directories from the
-# file paths. This number varies depending on where the code is being built,
-# and that's where `echo "$$PWD" | grep -o '/' - | wc -l | bc` comes in...
-# We first print the current working directory and feed it into grep, which
-# then searches for '/' and outputs each instance in a new line. `wc -l` then
-# outputs the actual number of lines. Unfortunately, it also outputs a bunch
-# of whitespace before the number. That's where `bc` comes in and strips the
-# whitespace away. I don't know how, but it was recommended in an SO post
-# here: https://stackoverflow.com/a/53177403
-#
-# The sed command at the end just strips the absolute path, once again,
-# to make the .lst file consistent across different build paths.
-#
-# If you come up with a better solution, please remove this :D
-#		
-	COMMAND bash -c "${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=$$(echo $${PWD//\\//} | tr -cd '/' | wc -c) -S -d -l -w ${EXECUTABLE} | tr -s ' ' | cut -d' ' -f2- | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst"
-	BYPRODUCTS ${EXECUTABLE}.lst
-)
+	# This is the windows version of the horrible command
+	set(HORRIBLE_COMMAND, "bash -c ${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=$$(echo $${PWD//\\//} | tr -cd '/' | wc -c) -S -d -l -w ${EXECUTABLE} | tr -s ' ' | cut -d' ' -f2- | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst")
 else()
-# Generate lst file
+	set(HORRIBLE_COMMAND, "${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=`echo "$$PWD" | grep -o '/' - | wc -l | bc` -S -d -l -w ${EXECUTABLE} | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst")
+endif()
+	# Generate lst file
 add_custom_command(TARGET ${EXECUTABLE}
         POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE} ${EXECUTABLE}.hex
         COMMAND ${CMAKE_OBJCOPY} -O binary ${EXECUTABLE} ${EXECUTABLE}.bin
 
-#
-# Let me explain the horrible looking command that follows...
-# Since we compiled with -ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.
-# the elf file only has relative paths to all the source files.
-# When trying to generate the assembly listing intermixed with source code,
-# objdump can't find the source files. It looks in the current directory + the
-# relative path to the file. I tried using the --include= flag with no luck.
-#
-# The --prefix flag adds the cmake source directory, but then objdump appends
-# the whole path to the current build directory AND relative file paths...
-# The --prefix-strip=<n> command removes the first <n> directories from the
-# file paths. This number varies depending on where the code is being built,
-# and that's where `echo "$$PWD" | grep -o '/' - | wc -l | bc` comes in...
-# We first print the current working directory and feed it into grep, which
-# then searches for '/' and outputs each instance in a new line. `wc -l` then
-# outputs the actual number of lines. Unfortunately, it also outputs a bunch
-# of whitespace before the number. That's where `bc` comes in and strips the
-# whitespace away. I don't know how, but it was recommended in an SO post
-# here: https://stackoverflow.com/a/53177403
-#
-# The sed command at the end just strips the absolute path, once again,
-# to make the .lst file consistent across different build paths.
-#
-# If you come up with a better solution, please remove this :D
-#		
-	COMMAND ${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=`echo "$$PWD" | grep -o '/' - | wc -l | bc` -S -d -l -w ${EXECUTABLE} | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst
+	COMMAND ${HORRIBLE_COMMAND}
 	BYPRODUCTS ${EXECUTABLE}.lst
 )
-endif()
 
 if (USE_BOOTLOADER STREQUAL 1)
 
