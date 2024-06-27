@@ -1,3 +1,11 @@
+# If we are on windows (CMAKE uses win32 for both win32 and win64), we need to set the python executable to python
+# even though we are using python3.
+if(CMAKE_HOST_WIN32)
+	set(PYTHON "python")
+else()
+	set(PYTHON "python3")
+endif()
+
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Change these whenever updating compiler in environment.yml
@@ -397,6 +405,7 @@ add_custom_command(
 	BYPRODUCTS ${EXECUTABLE}.bin
 )
 
+if(CMAKE_HOST_WIN32)
 # Generate lst file
 add_custom_command(TARGET ${EXECUTABLE}
         POST_BUILD
@@ -427,10 +436,46 @@ add_custom_command(TARGET ${EXECUTABLE}
 # to make the .lst file consistent across different build paths.
 #
 # If you come up with a better solution, please remove this :D
-#
-        COMMAND ${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=`echo "$$PWD" | grep -o '/' - | wc -l | bc` -S -d -l -w ${EXECUTABLE} | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst
-    	BYPRODUCTS ${EXECUTABLE}.lst
+#		
+	COMMAND bash -c "${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=$$(echo $${PWD//\\//} | tr -cd '/' | wc -c) -S -d -l -w ${EXECUTABLE} | tr -s ' ' | cut -d' ' -f2- | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst"
+	BYPRODUCTS ${EXECUTABLE}.lst
 )
+else()
+# Generate lst file
+add_custom_command(TARGET ${EXECUTABLE}
+        POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE} ${EXECUTABLE}.hex
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${EXECUTABLE} ${EXECUTABLE}.bin
+
+#
+# Let me explain the horrible looking command that follows...
+# Since we compiled with -ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.
+# the elf file only has relative paths to all the source files.
+# When trying to generate the assembly listing intermixed with source code,
+# objdump can't find the source files. It looks in the current directory + the
+# relative path to the file. I tried using the --include= flag with no luck.
+#
+# The --prefix flag adds the cmake source directory, but then objdump appends
+# the whole path to the current build directory AND relative file paths...
+# The --prefix-strip=<n> command removes the first <n> directories from the
+# file paths. This number varies depending on where the code is being built,
+# and that's where `echo "$$PWD" | grep -o '/' - | wc -l | bc` comes in...
+# We first print the current working directory and feed it into grep, which
+# then searches for '/' and outputs each instance in a new line. `wc -l` then
+# outputs the actual number of lines. Unfortunately, it also outputs a bunch
+# of whitespace before the number. That's where `bc` comes in and strips the
+# whitespace away. I don't know how, but it was recommended in an SO post
+# here: https://stackoverflow.com/a/53177403
+#
+# The sed command at the end just strips the absolute path, once again,
+# to make the .lst file consistent across different build paths.
+#
+# If you come up with a better solution, please remove this :D
+#		
+	COMMAND ${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=`echo "$$PWD" | grep -o '/' - | wc -l | bc` -S -d -l -w ${EXECUTABLE} | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst
+	BYPRODUCTS ${EXECUTABLE}.lst
+)
+endif()
 
 if (USE_BOOTLOADER STREQUAL 1)
 
@@ -454,7 +499,7 @@ endif()
 
 add_custom_command(
 	TARGET ${EXECUTABLE} POST_BUILD
-	COMMAND python3 ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align ${MCUBOOT_BOOT_MAX_ALIGN} --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} ${EXECUTABLE}.bin ${EXECUTABLE}.dfu.bin
+	COMMAND ${PYTHON} ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align ${MCUBOOT_BOOT_MAX_ALIGN} --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} ${EXECUTABLE}.bin ${EXECUTABLE}.dfu.bin
 	BYPRODUCTS ${EXECUTABLE}.dfu.bin
 	COMMENT "Creating MCUBoot image"
 )
@@ -462,7 +507,7 @@ add_custom_command(
 if(ENCRYPT_IMAGES STREQUAL 1)
 add_custom_command(
 	TARGET ${EXECUTABLE} POST_BUILD
-	COMMAND python3 ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align ${MCUBOOT_BOOT_MAX_ALIGN} --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} --clear ${EXECUTABLE}.bin ${EXECUTABLE}.clear.dfu.bin
+	COMMAND ${PYTHON} ${IMGTOOL} sign --header-size ${MCUBOOT_HEADER_SIZE} --align ${MCUBOOT_BOOT_MAX_ALIGN} --slot-size ${APP_SIZE} --version `cat ${CMAKE_CURRENT_BINARY_DIR}/version_string` --pad-header ${SIGN_IMAGE_CMD} ${ENCRYPT_IMAGE_CMD} --clear ${EXECUTABLE}.bin ${EXECUTABLE}.clear.dfu.bin
 	BYPRODUCTS ${EXECUTABLE}.clear.dfu.bin
 	COMMENT "Creating clear MCUBoot image"
 )
@@ -482,7 +527,7 @@ endif()
 # Only allow `make release` when -DRELEASE=1 is set for cmake
 if(RELEASE STREQUAL "1")
 add_custom_target(release
-	COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/release/release.py ${EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR} ${CUSTOM_VERSION_STR} --syscfg ${APP_DIR}/app_config.yml
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/release/release.py ${EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR} ${CUSTOM_VERSION_STR} --syscfg ${APP_DIR}/app_config.yml
 	DEPENDS ${EXECUTABLE}
 	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/release
 )
@@ -490,14 +535,14 @@ add_custom_target(release
 # Don't allow `eng-release` when -DRELEASE=1
 else()
 add_custom_target(eng-release
-	COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/release/release.py ${EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR} ${CUSTOM_VERSION_STR} --eng_build --syscfg ${APP_DIR}/app_config.yml
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/release/release.py ${EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR} ${CUSTOM_VERSION_STR} --eng_build --syscfg ${APP_DIR}/app_config.yml
 	DEPENDS ${EXECUTABLE}
 	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/release
 )
 endif()
 
 add_custom_target(test
-	COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/test/did_i_break_something.py ${CMAKE_SOURCE_DIR}/tools/scripts/test/configs
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/test/did_i_break_something.py ${CMAKE_SOURCE_DIR}/tools/scripts/test/configs
 )
 
 add_custom_target(cppcheck
@@ -567,17 +612,17 @@ add_custom_target(flash
 endif()
 
 add_custom_target(debug
-	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
+	COMMAND ${PYTHON} ${DEBUG_SCRIPTS_PATH}/debug.py ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} "\"$ENV{CONDA_PREFIX}\""
 	COMMENT "Debugging target"
 )
 
 add_custom_target(debug_rtos
-	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py --rtos ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
+	COMMAND ${PYTHON} ${DEBUG_SCRIPTS_PATH}/debug.py --rtos ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
 	COMMENT "Debugging target with rtos support"
 )
 
 add_custom_target(debug_tui
-	COMMAND python3 ${DEBUG_SCRIPTS_PATH}/debug.py --tui ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
+	COMMAND ${PYTHON} ${DEBUG_SCRIPTS_PATH}/debug.py --tui ${EXECUTABLE} ${SRC_DIR} ${CMAKE_BINARY_DIR} $ENV{CONDA_PREFIX}
 )
 
 if (APP STREQUAL "bootloader")
@@ -601,7 +646,7 @@ add_custom_target(dfu_flash
 endif()
 
 add_custom_target(memfault_upload
-	COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/memfault/memfault_elf_uploader.py --software_type ${APP_NAME} ${EXECUTABLE}
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/memfault/memfault_elf_uploader.py --software_type ${APP_NAME} ${EXECUTABLE}
 	DEPENDS ${EXECUTABLE}
 )
 
@@ -617,7 +662,7 @@ add_custom_command(
     DEPENDS ${APP_DIR}/app_config.yml
     DEPENDS ${CMAKE_SOURCE_DIR}/tools/scripts/config/syscfg_gen.py
     COMMENT "Generating configuration files from app_config.yml"
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/config/syscfg_gen.py ${APP_DIR}/app_config.yml --out_dir ${APP_DIR} ${RELEASE_STR})
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/config/syscfg_gen.py ${APP_DIR}/app_config.yml --out_dir ${APP_DIR} ${RELEASE_STR})
 endif()
 
 # Auto-generate app_error.yml if needed
@@ -631,7 +676,7 @@ add_custom_command(
     DEPENDS ${CMAKE_SOURCE_DIR}/tools/scripts/error/error_parser.py
     DEPENDS ${APP_ERROR_STRUCT}
     COMMENT "Generating error configuration"
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/scripts/error/error_parser.py --ignore-dirty --struct-path ${APP_ERROR_STRUCT}  --yaml ${APP_DIR})
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/error/error_parser.py --ignore-dirty --struct-path ${APP_ERROR_STRUCT}  --yaml ${APP_DIR})
 
 message(STATUS "Saving to ${CMAKE_CURRENT_BINARY_DIR}/version.c")
 
