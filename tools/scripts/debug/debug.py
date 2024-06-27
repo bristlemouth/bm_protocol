@@ -118,6 +118,8 @@ def run_openocd(args, port=3333):
             # stderr=subprocess.STDOUT,
             preexec_fn=os.setpgrp,
         )
+    else:
+        print("Unsupported platform")
 
 
 #
