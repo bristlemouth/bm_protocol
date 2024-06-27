@@ -432,9 +432,9 @@ add_custom_command(
 #		
 if(CMAKE_HOST_WIN32)
 	# This is the windows version of the horrible command
-	set(HORRIBLE_COMMAND, "bash -c ${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=$$(echo $${PWD//\\//} | tr -cd '/' | wc -c) -S -d -l -w ${EXECUTABLE} | tr -s ' ' | cut -d' ' -f2- | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst")
+	set(HORRIBLE_COMMAND, "bash -c \"${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=$$(echo $${PWD//\\//} | tr -cd '/' | wc -c) -S -d -l -w ${EXECUTABLE} | tr -s ' ' | cut -d' ' -f2- | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst\"")
 else()
-	set(HORRIBLE_COMMAND, "${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=`echo "$$PWD" | grep -o '/' - | wc -l | bc` -S -d -l -w ${EXECUTABLE} | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst")
+	set(HORRIBLE_COMMAND, "${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=`echo \"$$PWD\" | grep -o '/' - | wc -l | bc` -S -d -l -w ${EXECUTABLE} | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst")
 endif()
 	# Generate lst file
 add_custom_command(TARGET ${EXECUTABLE}
