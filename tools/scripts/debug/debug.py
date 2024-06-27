@@ -126,7 +126,10 @@ def run_openocd(args, port=3333):
 # Run GDB with all the required scripts
 #
 def run_gdb(args, port=3333):
-    gdb_cmd = ["gdb-multiarch"]
+    if platform.system() == "Windows" and platform.architecture()[0] == "64bit":
+        gdb_cmd = ["gdb-multiarch"]
+    else:
+        gdb_cmd = ["gdb"]
 
     for source_dir in args.dirs:
         gdb_cmd.append(f"--directory={source_dir}")
