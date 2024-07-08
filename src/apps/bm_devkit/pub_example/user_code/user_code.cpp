@@ -15,7 +15,7 @@ To test this application, you will need to run the sub_example application on an
 static constexpr uint32_t PUBLISH_PERIOD_MS = (1000);
 // The topic type is a identifier for the topic to encode different data types, we don't need to worry about this value for the tutorial, 
 // other than that it must be the same for the publisher and subscriber.
-static constexpr uint32_t EXAMPLE_PUBLSIH_TOPIC_TYPE = (1);
+static constexpr uint32_t EXAMPLE_PUBLISH_TOPIC_TYPE = (1);
 // The topic version is a version number for the topic, in case things change we don't need to worry about this value for the tutorial,
 // other than that it must be the same for the publisher and subscriber.
 static constexpr uint32_t  EXAMPLE_PUBLISH_TOPIC_VERSION = (1);
@@ -41,7 +41,7 @@ void loop(void) {
     // Print a simple message into the data buffer to publish to the topic.
     sprintf((char *)data_buffer, "[%d ms] Hello World!", uptimeGetMs());
     // Publish the data buffer to the topic.
-    if(!bm_pub(EXAMPLE_PUBLISH_TOPIC, data_buffer, sizeof(data_buffer), EXAMPLE_PUBLSIH_TOPIC_TYPE, EXAMPLE_PUBLISH_TOPIC_VERSION)) {
+    if(!bm_pub(EXAMPLE_PUBLISH_TOPIC, data_buffer, sizeof(data_buffer), EXAMPLE_PUBLISH_TOPIC_TYPE, EXAMPLE_PUBLISH_TOPIC_VERSION)) {
       printf("Failed to publish message\n");
     } else {
       printf("Published message to network: %s\n", data_buffer);
