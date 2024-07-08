@@ -4,10 +4,17 @@
 #include <stdint.h>
 #include <string.h>
 
+/*
+This application demonstrates how to subscribe to a data topic over bristlemouth via the bm_sub function.
+The application subscribes to the topic "pubsub_example" and prints the received message to the console.
+The callback function subscribe_callback is called when a message is received.
+To test this application, you will need to run the pub_example application on another node.
+*/
+
 // The topic type is a identifier for the topic to encode different data types, we don't need to worry about this value for the tutorial.
 static constexpr uint32_t EXAMPLE_SUBSCRIBE_TOPIC_TYPE = (1);
 // The topic version is a version number for the topic, in case things change we don't need to worry about this value for the tutorial.
-static constexpr uint32_t  EXAMPLE_SUBSCRIBE_TOPIC_VERSION =(1);
+static constexpr uint32_t  EXAMPLE_SUBSCRIBE_TOPIC_VERSION = (1);
 // This is the topic to subscribe to, the publisher will need to publish to this topic (see the application pub_example)
 static const char *const EXAMPLE_SUBSCRIBE_TOPIC = "pubsub_example";
 

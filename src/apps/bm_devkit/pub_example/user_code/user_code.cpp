@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include <string.h>
 
+/*
+This application demonstrates how to publish data over bristlemouth via the bm_pub function.
+The application publishes a message to the topic "pubsub_example" every second.
+The message is a simple string that includes the uptime in milliseconds.
+To test this application, you will need to run the sub_example application on another node.
+*/
+
 // Publish at a rate of 1 Hz
 static constexpr uint32_t PUBLISH_PERIOD_MS = (1000);
 // The topic type is a identifier for the topic to encode different data types, we don't need to worry about this value for the tutorial, 
@@ -11,7 +18,7 @@ static constexpr uint32_t PUBLISH_PERIOD_MS = (1000);
 static constexpr uint32_t EXAMPLE_PUBLSIH_TOPIC_TYPE = (1);
 // The topic version is a version number for the topic, in case things change we don't need to worry about this value for the tutorial,
 // other than that it must be the same for the publisher and subscriber.
-static constexpr uint32_t  EXAMPLE_PUBLISH_TOPIC_VERSION =(1);
+static constexpr uint32_t  EXAMPLE_PUBLISH_TOPIC_VERSION = (1);
 // This is the topic to publish to, the subscriber will need to know this topic to receive the data (see the application sub_example)
 static const char *const EXAMPLE_PUBLISH_TOPIC = "pubsub_example";
 
