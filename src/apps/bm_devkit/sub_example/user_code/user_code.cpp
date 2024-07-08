@@ -14,24 +14,26 @@ To test this application, you will need to run the pub_example application on an
 // The topic type is a identifier for the topic to encode different data types, we don't need to worry about this value for the tutorial.
 static constexpr uint32_t EXAMPLE_SUBSCRIBE_TOPIC_TYPE = (1);
 // The topic version is a version number for the topic, in case things change we don't need to worry about this value for the tutorial.
-static constexpr uint32_t  EXAMPLE_SUBSCRIBE_TOPIC_VERSION = (1);
+static constexpr uint32_t EXAMPLE_SUBSCRIBE_TOPIC_VERSION = (1);
 // This is the topic to subscribe to, the publisher will need to publish to this topic (see the application pub_example)
 static const char *const EXAMPLE_SUBSCRIBE_TOPIC = "pubsub_example";
 
-static void subscribe_callback(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+static void subscribe_callback(uint64_t node_id, const char *topic, uint16_t topic_len,
+                               const uint8_t *data, uint16_t data_len, uint8_t type,
+                               uint8_t version) {
   // These parameters are unused for this example, but in a real application you would use them to process the message.
   (void)topic_len;
   (void)data_len;
   // Check if the message is of the correct type and version
-  if(type != EXAMPLE_SUBSCRIBE_TOPIC_TYPE || version != EXAMPLE_SUBSCRIBE_TOPIC_VERSION) {
+  if (type != EXAMPLE_SUBSCRIBE_TOPIC_TYPE || version != EXAMPLE_SUBSCRIBE_TOPIC_VERSION) {
     printf("Received message with incorrect type or version\n");
     return;
   }
-  if(strncmp(topic, EXAMPLE_SUBSCRIBE_TOPIC, strlen(EXAMPLE_SUBSCRIBE_TOPIC)) == 0) {
+  if (strncmp(topic, EXAMPLE_SUBSCRIBE_TOPIC, strlen(EXAMPLE_SUBSCRIBE_TOPIC)) == 0) {
     // Print the received message
-    printf("Received message from node %016" PRIx64 " on topic %s: \"%s\"\n", node_id, EXAMPLE_SUBSCRIBE_TOPIC, data);
+    printf("Received message from node %016" PRIx64 " on topic %s: \"%s\"\n", node_id,
+           EXAMPLE_SUBSCRIBE_TOPIC, data);
   }
-
 }
 
 void setup(void) {
