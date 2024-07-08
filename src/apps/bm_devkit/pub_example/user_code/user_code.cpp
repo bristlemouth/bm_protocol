@@ -1,17 +1,8 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bm_pubsub.h"
-#include "bristlefin.h"
-#include "bsp.h"
-#include "debug.h"
-#include "lwip/inet.h"
-#include "sensors.h"
-#include "stm32_rtc.h"
-#include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
 #include <stdint.h>
+#include <string.h>
 
 // Publish at a rate of 1 Hz
 static constexpr uint32_t PUBLISH_PERIOD_MS = (1000);
