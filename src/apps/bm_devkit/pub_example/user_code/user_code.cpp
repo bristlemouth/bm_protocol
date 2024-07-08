@@ -39,7 +39,7 @@ void loop(void) {
     // Clear the data buffer
     memset(data_buffer, 0, sizeof(data_buffer));
     // Print a simple message into the data buffer to publish to the topic.
-    sprintf((char *)data_buffer, "[%d ms] Hello World!", uptimeGetMs());
+    sprintf((char *)data_buffer, "[%" PRId64" ms] Hello World!", uptimeGetMs());
     // Publish the data buffer to the topic.
     if(!bm_pub(EXAMPLE_PUBLISH_TOPIC, data_buffer, sizeof(data_buffer), EXAMPLE_PUBLISH_TOPIC_TYPE, EXAMPLE_PUBLISH_TOPIC_VERSION)) {
       printf("Failed to publish message\n");
