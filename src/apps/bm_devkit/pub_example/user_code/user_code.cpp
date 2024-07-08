@@ -30,9 +30,9 @@ void setup(void) {
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
   /// This section demonstrates a simple application to publish data over bristlemouth every second.
-  static uint32_t publishTimer = uptimeGetMs();
+  static uint64_t publishTimer = uptimeGetMs();
   // Publish data every PUBLISH_PERIOD_MS milliseconds.
-  if (((uint32_t)uptimeGetMs() - publishTimer >= PUBLISH_PERIOD_MS)) {
+  if ((uptimeGetMs() - publishTimer >= PUBLISH_PERIOD_MS)) {
     // This is a data buffer to hold the data to be published.
     // It is larger than necessary to demonstrate the use of the bm_pub function.
     static uint8_t data_buffer[128]; 
