@@ -83,7 +83,7 @@ void htuSamplerInit(AbstractHtu *sensor) {
   sensorSamplerAdd(&htuSensor, "HTU");
 }
 
-bool htuSamplerGetLatest(float &temperature, float &humidity) {
+bool htuSamplerGetLatest(float &humidity, float &temperature) {
   bool rval = false;
   taskENTER_CRITICAL();
   if (_newHumTempDataAvailable) {
