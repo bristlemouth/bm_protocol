@@ -75,10 +75,12 @@ static bool networkTopologyCheckAllPortsExplored(networkTopology_t *networkTopol
 static void _assemble_neighbor_info_list(bcmp_neighbor_info_t *_neighbor_info_list, bm_neighbor_t *neighbor, uint8_t num_neighbors) {
   uint16_t _neighbor_count = 0;
   while(neighbor != NULL && _neighbor_count < num_neighbors) {
-    _neighbor_info_list[_neighbor_count].node_id = neighbor->node_id;
-    _neighbor_info_list[_neighbor_count].port = neighbor->port;
-    _neighbor_info_list[_neighbor_count].online = (uint8_t)neighbor->online;
-    _neighbor_count++;
+    if (neighbor->online) {
+      _neighbor_info_list[_neighbor_count].node_id = neighbor->node_id;
+      _neighbor_info_list[_neighbor_count].port = neighbor->port;
+      _neighbor_info_list[_neighbor_count].online = (uint8_t)neighbor->online;
+      _neighbor_count++;
+    }
     // Go to the next one
     neighbor = neighbor->next;
   }
