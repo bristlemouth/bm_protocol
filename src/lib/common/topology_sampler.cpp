@@ -24,6 +24,7 @@
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
+#include "network_config_logger.h"
 #include "sensorController.h"
 #include "sm_config_crc_list.h"
 #include "stm32_rtc.h"
@@ -84,9 +85,6 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
 
 static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len);
 
-static CborError cborStreamFunct(void *token, const char *fmt, ...);
-
-static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_size);
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
 static void topology_sample_cb(networkTopology_t *networkTopology) {
@@ -829,31 +827,6 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
       }
     }
   }
-}
-
-static CborError cborStreamFunct(void *token, const char *fmt, ...) {
-  (void)token;
-  va_list args;
-  va_start(args, fmt);
-  vBridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, fmt, args);
-  va_end(args);
-  return CborNoError;
-}
-
-static void log_cbor_network_configurations(uint8_t *cbor_buf, size_t cbor_buf_size) {
-  configASSERT(cbor_buf);
-  CborError err = CborNoError;
-  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge network config: \n");
-  do {
-    CborParser parser;
-    CborValue it;
-    err = cbor_parser_init(cbor_buf, cbor_buf_size, 0, &parser, &it);
-    if (err != CborNoError) {
-      break;
-    }
-    cbor_value_to_pretty_stream(cborStreamFunct, NULL, &it, CborPrettyDefaultFlags);
-  } while (0);
-  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "\n");
 }
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list) {
