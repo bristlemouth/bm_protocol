@@ -56,6 +56,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
+    ${SRC_DIR}/lib/common/network_config_logger.cpp
     ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/pcap.c
     ${SRC_DIR}/lib/common/reset_reason.c
