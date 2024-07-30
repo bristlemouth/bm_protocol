@@ -161,7 +161,7 @@ raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg) {
     save_config = true;
   }
   cfg.rbrCodaReadingPeriodMs = RbrCodaSensor::DEFAULT_RBR_CODA_READING_PERIOD_MS;
-  if (syscfg.getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
+  if (!syscfg.getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
                                 strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
                                 cfg.rbrCodaReadingPeriodMs)) {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
