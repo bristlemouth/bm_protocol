@@ -369,7 +369,7 @@ static void defaultTask(void *parameters) {
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
 
-  #ifdef RAW_PRESSURE_ENABLE
+#ifdef RAW_PRESSURE_ENABLE
   raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
                             raw_pressure_cfg.maxRawReports,
