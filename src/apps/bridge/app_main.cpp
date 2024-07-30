@@ -368,6 +368,16 @@ static void defaultTask(void *parameters) {
   debugDfuInit(&dfu_partition);
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
 
+
+  #ifdef RAW_PRESSURE_ENABLE
+  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
+  rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
+                            raw_pressure_cfg.maxRawReports,
+                            raw_pressure_cfg.rawDepthThresholdUbar,
+                            &debug_configuration_user,
+                            raw_pressure_cfg.rbrCodaReadingPeriodMs);
+#endif // RAW_PRESSURE_ENABLE
+
   printf("Using bridge power controller.\n");
   IOWrite(&BOOST_EN, 1);
   power_config_s pwrcfg = getPowerConfigs(debug_configuration_system);
@@ -401,15 +411,6 @@ static void defaultTask(void *parameters) {
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
-
-#ifdef RAW_PRESSURE_ENABLE
-  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
-  rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
-                            raw_pressure_cfg.maxRawReports,
-                            raw_pressure_cfg.rawDepthThresholdUbar,
-                            &debug_configuration_user, 
-                            raw_pressure_cfg.rbrCodaReadingPeriodMs);
-#endif // RAW_PRESSURE_ENABLE
 
   // // Re-enable low power mode
   lpmPeripheralInactive(LPM_BOOT);
