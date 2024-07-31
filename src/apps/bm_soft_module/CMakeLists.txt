@@ -107,6 +107,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/common/ll.c
     ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
     ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
