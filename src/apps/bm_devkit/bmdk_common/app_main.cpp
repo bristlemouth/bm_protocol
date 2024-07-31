@@ -15,6 +15,9 @@
 #include "task.h"
 #include "task_priorities.h"
 
+// Include to set the funcs for malloc, free, delay, etc. in BCMP!
+#include "bcmp_platform.h"
+
 #include "app_pub_sub.h"
 #include "bm_l2.h"
 #include "bm_pubsub.h"
@@ -365,6 +368,8 @@ static void defaultTask(void *parameters) {
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins) / sizeof(DebugGpio_t));
   debugSpotterInit();
   debugRTCInit();
+
+  BcmpSetFn(pvPortMalloc, vPortFree, vTaskDelay, xTaskGetTickCount);
 
   timer_callback_handler_init();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);

@@ -18,6 +18,7 @@ set(BCMP_FILES
     ${BCMP_DIR}/dfu/bm_dfu_host.cpp
     ${BCMP_DIR}/bcmp_topology.cpp
     ${BCMP_DIR}/bcmp_resource_discovery.cpp
+    ${BCMP_DIR}/bcmp_platform_hooks.c
 
     # Core bristlemouth
     ${BCMP_DIR}/bm/bm_l2.cpp

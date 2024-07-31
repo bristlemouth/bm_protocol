@@ -6,6 +6,7 @@
 #include "timers.h"
 
 #include "bcmp.h"
+#include "bcmp_lib.h"
 #include "debug.h"
 
 #include "bm_util.h"
@@ -110,7 +111,7 @@ void bcmp_link_change(uint8_t port, bool state) {
 static void dfu_copy_and_process_message(struct pbuf *pbuf) {
   configASSERT(pbuf);
   bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
-  uint8_t* buf = static_cast<uint8_t *>(pvPortMalloc((pbuf->len) - sizeof(bcmp_header_t)));
+  uint8_t* buf = static_cast<uint8_t *>(_Malloc((pbuf->len) - sizeof(bcmp_header_t)));
   configASSERT(buf);
   memcpy(buf, header->payload, (pbuf->len) - sizeof(bcmp_header_t));
   bm_dfu_process_message(buf, (pbuf->len) - sizeof(bcmp_header_t));
@@ -597,18 +598,18 @@ static bool _message_list_remove_message(bcmp_request_element *message) {
     }
   }
   if (element_to_delete) {
-    vPortFree(element_to_delete);
+    _Free(element_to_delete);
     rval = true;
   }
   return rval;
 }
 
 static bcmp_request_element *_message_list_create_element(uint16_t seq_num, uint16_t type, uint32_t timeout_ms, bcmp_reply_message_cb callback) {
-  bcmp_request_element *element = static_cast<bcmp_request_element *>(pvPortMalloc(sizeof(bcmp_request_element)));
+  bcmp_request_element *element = static_cast<bcmp_request_element *>(_Malloc(sizeof(bcmp_request_element)));
   configASSERT(element);
   element->seq_num = seq_num;
   element->type = type;
-  element->send_timestamp_ms = pdTICKS_TO_MS(xTaskGetTickCount());
+  element->send_timestamp_ms = pdTICKS_TO_MS(_GetMs());
   element->timeout_ms = timeout_ms;
   element->callback = callback;
   element->next = NULL;
@@ -620,7 +621,7 @@ static void _message_list_timer_expiry_cb(void *arg) {
   if (xSemaphoreTake(_ctx.messages_list_mutex, pdMS_TO_TICKS(DEFAULT_MESSAGE_TIMEOUT_MS)) == pdPASS) {
     bcmp_request_element *current = _ctx.messages_list;
     while (current) {
-      if (pdTICKS_TO_MS(xTaskGetTickCount()) - current->send_timestamp_ms > current->timeout_ms) {
+      if (pdTICKS_TO_MS(_GetMs()) - current->send_timestamp_ms > current->timeout_ms) {
         printf("BCMP message with seq_num %d timed out\n", current->seq_num);
         if (current->callback) {
           current->callback(NULL);
