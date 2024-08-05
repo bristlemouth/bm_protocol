@@ -6,7 +6,6 @@
 #include "timers.h"
 
 #include "bcmp.h"
-#include "bcmp_lib.h"
 #include "debug.h"
 
 #include "bm_util.h"

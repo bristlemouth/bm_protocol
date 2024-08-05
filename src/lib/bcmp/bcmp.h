@@ -8,6 +8,7 @@
 
 #include "bcmp_messages.h"
 #include "bm_util.h"
+#include "bcmp_lib.h"
 
 #include "nvmPartition.h"
 #include "configuration.h"

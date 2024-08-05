@@ -30,7 +30,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
 
   uint16_t echo_len = sizeof(bcmp_echo_request_t) + payload_len;
 
-  uint8_t *echo_req_buff = static_cast<uint8_t *>(pvPortMalloc(echo_len));
+  uint8_t *echo_req_buff = static_cast<uint8_t *>(_Malloc(echo_len));
   configASSERT(echo_req_buff);
 
   memset(echo_req_buff, 0, echo_len);
@@ -44,7 +44,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
 
   // clear the expected payload
   if (_expected_payload != NULL) {
-      vPortFree(_expected_payload);
+      _Free(_expected_payload);
       _expected_payload = NULL;
       _expected_payload_len = 0;
   }
@@ -52,7 +52,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   // Lets only copy the paylaod if it isn't NULL just in case
   if (payload != NULL && payload_len > 0) {
     memcpy(&echo_req->payload[0], payload, payload_len);
-    _expected_payload = static_cast<uint8_t*>(pvPortMalloc(payload_len));
+    _expected_payload = static_cast<uint8_t*>(_Malloc(payload_len));
     memcpy(_expected_payload, payload, payload_len);
     _expected_payload_len = payload_len;
   }
@@ -64,7 +64,7 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
 
   _ping_request_time = uptimeGetMicroSeconds();
 
-  vPortFree(echo_req_buff);
+  _Free(echo_req_buff);
 
   return rval;
 }
