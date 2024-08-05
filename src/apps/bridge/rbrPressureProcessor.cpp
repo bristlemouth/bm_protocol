@@ -40,7 +40,8 @@ static constexpr char kRbrPressureProcessorTag[] = "[RbrPressureProcessor]";
 static constexpr size_t cbor_buffer_size = 1024;
 static constexpr char kRbrPressureHdrTopic[] = "/sofar/bm_rbr_data";
 static constexpr uint32_t kSampleChunkSize = 30;
-static constexpr double decibar_to_ubar = 10000.0;
+// 1 decibar is 1/10th of a bar => there are 100,000 millionths of a bar (ubar) in one decibar.
+static constexpr double decibar_to_ubar = 100000.0;
 static constexpr char kRBRnRawReportsSent[] = "RBRnRawReportsSent";
 
 static void runTask(void *param);
@@ -108,10 +109,11 @@ static void runTask(void *param) {
           break;
         }
         double signalMean = diffSignal.signalMean();
-        if ((signalMean * decibar_to_ubar) < _ctx.rawDepthThresholdUbar) {
+        double signalMeanUbar = signalMean * decibar_to_ubar;
+        if (signalMeanUbar < _ctx.rawDepthThresholdUbar) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                         "%s signalMean %lf < rawDepthThresholdUbar %lf \n",
-                         kRbrPressureProcessorTag, signalMean, _ctx.rawDepthThresholdUbar);
+                         "%s signalMean %lf ubar < rawDepthThresholdUbar %lf ubar \n",
+                         kRbrPressureProcessorTag, signalMeanUbar, _ctx.rawDepthThresholdUbar);
           break;
         }
         if (diffSignal.encodeDifferenceSignalToBuffer(d_n, diffSignalCapacity)) {
