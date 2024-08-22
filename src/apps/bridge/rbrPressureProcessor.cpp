@@ -92,10 +92,9 @@ bool rbrPressureProcessorIsStarted(void) { return _ctx.started; }
 static void runTask(void *param) {
   (void)param;
   BmRbrDataMsg::Data rbr_data;
-  uint32_t num_samples = (_ctx.rawSampleS * 1000) / _ctx.rbrCodaReadingPeriodMs;
-  size_t diffSignalCapacity = num_samples;
+  const uint32_t diffSignalCapacity = (_ctx.rawSampleS * 1000) / _ctx.rbrCodaReadingPeriodMs;
   DifferenceSignal diffSignal(diffSignalCapacity);
-  const size_t d_n_size = num_samples * sizeof(double);
+  const size_t d_n_size = diffSignalCapacity * sizeof(double);
   double *d_n = static_cast<double *>(pvPortMalloc(d_n_size));
   uint8_t *cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_buffer_size));
   while (1) {
@@ -116,14 +115,15 @@ static void runTask(void *param) {
                          kRbrPressureProcessorTag, signalMeanUbar, _ctx.rawDepthThresholdUbar);
           break;
         }
-        if (diffSignal.encodeDifferenceSignalToBuffer(d_n, diffSignalCapacity)) {
+        size_t total_samples = diffSignalCapacity;
+        if (diffSignal.encodeDifferenceSignalToBuffer(d_n, total_samples)) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "%s Encoded difference signal to buffer \n", kRbrPressureProcessorTag);
           double r0, d0;
           diffSignal.getReferenceSignal(r0);
           // Compute 2nd order difference signal
-          DifferenceSignal::differenceSignalFromBuffer(d_n, diffSignalCapacity, d0);
-          uint32_t samples_to_send = diffSignalCapacity;
+          DifferenceSignal::differenceSignalFromBuffer(d_n, total_samples, d0);
+          uint32_t samples_to_send = total_samples;
           static BmRbrPressureDifferenceSignalMsg::Data d;
           uint32_t offset = 0;
           uint32_t sequence_num = 0;
@@ -134,7 +134,7 @@ static void runTask(void *param) {
             d.header.reading_time_utc_ms = rbr_data.header.reading_time_utc_ms;
             d.header.reading_uptime_millis = rbr_data.header.reading_uptime_millis;
             d.header.sensor_reading_time_ms = rbr_data.header.sensor_reading_time_ms;
-            d.total_samples = diffSignalCapacity;
+            d.total_samples = total_samples;
             d.sequence_num = sequence_num;
             d.num_samples = samples_to_send_now;
             d.residual_0 = r0;
