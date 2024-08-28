@@ -19,7 +19,8 @@ static constexpr uint8_t fappendType = 1;
   \param[in] file_name - (optional) file name to print to (this will append to file")
   \param[in] *format - normal printf format string
 */
-bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name, const char* format, ...) {
+bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name,
+                           bool print_time, const char* format, ...) {
   bm_printf_err_t rval = BM_PRINTF_OK;
   bm_print_publication_t* printf_pub = NULL;
   va_list va;
@@ -55,6 +56,7 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name, const
     printf_pub->target_node_id = target_node_id;
     printf_pub->fname_len = fname_len;
     printf_pub->data_len = data_len;
+    printf_pub->print_time = print_time;
 
     if (file_name) {
       memcpy(printf_pub->fnameAndData, file_name, fname_len);

@@ -54,7 +54,7 @@ static bool powerSample() {
       rtcPrint(rtcTimeBuffer, &time_and_date);
       printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(),
              rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-      bm_fprintf(0, "power.log", "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
+      bm_fprintf(0, "power.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
                  uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
                  _powerData.current);
       bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
@@ -69,7 +69,7 @@ static bool powerSample() {
     } else {
       printf("ERR Failed to sample power monitor %u!", dev_num);
       bm_printf(0, "ERR Failed to sample power monitor %u!", dev_num);
-      bm_fprintf(0, "power.log", "ERR Failed to sample power monitor %u!", dev_num);
+      bm_fprintf(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!", dev_num);
     }
     rval &= success;
   }

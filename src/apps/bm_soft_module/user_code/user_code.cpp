@@ -54,7 +54,7 @@ static void getConfigs() {
     printf("TSYS serial number: %" PRIu32 "\n", serial_number);
   } else {
     printf("No TSYS serial number found\n");
-    bm_fprintf(0, soft_log, "No TSYS serial number found\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No TSYS serial number found\n");
     bm_printf(0, "No TSYS serial number found");
   }
 
@@ -64,7 +64,7 @@ static void getConfigs() {
     printf("Calibration temperature: %" PRId32 "\n", calTempC);
   } else {
     printf("No calibration temperature found\n");
-    bm_fprintf(0, soft_log, "No calibration temperature found\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No calibration temperature found\n");
     bm_printf(0, "No calibration temperature found");
   }
 
@@ -73,7 +73,7 @@ static void getConfigs() {
     printf("Calibration time: %" PRIu32 "\n", cal_time_epoch);
   } else {
     printf("No calibration time found\n");
-    bm_fprintf(0, soft_log, "No calibration time found\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No calibration time found\n");
     bm_printf(0, "No calibration time found");
   }
 
@@ -83,7 +83,7 @@ static void getConfigs() {
     printf("Calibration offset (milliDegC): %" PRId32 "\n", calOffsetMilliC);
   } else {
     printf("No calibration offset (milliDegC) found\n");
-    bm_fprintf(0, soft_log, "No calibration offset (milliDegC) found\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No calibration offset (milliDegC) found\n");
     bm_printf(0, "No calibration offset (milliDegC) found");
   }
   calibrationOffsetDegC = static_cast<float>(calOffsetMilliC) * 1e-3f;
@@ -129,7 +129,7 @@ void loop(void) {
     bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
     if (sensorBmLogEnable) {
-      bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
+      bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(),
                  rtcTimeBuffer, temperature);
     }
     static BmSoftDataMsg::Data d;
@@ -151,7 +151,7 @@ void loop(void) {
   }
   case TSYS01::TSYS01_RESULT_COMMS: {
     printf("soft | tick: %llu, rtc: %s, COMMS ERROR\n", uptimeGetMs(), rtcTimeBuffer);
-    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s,  COMMS ERROR\n", uptimeGetMs(),
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s,  COMMS ERROR\n", uptimeGetMs(),
                rtcTimeBuffer);
     bm_printf(0, "soft | tick: %llu, rtc: %s,  COMMS ERROR", uptimeGetMs(), rtcTimeBuffer);
     break;
@@ -159,7 +159,7 @@ void loop(void) {
   case TSYS01::TSYS01_RESULT_INVALID: {
     printf("soft | tick: %llu, rtc: %s, INVALID temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
            temperature);
-    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s, INVALID temp: %f\n", uptimeGetMs(),
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s, INVALID temp: %f\n", uptimeGetMs(),
                rtcTimeBuffer, temperature);
     bm_printf(0, "soft | tick: %llu, rtc: %s, INVALID temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
@@ -168,7 +168,7 @@ void loop(void) {
   }
   default: {
     printf("soft | tick: %llu, rtc: %s, UNKNOWN ERROR\n", uptimeGetMs(), rtcTimeBuffer);
-    bm_fprintf(0, soft_log, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR\n", uptimeGetMs(),
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR\n", uptimeGetMs(),
                rtcTimeBuffer);
     bm_printf(0, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR", uptimeGetMs(), rtcTimeBuffer);
     break;
@@ -203,11 +203,11 @@ static bool BmSoftWatchdogHandler(void *arg) {
   (void)arg;
   printf("Resetting BM soft\n");
   if (BmSoftStartAndValidate()) {
-    bm_fprintf(0, soft_log, "soft | Watchdog: Reset Bm Soft\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | Watchdog: Reset Bm Soft\n");
     bm_printf(0, "soft | Watchdog: Reset Bm Soft");
     printf("soft | Watchdog: Reset Bm Soft\n");
   } else {
-    bm_fprintf(0, soft_log, "soft | Watchdog: Failed to reset Bm Soft\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | Watchdog: Failed to reset Bm Soft\n");
     bm_printf(0, "soft | Watchdog: Failed to reset Bm Soft");
     printf("soft | Watchdog: Failed to reset Bm Soft\n");
   }
@@ -226,7 +226,7 @@ static void BmSoftInitalize(void) {
   while (!BmSoftStartAndValidate()) {
     if (!failed_init) {
       printf("Failed to start BM soft\n");
-      bm_fprintf(0, soft_log, "Failed to start BM soft\n");
+      bm_fprintf(0, soft_log, USE_TIMESTAMP, "Failed to start BM soft\n");
       bm_printf(0, "Failed to start BM soft");
       failed_init = true;
     }
@@ -234,7 +234,7 @@ static void BmSoftInitalize(void) {
   }
   if (failed_init) {
     printf("Successfully recovered & started BM soft\n");
-    bm_fprintf(0, soft_log, "Successfully recovered & started BM soft\n");
+    bm_fprintf(0, soft_log, USE_TIMESTAMP, "Successfully recovered & started BM soft\n");
     bm_printf(0, "Successfully recovered & started BM soft");
   }
 }
