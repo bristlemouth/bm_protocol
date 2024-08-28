@@ -69,9 +69,9 @@ static bool loadCellSample() {
       _loadCell->getInternalOffsetCal();
 
       // prints to SD card file
-      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, reading: %" PRId32 "\n",
+      bm_fprintf(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, reading: %" PRId32 "\n",
                  uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
-      bm_fprintf(0, "loadcell.log", "tick: %llu, rtc: %s, weight: %f\n",
+      bm_fprintf(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, weight: %f\n",
                  uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
 
       // prints to Spotter console

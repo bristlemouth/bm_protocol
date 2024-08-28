@@ -135,7 +135,7 @@ void loop(void) {
             current_tx_data.mean, current_tx_data.stdev, pressure_tx_data.sample_count,
             pressure_tx_data.min, pressure_tx_data.max, pressure_tx_data.mean,
             pressure_tx_data.stdev);
-    bm_fprintf(0, "bmdk_sensor_agg.log", "%s\n", stats_print_buffer);
+    bm_fprintf(0, "bmdk_sensor_agg.log", USE_TIMESTAMP, "%s\n", stats_print_buffer);
     bm_printf(0, "[sensor-agg] | %s", stats_print_buffer);
     printf("[sensor-agg] | %s\n", stats_print_buffer);
     // Update variables tracking start time of agg period in ticks and RTC.
