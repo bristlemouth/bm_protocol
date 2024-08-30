@@ -36,6 +36,7 @@ typedef enum {
   BM_DFU_ERR_IN_PROGRESS,
   BM_DFU_ERR_CHUNK_SIZE,
   BM_DFU_ERR_UNKNOWN_NODE_ID,
+  BM_DFU_ERR_CONFIRMATION_ABORT,
   // All errors below this are "fatal"
   BM_DFU_ERR_FLASH_ACCESS,
 } bm_dfu_err_t;

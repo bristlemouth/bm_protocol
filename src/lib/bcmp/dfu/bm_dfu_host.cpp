@@ -239,8 +239,14 @@ void s_host_req_update_run(void)
             configASSERT(xTimerStart(host_ctx.ack_timer, 10));
         }
     } else if (curr_evt.type == DFU_EVENT_ABORT) {
-        printf("Recieved abort.\n");
-        bm_dfu_host_transition_to_error(BM_DFU_ERR_ABORTED);
+        bm_dfu_err_t err = BM_DFU_ERR_ABORTED;
+        if (curr_evt.buf)
+        {
+            bcmp_dfu_abort_t* abort_evt = reinterpret_cast<bcmp_dfu_abort_t *>(curr_evt.buf);
+            err = static_cast<bm_dfu_err_t>(abort_evt->err.err_code);
+        }
+        printf("Recieved abort in request.\n");
+        bm_dfu_host_transition_to_error(err);
     }
 }
 
@@ -305,8 +311,14 @@ void s_host_update_run(void) {
         }
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
     } else if (curr_evt.type == DFU_EVENT_ABORT) {
-        printf("Recieved abort.\n");
-        bm_dfu_host_transition_to_error(BM_DFU_ERR_ABORTED);
+        bm_dfu_err_t err = BM_DFU_ERR_ABORTED;
+        if (curr_evt.buf)
+        {
+            bcmp_dfu_abort_t* abort_evt = reinterpret_cast<bcmp_dfu_abort_t *>(curr_evt.buf);
+            err = static_cast<bm_dfu_err_t>(abort_evt->err.err_code);
+        }
+        printf("Recieved abort in run.\n");
+        bm_dfu_host_transition_to_error(err);
     }
 }
 

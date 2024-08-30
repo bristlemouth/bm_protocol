@@ -43,7 +43,7 @@ typedef struct dfu_client_ctx_t {
 
 static dfu_client_ctx_t client_ctx;
 
-static void bm_dfu_client_abort(void);
+static void bm_dfu_client_abort(bm_dfu_err_t err);
 static void bm_dfu_client_send_reboot_request();
 static void bm_dfu_client_send_boot_complete(uint64_t host_node_id);
 static void bm_dfu_client_transition_to_error(bm_dfu_err_t err);
@@ -54,15 +54,17 @@ static void bm_dfu_client_fail_update_and_reboot(void);
  *
  * @note Stuff DFU Abort bm_frame and put into BM Serial TX Queue
  *
+ * @param err    error to set in abort message
+ *
  * @return none
  */
-static void bm_dfu_client_abort(void) {
+static void bm_dfu_client_abort(bm_dfu_err_t err) {
     bcmp_dfu_abort_t abort_msg;
 
     /* Populate the appropriate event */
     abort_msg.err.addresses.dst_node_id = client_ctx.host_node_id;
     abort_msg.err.addresses.src_node_id = client_ctx.self_node_id;
-    abort_msg.err.err_code = BM_DFU_ERR_ABORTED;
+    abort_msg.err.err_code = err;
     abort_msg.err.success = 0;
     abort_msg.header.frame_type = BCMP_DFU_ABORT;
     if(client_ctx.bcmp_dfu_tx(static_cast<bcmp_message_type_t>(abort_msg.header.frame_type), reinterpret_cast<uint8_t*>(&abort_msg), sizeof(abort_msg))){
@@ -229,7 +231,7 @@ void bm_dfu_client_process_update_request(void) {
 
     if (img_info_evt->img_info.gitSHA != getGitSHA() || img_info_evt->img_info.filter_key == BM_DFU_IMG_INFO_FORCE_UPDATE) {
         if(chunk_size > BM_DFU_MAX_CHUNK_SIZE) {
-            bm_dfu_client_abort();
+            bm_dfu_client_abort(BM_DFU_ERR_ABORTED);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_CHUNK_SIZE);
             return;
         }
@@ -357,7 +359,7 @@ void s_client_receiving_run(void) {
         client_ctx.chunk_retry_num++;
         /* Try requesting chunk until max retries is reached */
         if (client_ctx.chunk_retry_num >= BM_DFU_MAX_CHUNK_RETRIES) {
-            bm_dfu_client_abort();
+            bm_dfu_client_abort(BM_DFU_ERR_ABORTED);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_TIMEOUT);
         } else {
             bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
@@ -464,7 +466,7 @@ void s_client_reboot_req_run(void) {
         client_ctx.chunk_retry_num++;
         /* Try requesting reboot until max retries is reached */
         if (client_ctx.chunk_retry_num >= BM_DFU_MAX_CHUNK_RETRIES) {
-            bm_dfu_client_abort();
+            bm_dfu_client_abort(BM_DFU_ERR_ABORTED);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_TIMEOUT);
         } else {
             bm_dfu_client_send_reboot_request();
@@ -482,7 +484,7 @@ void s_client_update_done_entry(void) {
     client_ctx.host_node_id = client_update_reboot_info.host_node_id;
     client_ctx.chunk_retry_num = 0;
     if(getGitSHA() == client_update_reboot_info.gitSHA) {
-        // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration, 
+        // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration,
         // confirm, reset the config flag, and then reboot.
         if(!bm_dfu_confirm_is_enabled()){
             memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
@@ -520,7 +522,7 @@ void s_client_update_done_run(void) {
         client_ctx.chunk_retry_num++;
         /* Try requesting confirmation until max retries is reached */
         if (client_ctx.chunk_retry_num >= BM_DFU_MAX_CHUNK_RETRIES) {
-            bm_dfu_client_abort();
+            bm_dfu_client_abort(BM_DFU_ERR_CONFIRMATION_ABORT);
             bm_dfu_client_fail_update_and_reboot();
         } else {
             /* Request confirmation */

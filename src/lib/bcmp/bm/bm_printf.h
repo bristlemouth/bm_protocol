@@ -19,7 +19,7 @@ typedef enum {
 } bm_printf_err_t;
 
 bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name,
-                           bool print_time, const char* format, ...);
+                           uint8_t print_time, const char* format, ...);
 bm_printf_err_t bm_file_append(uint64_t target_node_id, const char* file_name, const uint8_t *buff, uint16_t len);
 
 #define bm_printf(target_node_id, format, ...) bm_fprintf(target_node_id, NULL, USE_TIMESTAMP, format, ##__VA_ARGS__)

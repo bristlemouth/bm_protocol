@@ -136,7 +136,7 @@ void loop(void) {
                "tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, "
                "std: %.4f\n",
                uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
-    bm_printf(0, 
+    bm_printf(0,
               "[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, "
               "mean: %.4f, std: %.4f",
               uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
