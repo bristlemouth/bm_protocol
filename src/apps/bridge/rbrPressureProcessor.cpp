@@ -49,9 +49,9 @@ static void diffSigSendTimerCallback(TimerHandle_t xTimer);
 
 static PressureProcessorContext_t _ctx;
 
-void rbrPressureProcessorInit(uint32_t rawSampleS,
-                              uint32_t maxRawReports, double rawDepthThresholdUbar,
-                              cfg::Configuration *usrCfg, uint32_t rbrCodaReadingPeriodMs) {
+void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t maxRawReports,
+                              double rawDepthThresholdUbar, cfg::Configuration *usrCfg,
+                              uint32_t rbrCodaReadingPeriodMs) {
   configASSERT(usrCfg);
   _ctx.usrCfg = usrCfg;
   _ctx.rbrCodaReadingPeriodMs = rbrCodaReadingPeriodMs;
@@ -111,14 +111,14 @@ static void runTask(void *param) {
         double signalMeanUbar = signalMean * decibar_to_ubar;
         if (signalMeanUbar < _ctx.rawDepthThresholdUbar) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                         "%s signalMean %lf ubar < rawDepthThresholdUbar %lf ubar \n",
+                         "%s signalMean %lf ubar < rawDepthThresholdUbar %lf ubar\n",
                          kRbrPressureProcessorTag, signalMeanUbar, _ctx.rawDepthThresholdUbar);
           break;
         }
         size_t total_samples = diffSignalCapacity;
         if (diffSignal.encodeDifferenceSignalToBuffer(d_n, total_samples)) {
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                         "%s Encoded difference signal to buffer \n", kRbrPressureProcessorTag);
+                         "%s Encoded difference signal to buffer\n", kRbrPressureProcessorTag);
           double r0, d0;
           diffSignal.getReferenceSignal(r0);
           // Compute 2nd order difference signal
@@ -149,20 +149,20 @@ static void runTask(void *param) {
                       encoded_len, APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_TYPE,
                       APP_PUB_SUB_BM_BRIDGE_RBR_HDR_PRESSURE_VERSION) == BM_SERIAL_OK) {
                 bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                               "%s Sent difference signal to Spotter \n",
+                               "%s Sent difference signal to Spotter\n",
                                kRbrPressureProcessorTag);
                 offset += samples_to_send_now;
                 samples_to_send -= samples_to_send_now;
                 sequence_num++;
               } else {
                 bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                               "%s Failed to publish difference signal to Spotter \n",
+                               "%s Failed to publish difference signal to Spotter\n",
                                kRbrPressureProcessorTag);
                 break;
               }
             } else {
               bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                             "%s Failed to encode difference signal \n",
+                             "%s Failed to encode difference signal\n",
                              kRbrPressureProcessorTag);
             }
             vTaskDelay(100);
@@ -178,13 +178,21 @@ static void runTask(void *param) {
     }
     if (bits & kQRcv) {
       if (xQueueReceive(_ctx.q, &rbr_data, 0) == pdTRUE) {
-        if (diffSignal.addSample(rbr_data.pressure_deci_bar)) {
-          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                         "%s Added sample %.2f to Diff signal \n", kRbrPressureProcessorTag,
-                         rbr_data.pressure_deci_bar);
+        if (_ctx.started) {
+          if (diffSignal.addSample(rbr_data.pressure_deci_bar)) {
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                           "%s Added reading %.4f to Diff signal\n", kRbrPressureProcessorTag,
+                           rbr_data.pressure_deci_bar);
+          } else {
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                           "%s Unable to add reading to Diff signal, buffer is full\n",
+                           kRbrPressureProcessorTag);
+          }
         } else {
-          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                         "%s Unable to add sample to Diff signal \n", kRbrPressureProcessorTag);
+          bridgeLogPrint(
+              BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+              "%s Not adding late reading %.4f to Diff signal because timer has stopped\n",
+              kRbrPressureProcessorTag, rbr_data.pressure_deci_bar);
         }
       }
     }
