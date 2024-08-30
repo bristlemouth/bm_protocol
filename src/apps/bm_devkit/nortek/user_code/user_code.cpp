@@ -340,7 +340,7 @@ void loop(void) {
         "DATA, %" PRIu64 ", %s, %u, %u, %u, %u, %u, %u, %u, %u, %.4f, %.4f, %.4f, %u, %u, %u, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %u, %u, %.4f, %.4f\n",
         this_uptime, rtcTimeBuffer,nortekData.month, nortekData.day, nortekData.year, nortekData.hour, nortekData.minute, nortekData.second, nortekData.error_code, nortekData.status_code, nortekData.v_b1_x, nortekData.v_b2_y, nortekData.v_b3_z, nortekData.amp_b1_x, nortekData.amp_b2_y, nortekData.amp_b3_z, nortekData.batt_v, nortekData.sound_speed, nortekData.heading, nortekData.pitch, nortekData.roll, nortekData.pressure, nortekData.temperature, nortekData.an_in_1, nortekData.an_in_2, nortekData.speed, nortekData.direction
       );
-      bm_printf(0, 
+      bm_printf(0,
         "DATA, %" PRIu64 ", %s, %u, %u, %u, %u, %u, %u, %u, %u, %.4f, %.4f, %.4f, %u, %u, %u, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %u, %u, %.4f, %.4f\n",
         this_uptime, rtcTimeBuffer,nortekData.month, nortekData.day, nortekData.year, nortekData.hour, nortekData.minute, nortekData.second, nortekData.error_code, nortekData.status_code, nortekData.v_b1_x, nortekData.v_b2_y, nortekData.v_b3_z, nortekData.amp_b1_x, nortekData.amp_b2_y, nortekData.amp_b3_z, nortekData.batt_v, nortekData.sound_speed, nortekData.heading, nortekData.pitch, nortekData.roll, nortekData.pressure, nortekData.temperature, nortekData.an_in_1, nortekData.an_in_2, nortekData.speed, nortekData.direction
       );
@@ -399,11 +399,11 @@ void loop(void) {
           v_b1_x_stdev,v_b2_y_stdev,v_b3_z_stdev,heading_stdev,pitch_stdev,roll_stdev,pressure_stdev,temperature_stdev,speed_stdev,direction_stdev
       );
 
-      bm_printf(0, 
+      bm_printf(0,
           "MEANS |  v_x %.4f, v_y %.4f, v_z %.4f, heading %.4f, pitch %.4f, roll %.4f, pressure %.4f, temperature %.4f, speed %.4f, direction %.4f\n\n",
           v_b1_x_mean,v_b2_y_mean,v_b3_z_mean,heading_mean,pitch_mean,roll_mean,pressure_mean,temperature_mean,speed_mean,direction_mean
       );
-      bm_printf(0, 
+      bm_printf(0,
           "STDEVS |  v_x %.4f, v_y %.4f, v_z %.4f, heading %.4f, pitch %.4f, roll %.4f, pressure %.4f, temperature %.4f, speed %.4f, direction %.4f\n\n",
           v_b1_x_stdev,v_b2_y_stdev,v_b3_z_stdev,heading_stdev,pitch_stdev,roll_stdev,pressure_stdev,temperature_stdev,speed_stdev,direction_stdev
       );

@@ -17,10 +17,11 @@ static constexpr uint8_t fappendType = 1;
   \param[in] target_node_id - node_id to send to (0 = all nodes), the accept if it is
                               subscribed to the topic that the printf is publishing to
   \param[in] file_name - (optional) file name to print to (this will append to file")
+  \param[in] print_time - whether or not the timestamp will be written to the file
   \param[in] *format - normal printf format string
 */
 bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name,
-                           bool print_time, const char* format, ...) {
+                           uint8_t print_time, const char* format, ...) {
   bm_printf_err_t rval = BM_PRINTF_OK;
   bm_print_publication_t* printf_pub = NULL;
   va_list va;
