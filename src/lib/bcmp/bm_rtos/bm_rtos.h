@@ -54,9 +54,9 @@ BmError bm_task_create(void (*task)(void *), const char *name, uint32_t stack_si
 // Timer functions
 BmTimer bm_timer_create(void (*callback)(void *), const char *name, uint32_t period_ms,
                         void *arg);
-BmError bm_timer_start(BmTimer timer, uint32_t period_ms);
+BmError bm_timer_start(BmTimer timer, uint32_t timeout_ms);
 BmError bm_timer_stop(BmTimer timer, uint32_t timeout_ms);
-BmError bm_timer_change_period(BmTimer timer, uint32_t period_ms);
+BmError bm_timer_change_period(BmTimer timer, uint32_t period_ms, uint32_t timeout_ms);
 uint32_t bm_get_tick_count(void);
 uint32_t bm_ms_to_ticks(uint32_t ms);
 uint32_t bm_ticks_to_ms(uint32_t ticks);
