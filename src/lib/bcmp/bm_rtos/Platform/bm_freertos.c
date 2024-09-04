@@ -16,14 +16,6 @@ BmQueue bm_queue_create(uint32_t queue_length, uint32_t item_size) {
   return xQueueCreate(queue_length, item_size);
 }
 
-
-BmError bm_queue_receive(BmQueue queue, void *item, uint32_t timeout_ms) {
-  if (xQueueReceive(queue, item, pdMS_TO_TICKS(timeout_ms)) == pdPASS) {
-    return BM_SUCCESS;
-  } else {
-    return BM_FAIL;
-  }
-}
 BmError bm_queue_receive(BmQueue queue, void *item, uint32_t timeout_ms) {
   if (xQueueReceive(queue, item, pdMS_TO_TICKS(timeout_ms)) == pdPASS) {
     return BM_SUCCESS;
@@ -47,7 +39,7 @@ BmError bm_semaphore_give(BmSemaphore semaphore) {
     return BM_SUCCESS;
   } else {
     return BM_FAIL;
-  } BM_FAIL;
+  }
 }
 
 BmError bm_task_create(void (*task)(void *), const char *name, uint32_t stack_size, void *arg,
