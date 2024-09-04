@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// base it off the posix error codes
+// base it off the posix error codes?
 typedef enum BmError {
   BM_SUCCESS = 0,
   BM_FAIL = -1,
@@ -22,12 +22,6 @@ typedef enum BmError {
 // #define ASSERT(x) ((void)0)
 // #endif
 
-// TODO - give this a better name
-// also BaseType_t is defined in FreeRTOS so perhaps it this needs to be defined in the implementaiton file?
-// in FreeRTOS Basetype_t is defined as long. I'm not sure what the equivalent might be defined as in other RTOSs.
-// I see one way we can do this is by only referencing the BaseType_t in the implementation file and not in the header file.
-// and then based ont the BaseType_t return we get in the implementation file we can return our own generic return value!
-// typedef BmError BaseType_t;
 typedef void *BmQueue;
 typedef void *BmSemaphore;
 typedef void *BmTimer;
@@ -49,7 +43,7 @@ BmError bm_semaphore_take(BmSemaphore semaphore, uint32_t timeout_ms);
 // Task functions
 BmError bm_task_create(void (*task)(void *), const char *name, uint32_t stack_size, void *arg,
                        uint32_t priority, void *task_handle);
-// Going to need to add a function to start the scheduler here!
+void bm_start_scheduler(void);
 
 // Timer functions
 BmTimer bm_timer_create(void (*callback)(void *), const char *name, uint32_t period_ms,
@@ -61,26 +55,6 @@ uint32_t bm_get_tick_count(void);
 uint32_t bm_ms_to_ticks(uint32_t ms);
 uint32_t bm_ticks_to_ms(uint32_t ticks);
 void bm_delay(uint32_t ms);
-
-// These are the functions that I need to implement in the FreeRTOS porting layer
-// configASSERT
-// pvPortMalloc
-// vPortFree
-// vTaskDelay
-// xQueueCreate
-// xQueueReceive
-// xQueueSend
-// xSemaphoreCreateMutex
-// xSemaphoreGive
-// xSemaphoreTake
-// xTaskCreate
-// xTaskGetTickCount
-// xTimerChangePeriod
-// xTimerCreate
-// xTimerStart
-// xTimerStop
-// pdMS_TO_TICKS
-// pdTICKS_TO_MS
 
 // These are the functions that I need to implement in the FreeRTOS+CLI porting layer... maybe???
 // FreeRTOS_CLIGetParameter

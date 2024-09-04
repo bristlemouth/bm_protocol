@@ -48,6 +48,10 @@ BmError bm_task_create(void (*task)(void *), const char *name, uint32_t stack_si
   }
 }
 
+void bm_start_scheduler(void) {
+  vTaskStartScheduler();
+}
+
 BmTimer bm_timer_create(void (*callback)(void *), const char *name, uint32_t period_ms,
                         void *arg) {
   return xTimerCreate(name, pdMS_TO_TICKS(period_ms), pdTRUE, arg,

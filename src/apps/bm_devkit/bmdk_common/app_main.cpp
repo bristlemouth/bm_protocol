@@ -178,16 +178,16 @@ extern "C" int main(void) {
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
 
-  BaseType_t rval = xTaskCreate(
+  BmError rval = bm_task_create(
       defaultTask, "Default",
       128 * 4, // TODO - verify stack size
       NULL,
       2, // Start with very high priority during boot then downgrade once done initializing everything
       NULL);
-  configASSERT(rval == pdTRUE);
+  configASSERT(rval == BM_SUCCESS);
 
   // Start FreeRTOS scheduler
-  vTaskStartScheduler();
+  bm_start_scheduler();
 
   /* We should never get here as control is now taken by the scheduler */
 
