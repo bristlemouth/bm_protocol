@@ -14,6 +14,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "task_priorities.h"
+#include "bm_rtos.h"
 
 #include "app_pub_sub.h"
 #include "bm_l2.h"
@@ -301,8 +302,8 @@ static const DebugGpio_t debugGpioPins[] = {
 static void user_task(void *parameters);
 
 void user_code_start() {
-  BaseType_t rval = xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
-  configASSERT(rval == pdPASS);
+  bm_return_value_t rval = bm_task_create(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
+  configASSERT(rval == bmRETPASS);
 }
 
 static void user_task(void *parameters) {
@@ -318,7 +319,7 @@ static void user_task(void *parameters) {
       to allow for lower priority tasks to be serviced.
       Keep this delay in the range of 10 to 100 ms.
     */
-    vTaskDelay(pdMS_TO_TICKS(10));
+    bm_delay(bm_ms_to_ticks(10));
   }
 }
 /* USER CODE EXECUTED HERE END */

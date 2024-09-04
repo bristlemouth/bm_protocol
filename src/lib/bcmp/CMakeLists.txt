@@ -25,11 +25,15 @@ set(BCMP_FILES
     ${BCMP_DIR}/bm/bm_printf.cpp
     ${BCMP_DIR}/bm/bristlemouth.cpp
 
+    # BM FREERTOS - TODO turn this into a CMAKE variable?
+    ${BCMP_DIR}/bm_rtos/platform/bm_freertos.c
+
     PARENT_SCOPE)
 
 set(BCMP_INCLUDES
     ${BCMP_DIR}
     ${BCMP_DIR}/bm
     ${BCMP_DIR}/dfu
+    ${BCMP_DIR}/bm_rtos
     PARENT_SCOPE
     )
