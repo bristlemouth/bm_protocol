@@ -302,8 +302,8 @@ static const DebugGpio_t debugGpioPins[] = {
 static void user_task(void *parameters);
 
 void user_code_start() {
-  bm_return_value_t rval = bm_task_create(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
-  configASSERT(rval == bmRETPASS);
+  BmError rval = bm_task_create(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
+  configASSERT(rval == BM_SUCCESS);
 }
 
 static void user_task(void *parameters) {

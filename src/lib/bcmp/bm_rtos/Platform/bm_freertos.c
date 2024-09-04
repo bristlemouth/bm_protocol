@@ -5,8 +5,8 @@
 #include "semphr.h"
 #include "timers.h"
 
-#define bmRETPASS pdPASS
-#define bmRETFAIL pdFAIL
+// #define bmRETPASS pdPASS
+// #define bmRETFAIL pdFAIL
 
 void *bm_malloc(size_t size) {
     return pvPortMalloc(size);
@@ -16,47 +16,52 @@ void bm_free(void *ptr) {
     vPortFree(ptr);
 }
 
-bm_queue_handle_t bm_queue_create(uint32_t queue_length, uint32_t item_size) {
+BmQueue bm_queue_create(uint32_t queue_length, uint32_t item_size) {
     return xQueueCreate(queue_length, item_size);
 }
 
-bm_return_value_t bm_queue_receive(bm_queue_handle_t queue, void *item, uint32_t timeout_ms) {
+BmError bm_queue_receive(BmQueue queue, void *item, uint32_t timeout_ms) {
     return xQueueReceive(queue, item, pdMS_TO_TICKS(timeout_ms));
 }
 
-bm_return_value_t bm_queue_send(bm_queue_handle_t queue, const void *item, uint32_t timeout_ms) {
+BmError bm_queue_send(BmQueue queue, const void *item, uint32_t timeout_ms) {
     return xQueueSend(queue, item, pdMS_TO_TICKS(timeout_ms));
 }
 
-bm_semaphore_handle_t bm_semaphore_create(void) {
+BmSemaphore bm_semaphore_create(void) {
     return xSemaphoreCreateMutex();
 }
 
-bm_return_value_t bm_semaphore_give(bm_semaphore_handle_t semaphore) {
+BmError bm_semaphore_give(BmSemaphore semaphore) {
     return xSemaphoreGive(semaphore);
 }
 
-bm_return_value_t bm_semaphore_take(bm_semaphore_handle_t semaphore, uint32_t timeout_ms) {
+BmError bm_semaphore_take(BmSemaphore semaphore, uint32_t timeout_ms) {
     return xSemaphoreTake(semaphore, pdMS_TO_TICKS(timeout_ms));
 }
 
-bm_return_value_t bm_task_create(void (*task)(void *), const char *name, uint32_t stack_size, void *arg) {
-   return xTaskCreate(task, name, stack_size, arg, tskIDLE_PRIORITY, NULL);
+BmError bm_task_create(void (*task)(void *), const char *name, uint32_t stack_size, void *arg, uint32_t priority, void *task_handle) {
+
+    if (xTaskCreate(task, name, stack_size, arg, priority, task_handle) == pdPASS) {
+        return BM_SUCCESS;
+    } else {
+        return BM_FAIL;
+    }
 }
 
-bm_timer_handle_t bm_timer_create(void (*callback)(void *), const char *name, uint32_t period_ms, void *arg) {
-    return xTimerCreate(name, pdMS_TO_TICKS(period_ms), pdTRUE, arg, callback);
+BmTimer bm_timer_create(void (*callback)(void *), const char *name, uint32_t period_ms, void *arg) {
+    return xTimerCreate(name, pdMS_TO_TICKS(period_ms), pdTRUE, arg, (TimerCallbackFunction_t)callback);
 }
 
-bm_return_value_t bm_timer_start(bm_timer_handle_t timer, uint32_t period_ms) {
+BmError bm_timer_start(BmTimer timer, uint32_t period_ms) {
     return xTimerStart(timer, pdMS_TO_TICKS(period_ms));
 }
 
-bm_return_value_t bm_timer_stop(bm_timer_handle_t timer, uint32_t timeout_ms) {
+BmError bm_timer_stop(BmTimer timer, uint32_t timeout_ms) {
     return xTimerStop(timer, pdMS_TO_TICKS(timeout_ms));
 }
 
-bm_return_value_t bm_timer_change_period(bm_timer_handle_t timer, uint32_t period_ms) {
+BmError bm_timer_change_period(BmTimer timer, uint32_t period_ms) {
     return xTimerChangePeriod(timer, pdMS_TO_TICKS(period_ms), pdMS_TO_TICKS(0));
 }
 
