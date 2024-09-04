@@ -5,9 +5,6 @@
 #include "task.h"
 #include "timers.h"
 
-// #define bmRETPASS pdPASS
-// #define bmRETFAIL pdFAIL
-
 void *bm_malloc(size_t size) { return pvPortMalloc(size); }
 
 void bm_free(void *ptr) { vPortFree(ptr); }
@@ -74,7 +71,8 @@ BmError bm_timer_stop(BmTimer timer, uint32_t timeout_ms) {
 }
 
 BmError bm_timer_change_period(BmTimer timer, uint32_t period_ms, uint32_t timeout_ms) {
-  if (xTimerChangePeriod(timer, pdMS_TO_TICKS(period_ms), pdMS_TO_TICKS(timeout_ms)) == pdPASS) {
+  if (xTimerChangePeriod(timer, pdMS_TO_TICKS(period_ms), pdMS_TO_TICKS(timeout_ms)) ==
+      pdPASS) {
     return BM_SUCCESS;
   } else {
     return BM_FAIL;
