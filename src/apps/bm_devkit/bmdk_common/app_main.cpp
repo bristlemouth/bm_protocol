@@ -165,7 +165,7 @@ extern "C" int main(void) {
   // If you NEED to have an interrupt based timer, or other interrupts running before the
   // scheduler starts, you can enable them here. The reason for this is that FreeRTOS will
   // disable interrupts when calling FreeRTOS API functions before the scheduler starts.
-  // In our case, this is done in some class constructors that utilize pvPortMalloc,
+  // In our case, this is done in some class constructors that utilize bm_malloc,
   // or other FreeRTOS API calls. This means that when __libc_init_array is called,
   // interrupts are disabled, and the timer interrupt will no longer be available until
   // the scheduler starts. This is a problem if you are initializing a peripheral that
@@ -315,7 +315,7 @@ static void user_task(void *parameters) {
     loop();
     /*
       DO NOT REMOVE
-      This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
+      This bm_delay delay is REQUIRED for the FreeRTOS task scheduler
       to allow for lower priority tasks to be serviced.
       Keep this delay in the range of 10 to 100 ms.
     */
@@ -415,6 +415,6 @@ static void defaultTask(void *parameters) {
 
   while (1) {
     /* Do nothing */
-    vTaskDelay(1000);
+    bm_delay(1000);
   }
 }

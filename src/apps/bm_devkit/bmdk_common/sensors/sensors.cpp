@@ -4,7 +4,7 @@
 #include "sensors.h"
 #include "abstract_pressure_sensor.h"
 #include "abstract_htu_sensor.h"
-#include "FreeRTOS.h"
+#include "bm_rtos.h"
 
 // Sensor driver includes
 #include "ms5803.h"
@@ -32,7 +32,7 @@ void sensorsInit() {
   bristlefin.setGpioDefault();
 
   // Wait for the 3V3 rail to stabilize before communicating with the mux
-  vTaskDelay(pdMS_TO_TICKS(5));
+  bm_delay(bm_ms_to_ticks(5));
 
   if(!bristlefin.sensorsInit()){
     printf("Failed to init bristlefin\n");

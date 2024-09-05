@@ -2,6 +2,7 @@
 #include "bm_network.h"
 #include "bm_printf.h"
 #include "bm_pubsub.h"
+#include "bm_rtos.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -48,7 +49,7 @@ void setup(void) {
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
-  vTaskDelay(pdMS_TO_TICKS(5));
+  bm_delay(bm_ms_to_ticks(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
 }

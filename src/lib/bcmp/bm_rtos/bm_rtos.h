@@ -56,7 +56,7 @@ uint32_t bm_ms_to_ticks(uint32_t ms);
 uint32_t bm_ticks_to_ms(uint32_t ticks);
 void bm_delay(uint32_t ms);
 
-// These are the functions that I need to implement in the FreeRTOS+CLI porting layer... maybe???
+// These are used by the CLI... not necessarily required to be part of the RTOS or part of the abstraction layer???
 // FreeRTOS_CLIGetParameter
 // FreeRTOS_CLIRegisterCommand
 

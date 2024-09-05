@@ -8,6 +8,7 @@
 #include "uptime.h"
 #include "bm_printf.h"
 #include "bm_pubsub.h"
+#include "bm_rtos.h"
 #include "lwip/inet.h"
 #include "bm_network.h"
 #include "usart.h"
@@ -211,31 +212,31 @@ void setup(void) {
   parser.init();
 
   //appointing memory for all of the buffers.
-  month_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  day_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  year_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  hour_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  minute_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  second_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  error_code_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  status_code_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  v_b1_x_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  v_b2_y_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  v_b3_z_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  amp_b1_x_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  amp_b2_y_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  amp_b3_z_stats.values = static_cast<uint64_t *>(pvPortMalloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
-  batt_v_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  sound_speed_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  heading_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  pitch_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  roll_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  pressure_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  temperature_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  an_in_1_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  an_in_2_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  speed_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
-  direction_stats.values = static_cast<double *>(pvPortMalloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  month_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  day_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  year_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  hour_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  minute_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  second_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  error_code_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  status_code_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  v_b1_x_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  v_b2_y_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  v_b3_z_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  amp_b1_x_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  amp_b2_y_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  amp_b3_z_stats.values = static_cast<uint64_t *>(bm_malloc(sizeof(uint64_t) * MAX_SENSOR_SAMPLES));
+  batt_v_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  sound_speed_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  heading_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  pitch_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  roll_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  pressure_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  temperature_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  an_in_1_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  an_in_2_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  speed_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
+  direction_stats.values = static_cast<double *>(bm_malloc(sizeof(double) * MAX_SENSOR_SAMPLES));
 
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
@@ -248,7 +249,7 @@ void setup(void) {
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
-  vTaskDelay(pdMS_TO_TICKS(5));
+  bm_delay(bm_ms_to_ticks(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
 
