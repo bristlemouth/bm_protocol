@@ -13,6 +13,7 @@
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
+#include "bm_rtos.h"
 
 #include "app_pub_sub.h"
 #include "bm_l2.h"
@@ -177,16 +178,16 @@ extern "C" int main(void) {
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
 
-  BaseType_t rval = xTaskCreate(
+  BmError rval = bm_task_create(
       defaultTask, "Default",
       128 * 4, // TODO - verify stack size
       NULL,
       2, // Start with very high priority during boot then downgrade once done initializing everything
       NULL);
-  configASSERT(rval == pdTRUE);
+  configASSERT(rval == BM_SUCCESS);
 
   // Start FreeRTOS scheduler
-  vTaskStartScheduler();
+  bm_start_scheduler();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -386,7 +387,7 @@ static void defaultTask(void *parameters) {
   IOWrite(&BF_LED_G1, LED_OFF);
   IOWrite(&BF_LED_R1, LED_OFF);
 #endif // BSP_DEV_MOTE_V1_0
-  vTaskDelay(1000);
+  bm_delay(1000);
 #ifdef BSP_MOTE_V1_0
   IOWrite(&BF_LED_G2, LED_ON);
   IOWrite(&BF_LED_R2, LED_OFF);
@@ -402,6 +403,6 @@ static void defaultTask(void *parameters) {
 
   while (1) {
     /* Do nothing */
-    vTaskDelay(1000);
+    bm_delay(1000);
   }
 }
