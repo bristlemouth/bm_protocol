@@ -89,8 +89,8 @@ static bool powerInit() {
       _inaSensors[dev_num]->setShuntValue(0.01);
 
       //Set normal sampling speed
-      _inaSensors[dev_num]->setBusConvTime(CT_1100);
-      _inaSensors[dev_num]->setShuntConvTime(CT_1100);
+      _inaSensors[dev_num]->setBusConvTime(CT_203);
+      _inaSensors[dev_num]->setShuntConvTime(CT_203);
       _inaSensors[dev_num]->setAvg(AVG_256);
       rval &= true;
     }
