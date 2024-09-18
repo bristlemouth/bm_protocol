@@ -17,8 +17,6 @@
 
 #include "lpm.h"
 
-// Log_t *SerialLog;
-
 // Number of buffers to queue up for transmission
 #define SERIAL_TX_QUEUE_SIZE 128
 
