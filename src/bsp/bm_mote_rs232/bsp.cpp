@@ -65,16 +65,8 @@ void bspInit() {
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
 
-  // Turn LEDS on by default
-  IOWrite(&LED_BLUE, 0);
-  IOWrite(&LED_RED, 0);
-  IOWrite(&LED_GREEN, 0);
-
   // Turn off the BUCK by default (it's enabled when low)
-  IOWrite(&BB_PL_BUCK_EN, 1);
-
-  // Turn it on by default
-  IOWrite(&BB_3V3_EN, 1);
+  IOWrite(&PL_BUCK_EN, 1);
 
 }
 
@@ -88,7 +80,7 @@ bool usb_is_connected() {
 
 void mxInit(void) {
   MX_GPIO_Init();
-  MX_USART3_UART_Init();
+  MX_LPUART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();

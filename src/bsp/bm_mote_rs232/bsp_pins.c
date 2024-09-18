@@ -2,16 +2,9 @@
 #include "stm32_io.h"
 #include "pca9535.h"
 
-IOPinHandle_t LED_GREEN = {&STM32PinDriver, &(STM32Pin_t){LED_GREEN_GPIO_Port, LED_GREEN_Pin, NULL, NULL}};
-IOPinHandle_t GPIO1 = {&STM32PinDriver, &(STM32Pin_t){GPIO1_GPIO_Port, GPIO1_Pin, NULL, NULL}};
 IOPinHandle_t VUSB_DETECT = {&STM32PinDriver, &(STM32Pin_t){VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, NULL, NULL}};
-IOPinHandle_t BB_3V3_EN = {&STM32PinDriver, &(STM32Pin_t){BB_3V3_EN_GPIO_Port, BB_3V3_EN_Pin, NULL, NULL}};
 IOPinHandle_t DISCHARGE_ON = {&STM32PinDriver, &(STM32Pin_t){DISCHARGE_ON_GPIO_Port, DISCHARGE_ON_Pin, NULL, NULL}};
 IOPinHandle_t PL_BUCK_EN = {&STM32PinDriver, &(STM32Pin_t){PL_BUCK_EN_GPIO_Port, PL_BUCK_EN_Pin, NULL, NULL}};
-IOPinHandle_t BM_SCK_RX3 = {&STM32PinDriver, &(STM32Pin_t){BM_SCK_RX3_GPIO_Port, BM_SCK_RX3_Pin, NULL, NULL}};
-IOPinHandle_t BM_MISO = {&STM32PinDriver, &(STM32Pin_t){BM_MISO_GPIO_Port, BM_MISO_Pin, NULL, NULL}};
-IOPinHandle_t BM_MOSI_TX3 = {&STM32PinDriver, &(STM32Pin_t){BM_MOSI_TX3_GPIO_Port, BM_MOSI_TX3_Pin, NULL, NULL}};
-IOPinHandle_t LED_BLUE = {&STM32PinDriver, &(STM32Pin_t){LED_BLUE_GPIO_Port, LED_BLUE_Pin, NULL, NULL}};
 IOPinHandle_t BB_VBUS_EN = {&STM32PinDriver, &(STM32Pin_t){BB_VBUS_EN_GPIO_Port, BB_VBUS_EN_Pin, NULL, NULL}};
 IOPinHandle_t FLASH_SCK = {&STM32PinDriver, &(STM32Pin_t){FLASH_SCK_GPIO_Port, FLASH_SCK_Pin, NULL, NULL}};
 IOPinHandle_t FLASH_MISO = {&STM32PinDriver, &(STM32Pin_t){FLASH_MISO_GPIO_Port, FLASH_MISO_Pin, NULL, NULL}};
