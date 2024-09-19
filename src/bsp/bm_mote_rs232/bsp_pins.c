@@ -1,6 +1,5 @@
 #include "bsp.h"
 #include "stm32_io.h"
-#include "pca9535.h"
 
 IOPinHandle_t VUSB_DETECT = {&STM32PinDriver, &(STM32Pin_t){VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, NULL, NULL}};
 IOPinHandle_t DISCHARGE_ON = {&STM32PinDriver, &(STM32Pin_t){DISCHARGE_ON_GPIO_Port, DISCHARGE_ON_Pin, NULL, NULL}};
