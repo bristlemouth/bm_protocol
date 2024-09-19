@@ -22,7 +22,7 @@ void bspInit();
 // Pin definitions
 extern IOPinHandle_t VUSB_DETECT;
 extern IOPinHandle_t PL_BUCK_EN;
-extern IOPinHandle_t BB_VBUS_EN;
+extern IOPinHandle_t VBUS_EN;
 extern IOPinHandle_t FLASH_SCK;
 extern IOPinHandle_t FLASH_MISO;
 extern IOPinHandle_t FLASH_MOSI;

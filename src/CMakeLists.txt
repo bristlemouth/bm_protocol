@@ -222,9 +222,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(APP_NAME ${APP_NAME}-dbg)
 endif()
 if(CMAKE_APP_TYPE STREQUAL "BMDK")
-    add_subdirectory(apps/bm_devkit/${APP})
+	add_subdirectory(apps/bm_devkit/${APP})
 elseif(CMAKE_APP_TYPE STREQUAL "bristleback")
-    add_subdirectory(apps/bristleback_apps/${APP})
+	add_subdirectory(apps/bristleback_apps/${APP})
+elseif(CMAKE_APP_TYPE STREQUAL "rs232_expander")
+	add_subdirectory(apps/rs232_expander_apps/${APP})
 else()
     add_subdirectory(apps/${APP})
 endif()
@@ -429,7 +431,7 @@ add_custom_command(
 # to make the .lst file consistent across different build paths.
 #
 # If you come up with a better solution, please remove this :D
-#		
+#
 if(CMAKE_HOST_WIN32)
 	# This is the windows version of the horrible command
 	set(HORRIBLE_COMMAND, "bash -c \"${CMAKE_OBJDUMP} --prefix=${SRC_DIR} --prefix-strip=$$(echo $${PWD//\\//} | tr -cd '/' | wc -c) -S -d -l -w ${EXECUTABLE} | tr -s ' ' | cut -d' ' -f2- | sed 's=${SRC_DIR}/./==' > ${EXECUTABLE}.lst\"")

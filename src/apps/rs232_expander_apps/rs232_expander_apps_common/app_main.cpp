@@ -7,11 +7,13 @@
 #include "icache.h"
 #include "iwdg.h"
 // #include "rtc.h"
+#include "usart.h"
 #include "usb_otg.h"
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
+#include "task_priorities.h"
 
 #include "app_pub_sub.h"
 #include "bm_l2.h"
@@ -27,13 +29,15 @@
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
-#include "debug_uart.h"
+#include "debug_pluart_cli.h"
 #include "debug_w25.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
+#include "ms5803.h"
 #include "nvmPartition.h"
+#include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
 #include "ram_partitions.h"
@@ -50,7 +54,11 @@
 #include "watchdog.h"
 #include "debug_bm_service.h"
 #include "sys_info_service.h"
+#include "sensorWatchdog.h"
 #include "config_cbor_map_service.h"
+/* USER FILE INCLUDES */
+#include "user_code.h"
+/* USER FILE INCLUDES END */
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -62,7 +70,7 @@
 static void defaultTask(void *parameters);
 
 // Serial console USB device
-SerialHandle_t usbCLI   = {
+SerialHandle_t usbCLI = {
     .device = (void *)0, // Using CDC 0
     .name = "vcp-cli",
     .txPin = NULL,
@@ -82,7 +90,7 @@ SerialHandle_t usbCLI   = {
     .postTxCb = NULL,
 };
 
-SerialHandle_t usbPcap   = {
+SerialHandle_t usbPcap = {
     .device = (void *)1, // Using CDC 1
     .name = "vcp-bm",
     .txPin = NULL,
@@ -102,8 +110,14 @@ SerialHandle_t usbPcap   = {
     .postTxCb = NULL,
 };
 
+cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *systemConfigurationPartition = NULL;
+
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
+
+// Only needed if we want the debug commands too
+// extern INA::INA232 *debugIna;
 
 extern "C" int main(void) {
 
@@ -163,9 +177,9 @@ bool start_stress(const void *pinHandle, uint8_t value, void *args) {
   return false;
 }
 
-void handle_subscriptions(uint64_t node_id, const char *topic,
-                          uint16_t topic_len, const uint8_t *data,
-                          uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_bm_subscriptions(uint64_t node_id, const char *topic,
+                             uint16_t topic_len, const uint8_t *data,
+                             uint16_t data_len, uint8_t type, uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
@@ -200,7 +214,7 @@ void handle_subscriptions(uint64_t node_id, const char *topic,
   }
 }
 
-// TODO - move this to some debug file?
+// TODO - move this to some debug file
 // Defines list if GPIOs for Debug CLI
 static const DebugGpio_t debugGpioPins[] = {
     {"adin_cs", &ADIN_CS, GPIO_OUT},
@@ -214,6 +228,33 @@ static const DebugGpio_t debugGpioPins[] = {
     {"vusb_detect", &VUSB_DETECT, GPIO_IN},
     {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
 };
+
+/* USER CODE EXECUTED HERE */
+static void user_task(void *parameters);
+
+void user_code_start() {
+  BaseType_t rval =
+      xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
+  configASSERT(rval == pdPASS);
+}
+
+static void user_task(void *parameters) {
+  (void)parameters;
+
+  setup();
+
+  for (;;) {
+    loop();
+    /*
+      DO NOT REMOVE
+      This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
+      to allow for lower priority tasks to be serviced.
+      Keep this delay in the range of 10 to 100 ms.
+    */
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+/* USER CODE EXECUTED HERE END */
 
 static void defaultTask(void *parameters) {
   (void)parameters;
@@ -243,7 +284,6 @@ static void defaultTask(void *parameters) {
   pcapInit(&usbPcap);
 
   startCLI();
-  startDebugUart();
   // pcapInit(&usbPcap);
 
   gpioISRStartTask();
@@ -259,7 +299,6 @@ static void defaultTask(void *parameters) {
   debugGpioInit(debugGpioPins, sizeof(debugGpioPins) / sizeof(DebugGpio_t));
   debugSpotterInit();
   debugRTCInit();
-
   timer_callback_handler_init();
   spiflash::W25 debugW25(&spi2, &FLASH_CS);
   debugW25Init(&debugW25);
@@ -274,24 +313,28 @@ static void defaultTask(void *parameters) {
   cfg::Configuration debug_configuration_system(debug_system_partition,
                                                 ram_system_configuration,
                                                 RAM_SYSTEM_CONFIG_SIZE_BYTES);
-
-debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
+  debug_configuration_system.getConfig("sensorsPollIntervalMs",
+                                       strlen("sensorsPollIntervalMs"),
                                        sys_cfg_sensorsPollIntervalMs);
-debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
+  debug_configuration_system.getConfig("sensorsCheckIntervalS",
+                                       strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
-
+  userConfigurationPartition = &debug_configuration_user;
+  systemConfigurationPartition = &debug_configuration_system;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugConfigurationInit(&debug_configuration_user,
                          &debug_configuration_hardware,
                          &debug_configuration_system);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
+  debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init(&dfu_partition, &debug_configuration_user,
            &debug_configuration_system);
 
-  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
-                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
+  sensorConfig_t sensorConfig = {
+      .sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+      .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
@@ -299,11 +342,13 @@ debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsChe
   sys_info_service_init(debug_configuration_system);
   config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
                                debug_configuration_user);
-  bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
+  SensorWatchdog::SensorWatchdogInit();
+  bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
+  user_code_start();
 
   // Re-enable low power mode
   // lpmPeripheralInactive(LPM_BOOT);
