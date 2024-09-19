@@ -131,3 +131,12 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
+
+- name: serial_payload_example on bm_mote_rs232
+  type: build_fw
+  args:
+    app: serial_payload_example
+    bsp: bm_mote_rs232
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=rs232_expander
