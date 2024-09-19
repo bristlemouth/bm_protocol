@@ -211,7 +211,7 @@ static const DebugGpio_t debugGpioPins[] = {
     {"adin_pwr", &ADIN_PWR, GPIO_OUT},
     {"adin_rst", &ADIN_RST, GPIO_OUT},
     {"pl_buck_en", &PL_BUCK_EN, GPIO_OUT},
-    {"vbus_en", &VBUS_EN, GPIO_OUT}, // Should I remove the bb_ and just call it vbus_en?
+    {"vbus_en", &VBUS_EN, GPIO_OUT},
     {"flash_cs", &FLASH_CS, GPIO_OUT},
     {"boot_led", &BOOT_LED, GPIO_IN},
     {"vusb_detect", &VUSB_DETECT, GPIO_IN},
