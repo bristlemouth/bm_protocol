@@ -7,7 +7,6 @@
 #include "icache.h"
 #include "iwdg.h"
 // #include "rtc.h"
-#include "usart.h"
 #include "usb_otg.h"
 
 // Includes for FreeRTOS
