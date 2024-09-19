@@ -76,9 +76,11 @@ static bool BmRbrWatchdogHandler(void *arg) {
   bm_fprintf(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
   bm_printf(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
+  IOWrite(&DISCHARGE_ON, 1);
   IOWrite(&PL_BUCK_EN, 1);
   vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
   rbr_sensor.flush();
+  IOWrite(&DISCHARGE_ON, 0);
   IOWrite(&PL_BUCK_EN, 0);
   last_payload_power_on_time = uptimeGetMs();
   return true;
