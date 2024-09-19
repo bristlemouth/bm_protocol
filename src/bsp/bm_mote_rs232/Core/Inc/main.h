@@ -45,6 +45,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+// We need this for serial.c to function for now.
 #include "stm32u5xx_ll_usart.h"
 /* USER CODE END Includes */
 
