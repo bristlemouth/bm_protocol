@@ -7,7 +7,6 @@
 #include "icache.h"
 #include "iwdg.h"
 // #include "rtc.h"
-#include "usart.h"
 #include "usb_otg.h"
 
 // Includes for FreeRTOS
@@ -65,27 +64,6 @@
 
 static void defaultTask(void *parameters);
 
-// Serial console (when no usb present)
-// SerialHandle_t usart3 = {
-//     .device = USART3,
-//     .name = "usart3",
-//     .txPin = &BM_MOSI_TX3,
-//     .rxPin = &BM_SCK_RX3,
-//     .interruptPin = NULL,
-//     .txStreamBuffer = NULL,
-//     .rxStreamBuffer = NULL,
-//     .txBufferSize = 1024,
-//     .rxBufferSize = 512,
-//     .rxBytesFromISR = serialGenericRxBytesFromISR,
-//     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-//     .processByte = NULL,
-//     .data = NULL,
-//     .enabled = false,
-//     .flags = 0,
-//     .preTxCb = NULL,
-//     .postTxCb = NULL,
-// };
-
 // Serial console USB device
 SerialHandle_t usbCLI   = {
     .device = (void *)0, // Using CDC 0
@@ -126,10 +104,6 @@ SerialHandle_t usbPcap   = {
     .preTxCb = NULL,
     .postTxCb = NULL,
 };
-
-// extern "C" void USART3_IRQHandler(void) {
-//   serialGenericUartIRQHandler(&usart3);
-// }
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
