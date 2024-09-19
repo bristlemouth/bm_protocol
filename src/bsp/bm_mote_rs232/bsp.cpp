@@ -68,6 +68,9 @@ void bspInit() {
   // Turn off the BUCK by default (it's enabled when low)
   IOWrite(&PL_BUCK_EN, 1);
 
+  // Turn off the DISCHARGE_ON by default
+  IOWrite(&DISCHARGE_ON, 0);
+
 }
 
 bool usb_is_connected() {
