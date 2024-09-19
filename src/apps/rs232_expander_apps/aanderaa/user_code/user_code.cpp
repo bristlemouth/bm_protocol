@@ -19,9 +19,6 @@
 #include "usart.h"
 #include "util.h"
 
-#define LED_ON_TIME_MS 20
-#define LED_PERIOD_MS 1000
-
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 static constexpr char AANDERAA_WATCHDOG_ID[] = "Aanderaa";
 static constexpr char AANDERAA_RAW_LOG[] = "aanderaa_raw.log";
@@ -172,9 +169,6 @@ static int aanderaaTopicStrLen;
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
 static OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, lineHeader);
-
-// A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
-static int32_t ledLinePulse = -1;
 
 static currentData_t aggregateStats(AveragingSampler &sampler) {
   currentData_t ret_stats = {};
@@ -375,31 +369,6 @@ void loop(void) {
     }
   }
 
-  /// Blink green LED when data is received from the payload UART.
-  static bool led2State = false;
-  // If LED_GREEN is off and the ledLinePulse flag is set, turn it on.
-  if (!led2State && ledLinePulse > -1) {
-    led2State = true;
-  } // If LED_GREEN has been on for LED_ON_TIME_MS, turn it off.
-  else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
-    ledLinePulse = -1;
-    led2State = false;
-  }
-
-  // Blink red LED on a simple timer.
-  static u_int32_t ledPulseTimer = uptimeGetMs();
-  static u_int32_t ledOnTimer = 0;
-  static bool led1State = false;
-  // Turn LED_RED on every LED_PERIOD_MS milliseconds.
-  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    ledOnTimer = uptimeGetMs();
-    ledPulseTimer += LED_PERIOD_MS;
-    led1State = true;
-  } // If LED_RED has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    led1State = false;
-  }
-
 #ifdef FAKE_AANDERAA
   (void)readings_skipped;
   spoof_aanderaa();
@@ -430,7 +399,6 @@ void loop(void) {
     printf("[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
            rtcTimeBuffer, read_len, payload_buffer);
 
-    ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
     // Now when we get a line of text data, our LineParser turns it into numeric values.
     if (!parser.parseLine(payload_buffer, read_len)) {
       printf("Error parsing line!\n");
