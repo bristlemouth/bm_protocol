@@ -159,3 +159,4 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=rs232_expander
              -DCMAKE_AANDERAA_TYPE=4830
+             
