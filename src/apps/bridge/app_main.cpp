@@ -407,7 +407,7 @@ static void defaultTask(void *parameters) {
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
                             raw_pressure_cfg.maxRawReports,
                             raw_pressure_cfg.rawDepthThresholdUbar,
-                            &debug_configuration_user, 
+                            &debug_configuration_user,
                             raw_pressure_cfg.rbrCodaReadingPeriodMs);
 #endif // RAW_PRESSURE_ENABLE
 

@@ -56,7 +56,7 @@ static bool htuSample() {
     rtcPrint(rtcTimeBuffer, &time_and_date);
     printf("hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
            _humTempData.humidity, _humTempData.temperature);
-    bm_fprintf(0, "hum_temp.log", "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(),
+    bm_fprintf(0, "hum_temp.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(),
                rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
     bm_printf(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(),
               rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);

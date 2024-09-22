@@ -91,3 +91,21 @@
     bsp: bm_mote_bristleback_v1_0
     build_type: Release
   sign: true
+
+- name: serial_bridge_debug
+  description: Serial Bridge - Debug
+  type: build_fw
+  args:
+    app: serial_bridge
+    bsp: bm_mote_v1.0
+    build_type: Debug
+  sign: false
+
+- name: bringup_mote_debug
+  description: Bringup Mote - Debug
+  type: build_fw
+  args:
+    app: bringup_mote
+    bsp: bm_mote_v1.0
+    build_type: Debug
+  sign: false

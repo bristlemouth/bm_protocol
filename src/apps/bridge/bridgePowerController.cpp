@@ -235,10 +235,11 @@ void BridgePowerController::_update(void) {
         } else { // Subsampling disabled
           stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
 #ifdef RAW_PRESSURE_ENABLE
-      if(!rbrPressureProcessorIsStarted()) {
-        rbrPressureProcessorStart();
-        printf("Started rbrPressureProcessor\n");
-      }
+          if (!rbrPressureProcessorIsStarted()) {
+            rbrPressureProcessorStart();
+            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                           "Started rbrPressureProcessor\n");
+          }
 #endif // RAW_PRESSURE_ENABLE
           powerBusAndSetSignal(true);
           time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
@@ -298,7 +299,7 @@ void BridgePowerController::_update(void) {
 #ifndef CI_TEST
   uint32_t taskNotifyValue = 0;
   xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, pdMS_TO_TICKS(time_to_sleep_ms));
-#else // CI_TEST
+#else  // CI_TEST
   vTaskDelay(time_to_sleep_ms); // FIXME fix this in test.
 #endif // CI_TEST
 }

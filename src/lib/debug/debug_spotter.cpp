@@ -95,7 +95,7 @@ static BaseType_t cmd_spotter_fn(char *writeBuffer, size_t writeBufferLen,
       }
       size_t dataLen = strnlen(dataStr, 128);
       bm_printf_err_t res;
-      res = bm_fprintf(0, just_filename, "%.*s\n", dataLen + 1,
+      res = bm_fprintf(0, just_filename, USE_TIMESTAMP, "%.*s\n", dataLen + 1,
                        dataStr); // add one for the \n
       if (res != BM_PRINTF_OK) {
         printf("bm_fprintf err: %d\n", res);
