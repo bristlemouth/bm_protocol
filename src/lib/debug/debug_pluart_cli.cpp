@@ -70,7 +70,6 @@ static BaseType_t plUartCliCommand( char *writeBuffer,
       PLUART::startTransaction();
       PLUART::write((uint8_t*)argDataStr, strlen(argDataStr));
       PLUART::write((uint8_t*)termination, strlen(termination));
-
       PLUART::endTransaction();
     } else {
       printf("ERROR - Unsupported op!: %s\n", opStr);
