@@ -54,6 +54,7 @@ void startSerial() {
   configASSERT(rval == pdTRUE);
 }
 
+// ReSharper disable once CppDFAEndlessLoop
 // Receive character from uart rx interrupt and place in stream buffer
 // to be processed in serialGenericRxTask
 BaseType_t serialGenericRxBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
@@ -244,8 +245,10 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     }
   }
 
-  if (!bytesAvailable && LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device) && !usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
+  // Check if transmission just completed, and clear flag if so
+  if (LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device)) {
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
+      // If have a postTxCb, call it.
       if(handle->postTxCb){
         handle->postTxCb(handle);
       }
@@ -320,6 +323,9 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
       // Enable transmit interrupt if not already transmitting
       if(!usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
         usart_EnableIT_TXE((USART_TypeDef *)handle->device);
+      }
+      // Enable TC interrupt to detect end of transmission
+      if (!LL_USART_IsEnabledIT_TC((USART_TypeDef *)handle->device)) {
         LL_USART_EnableIT_TC((USART_TypeDef *)handle->device);
       }
 
