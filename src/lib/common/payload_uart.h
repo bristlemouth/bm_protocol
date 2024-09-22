@@ -6,6 +6,12 @@
 
 namespace PLUART {
 
+// Function pointers for hardware-specific actions for transaction control
+typedef void (*HardwareControlFunc)();
+void enableTransactions(HardwareControlFunc preTxFunc, HardwareControlFunc postTxFunc);
+void startTransaction();
+void endTransaction();
+
 // Set the baud rate for the LPUART
 void setBaud(uint32_t new_baud_rate);
 

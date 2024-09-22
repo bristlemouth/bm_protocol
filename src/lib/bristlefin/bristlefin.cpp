@@ -174,7 +174,6 @@ void Bristlefin::setRS485Rx() {
   IOWrite(&GPIO2, 0); // GPIO2 is connected to RE active LOW
 }
 
-
 Bristlefin::version_e Bristlefin::getVersion() {return version_;}
 
 TCA::Channel_t Bristlefin::getMuxChannel() {
