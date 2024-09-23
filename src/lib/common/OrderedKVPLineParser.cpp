@@ -14,7 +14,7 @@ OrderedKVPLineParser::OrderedKVPLineParser(const char *separator, size_t maxLine
 // Parse the value based on its type
 bool OrderedKVPLineParser::parseValues(char *workStr) {
   // Parse the values
-  for (size_t i = 0; i < _numValues; ++i) {
+  for (size_t i = 0; i < _numValues; i++) {
     //    printf("DEBUG - searching for key: %s\n", _keys[i]);
 
     char *pos = strstr(workStr, _keys[i]);

@@ -19,7 +19,7 @@ LineParser::LineParser(const char* separator, size_t maxLineLen, const ValueType
 bool LineParser::init() {
   _values = static_cast<Value *>(pvPortMalloc(sizeof(Value) * _numValues));
   if (_values != NULL) {
-    for (size_t i = 0; i < _numValues; ++i) {
+    for (size_t i = 0; i < _numValues; i++) {
       _values[i].type = _valueTypes[i];
       if (_values[i].type == TYPE_STRING) {
         _values[i].data.string_val_ptr = nullptr;
@@ -33,7 +33,7 @@ bool LineParser::init() {
 LineParser::~LineParser() {
   if (_values != nullptr) {
     // Free any allocated string values
-    for (size_t i = 0; i < _numValues; ++i) {
+    for (size_t i = 0; i < _numValues; i++) {
       if (_values[i].type == TYPE_STRING) {
         if (_values[i].data.string_val_ptr != nullptr) {
           vPortFree(_values[i].data.string_val_ptr);
@@ -83,14 +83,14 @@ bool LineParser::parseLine(const char* line, uint16_t len) {
 }
 
 const Value& LineParser::getValue(uint16_t index) {
+  static Value invalidValue = {TYPE_INVALID, {0}};
+
   if (_values == nullptr) {
     printf("ERR Parser values uninitialized!\n");
-    static Value invalidValue = {TYPE_INVALID, {0}};
     return invalidValue;
   }
   else if (index >= _numValues) {
     printf("ERR Parsed value at %u out of range %zu!\n", index, _numValues);
-    static Value invalidValue = {TYPE_INVALID, {0}};
     return invalidValue;
   }
   else {
