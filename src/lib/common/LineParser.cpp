@@ -21,10 +21,29 @@ bool LineParser::init() {
   if (_values != NULL) {
     for (size_t i = 0; i < _numValues; ++i) {
       _values[i].type = _valueTypes[i];
+      if (_values[i].type == TYPE_STRING) {
+        _values[i].data.string_val_ptr = nullptr;
+      }
     }
     return true;
   }
   return false;
+}
+
+LineParser::~LineParser() {
+  if (_values != nullptr) {
+    // Free any allocated string values
+    for (size_t i = 0; i < _numValues; ++i) {
+      if (_values[i].type == TYPE_STRING) {
+        if (_values[i].data.string_val_ptr != nullptr) {
+          vPortFree(_values[i].data.string_val_ptr);
+          _values[i].data.string_val_ptr = nullptr;
+        }
+      }
+    }
+    vPortFree(_values);
+    _values = nullptr;
+  }
 }
 
 bool LineParser::parseLine(const char* line, uint16_t len) {
@@ -63,24 +82,29 @@ bool LineParser::parseLine(const char* line, uint16_t len) {
   return values_parsed;
 }
 
-Value LineParser::getValue(uint16_t index) {
-  Value retVal = {TYPE_INVALID, {0}};
-
+const Value& LineParser::getValue(uint16_t index) {
   if (_values == nullptr) {
     printf("ERR Parser values uninitialized!\n");
+    static Value invalidValue = {TYPE_INVALID, {0}};
+    return invalidValue;
   }
   else if (index >= _numValues) {
     printf("ERR Parsed value at %u out of range %zu!\n", index, _numValues);
+    static Value invalidValue = {TYPE_INVALID, {0}};
+    return invalidValue;
   }
   else {
-    retVal = _values[index];
+    return _values[index];
   }
-  return retVal;
 }
 
 bool LineParser::parseValueFromToken(const char *token, size_t index) {
   char* endptr;
   switch (_values[index].type) {
+    case TYPE_INVALID: {
+      // printf("WARN - unparsable value at: %s\n", token);
+      return true;
+    }
     case TYPE_UINT64: {
       uint64_t parseVal = strtoull(token, &endptr, 10);
       if (endptr == token) {
@@ -110,9 +134,22 @@ bool LineParser::parseValueFromToken(const char *token, size_t index) {
       _values[index].data.double_val = parseVal;
       return true;
     }
-    default:
-      printf("ERR - can't parse value of ValueType %d\n", _values[index].type);
-      return false; // Unknown type
+    case TYPE_STRING: {
+      // Free any existing string to prevent memory leaks
+      if (_values[index].data.string_val_ptr != nullptr) {
+        vPortFree(_values[index].data.string_val_ptr);
+        _values[index].data.string_val_ptr = nullptr;
+      }
+      // Allocate memory for the new string + \0 term char
+      size_t len = strlen(token);
+      _values[index].data.string_val_ptr = static_cast<char*>(pvPortMalloc(len + 1));
+      configASSERT(_values[index].data.string_val_ptr);
+      // Copy the token into the allocated memory
+      strcpy(_values[index].data.string_val_ptr, token);
+      // printf("DEBUG - parse val: %s\n", _values[index].data.string_val_ptr);
+      return true;
+    }
   }
-  return false;
+  printf("ERR - Unexpected ValueType %d\n", _values[index].type);
+  return false; // Unknown type
 }
