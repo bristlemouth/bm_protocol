@@ -15,7 +15,7 @@ OrderedSeparatorLineParser::OrderedSeparatorLineParser(const char* separator, si
 bool OrderedSeparatorLineParser::parseValues(char* workStr) {
   char* saveptr; // Additional pointer for strtok_r so it stays thread-safe
   // Parse number of expected values from the string
-  for (size_t i = 0; i < _numValues; ++i) {
+  for (size_t i = 0; i < _numValues; i++) {
     // First call to strok_r, workStr will be non-NULL (start of string).
     //    strtok_r will set first occurence of _separator in workStr to NULL
     //    set saveptr to the next byte
