@@ -2,17 +2,13 @@ from bitstring import BitStream
 import struct
 
 test_no_detection = '04000000'
-test_single_detection = '03000000FC3C000045002E23020041'
+test_single_detection = '04000000fc3c000045002e23020041'
 test_two_detection = '03000000FC3C000045002E230B0041FC3C000045002E23060041'
-
-bitstream = BitStream('0x' + test_single_detection)
-
-print(bitstream)
-
-struct_description = [
-    ('uint16_t', 'sample_count'),
-    ('float', 'mean'),
-    ('float', 'stdev'),
+payloads = [
+    '04000000fc3c000045002e23020041',
+    '04000000fc3c000045002e23010041',
+    '04000000fc3c000045002e23010041',
+    '04000000fc3c000045002e23020041'
 ]
 
 detect_struct_description = [
@@ -22,6 +18,7 @@ detect_struct_description = [
     ('uint16_t', 'detection_count'),
     ('char', 'code_char'),
 ]
+
 
 def hex_to_struct(hex_data, struct_description):
     # Convert the hex data to bytes.
@@ -101,19 +98,24 @@ def parse_bm_raw_binary_message(raw_hex):
     parsed_message['devkit_payload'] = sensor_data.hex()
     return parsed_message
 
+
+# TODO - get example of raw message with Rx-Live data.
 parsed_message = parse_bm_raw_binary_message("de650efb19d5d50a01f9e92d8725e978c62238e79d2bb12295b27781fc2b013b08b64167ec3b3e2b01747b64425b9d163f")
 
 print("Parsed raw message:")
 for key in parsed_message:
     print(f"\t{key}: {parsed_message[key]}")
 
-# TODO - get example of raw message with Rx-Live data.
+for payload in payloads:
+    bitstream = BitStream('0x' + payload)
 
-sts_count = int(bitstream.read('uintle:32'))
-print(f"{sts_count} Rx-Live Status Polls received.")
-while bitstream.pos < bitstream.len:
-    detect_data = bitstream.read('bytes:11')
-    detection_data = hex_to_struct(detect_data, detect_struct_description)
-    print(f"Detection data:")
-    for key in detection_data:
-        print(f"\t{key}: {detection_data[key]}")
+    print(bitstream)
+
+    sts_count = int(bitstream.read('uintle:32'))
+    print(f"{sts_count} Rx-Live Status Polls received.")
+    while bitstream.pos < bitstream.len:
+        detect_data = bitstream.read('bytes:11')
+        detection_data = hex_to_struct(detect_data, detect_struct_description)
+        print(f"Detection data:")
+        for key in detection_data:
+            print(f"\t{key}: {detection_data[key]}")
