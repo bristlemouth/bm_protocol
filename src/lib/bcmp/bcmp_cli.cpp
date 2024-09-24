@@ -14,7 +14,7 @@
 #include "bm_pubsub.h"
 #include "bcmp_ping.h"
 #include "bcmp_config.h"
-#include "util.h"
+#include "app_util.h"
 #include "bcmp_time.h"
 #include "bcmp_topology.h"
 #include "bcmp_resource_discovery.h"

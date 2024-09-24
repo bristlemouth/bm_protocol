@@ -10,7 +10,7 @@
 #include "semphr.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 #include <new>
 
 // TODO - get this from the sensor node itself

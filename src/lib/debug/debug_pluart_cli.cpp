@@ -6,7 +6,7 @@
 
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
-#include "util.h"
+#include "app_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -11,7 +11,7 @@
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "task_priorities.h"
-#include "util.h"
+#include "app_util.h"
 
 // TODO: Once we have bcmp_config request reply, we should read this value from the modules.
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms

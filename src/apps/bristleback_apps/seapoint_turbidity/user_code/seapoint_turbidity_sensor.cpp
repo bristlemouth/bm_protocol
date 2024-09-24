@@ -7,7 +7,7 @@
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
+#include "app_util.h"
 
 extern cfg::Configuration *systemConfigurationPartition;
 

@@ -1,5 +1,10 @@
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
+# Include bm_core
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
+target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
+
 # Include FreeRTOS
 add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 
@@ -25,6 +30,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/platform/bm_freertos.c
 
     ${BCMP_FILES}
     )
@@ -35,6 +41,8 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
+    ${SRC_DIR}/lib/bm_core/include
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
     ${BCMP_INCLUDES}
     ${BM_COMMON_MESSAGES_INCLUDES}
     )
@@ -268,6 +276,7 @@ set(APP_INCLUDES
 
 set(APP_LIBS
     lwipcore
+    bmcore
     )
 
 set(APP_DEFINES

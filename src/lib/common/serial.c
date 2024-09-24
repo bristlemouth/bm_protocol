@@ -13,7 +13,7 @@
 #include "stm32_io.h"
 #include "task_priorities.h"
 #include "tusb.h"
-#include "util.h"
+#include "app_util.h"
 
 #include "lpm.h"
 

@@ -9,7 +9,7 @@
 #include "task_priorities.h"
 #include "tusb.h"
 #include "usb.h"
-#include "util.h"
+#include "app_util.h"
 
 #include <stdio.h>
 

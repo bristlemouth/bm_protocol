@@ -2,7 +2,7 @@
 
 #include "differenceSignal.h"
 #include "fff.h"
-#include "util.h"
+#include "app_util.h"
 
 extern "C" {
 #include "mock_FreeRTOS.h"

@@ -8,7 +8,7 @@
 #include "bm_pubsub.h"
 #include <string.h>
 #include "device_info.h"
-#include "util.h"
+#include "app_util.h"
 #include "bm_service_common.h"
 
 static constexpr uint32_t DEFAULT_SERVICE_REQUEST_TIMEOUT_MS = 100;
@@ -117,7 +117,7 @@ static bool _request_list_add_request(bm_service_request_node_t * node) {
         }
         rval = true;
         xSemaphoreGive(_bm_service_request_context.lock);
-    } 
+    }
     return rval;
 }
 
@@ -259,4 +259,3 @@ static bm_service_request_node_t * _service_request_list_get_node_by_id(uint32_t
     }
     return node;
 }
-

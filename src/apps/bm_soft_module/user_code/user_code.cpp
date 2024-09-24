@@ -14,7 +14,7 @@
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
+#include "app_util.h"
 
 #define PAYLOAD_WATCHDOG_TIMEOUT_MS (60 * 1000)
 #define NO_MAX_TRIGGER (0)

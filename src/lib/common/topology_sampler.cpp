@@ -31,7 +31,7 @@
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 
 #define TOPOLOGY_TIMEOUT_MS 60000
 #define NETWORK_CONFIG_TIMEOUT_MS 1000

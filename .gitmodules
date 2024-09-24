@@ -34,3 +34,6 @@
 [submodule "src/third_party/BME280_driver"]
 	path = src/third_party/BME280_driver
 	url = https://github.com/sofarocean/BME280_driver.git
+[submodule "src/lib/bm_core"]
+	path = src/lib/bm_core
+	url = https://github.com/bristlemouth/bm_core.git
