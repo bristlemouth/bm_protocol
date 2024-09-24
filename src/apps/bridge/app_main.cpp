@@ -367,6 +367,10 @@ static void defaultTask(void *parameters) {
       debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
   debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
                          &debug_configuration_system);
+  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
+                                       sys_cfg_sensorsPollIntervalMs);
+  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
+                                       sys_cfg_sensorsCheckIntervalS);
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
