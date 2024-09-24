@@ -8,7 +8,8 @@ payloads = [
     '04000000fc3c000045002e23020041',
     '04000000fc3c000045002e23010041',
     '04000000fc3c000045002e23010041',
-    '04000000fc3c000045002e23020041'
+    '04000000fc3c000045002e23020041',
+    '04000000'
 ]
 
 detect_struct_description = [
@@ -109,7 +110,7 @@ for key in parsed_message:
 for payload in payloads:
     bitstream = BitStream('0x' + payload)
 
-    print(bitstream)
+    print(f"Decoding data: {bitstream}")
 
     sts_count = int(bitstream.read('uintle:32'))
     print(f"{sts_count} Rx-Live Status Polls received.")
@@ -119,3 +120,4 @@ for payload in payloads:
         print(f"Detection data:")
         for key in detection_data:
             print(f"\t{key}: {detection_data[key]}")
+    print("---------------------------------\n")
