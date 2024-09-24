@@ -10,7 +10,7 @@
 #include "debug_configuration.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "util.h"
+#include "app_util.h"
 static BaseType_t configurationCommand( char *writeBuffer,
                                   size_t writeBufferLen,
                                   const char *commandString);

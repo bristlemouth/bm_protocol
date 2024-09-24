@@ -9,7 +9,7 @@
 #include "rbr_sensor.h"
 #include "sensorWatchdog.h"
 #include "uptime.h"
-#include "util.h"
+#include "app_util.h"
 
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;

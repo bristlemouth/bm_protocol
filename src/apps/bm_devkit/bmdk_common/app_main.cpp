@@ -54,7 +54,7 @@
 #include "sys_info_service.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
-#include "util.h"
+#include "app_util.h"
 #include "w25.h"
 #include "watchdog.h"
 

@@ -8,7 +8,7 @@
 #include "device_info.h"
 #include "seapoint_turbidity_sensor.h"
 #include "uptime.h"
-#include "util.h"
+#include "app_util.h"
 
 static constexpr uint32_t BM_SEAPOINT_TURBIDITY_DATA_MSG_MAX_SIZE = 256;
 

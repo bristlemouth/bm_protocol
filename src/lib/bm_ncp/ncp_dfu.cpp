@@ -12,7 +12,7 @@
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 #include <stdio.h>
 
 typedef struct __attribute__((__packed__)) {

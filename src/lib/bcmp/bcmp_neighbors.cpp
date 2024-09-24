@@ -6,7 +6,7 @@
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
 #include "device_info.h"
-#include "util.h"
+#include "app_util.h"
 
 // Pointer to neighbor linked-list
 static bm_neighbor_t *_neighbors;
@@ -253,4 +253,3 @@ void bcmp_print_neighbor_info(bm_neighbor_t *neighbor) {
 void bcmp_neighbor_register_discovery_callback(neighbor_discovery_callback_t cb) {
   neighbor_discovery_cb = cb;
 }
-
