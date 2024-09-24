@@ -52,6 +52,8 @@
 #include "ram_partitions.h"
 #include "reportBuilder.h"
 #include "sensorController.h"
+#include "sensorSampler.h"
+#include "sensors.h"
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
@@ -151,6 +153,9 @@ SerialHandle_t usbPcap = {
     .preTxCb = NULL,
     .postTxCb = NULL,
 };
+
+uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
+uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
 extern "C" int main(void) {
 
@@ -367,6 +372,12 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+
+  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
+  sensorSamplerInit(&sensorConfig);
+  // must call sensorsInit after sensorSamplerInit
+  sensorsInit();
 
   printf("Using bridge power controller.\n");
   IOWrite(&BOOST_EN, 1);
