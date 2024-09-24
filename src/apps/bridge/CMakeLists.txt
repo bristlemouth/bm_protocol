@@ -90,7 +90,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bm_service.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
-
+    ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
@@ -99,6 +99,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
+    ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
@@ -108,6 +109,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
+    ${SRC_DIR}/lib/sensor_sampler/sensorSampler.cpp
+    ${SRC_DIR}/lib/sensor_sampler/powerSampler.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/cobs-c/cobs.c
     ${SRC_DIR}/third_party/crc/crc16.c
@@ -139,6 +142,7 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/lwip
     ${SRC_DIR}/lib/memfault
     ${SRC_DIR}/lib/middleware
+    ${SRC_DIR}/lib/sensor_sampler
     ${SRC_DIR}/lib/sys/
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc/
@@ -260,6 +264,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/rbrCodaSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/softSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/seapointTurbiditySensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensorController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cbor_sensor_report_encoder.cpp
@@ -277,6 +282,7 @@ set(APP_FILES
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors
     ${FREERTOS_INCLUDES}
     ${LIB_INCLUDES}
     ${LWIP_INCLUDE_DIRS}
