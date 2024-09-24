@@ -3,14 +3,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "lwip/netif.h"
 #include "lwip/ip_addr.h"
+#include "lwip/netif.h"
 
 #include "bcmp_messages.h"
 #include "bm_util.h"
+#include "messages.h"
+#include "util.h"
 
-#include "nvmPartition.h"
 #include "configuration.h"
+#include "nvmPartition.h"
 
 using namespace cfg;
 /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
@@ -36,7 +38,10 @@ typedef bool (*bcmp_reply_message_cb)(uint8_t *payload);
 
 static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 24;
 
-void bcmp_init(struct netif* netif, NvmPartition * dfu_partition, Configuration* user_cfg, Configuration* sys_cfg);
-err_t bcmp_tx(const ip_addr_t *dst, bcmp_message_type_t type, uint8_t *buff, uint16_t len, uint16_t seq_num=0, bcmp_reply_message_cb reply_cb=NULL, uint32_t request_timeout_ms=DEFAULT_MESSAGE_TIMEOUT_MS);
-err_t bcmp_ll_forward(struct pbuf *pbuf, uint8_t ingress_port);
+void bcmp_init(struct netif *netif, NvmPartition *dfu_partition, Configuration *user_cfg,
+               Configuration *sys_cfg);
+BmErr bcmp_tx(const ip_addr_t *dst, BcmpMessageType type, uint8_t *buff, uint16_t len,
+              uint16_t seq_num = 0, BmErr (*reply_cb)(uint8_t *payload) = NULL,
+              uint32_t request_timeout_ms = DEFAULT_MESSAGE_TIMEOUT_MS);
+BmErr bcmp_ll_forward(BcmpHeader *header, void *data, uint32_t size, uint8_t ingress_port);
 void bcmp_link_change(uint8_t port, bool state);

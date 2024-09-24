@@ -9,7 +9,7 @@
 #include "stm32_rtc.h"
 #include "task.h"
 #include "task_priorities.h"
-#include "util.h"
+#include "app_util.h"
 #include <cinttypes>
 #include <stdio.h>
 #ifdef RAW_PRESSURE_ENABLE

@@ -12,7 +12,7 @@
 #include "io.h"
 #include "protected_spi.h"
 #include "task_priorities.h"
-#include "util.h"
+#include "app_util.h"
 
 #define RESET_DELAY (1)
 #define AFTER_RESET_DELAY (100)

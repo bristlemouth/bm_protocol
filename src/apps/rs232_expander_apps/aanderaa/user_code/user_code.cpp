@@ -17,7 +17,7 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "util.h"
+#include "app_util.h"
 
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 static constexpr char AANDERAA_WATCHDOG_ID[] = "Aanderaa";

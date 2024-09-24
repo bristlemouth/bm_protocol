@@ -10,7 +10,7 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "util.h"
+#include "app_util.h"
 
 #define LED_ON_TIME_MS 75
 #define LED_PERIOD_MS 5000

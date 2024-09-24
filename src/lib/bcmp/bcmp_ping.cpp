@@ -1,6 +1,6 @@
-#include <string.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include <string.h>
 
 #include "bcmp.h"
 #include "bcmp_neighbors.h"
@@ -10,7 +10,7 @@
 
 static uint64_t _ping_request_time;
 static uint32_t _bcmp_seq;
-static uint8_t* _expected_payload = NULL;
+static uint8_t *_expected_payload = NULL;
 static uint16_t _expected_payload_len = 0;
 
 /*!
@@ -22,7 +22,8 @@ static uint16_t _expected_payload_len = 0;
   \param payload_len - length of payload to send
   \ret ERR_OK if successful
 */
-err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint8_t* payload, uint16_t payload_len) {
+err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint8_t *payload,
+                             uint16_t payload_len) {
 
   if (payload == NULL) {
     payload_len = 0;
@@ -44,15 +45,15 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
 
   // clear the expected payload
   if (_expected_payload != NULL) {
-      vPortFree(_expected_payload);
-      _expected_payload = NULL;
-      _expected_payload_len = 0;
+    vPortFree(_expected_payload);
+    _expected_payload = NULL;
+    _expected_payload_len = 0;
   }
 
   // Lets only copy the paylaod if it isn't NULL just in case
   if (payload != NULL && payload_len > 0) {
     memcpy(&echo_req->payload[0], payload, payload_len);
-    _expected_payload = static_cast<uint8_t*>(pvPortMalloc(payload_len));
+    _expected_payload = static_cast<uint8_t *>(pvPortMalloc(payload_len));
     memcpy(_expected_payload, payload, payload_len);
     _expected_payload_len = payload_len;
   }
@@ -60,7 +61,8 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   printf("PING (%016" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id,
          echo_req->payload_len);
 
-  err_t rval = bcmp_tx(addr, BCMP_ECHO_REQUEST, reinterpret_cast<uint8_t*>(echo_req), echo_len, 0);
+  err_t rval =
+      bcmp_tx(addr, BcmpEchoRequestMessage, reinterpret_cast<uint8_t *>(echo_req), echo_len, 0);
 
   _ping_request_time = uptimeGetMicroSeconds();
 
@@ -76,9 +78,11 @@ err_t bcmp_send_ping_request(uint64_t node_id, const ip_addr_t *addr, const uint
   \param *addr - ip address to send ping reply to
   \ret ERR_OK if successful
 */
-err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr, uint16_t seq_num) {
+err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr,
+                           uint16_t seq_num) {
 
-  return bcmp_tx(addr, BCMP_ECHO_REPLY, reinterpret_cast<uint8_t*>(echo_reply), sizeof(*echo_reply) + echo_reply->payload_len, seq_num);
+  return bcmp_tx(addr, BcmpEchoReplyMessage, reinterpret_cast<uint8_t *>(echo_reply),
+                 sizeof(*echo_reply) + echo_reply->payload_len, seq_num);
 }
 
 /*!
@@ -89,12 +93,13 @@ err_t bcmp_send_ping_reply(bcmp_echo_reply_t *echo_reply, const ip_addr_t *addr,
   \param *dst - destination ip of request (used for responding to the correct multicast address)
   \ret ERR_OK if successful
 */
-err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src, const ip_addr_t *dst, uint16_t seq_num) {
-  (void) src;
+err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *src,
+                                const ip_addr_t *dst, uint16_t seq_num) {
+  (void)src;
   configASSERT(echo_req);
   if ((echo_req->target_node_id == 0) || (getNodeId() == echo_req->target_node_id)) {
     echo_req->target_node_id = getNodeId();
-    return bcmp_send_ping_reply(reinterpret_cast<bcmp_echo_reply_t*>(echo_req), dst, seq_num);
+    return bcmp_send_ping_reply(reinterpret_cast<bcmp_echo_reply_t *>(echo_req), dst, seq_num);
   }
 
   return ERR_OK;
@@ -108,7 +113,7 @@ err_t bcmp_process_ping_request(bcmp_echo_request_t *echo_req, const ip_addr_t *
   \param *dst - destination ip of request (used for responding to the correct multicast address)
   \
   */
-err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
+err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply) {
   configASSERT(echo_reply);
 
   err_t rval = ERR_VAL;
@@ -124,7 +129,7 @@ err_t bcmp_process_ping_reply(bcmp_echo_reply_t *echo_reply){
     }
 
     if (_expected_payload != NULL) {
-      if (memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0){
+      if (memcmp(_expected_payload, echo_reply->payload, echo_reply->payload_len) != 0) {
         break;
       }
     }
