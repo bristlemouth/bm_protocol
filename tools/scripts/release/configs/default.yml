@@ -38,24 +38,6 @@
     build_type: Release
   sign: true
 
-- name: aanderaa_debug
-  description: Aanderaa Current Meter - Debug
-  type: build_fw
-  args:
-    app: aanderaa
-    bsp: bm_mote_bristleback_v1_0
-    build_type: Debug
-  sign: true
-
-- name: aanderaa_release
-  description: Aanderaa Current Meter - Release
-  type: build_fw
-  args:
-    app: aanderaa
-    bsp: bm_mote_bristleback_v1_0
-    build_type: Release
-  sign: true
-
 - name: hello_world_debug
   description: Hello World - Debug
   type: build_fw
@@ -71,24 +53,6 @@
   args:
     app: bm_soft_module
     bsp: bm_mote_spi_v1_0
-    build_type: Release
-  sign: true
-
-- name: bm_rbr_release
-  description: BM RBR - Release
-  type: build_fw
-  args:
-    app: bm_rbr
-    bsp: bm_mote_bristleback_v1_0
-    build_type: Release
-  sign: true
-
-- name: seapoint_turbidity_release
-  description: BM Seapoint Turbidity - Release
-  type: build_fw
-  args:
-    app: seapoint_turbidity
-    bsp: bm_mote_bristleback_v1_0
     build_type: Release
   sign: true
 
@@ -126,15 +90,6 @@
     app: seapoint_turbidity
     bsp: bm_mote_rs232
     build_type: Release
-  sign: true
-
-  - name: aanderaa_debug
-  description: Aanderaa Current Meter - Debug
-  type: build_fw
-  args:
-    app: aanderaa
-    bsp: bm_mote_rs232
-    build_type: Debug
   sign: true
 
 - name: aanderaa_release
