@@ -96,7 +96,7 @@ static BmErr bcmp_process_ping_request(BcmpProcessData data) {
   // configASSERT(echo_req);
   if ((echo_req->target_node_id == 0) || (getNodeId() == echo_req->target_node_id)) {
     echo_req->target_node_id = getNodeId();
-    return bcmp_send_ping_reply((BcmpEchoReply *)echo_req, data.dst, data.seq_num);
+    return bcmp_send_ping_reply((BcmpEchoReply *)echo_req, data.dst, echo_req->seq_num);
   }
 
   return BmOK;

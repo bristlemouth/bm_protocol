@@ -1,13 +1,6 @@
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "semphr.h"
-#include "task.h"
-#include "timers.h"
 #include <string.h>
 
 #include "bcmp.h"
-#include "debug.h"
-
 #include "bm_util.h"
 #include "task_priorities.h"
 
@@ -19,15 +12,12 @@
 #include "bcmp_resource_discovery.h"
 #include "bcmp_time.h"
 #include "bcmp_topology.h"
-#include "bm_os.h"
 
 extern "C" {
 #include "bm_ip.h"
+#include "bm_os.h"
 #include "packet.h"
 }
-#include "lwip/inet_chksum.h"
-#include "lwip/raw.h"
-#include "timer_callback_handler.h"
 
 #include "bm_dfu.h"
 
@@ -41,15 +31,9 @@ extern "C" {
 // 1500 MTU minus ipv6 header
 #define max_payload_len (1500 - ipv6_header_length)
 
-struct LwipCtx {
-  struct netif *netif;
-  struct raw_pcb *pcb;
-};
-extern struct LwipCtx CTX;
-
 typedef struct {
   BmQueue queue;
-  TimerHandle_t heartbeat_timer;
+  BmTimer heartbeat_timer;
 } bcmpContext_t;
 
 typedef enum {
@@ -63,7 +47,7 @@ typedef struct {
   uint32_t size;
 } BcmpQueueItem;
 
-static bcmpContext_t _ctx;
+static bcmpContext_t CTX;
 
 /*!
   BCMP link change event callback
@@ -78,7 +62,7 @@ void bcmp_link_change(uint8_t port, bool state) {
     // Send heartbeat since we just connected to someone and (re)start the
     // heartbeat timer
     bcmp_send_heartbeat(bcmp_heartbeat_s);
-    configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
+    bm_timer_start(CTX.heartbeat_timer, 10);
   }
 }
 
@@ -103,12 +87,12 @@ void bcmp_link_change(uint8_t port, bool state) {
   \param tmr unused
   \return none
 */
-static void heartbeat_timer_handler(TimerHandle_t tmr) {
+static void heartbeat_timer_handler(BmTimer tmr) {
   (void)tmr;
 
   BcmpQueueItem item = {BCMP_EVT_HEARTBEAT, NULL, 0};
 
-  bm_queue_send(_ctx.queue, &item, 0);
+  bm_queue_send(CTX.queue, &item, 0);
 }
 
 /*!
@@ -121,16 +105,14 @@ static void bcmp_thread(void *parameters) {
   (void)parameters;
 
   // Start listening for BCMP packets
-  _ctx.heartbeat_timer = xTimerCreate("bcmp_heartbeat", pdMS_TO_TICKS(bcmp_heartbeat_s * 1000),
-                                      pdTRUE, NULL, heartbeat_timer_handler);
-  configASSERT(_ctx.heartbeat_timer);
+  CTX.heartbeat_timer =
+      bm_timer_create(heartbeat_timer_handler, "bcmp_heartbeat", bcmp_heartbeat_s * 1000, NULL);
 
   // TODO - send out heartbeats on link change
-
   for (;;) {
     BcmpQueueItem item;
 
-    BmErr err = bm_queue_receive(_ctx.queue, &item, portMAX_DELAY);
+    BmErr err = bm_queue_receive(CTX.queue, &item, portMAX_DELAY);
 
     if (err == BmOK) {
       switch (item.type) {
@@ -182,7 +164,7 @@ BmErr bcmp_tx(const void *dst, BcmpMessageType type, uint8_t *data, uint16_t siz
       err = serialize(buf, data, size, type, seq_num, reply_cb);
 
       if (err == BmOK) {
-        err = bm_ip_tx_perform(buf);
+        err = bm_ip_tx_perform(buf, NULL);
         if (err != BmOK) {
           printf("Error sending BMCP packet %d\n", err);
         }
@@ -208,31 +190,34 @@ BmErr bcmp_tx(const void *dst, BcmpMessageType type, uint8_t *data, uint16_t siz
     \return ERR_OK on success, or an error that occurred.
 */
 BmErr bcmp_ll_forward(BcmpHeader *header, void *payload, uint32_t size, uint8_t ingress_port) {
-  ip_addr_t port_specific_dst;
-  ip6_addr_set(&port_specific_dst, &multicast_ll_addr);
+  uint8_t port_specific_dst[sizeof(multicast_ll_addr)];
   BmErr err = BmEINVAL;
+  void *forward = NULL;
+  memcpy(port_specific_dst, &multicast_ll_addr, sizeof(multicast_ll_addr));
 
   // TODO: Make more generic. This is specifically for a 2-port device.
   uint8_t egress_port = ingress_port == 1 ? 2 : 1;
-  port_specific_dst.addr[3] = 0x1000000 | (egress_port << 8);
-
-  const ip_addr_t *src = netif_ip_addr6(CTX.netif, 0);
+  ((uint32_t *)port_specific_dst)[3] = 0x1000000 | (egress_port << 8);
 
   // L2 will clear the egress port from the destination address,
   // so calculate the checksum on the link-local multicast address.
-  struct pbuf *pbuf = pbuf_alloc(PBUF_IP, size + sizeof(bcmp_header_t), PBUF_RAM);
-  header->checksum = 0;
-  header->checksum = ip6_chksum_pseudo(pbuf, IP_PROTO_BCMP, pbuf->len, src, &multicast_ll_addr);
-  memcpy(pbuf->payload, header, sizeof(BcmpHeader));
-  memcpy((uint8_t *)pbuf->payload + sizeof(BcmpHeader), payload, size);
+  forward = bm_ip_tx_new(&multicast_ll_addr, size + sizeof(BcmpHeader));
+  if (forward) {
+    header->checksum = 0;
+    header->checksum = packet_checksum(forward, size + sizeof(BcmpHeader));
 
-  err = raw_sendto_if_src(CTX.pcb, pbuf, &port_specific_dst, CTX.netif, src) == ERR_OK
-            ? BmOK
-            : BmEBADMSG;
-  if (err != BmOK) {
-    printf("Error forwarding BMCP packet link-locally: %d\n", err);
+    // Copy data to be forwarded
+    bm_ip_tx_copy(forward, header, sizeof(BcmpHeader), 0);
+    bm_ip_tx_copy(forward, payload, size, sizeof(BcmpHeader));
+
+    err = bm_ip_tx_perform(forward, &port_specific_dst);
+    if (err != BmOK) {
+      printf("Error forwarding BMCP packet link-locally: %d\n", err);
+    }
+    bm_ip_tx_cleanup(forward);
+  } else {
+    err = BmENOMEM;
   }
-  pbuf_free(pbuf);
   return err;
 }
 
@@ -255,12 +240,12 @@ static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
   \param *netif lwip network interface to use
   \return none
 */
-void bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configuration *sys_cfg) {
+BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configuration *sys_cfg) {
 
   /* Create threads and Queues */
-  _ctx.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
+  CTX.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
 
-  bm_ip_init(_ctx.queue);
+  bm_ip_init(CTX.queue);
 
   heartbeat_init();
   ping_init();
@@ -271,6 +256,5 @@ void bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configurati
   bcmp_config_init(user_cfg, sys_cfg);
   bcmp_resource_discovery::bcmp_resource_discovery_init();
 
-  BaseType_t rval = xTaskCreate(bcmp_thread, "BCMP", 1024, NULL, BCMP_TASK_PRIORITY, NULL);
-  configASSERT(rval == pdPASS);
+  return bm_task_create(bcmp_thread, "BCMP", 1024, NULL, BCMP_TASK_PRIORITY, NULL);
 }
