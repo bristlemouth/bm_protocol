@@ -1,12 +1,13 @@
-#include <string.h>
 #include "FreeRTOS.h"
+#include <string.h>
 
-#include "bm_l2.h"
+#include "app_util.h"
 #include "bcmp.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
+#include "bm_l2.h"
+#include "bm_util.h"
 #include "device_info.h"
-#include "app_util.h"
 
 // Pointer to neighbor linked-list
 static bm_neighbor_t *_neighbors;
@@ -18,7 +19,7 @@ neighbor_discovery_callback_t neighbor_discovery_cb = NULL;
   \param[out] &num_neighbors - number of neighbors
   \return - pointer to neighbors linked-list
 */
-bm_neighbor_t* bcmp_get_neighbors(uint8_t &num_neighbors) {
+bm_neighbor_t *bcmp_get_neighbors(uint8_t &num_neighbors) {
   bcmp_check_neighbors();
   num_neighbors = _num_neighbors;
   return _neighbors;
@@ -33,8 +34,8 @@ bm_neighbor_t* bcmp_get_neighbors(uint8_t &num_neighbors) {
 bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id) {
   bm_neighbor_t *neighbor = _neighbors;
 
-  while(neighbor != NULL) {
-    if(node_id && node_id == neighbor->node_id) {
+  while (neighbor != NULL) {
+    if (node_id && node_id == neighbor->node_id) {
       // Found it!
       break;
     }
@@ -56,22 +57,22 @@ void bcmp_neighbor_foreach(neighbor_callback_t cb) {
   bm_neighbor_t *neighbor = _neighbors;
   _num_neighbors = 0;
 
-  while(neighbor != NULL) {
+  while (neighbor != NULL) {
     cb(neighbor);
     _num_neighbors++;
 
     // Go to the next one
     neighbor = neighbor->next;
   }
-
 }
 
 static void _neighbor_check(bm_neighbor_t *neighbor) {
-  if(neighbor->online && !timeRemainingTicks( neighbor->last_heartbeat_ticks,
-                                              pdMS_TO_TICKS(2 * neighbor->heartbeat_period_s * 1000))) {
+  if (neighbor->online &&
+      !timeRemainingTicks(neighbor->last_heartbeat_ticks,
+                          pdMS_TO_TICKS(2 * neighbor->heartbeat_period_s * 1000))) {
     printf("🏚  Neighbor offline :'( %016" PRIx64 "\n", neighbor->node_id);
-    if(neighbor_discovery_cb) {
-      neighbor_discovery_cb(false,neighbor);
+    if (neighbor_discovery_cb) {
+      neighbor_discovery_cb(false, neighbor);
     }
     neighbor->online = false;
   }
@@ -82,9 +83,7 @@ static void _neighbor_check(bm_neighbor_t *neighbor) {
 
   \return none
 */
-void bcmp_check_neighbors() {
-  bcmp_neighbor_foreach(_neighbor_check);
-}
+void bcmp_check_neighbors() { bcmp_neighbor_foreach(_neighbor_check); }
 
 /*!
   Add neighbor to neigbhor table
@@ -94,7 +93,8 @@ void bcmp_check_neighbors() {
   \return pointer to neighbor if successful, NULL otherwise (if neighbor is already present, for example)
 */
 static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
-  bm_neighbor_t *new_neighbor = static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
+  bm_neighbor_t *new_neighbor =
+      static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
   configASSERT(new_neighbor);
 
   memset(new_neighbor, 0, sizeof(bm_neighbor_t));
@@ -103,15 +103,15 @@ static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
   new_neighbor->port = port;
 
   bm_neighbor_t *neighbor = NULL;
-  if(_neighbors == NULL) {
+  if (_neighbors == NULL) {
     // First neighbor!
     _neighbors = new_neighbor;
   } else {
     neighbor = _neighbors;
 
     // Go to the last neighbor and insert the new one there
-    while(neighbor && (neighbor->next != NULL)) {
-      if(node_id == neighbor->node_id) {
+    while (neighbor && (neighbor->next != NULL)) {
+      if (node_id == neighbor->node_id) {
         neighbor = NULL;
         break;
       }
@@ -120,7 +120,7 @@ static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
       neighbor = neighbor->next;
     }
 
-    if(neighbor != NULL) {
+    if (neighbor != NULL) {
       neighbor->next = new_neighbor;
     } else {
       vPortFree(new_neighbor);
@@ -141,7 +141,7 @@ static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
 bm_neighbor_t *bcmp_update_neighbor(uint64_t node_id, uint8_t port) {
   bm_neighbor_t *neighbor = bcmp_find_neighbor(node_id);
 
-  if(neighbor == NULL) {
+  if (neighbor == NULL) {
     printf("🏘  Adding new neighbor! %016" PRIx64 "\n", node_id);
     neighbor = bcmp_add_neighbor(node_id, port);
     // Let's get this node's information
@@ -159,12 +159,12 @@ bm_neighbor_t *bcmp_update_neighbor(uint64_t node_id, uint8_t port) {
 */
 bool bcmp_free_neighbor(bm_neighbor_t *neighbor) {
   bool rval = false;
-  if(neighbor) {
-    if(neighbor->version_str) {
+  if (neighbor) {
+    if (neighbor->version_str) {
       vPortFree(neighbor->version_str);
     }
 
-    if(neighbor->device_name) {
+    if (neighbor->device_name) {
       vPortFree(neighbor->device_name);
     }
 
@@ -187,15 +187,15 @@ bool bcmp_remove_neighbor_from_table(bm_neighbor_t *neighbor) {
   configASSERT(neighbor);
 
   // Check if we're the first in the table
-  if(neighbor == _neighbors) {
+  if (neighbor == _neighbors) {
     printf("First neighbor!\n");
     // Remove neighbor from the list
     _neighbors = neighbor->next;
     rval = true;
   } else {
     bm_neighbor_t *next_neighbor = _neighbors;
-    while(next_neighbor->next != NULL) {
-      if(next_neighbor->next == neighbor) {
+    while (next_neighbor->next != NULL) {
+      if (next_neighbor->next == neighbor) {
 
         // Found it!
 
@@ -210,7 +210,7 @@ bool bcmp_remove_neighbor_from_table(bm_neighbor_t *neighbor) {
     }
   }
 
-  if(!rval) {
+  if (!rval) {
     printf("Something went wrong...\n");
   }
 
@@ -234,12 +234,13 @@ void bcmp_print_neighbor_info(bm_neighbor_t *neighbor) {
   printf("VID: %04X PID: %04X\n", neighbor->info.vendor_id, neighbor->info.product_id);
   printf("Serial number %.*s\n", 16, neighbor->info.serial_num);
   printf("GIT SHA: %" PRIX32 "\n", neighbor->info.git_sha);
-  printf("Version: %u.%u.%u\n", neighbor->info.ver_major, neighbor->info.ver_minor, neighbor->info.ver_rev);
+  printf("Version: %u.%u.%u\n", neighbor->info.ver_major, neighbor->info.ver_minor,
+         neighbor->info.ver_rev);
   printf("HW Version: %u\n", neighbor->info.ver_hw);
-  if(neighbor->version_str) {
+  if (neighbor->version_str) {
     printf("VersionStr: %s\n", neighbor->version_str);
   }
-  if(neighbor->device_name) {
+  if (neighbor->device_name) {
     printf("Device Name: %s\n", neighbor->device_name);
   }
 }

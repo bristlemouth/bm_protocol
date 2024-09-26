@@ -3,6 +3,7 @@
 #include "bcmp.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
+#include "bm_util.h"
 #include "device_info.h"
 extern "C" {
 #include "packet.h"

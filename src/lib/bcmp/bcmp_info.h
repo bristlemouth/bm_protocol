@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lwip/ip.h"
 #include "lwip/ip_addr.h"
 #include <stdint.h>
 extern "C" {
