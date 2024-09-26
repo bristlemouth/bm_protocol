@@ -31,12 +31,12 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
 
   uint16_t echo_len = sizeof(BcmpEchoRequest) + payload_len;
 
-  uint8_t *echo_req_buff = static_cast<uint8_t *>(bm_malloc(echo_len));
+  uint8_t *echo_req_buff = (uint8_t *)bm_malloc(echo_len);
   // configASSERT(echo_req_buff);
 
   memset(echo_req_buff, 0, echo_len);
 
-  BcmpEchoRequest *echo_req = reinterpret_cast<BcmpEchoRequest *>(echo_req_buff);
+  BcmpEchoRequest *echo_req = (BcmpEchoRequest *)echo_req_buff;
 
   echo_req->target_node_id = node_id;
   echo_req->id = (uint16_t)getNodeId(); // TODO - make this a randomly generated number
@@ -53,7 +53,7 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
   // Lets only copy the paylaod if it isn't NULL just in case
   if (payload != NULL && payload_len > 0) {
     memcpy(&echo_req->payload[0], payload, payload_len);
-    _expected_payload = static_cast<uint8_t *>(bm_malloc(payload_len));
+    _expected_payload = (uint8_t *)bm_malloc(payload_len);
     memcpy(_expected_payload, payload, payload_len);
     _expected_payload_len = payload_len;
   }
@@ -62,7 +62,7 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
          echo_req->payload_len);
 
   BmErr rval =
-      bcmp_tx(addr, BcmpEchoRequestMessage, reinterpret_cast<uint8_t *>(echo_req), echo_len, 0);
+      bcmp_tx(addr, BcmpEchoRequestMessage, (uint8_t *)echo_req, echo_len, 0);
 
   _ping_request_time = bm_ticks_to_ms(bm_get_tick_count());
 
@@ -78,10 +78,10 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
   \param *addr - ip address to send ping reply to
   \ret BmOK if successful
 */
-BmErr bcmp_send_ping_reply(BcmpEchoReply *echo_reply,  void *addr,
+static BmErr bcmp_send_ping_reply(BcmpEchoReply *echo_reply,  void *addr,
                            uint16_t seq_num) {
 
-  return bcmp_tx(addr, BcmpEchoReplyMessage, reinterpret_cast<uint8_t *>(echo_reply),
+  return bcmp_tx(addr, BcmpEchoReplyMessage, (uint8_t *)echo_reply,
                  sizeof(*echo_reply) + echo_reply->payload_len, seq_num);
 }
 
@@ -93,12 +93,12 @@ BmErr bcmp_send_ping_reply(BcmpEchoReply *echo_reply,  void *addr,
   \param *dst - destination ip of request (used for responding to the correct multicast address)
   \ret BmOK if successful
 */
-BmErr bcmp_process_ping_request(BcmpProcessData data) {
+static BmErr bcmp_process_ping_request(BcmpProcessData data) {
   BcmpEchoRequest *echo_req = (BcmpEchoRequest *)data.payload;
   // configASSERT(echo_req);
   if ((echo_req->target_node_id == 0) || (getNodeId() == echo_req->target_node_id)) {
     echo_req->target_node_id = getNodeId();
-    return bcmp_send_ping_reply(reinterpret_cast<BcmpEchoReply *>(echo_req), data.dst, data.seq_num);
+    return bcmp_send_ping_reply((BcmpEchoReply *)echo_req, data.dst, data.seq_num);
   }
 
   return BmOK;
@@ -112,7 +112,7 @@ BmErr bcmp_process_ping_request(BcmpProcessData data) {
   \param *dst - destination ip of request (used for responding to the correct multicast address)
   \
   */
-BmErr bcmp_process_ping_reply(BcmpProcessData data) {
+static BmErr bcmp_process_ping_reply(BcmpProcessData data) {
   BmErr err = BmEINVAL;
   BcmpEchoReply *echo_reply = (BcmpEchoReply *)data.payload;
 
