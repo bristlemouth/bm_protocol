@@ -30,6 +30,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
+    ${SRC_DIR}/lib/bm_core/src/platform/bm_lwip.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/platform/bm_freertos.c
 
     ${BCMP_FILES}

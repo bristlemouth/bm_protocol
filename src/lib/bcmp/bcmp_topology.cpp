@@ -240,8 +240,8 @@ static BmErr bcmp_send_neighbor_table(void *addr) {
       (bcmp_neighbor_info_t *)(&neighbor_table_reply->port_list[num_ports]), neighbor,
       num_neighbors);
 
-  BmErr err = bcmp_tx((const ip_addr_t *)addr, BcmpNeighborTableReplyMessage,
-                      (uint8_t *)neighbor_table_reply, neighbor_table_len);
+  BmErr err = bcmp_tx(addr, BcmpNeighborTableReplyMessage, (uint8_t *)neighbor_table_reply,
+                      neighbor_table_len);
 
   vPortFree(neighbor_table_reply_buff);
 
