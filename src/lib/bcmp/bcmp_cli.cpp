@@ -116,7 +116,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       if (node_id_str_len > 0) {
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
         uint8_t payload[32] = {0};
-        if (bcmp_send_ping_request(node_id, &multicast_global_addr, payload, 32) != ERR_OK) {
+        if (bcmp_send_ping_request(node_id, &multicast_global_addr, payload, 32) != BmOK) {
           printf("Error sending ping\n");
         }
       } else {
