@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "bcmp.h"
-#include "bcmp_neighbors.h"
 #include "bcmp_ping.h"
 #include "device_info.h"
 extern "C" {
@@ -30,14 +29,14 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
     payload_len = 0;
   }
 
-  uint16_t echo_len = sizeof(bcmp_echo_request_t) + payload_len;
+  uint16_t echo_len = sizeof(BcmpEchoRequest) + payload_len;
 
   uint8_t *echo_req_buff = static_cast<uint8_t *>(bm_malloc(echo_len));
   // configASSERT(echo_req_buff);
 
   memset(echo_req_buff, 0, echo_len);
 
-  bcmp_echo_request_t *echo_req = reinterpret_cast<bcmp_echo_request_t *>(echo_req_buff);
+  BcmpEchoRequest *echo_req = reinterpret_cast<BcmpEchoRequest *>(echo_req_buff);
 
   echo_req->target_node_id = node_id;
   echo_req->id = (uint16_t)getNodeId(); // TODO - make this a randomly generated number
