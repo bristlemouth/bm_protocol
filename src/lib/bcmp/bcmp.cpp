@@ -263,6 +263,7 @@ void bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configurati
   bm_ip_init(_ctx.queue);
 
   heartbeat_init();
+  ping_init();
   bcmp_topology_init();
   bcmp_process_info_init();
 
