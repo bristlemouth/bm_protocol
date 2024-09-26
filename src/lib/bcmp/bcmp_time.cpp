@@ -120,3 +120,11 @@ bool bcmp_time_process_time_message(bcmp_message_type_t bcmp_msg_type, uint8_t *
 
   return should_forward;
 }
+
+// BmErr time_init(void) {
+//   BcmpPacketCfg time_request = {
+//       false,
+//       false,
+//       bcmp_time_process_time_message,
+//   };
+// }
