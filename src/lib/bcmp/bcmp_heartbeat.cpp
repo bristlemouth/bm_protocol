@@ -1,18 +1,15 @@
 #include "bcmp_heartbeat.h"
-#include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
 #include "bm_util.h"
-#include "device_info.h"
 extern "C" {
+#include "bm_os.h"
 #include "packet.h"
 }
-#include "task.h"
-#include "uptime.h"
 
 extern neighbor_discovery_callback_t
-    neighbor_discovery_cb; // FIXME - https://github.com/wavespotter/bristlemouth/issues/384
+    NEIGHBOR_DISCOVERY_CB; // FIXME - https://github.com/wavespotter/bristlemouth/issues/384
 
 /*!
   Send heartbeat to neighbors
@@ -21,7 +18,8 @@ extern neighbor_discovery_callback_t
   \return ERR_OK if successful
 */
 BmErr bcmp_send_heartbeat(uint32_t lease_duration_s) {
-  BcmpHeartbeat heartbeat = {.time_since_boot_us = uptimeGetMicroSeconds(),
+  // TODO: abstract time since boot microseconds?
+  BcmpHeartbeat heartbeat = {.time_since_boot_us = bm_ticks_to_ms(bm_get_tick_count()) * 1000,
                              .liveliness_lease_dur_s = lease_duration_s};
   return bcmp_tx(&multicast_ll_addr, BcmpHeartbeatMessage, (uint8_t *)&heartbeat,
                  sizeof(heartbeat));
@@ -44,8 +42,8 @@ static BmErr bcmp_process_heartbeat(BcmpProcessData data) {
 
     // Neighbor restarted, let's get additional info
     if (heartbeat->time_since_boot_us < neighbor->last_time_since_boot_us) {
-      if (neighbor_discovery_cb) {
-        neighbor_discovery_cb(true, neighbor);
+      if (NEIGHBOR_DISCOVERY_CB) {
+        NEIGHBOR_DISCOVERY_CB(true, neighbor);
       }
       printf("🏘📡 Updating neighbor info! %016" PRIx64 "\n", neighbor->node_id);
       bcmp_request_info(neighbor->info.node_id, &multicast_ll_addr);
@@ -54,7 +52,7 @@ static BmErr bcmp_process_heartbeat(BcmpProcessData data) {
     // Update times
     neighbor->last_time_since_boot_us = heartbeat->time_since_boot_us;
     neighbor->heartbeat_period_s = heartbeat->liveliness_lease_dur_s;
-    neighbor->last_heartbeat_ticks = xTaskGetTickCount();
+    neighbor->last_heartbeat_ticks = bm_get_tick_count();
     neighbor->online = true;
   }
 

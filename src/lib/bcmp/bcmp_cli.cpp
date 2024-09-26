@@ -102,7 +102,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         } else {
           printf("Device not in neighbor table. Sending global request.\n");
           bcmp_expect_info_from_node_id(node_id);
-          if (bcmp_request_info(node_id, &multicast_global_addr) != ERR_OK) {
+          if (bcmp_request_info(node_id, &multicast_global_addr) != BmOK) {
             printf("Error sending request\n");
           }
         }
