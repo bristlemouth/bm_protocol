@@ -13,6 +13,7 @@ extern "C" {
 extern const ip6_addr_t multicast_global_addr;
 extern const ip6_addr_t multicast_ll_addr;
 
+//TODO: make this endian agnostic and platform agnostic
 /*!
   Extract 64-bit node id from IP address
 

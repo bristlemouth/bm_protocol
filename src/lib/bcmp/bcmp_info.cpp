@@ -49,7 +49,7 @@ err_t bcmp_request_info(uint64_t target_node_id, const ip_addr_t *addr, void (*c
   \param dst - ip address to send the information to
   \return ERR_OK if successful
 */
-static err_t bcmp_send_info(const ip_addr_t *dst) {
+static err_t bcmp_send_info(void *dst) {
 
   char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
   configASSERT(ver_str);
@@ -111,7 +111,7 @@ static BmErr bcmp_process_info_request(BcmpProcessData data) {
   if ((request->target_node_id == 0) || (getNodeId() == request->target_node_id)) {
     // Send info back on the same address we received it on
     // TODO - add unicast support, this will only work with multicast dst
-    bcmp_send_info((const ip_addr_t *)data.dst);
+    bcmp_send_info(data.dst);
   }
   return BmOK;
 }

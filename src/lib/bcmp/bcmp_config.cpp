@@ -1,6 +1,7 @@
 #include "bcmp_config.h"
 #include "FreeRTOS.h"
 #include "bcmp.h"
+#include "bm_util.h"
 #include "device_info.h"
 extern "C" {
 #include "packet.h"

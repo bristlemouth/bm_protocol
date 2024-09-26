@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bcmp_linked_list_generic.h"
+#include "bm_util.h"
 #include "device_info.h"
 #include "semphr.h"
 #include "string.h"

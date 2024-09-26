@@ -20,86 +20,50 @@
 #include "bcmp_time.h"
 #include "bcmp_topology.h"
 #include "bm_os.h"
-#include "lwip/inet_chksum.h"
-#include "lwip/raw.h"
+
 extern "C" {
+#include "bm_ip.h"
 #include "packet.h"
 }
+#include "lwip/inet_chksum.h"
+#include "lwip/raw.h"
 #include "timer_callback_handler.h"
 
 #include "bm_dfu.h"
 
-#define BCMP_EVT_QUEUE_LEN 32
+#define bcmp_evt_queue_len 32
 
 // Send heartbeats every 10 seconds (and check for expired links)
-#define BCMP_HEARTBEAT_S 10
+#define bcmp_heartbeat_s 10
+
+#define ipv6_header_length (40)
 
 // 1500 MTU minus ipv6 header
-#define MAX_PAYLOAD_LEN (1500 - sizeof(struct ip6_hdr))
+#define max_payload_len (1500 - ipv6_header_length)
 
-static constexpr uint32_t MESSAGE_TIMER_EXPIRY_PERIOD_MS = 12;
-
-typedef struct bcmp_request_element {
-  uint32_t seq_num;
-  uint16_t type;
-  uint32_t send_timestamp_ms;
-  uint32_t timeout_ms;
-  bcmp_reply_message_cb callback;
-  bcmp_request_element *next;
-} bcmp_request_element_t;
-
-typedef struct {
+struct LwipCtx {
   struct netif *netif;
   struct raw_pcb *pcb;
-  QueueHandle_t rx_queue;
-  TimerHandle_t heartbeat_timer;
-  // Linked list of sent BCMP messages
-  bcmp_request_element *messages_list;
-  SemaphoreHandle_t messages_list_mutex;
-  TimerHandle_t messages_expiration_timer;
-  uint32_t message_count;
-} bcmpContext_t;
+};
+extern struct LwipCtx CTX;
 
 typedef struct {
-  struct pbuf *pbuf;
-  const ip_addr_t *src;
-  const ip_addr_t *dst;
-} BcmpLwipLayout;
+  BmQueue queue;
+  TimerHandle_t heartbeat_timer;
+} bcmpContext_t;
 
 typedef enum {
   BCMP_EVT_RX,
   BCMP_EVT_HEARTBEAT,
-} bcmp_queue_type_e;
+} BcmpQueueType;
 
 typedef struct {
-  bcmp_queue_type_e type;
-  BcmpLwipLayout layout;
-} bcmp_queue_item_t;
+  BcmpQueueType type;
+  void *data;
+  uint32_t size;
+} BcmpQueueItem;
 
 static bcmpContext_t _ctx;
-
-void *message_get_data(void *payload) {
-  BcmpLwipLayout *ret = (BcmpLwipLayout *)payload;
-  return (void *)ret->pbuf->payload;
-}
-void *message_get_src_ip(void *payload) {
-  BcmpLwipLayout *ret = (BcmpLwipLayout *)payload;
-  return (void *)ret->src;
-}
-void *message_get_dst_ip(void *payload) {
-  BcmpLwipLayout *ret = (BcmpLwipLayout *)payload;
-  return (void *)ret->dst;
-}
-uint16_t message_get_checksum(void *payload, uint32_t size) {
-  uint16_t ret = UINT16_MAX;
-  BcmpLwipLayout *data = (BcmpLwipLayout *)payload;
-
-  ret = ip6_chksum_pseudo(data->pbuf, IP_PROTO_BCMP, size,
-                          (ip_addr_t *)message_get_src_ip(payload),
-                          (ip_addr_t *)message_get_dst_ip(payload));
-
-  return ret;
-}
 
 /*!
   BCMP link change event callback
@@ -113,7 +77,7 @@ void bcmp_link_change(uint8_t port, bool state) {
   if (state) {
     // Send heartbeat since we just connected to someone and (re)start the
     // heartbeat timer
-    bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
+    bcmp_send_heartbeat(bcmp_heartbeat_s);
     configASSERT(xTimerStart(_ctx.heartbeat_timer, 10));
   }
 }
@@ -142,65 +106,9 @@ void bcmp_link_change(uint8_t port, bool state) {
 static void heartbeat_timer_handler(TimerHandle_t tmr) {
   (void)tmr;
 
-  bcmp_queue_item_t item = {BCMP_EVT_HEARTBEAT, {NULL, NULL, NULL}};
+  BcmpQueueItem item = {BCMP_EVT_HEARTBEAT, NULL, 0};
 
-  configASSERT(xQueueSend(_ctx.rx_queue, &item, 0) == pdTRUE);
-}
-
-/*!
-  lwip raw recv callback for BCMP packets. Called from lwip task.
-  Packet is added to main BCMP queue for processing
-
-  \param *arg unused
-  \param *pcb unused
-  \param *pbuf packet buffer
-  \param *src packet sender address
-  \return 1 if the packet was consumed, 0 otherwise (someone else will take it)
-*/
-static uint8_t bcmp_recv(void *arg, struct raw_pcb *pcb, struct pbuf *pbuf,
-                         const ip_addr_t *src) {
-  (void)arg;
-  (void)pcb;
-
-  // don't eat the packet unless we process it
-  uint8_t rval = 0;
-  configASSERT(pbuf);
-
-  do {
-    if (pbuf->tot_len < (PBUF_IP_HLEN + sizeof(bcmp_header_t))) {
-      break;
-    }
-
-    // Grab a pointer to the ip6 header so we can get the packet destination
-    struct ip6_hdr *ip6_hdr = static_cast<struct ip6_hdr *>(pbuf->payload);
-
-    if (pbuf_remove_header(pbuf, PBUF_IP_HLEN) != 0) {
-      //  restore original packet
-      pbuf_add_header(pbuf, PBUF_IP_HLEN);
-      break;
-    }
-
-    // Make a copy of the IP address since we'll be modifying it later when we
-    // remove the src/dest ports (and since it might not be in the pbuf so someone
-    // else is managing that memory)
-    struct pbuf *p_ref = pbuf_alloc(PBUF_IP, pbuf->len, PBUF_RAM);
-    ip_addr_t *src_ref = (ip_addr_t *)bm_malloc(sizeof(ip_addr_t));
-    ip_addr_t *dst_ref = (ip_addr_t *)bm_malloc(sizeof(ip_addr_t));
-    pbuf_copy(p_ref, pbuf);
-    memcpy(dst_ref, ip6_hdr->dest.addr, sizeof(ip_addr_t));
-    memcpy(src_ref, src, sizeof(ip_addr_t));
-
-    bcmp_queue_item_t item = {BCMP_EVT_RX, {p_ref, src_ref, dst_ref}};
-    if (xQueueSend(_ctx.rx_queue, &item, 0) != pdTRUE) {
-      printf("Error sending to Queue\n");
-      pbuf_free(pbuf);
-    }
-
-    // eat the packet
-    rval = 1;
-  } while (0);
-
-  return rval;
+  bm_queue_send(_ctx.queue, &item, 0);
 }
 
 /*!
@@ -213,50 +121,40 @@ static void bcmp_thread(void *parameters) {
   (void)parameters;
 
   // Start listening for BCMP packets
-  raw_recv(_ctx.pcb, bcmp_recv, NULL);
-  configASSERT(raw_bind(_ctx.pcb, IP_ADDR_ANY) == ERR_OK);
-
-  _ctx.heartbeat_timer = xTimerCreate("bcmp_heartbeat", pdMS_TO_TICKS(BCMP_HEARTBEAT_S * 1000),
+  _ctx.heartbeat_timer = xTimerCreate("bcmp_heartbeat", pdMS_TO_TICKS(bcmp_heartbeat_s * 1000),
                                       pdTRUE, NULL, heartbeat_timer_handler);
   configASSERT(_ctx.heartbeat_timer);
 
   // TODO - send out heartbeats on link change
 
   for (;;) {
-    bcmp_queue_item_t item;
+    BcmpQueueItem item;
 
-    BaseType_t rval = xQueueReceive(_ctx.rx_queue, &item, portMAX_DELAY);
-    configASSERT(rval == pdTRUE);
+    BmErr err = bm_queue_receive(_ctx.queue, &item, portMAX_DELAY);
 
-    switch (item.type) {
-    case BCMP_EVT_RX: {
-      process_received_message(&item.layout, item.layout.pbuf->len - sizeof(BcmpHeader));
-      break;
-    }
+    if (err == BmOK) {
+      switch (item.type) {
+      case BCMP_EVT_RX: {
+        process_received_message(item.data, item.size - sizeof(BcmpHeader));
+        break;
+      }
 
-    case BCMP_EVT_HEARTBEAT: {
-      // Should we check neighbors on a differnt timer?
-      // Check neighbor status to see if any dropped
-      bcmp_check_neighbors();
+      case BCMP_EVT_HEARTBEAT: {
+        // Should we check neighbors on a differnt timer?
+        // Check neighbor status to see if any dropped
+        bcmp_check_neighbors();
 
-      // Send out heartbeats
-      bcmp_send_heartbeat(BCMP_HEARTBEAT_S);
-      break;
-    }
+        // Send out heartbeats
+        bcmp_send_heartbeat(bcmp_heartbeat_s);
+        break;
+      }
 
-    default: {
-      break;
-    }
-    }
+      default: {
+        break;
+      }
+      }
 
-    if (item.layout.pbuf) {
-      pbuf_free(item.layout.pbuf);
-    }
-    if (item.layout.dst) {
-      bm_free((void *)item.layout.dst);
-    }
-    if (item.layout.src) {
-      bm_free((void *)item.layout.src);
+      bm_ip_rx_cleanup(item.data);
     }
   }
 }
@@ -273,35 +171,28 @@ static void bcmp_thread(void *parameters) {
   \param request_timeout_ms The timeout for the request in milliseconds.
   \return ERR_OK on success, something else otherwise
 */
-BmErr bcmp_tx(const ip_addr_t *dst, BcmpMessageType type, uint8_t *buff, uint16_t len,
-              uint16_t seq_num, BmErr (*reply_cb)(uint8_t *payload),
-              uint32_t request_timeout_ms) {
-  (void)request_timeout_ms;
+BmErr bcmp_tx(const void *dst, BcmpMessageType type, uint8_t *data, uint16_t size,
+              uint32_t seq_num, BmErr (*reply_cb)(uint8_t *payload)) {
   BmErr err = BmEINVAL;
+  void *buf = NULL;
 
-  if (dst && (uint32_t)len + sizeof(BcmpHeartbeat) <= MAX_PAYLOAD_LEN) {
-    struct pbuf *pbuf = pbuf_alloc(PBUF_IP, len + sizeof(BcmpHeader), PBUF_RAM);
-    const ip_addr_t *src_ip = netif_ip_addr6(_ctx.netif, 0);
-    BcmpLwipLayout layout = {pbuf, src_ip, dst};
-    configASSERT(pbuf);
+  if (dst && (uint32_t)size + sizeof(BcmpHeartbeat) <= max_payload_len) {
+    buf = bm_ip_tx_new(dst, size + sizeof(BcmpHeader));
+    if (buf) {
+      err = serialize(buf, data, size, type, seq_num, reply_cb);
 
-    err = serialize(&layout, buff, len, type, seq_num, reply_cb);
-
-    if (err == BmOK) {
-      // Using link-local address
-      err = raw_sendto_if_src(_ctx.pcb, pbuf, dst, _ctx.netif, src_ip) == ERR_OK ? BmOK
-                                                                                 : BmEBADMSG;
-
-      // We're done with this pbuf
-      // raw_sendto_if_src eventually calls bm_l2_tx, which does a pbuf_ref
-      // on this buffer.
-      pbuf_free(pbuf);
-
-      if (err != BmOK) {
-        printf("Error sending BMCP packet %d\n", err);
+      if (err == BmOK) {
+        err = bm_ip_tx_perform(buf);
+        if (err != BmOK) {
+          printf("Error sending BMCP packet %d\n", err);
+        }
+      } else {
+        printf("Could not properly serialize message\n");
       }
+
+      bm_ip_tx_cleanup(buf);
     } else {
-      printf("Could not properly serialize message\n");
+      printf("Could not allocate memory for bcmp message\n");
     }
   }
 
@@ -325,7 +216,7 @@ BmErr bcmp_ll_forward(BcmpHeader *header, void *payload, uint32_t size, uint8_t 
   uint8_t egress_port = ingress_port == 1 ? 2 : 1;
   port_specific_dst.addr[3] = 0x1000000 | (egress_port << 8);
 
-  const ip_addr_t *src = netif_ip_addr6(_ctx.netif, 0);
+  const ip_addr_t *src = netif_ip_addr6(CTX.netif, 0);
 
   // L2 will clear the egress port from the destination address,
   // so calculate the checksum on the link-local multicast address.
@@ -335,7 +226,7 @@ BmErr bcmp_ll_forward(BcmpHeader *header, void *payload, uint32_t size, uint8_t 
   memcpy(pbuf->payload, header, sizeof(BcmpHeader));
   memcpy((uint8_t *)pbuf->payload + sizeof(BcmpHeader), payload, size);
 
-  err = raw_sendto_if_src(_ctx.pcb, pbuf, &port_specific_dst, _ctx.netif, src) == ERR_OK
+  err = raw_sendto_if_src(CTX.pcb, pbuf, &port_specific_dst, CTX.netif, src) == ERR_OK
             ? BmOK
             : BmEBADMSG;
   if (err != BmOK) {
@@ -364,24 +255,17 @@ static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
   \param *netif lwip network interface to use
   \return none
 */
-void bcmp_init(struct netif *netif, NvmPartition *dfu_partition, Configuration *user_cfg,
-               Configuration *sys_cfg) {
-  _ctx.netif = netif;
-  _ctx.pcb = raw_new(IP_PROTO_BCMP);
-  configASSERT(_ctx.pcb);
-
-  _ctx.message_count = 0;
+void bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configuration *sys_cfg) {
 
   /* Create threads and Queues */
-  _ctx.rx_queue = xQueueCreate(BCMP_EVT_QUEUE_LEN, sizeof(bcmp_queue_item_t));
-  configASSERT(_ctx.rx_queue);
-  _ctx.messages_list_mutex = xSemaphoreCreateMutex();
-  configASSERT(_ctx.messages_list_mutex);
+  _ctx.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
+
+  bm_ip_init(_ctx.queue);
 
   heartbeat_init();
   bcmp_topology_init();
   bcmp_process_info_init();
-  packet_init(message_get_src_ip, message_get_dst_ip, message_get_data, message_get_checksum);
+
   bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
   bcmp_config_init(user_cfg, sys_cfg);
   bcmp_resource_discovery::bcmp_resource_discovery_init();

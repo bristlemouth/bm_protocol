@@ -1,6 +1,7 @@
 #include "bcmp_time.h"
 #include "app_util.h"
 #include "bcmp.h"
+#include "bm_util.h"
 #include "device_info.h"
 #include "stm32_rtc.h"
 
