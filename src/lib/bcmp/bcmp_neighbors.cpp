@@ -1,18 +1,18 @@
-#include "FreeRTOS.h"
 #include <string.h>
 
 #include "app_util.h"
-#include "bcmp.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
-#include "bm_l2.h"
 #include "bm_util.h"
-#include "device_info.h"
+
+extern "C" {
+#include "bm_os.h"
+}
 
 // Pointer to neighbor linked-list
-static bm_neighbor_t *_neighbors;
-static uint8_t _num_neighbors = 0;
-neighbor_discovery_callback_t neighbor_discovery_cb = NULL;
+static bm_neighbor_t *NEIGHBORS;
+static uint8_t NUM_NEIGHBORS = 0;
+neighbor_discovery_callback_t NEIGHBOR_DISCOVERY_CB = NULL;
 /*
   Accessor to latest the neighbor linked-list and nieghbor count
 
@@ -21,8 +21,8 @@ neighbor_discovery_callback_t neighbor_discovery_cb = NULL;
 */
 bm_neighbor_t *bcmp_get_neighbors(uint8_t &num_neighbors) {
   bcmp_check_neighbors();
-  num_neighbors = _num_neighbors;
-  return _neighbors;
+  num_neighbors = NUM_NEIGHBORS;
+  return NEIGHBORS;
 }
 
 /*!
@@ -32,7 +32,7 @@ bm_neighbor_t *bcmp_get_neighbors(uint8_t &num_neighbors) {
   \return pointer to neighbor if successful, NULL otherwise
 */
 bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id) {
-  bm_neighbor_t *neighbor = _neighbors;
+  bm_neighbor_t *neighbor = NEIGHBORS;
 
   while (neighbor != NULL) {
     if (node_id && node_id == neighbor->node_id) {
@@ -54,12 +54,12 @@ bm_neighbor_t *bcmp_find_neighbor(uint64_t node_id) {
   \return none
 */
 void bcmp_neighbor_foreach(neighbor_callback_t cb) {
-  bm_neighbor_t *neighbor = _neighbors;
-  _num_neighbors = 0;
+  bm_neighbor_t *neighbor = NEIGHBORS;
+  NUM_NEIGHBORS = 0;
 
   while (neighbor != NULL) {
     cb(neighbor);
-    _num_neighbors++;
+    NUM_NEIGHBORS++;
 
     // Go to the next one
     neighbor = neighbor->next;
@@ -71,8 +71,8 @@ static void _neighbor_check(bm_neighbor_t *neighbor) {
       !timeRemainingTicks(neighbor->last_heartbeat_ticks,
                           pdMS_TO_TICKS(2 * neighbor->heartbeat_period_s * 1000))) {
     printf("🏚  Neighbor offline :'( %016" PRIx64 "\n", neighbor->node_id);
-    if (neighbor_discovery_cb) {
-      neighbor_discovery_cb(false, neighbor);
+    if (NEIGHBOR_DISCOVERY_CB) {
+      NEIGHBOR_DISCOVERY_CB(false, neighbor);
     }
     neighbor->online = false;
   }
@@ -93,8 +93,7 @@ void bcmp_check_neighbors() { bcmp_neighbor_foreach(_neighbor_check); }
   \return pointer to neighbor if successful, NULL otherwise (if neighbor is already present, for example)
 */
 static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
-  bm_neighbor_t *new_neighbor =
-      static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
+  bm_neighbor_t *new_neighbor = (bm_neighbor_t *)(bm_malloc(sizeof(bm_neighbor_t)));
   configASSERT(new_neighbor);
 
   memset(new_neighbor, 0, sizeof(bm_neighbor_t));
@@ -103,11 +102,11 @@ static bm_neighbor_t *bcmp_add_neighbor(uint64_t node_id, uint8_t port) {
   new_neighbor->port = port;
 
   bm_neighbor_t *neighbor = NULL;
-  if (_neighbors == NULL) {
+  if (NEIGHBORS == NULL) {
     // First neighbor!
-    _neighbors = new_neighbor;
+    NEIGHBORS = new_neighbor;
   } else {
-    neighbor = _neighbors;
+    neighbor = NEIGHBORS;
 
     // Go to the last neighbor and insert the new one there
     while (neighbor && (neighbor->next != NULL)) {
@@ -187,13 +186,13 @@ bool bcmp_remove_neighbor_from_table(bm_neighbor_t *neighbor) {
   configASSERT(neighbor);
 
   // Check if we're the first in the table
-  if (neighbor == _neighbors) {
+  if (neighbor == NEIGHBORS) {
     printf("First neighbor!\n");
     // Remove neighbor from the list
-    _neighbors = neighbor->next;
+    NEIGHBORS = neighbor->next;
     rval = true;
   } else {
-    bm_neighbor_t *next_neighbor = _neighbors;
+    bm_neighbor_t *next_neighbor = NEIGHBORS;
     while (next_neighbor->next != NULL) {
       if (next_neighbor->next == neighbor) {
 
@@ -252,5 +251,5 @@ void bcmp_print_neighbor_info(bm_neighbor_t *neighbor) {
   \return none
 */
 void bcmp_neighbor_register_discovery_callback(neighbor_discovery_callback_t cb) {
-  neighbor_discovery_cb = cb;
+  NEIGHBOR_DISCOVERY_CB = cb;
 }

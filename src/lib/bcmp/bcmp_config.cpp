@@ -1,5 +1,4 @@
 #include "bcmp_config.h"
-#include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bm_util.h"
 #include "device_info.h"
@@ -444,11 +443,12 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
     switch (data.header->type) {
     case BcmpConfigGetMessage: {
       bcmp_config_process_config_get_msg((bm_common_config_get_t *)(data.payload),
-                                         data.seq_num);
+                                         data.header->seq_num);
       break;
     }
     case BcmpConfigSetMessage: {
-      bcmp_config_process_config_set_msg((bm_common_config_set_t *)data.payload, data.seq_num);
+      bcmp_config_process_config_set_msg((bm_common_config_set_t *)data.payload,
+                                         data.header->seq_num);
       break;
     }
     case BcmpConfigCommitMessage: {
@@ -458,7 +458,7 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
     }
     case BcmpConfigStatusRequestMessage: {
       bcmp_config_process_status_request_msg((bm_common_config_status_request_t *)data.payload,
-                                             data.seq_num);
+                                             data.header->seq_num);
       break;
     }
     case BcmpConfigStatusResponseMessage: {
@@ -488,7 +488,7 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
     case BcmpConfigDeleteRequestMessage: {
       bm_common_config_delete_key_request_t *msg =
           (bm_common_config_delete_key_request_t *)data.payload;
-      bcmp_process_del_request_message(msg, data.seq_num);
+      bcmp_process_del_request_message(msg, data.header->seq_num);
       break;
     }
     case BcmpConfigDeleteResponseMessage: {

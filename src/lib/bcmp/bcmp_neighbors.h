@@ -1,16 +1,14 @@
 #pragma once
 
-#include "lwip/ip.h"
-#include "bcmp_messages.h"
+#include "messages.h"
+#include "util.h"
+#include <stdbool.h>
 
 #define NEIGHBOR_UUID_LEN (12)
 
 typedef struct bm_neighbor_s {
   // Pointer to next neighbor
   struct bm_neighbor_s *next;
-
-  // Neighbor link-local address (do we need this?)
-  ip_addr_t addr;
 
   uint64_t node_id;
 
@@ -34,7 +32,7 @@ typedef struct bm_neighbor_s {
   bool online;
 
   // Device information
-  bcmp_device_info_t info;
+  BcmpDeviceInfo info;
   char *version_str;
   char *device_name;
 
@@ -44,7 +42,7 @@ typedef struct bm_neighbor_s {
 typedef void (*neighbor_callback_t)(bm_neighbor_t *neighbor);
 typedef void (*neighbor_discovery_callback_t)(bool discovered, bm_neighbor_t *neighbor);
 
-bm_neighbor_t* bcmp_get_neighbors(uint8_t &num_neighbors);
+bm_neighbor_t *bcmp_get_neighbors(uint8_t &num_neighbors);
 void bcmp_check_neighbors();
 void bcmp_print_neighbor_info(bm_neighbor_t *neighbor);
 bool bcmp_remove_neighbor_from_table(bm_neighbor_t *neighbor);
