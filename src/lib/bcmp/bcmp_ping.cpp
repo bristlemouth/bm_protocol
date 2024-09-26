@@ -144,11 +144,11 @@ static BmErr bcmp_process_ping_reply(BcmpProcessData data) {
 BmErr ping_init(void) {
   BcmpPacketCfg ping_request = {
       false,
-      false,
+      true,
       bcmp_process_ping_request,
   };
   BcmpPacketCfg ping_reply = {
-      false,
+      true,
       false,
       bcmp_process_ping_reply,
   };
