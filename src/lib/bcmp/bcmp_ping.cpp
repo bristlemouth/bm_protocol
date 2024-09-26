@@ -61,8 +61,7 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
   printf("PING (%016" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id,
          echo_req->payload_len);
 
-  BmErr rval =
-      bcmp_tx(addr, BcmpEchoRequestMessage, (uint8_t *)echo_req, echo_len, 0);
+  BmErr rval = bcmp_tx(addr, BcmpEchoRequestMessage, (uint8_t *)echo_req, echo_len, 0);
 
   _ping_request_time = bm_ticks_to_ms(bm_get_tick_count());
 
@@ -78,8 +77,7 @@ BmErr bcmp_send_ping_request(uint64_t node_id, const void *addr, const uint8_t *
   \param *addr - ip address to send ping reply to
   \ret BmOK if successful
 */
-static BmErr bcmp_send_ping_reply(BcmpEchoReply *echo_reply,  void *addr,
-                           uint16_t seq_num) {
+static BmErr bcmp_send_ping_reply(BcmpEchoReply *echo_reply, void *addr, uint16_t seq_num) {
 
   return bcmp_tx(addr, BcmpEchoReplyMessage, (uint8_t *)echo_reply,
                  sizeof(*echo_reply) + echo_reply->payload_len, seq_num);
@@ -142,7 +140,6 @@ static BmErr bcmp_process_ping_reply(BcmpProcessData data) {
 
   return err;
 }
-
 
 BmErr ping_init(void) {
   BcmpPacketCfg ping_request = {
