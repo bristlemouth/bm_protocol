@@ -84,7 +84,7 @@ bool endTransaction(uint32_t wait_ms) {
   if (!_writeDuringTransaction) {
     _transactionInProgress = false;
     taskEXIT_CRITICAL();
-    _postTxFunction(); // Safely call the function
+    if (_postTxFunction != nullptr) _postTxFunction(); // Safely call the function
     return true;
   }
 
@@ -93,8 +93,6 @@ bool endTransaction(uint32_t wait_ms) {
   taskEXIT_CRITICAL();
 
   // Exit ciritcal while we wait for final write to complete.
-  // The first while check will fail if data has not yet been added to stream buffer,
-  //    So need to make sure we block on first semaphore take first.
   // After each transmission compeltes, TC interrupt will call pluartPostTransactionCb,
   //    which will give a token to the semaphore.
   // Each subsequent write inside the transaction will take from the semaphore,
