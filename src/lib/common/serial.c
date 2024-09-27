@@ -236,7 +236,7 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
   }
 
   // Check if transmission just completed, and clear TC flag if so. TC will set when TDR and shift register are empty.
-  if (LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device)) {
+  if (!bytesAvailable && LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device) && !usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
       // If have a postTxCb, call it.
       if(handle->postTxCb){
@@ -314,9 +314,7 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
       //  When first enabled, this will trigger the interrupt and its IRQ handler because TDR will be empty.
       if(!usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
         usart_EnableIT_TXE((USART_TypeDef *)handle->device);
-      }
       // Enable TC interrupt to detect end of transmission
-      if (!LL_USART_IsEnabledIT_TC((USART_TypeDef *)handle->device)) {
         LL_USART_EnableIT_TC((USART_TypeDef *)handle->device);
       }
 
