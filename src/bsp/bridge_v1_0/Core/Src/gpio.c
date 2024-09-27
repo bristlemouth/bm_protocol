@@ -59,11 +59,14 @@ void MX_GPIO_Init(void)
   LL_GPIO_ResetOutputPin(ADIN_PWR_GPIO_Port, ADIN_PWR_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOA, TP10_Pin|LED_G_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin
-                          |FLASH_CS_Pin|ADIN_CS_Pin);
+  LL_GPIO_ResetOutputPin(GPIOA, TP10_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin|FLASH_CS_Pin
+                          |ADIN_CS_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(LED_R_GPIO_Port, LED_R_Pin);
+
+  /**/
+  LL_GPIO_SetOutputPin(LED_G_GPIO_Port, LED_G_Pin);
 
   /**/
   GPIO_InitStruct.Pin = ADIN_RST_Pin;
@@ -74,22 +77,16 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(ADIN_RST_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = VUSB_DETECT_Pin|BOOT_Pin;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-
-  /**/
-  GPIO_InitStruct.Pin = ADIN_PWR_Pin;
+  GPIO_InitStruct.Pin = LED_G_Pin|ADIN_PWR_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(ADIN_PWR_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = TP10_Pin|LED_G_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin
-                          |FLASH_CS_Pin|ADIN_CS_Pin;
+  GPIO_InitStruct.Pin = TP10_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin|FLASH_CS_Pin
+                          |ADIN_CS_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -97,10 +94,10 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = BM_CS_Pin;
+  GPIO_InitStruct.Pin = VUSB_DETECT_Pin|BM_CS_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(BM_CS_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = BM_MISO_Pin;
@@ -118,6 +115,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = BOOT_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(BOOT_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTB, LL_EXTI_EXTI_LINE0);
