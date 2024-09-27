@@ -63,7 +63,6 @@ static BaseType_t plUartCliCommand( char *writeBuffer,
         printf("ERR Invalid parameters\n");
         break;
       }
-
       // TODO - make the termination configurable.
       const char* termination = {"\r\n"};
       // Use start and end transaction guards, have no effect if transactions not being used.
@@ -71,6 +70,7 @@ static BaseType_t plUartCliCommand( char *writeBuffer,
       PLUART::write((uint8_t*)argDataStr, strlen(argDataStr));
       PLUART::write((uint8_t*)termination, strlen(termination));
       PLUART::endTransaction();
+
     } else {
       printf("ERROR - Unsupported op!: %s\n", opStr);
     }
