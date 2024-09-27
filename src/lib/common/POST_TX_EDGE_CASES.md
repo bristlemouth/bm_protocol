@@ -36,8 +36,10 @@ PLUART::endTransaction();
    - each call to `pluartPostTransactionCb` gives the `_postTxSemaphore` semaphore token.
 
 
-6. (!!!) **user task**::`endTransaction` **open**:
+6. **user task**::`endTransaction` **open**:
    - Wait for the single token to be given to `_postTxCntSemaphore`.
+   - Calls `_postTxFunction()`.
+   - **user task**::`endTransaction` **closes**.
 
 ---
 
@@ -69,9 +71,58 @@ PLUART::endTransaction();
 PLUART::startTransaction();
 PLUART::endTransaction();
 ```
-### TODO:
+1. **user task**::`startTransaction` **opens**:
+    - in critical: sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
+    - executes `_preTxFunction()`.
+    - **user task**::`startTransaction` **closes**.
+
+
+2. **user task**::`endTransaction` **opens**:
+    - in critical: retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
+    - `writeDuringTransaction` is not set, exits critical and calls `_postTxFunction()`.
+---
+
 ## both CBs null
-## start CB null
-## end CB null
+```c++
+PLUART::startTransaction();
+PLUART::write(A);
+PLUART::endTransaction();
+```
+1. **user task**::`startTransaction` **opens**:
+    - in critical: sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
+    - **user task**::`startTransaction` **closes**.
+
+
+2. **user task**::`write` **opens**:
+    - in critical: sets `writeDuringTransaction` flag.
+    - No tokens available in `_postTxCntSemaphore`, so does not enter loop to take.
+    - `serialWrite` -> `serialWriteNocopy` -> submit data to `serialTxQueue`.
+    - **user task**::`write` **closes**:
+
+
+3. **user task**::`endTransaction` **opens**:
+    - in critical: retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
+    - .
+
+
+4. **serialTxTask** takes from `serialTxQueue`:
+    - `serialGenericTx` -> submit data to `txStreamBuffer`.
+    - enable TXE flag, which will trigger the UART interrupt and `serialGenericUartIRQHandler`.
+
+
+5. **serialGenericUartIRQHandler** is triggered :
+    - `handle->getTxBytesFromISR` points to `serialGenericGetTxBytesFromISR`
+        - this receives one byte at a time from `handle->txStreamBuffer`, which points to `txStreamBuffer`.
+    - When the UART data register is clear while TXE is set, the interrupt will fire again.
+    - The TC flag will fire only once when TDR is finally clear and shift register is also empty.
+      Calls postTxCb(`pluartPostTransactionCb`).
+    - each call to `pluartPostTransactionCb` gives the `_postTxSemaphore` semaphore token.
+
+
+6. **user task**::`endTransaction` **open**:
+   - Wait for the single token to be given to `_postTxCntSemaphore`.
+   - **user task**::`endTransaction` **closes**.
+---
+### TODO:
 ## write before start
 ## write after end
