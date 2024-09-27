@@ -129,8 +129,16 @@ BmErr time_init(void) {
       false,
       bcmp_time_process_time_message,
   };
+
+  // TODO - handle the errors better
   err = packet_add(&time_request, BcmpSystemTimeRequestMessage);
+  if (err != BmOK) {
+    return err;
+  }
   err = packet_add(&time_request, BcmpSystemTimeResponseMessage);
+  if (err != BmOK) {
+    return err;
+  }
   err = packet_add(&time_request, BcmpSystemTimeSetMessage);
   return err;
 }
