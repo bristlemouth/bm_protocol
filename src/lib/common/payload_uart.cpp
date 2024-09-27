@@ -80,15 +80,7 @@ bool endTransaction(uint32_t wait_ms) {
     return false;
   }
 
-  // If no postTx function, job is done.
-  // TODO - should we still block here until writing is complete?
-  if (!_postTxFunction) {
-    taskEXIT_CRITICAL();
-    _transactionInProgress = false;
-    return true;
-  }
-
-  // If there were no writes during the transaction, don't wait for writes to complete.
+  // If there were no writes during the transaction, don't wait for write complete semaphore token.
   if (!_writeDuringTransaction) {
     _transactionInProgress = false;
     taskEXIT_CRITICAL();
@@ -107,14 +99,14 @@ bool endTransaction(uint32_t wait_ms) {
   //    which will give a token to the semaphore.
   // Each subsequent write inside the transaction will take from the semaphore,
   //    so only the final write will leave a token available here.
+  bool ret_value = true;
   if (xSemaphoreTake(_postTxSemaphore, pdMS_TO_TICKS(wait_ms)) == pdFALSE) {
     // Failed to take sempaphore within transaction timeout
-    _postTxFunction(); // TODO - maybe best to assert(false) here?
-    return false;
+    ret_value = false; // TODO - maybe better to assert(false) here?
   }
   // Call the post-transaction function after the final transmission is fully complete
-  _postTxFunction();
-  return true;
+  if (_postTxFunction != nullptr) _postTxFunction();
+  return ret_value;
 }
 
 // Post-transmission callback function, attached as uart_handle.postTxCb and
