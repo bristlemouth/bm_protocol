@@ -34,88 +34,98 @@ static bool _transactionInProgress = false;
 static bool _writeDuringTransaction = false;
 // Optional transaction start function
 static HardwareControlFunc _preTxFunction = nullptr;
-// Optional transaction end function, will be called after final write of transaction
+// Optional transaction end function, will be called after final write of transaction completes
 static HardwareControlFunc _postTxFunction = nullptr;
-// Semaphore for passing event to postTxCallbackTask
-static SemaphoreHandle_t _postTxSemaphore = NULL;
-// Flag to prevent double triggers of the _postTxFunction callback
-static volatile bool _postTxFunctionPending = false;
+// Semaphore for passing token between postTxCallback, endTransaction, and write to ensure
+//  proper synchronization between completion of all writes in the transaction blocking _postTxFunction.
+static SemaphoreHandle_t _postTxSemaphore = nullptr;
 
 // Forward declaration of the post-transmission callback function
-static void pluartPostTxCallback(SerialHandle_t *handle);
+static void pluartPostTransactionCb(SerialHandle_t *handle);
 
 // Set transaction hardware control functions
 void enableTransactions(HardwareControlFunc preTxFunc, HardwareControlFunc postTxFunc) {
   // Assign the transaction start and end callbacks
   _preTxFunction = preTxFunc;
   _postTxFunction = postTxFunc;
-  // Assign the post-transmission callback
-  uart_handle.postTxCb = pluartPostTxCallback;
+  // Assign the post-transaction callback function,
+  //  which wraps _postTxFunction in some additional checks to ensure transaction is complete.
+  uart_handle.postTxCb = pluartPostTransactionCb;
 }
 
 // Start a Tx transaction
+// TODO - return false if transaction already started?
 void startTransaction() {
+  taskENTER_CRITICAL();
   _transactionInProgress = true;
   _writeDuringTransaction = false;
+  taskEXIT_CRITICAL();
   if (_preTxFunction) {
     _preTxFunction(); // External start transaction function. Eg, enable Tx for Half-Duplex
   }
 }
 
-// End a Tx transaction
-// _postTxFunction call will be triggered either from here if no writes are pending,
-//  or by TC interrupt firing on completion of the final write (see lib/common/serial.c).
-//  Use a semaphore and a separate task to trigger and execute this safely.
-void endTransaction() {
+/** End a Tx transaction, called by user.
+// Blocks until all PLUART writes are complete then fires _postTxFunction
+// Description: First safely check if there's a transaction to end, safely wait for all Tx writing
+                to finish, then _postTxFunction().
+TODO - If users have multiple tasks interacting with PLUART transactions,
+       this will heavily bork. This is not a currently supported use case.
+ **/
+bool endTransaction(uint32_t wait_ms) {
   taskENTER_CRITICAL();
-  if (_transactionInProgress && _postTxFunction) {
-    // ensure _postTxFunction is called if we start and end transaction without writing
-    // ensure _postTxFunction is called if write completes and fires TC interrupt before we've
-    //  marked the transaction as complete.
+  // If not in a transaction, bail and tell the user.
+  if (!_transactionInProgress) {
+    taskEXIT_CRITICAL();
+    return false;
+  }
+
+  // If no postTx function, job is done.
+  // TODO - should we still block here until writing is complete?
+  if (!_postTxFunction) {
+    taskEXIT_CRITICAL();
     _transactionInProgress = false;
-    if (!_writeDuringTransaction || xStreamBufferIsEmpty(uart_handle.txStreamBuffer)) {
-      // Transmission is complete, ensure callback triggers
-      if (!_postTxFunctionPending) {
-        _postTxFunctionPending = true;
-        taskEXIT_CRITICAL();
-        xSemaphoreGive(_postTxSemaphore);
-      } else {
-        taskEXIT_CRITICAL();
-      }
-    } else {
-      // Serial writes are in progress, and we will wait for them to complete.
-      // uart_handle.postTxCb (pluartPostTxCallback) will trigger call to _postTxFunction on
-      // completion of write(). No further action needed here
-      taskEXIT_CRITICAL();
-    }
-  } else {
+    return true;
+  }
+
+  // If there were no writes during the transaction, don't wait for writes to complete.
+  if (!_writeDuringTransaction) {
     _transactionInProgress = false;
     taskEXIT_CRITICAL();
+    _postTxFunction(); // Safely call the function
+    return true;
   }
+
+  // transaction is in progress, and need to call _postTxFunction when writing is complete.
+  _transactionInProgress = false;
+  taskEXIT_CRITICAL();
+
+  // Exit ciritcal while we wait for final write to complete.
+  // The first while check will fail if data has not yet been added to stream buffer,
+  //    So need to make sure we block on first semaphore take first.
+  // After each transmission compeltes, TC interrupt will call pluartPostTransactionCb,
+  //    which will give a token to the semaphore.
+  // Each subsequent write inside the transaction will take from the semaphore,
+  //    so only the final write will leave a token available here.
+  if (xSemaphoreTake(_postTxSemaphore, pdMS_TO_TICKS(wait_ms)) == pdFALSE) {
+    // Failed to take sempaphore within transaction timeout
+    _postTxFunction(); // TODO - maybe best to assert(false) here?
+    return false;
+  }
+  // Call the post-transaction function after the final transmission is fully complete
+  _postTxFunction();
+  return true;
 }
 
-// Post-transmission callback function, attached as uart_handle.postTxCb and called
-//  from ISR when the TC interrupt fires [see common/serial.c::serialGenericUartIRQHandler].
-static void pluartPostTxCallback(SerialHandle_t *handle) {
+// Post-transmission callback function, attached as uart_handle.postTxCb and
+// *called from ISR* when the TC interrupt fires [see common/serial.c::serialGenericUartIRQHandler].
+static void pluartPostTransactionCb(SerialHandle_t *handle) {
   (void)handle; // Mark 'handle' as intentionally unused
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  const UBaseType_t uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
-
-  // If transaction has already been marked complete by endTransaction,
-  //  we need to trigger the postTx callback function
-  if (!_transactionInProgress && _postTxFunction) {
-    if (!_postTxFunctionPending) {
-      _postTxFunctionPending = true;
-      taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
-      xSemaphoreGiveFromISR(_postTxSemaphore, &xHigherPriorityTaskWoken);
-    } else {
-      taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
-    }
-  } else {
-    taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
-  }
-
+  // Awaiting a token in this semaphore is used to block endTransaction from calling _postTxFunction.
+  // Every call to write takes the token if present, every complete uart transmission gives it.
+  xSemaphoreGiveFromISR(_postTxSemaphore, &xHigherPriorityTaskWoken);
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
@@ -237,6 +247,7 @@ uint16_t readLine(char *buffer, size_t len) {
   return rval;
 }
 
+// TODO - change to bool and return false if transactions are enabled, but no transaciton is in progress?
 void write(uint8_t *buffer, size_t len) {
   // If we are using transaction, need to flag that we've had at least
   //  one write in the transaction so we don't trigger postTx callback prematurely.
@@ -244,6 +255,12 @@ void write(uint8_t *buffer, size_t len) {
   if (_transactionInProgress) {
     _writeDuringTransaction = true;
   }
+  // Token being available in the semaphore here means TC has already fired in a transation,
+  //  and this write is starting a subsequent transmission in the transaction. Take the token so
+  //  endTransaction has to wait for this transmission to complete.
+  // Note - multiple writes will likely be grouped in the same UART Tx transmission if there is no
+  //  delay between them in the transaction in the user thread.
+  xSemaphoreTake(_postTxSemaphore, 0);
   serialWrite(&PLUART::uart_handle, buffer, len);
 }
 
@@ -287,26 +304,6 @@ SerialHandle_t uart_handle = {
     .postTxCb = NULL,
 };
 
-// This task exectutes the _postTxFunction.
-//  If transactions are being used, it can be triggered by
-//  endTransaction or UART Tx complete TC ISR -> pluartPostTxCallback, whichever occurs first.
-static void postTxCBTask(void *pvParameters) {
-  (void)pvParameters; // Mark 'pvParameters' as intentionally unused
-
-  for (;;) {
-    if (xSemaphoreTake(_postTxSemaphore, portMAX_DELAY) == pdTRUE) {
-      taskENTER_CRITICAL();
-      if (_postTxFunctionPending) {
-        _postTxFunctionPending = false;
-        taskEXIT_CRITICAL();
-        _postTxFunction(); // Safely call the function
-      } else {
-        taskEXIT_CRITICAL();
-      }
-    }
-  }
-}
-
 BaseType_t init(uint8_t task_priority) {
   // Create the stream buffer for the user bytes to be buffered into and read from
   user_byte_stream_buffer = xStreamBufferCreate(USER_BYTE_BUFFER_LEN, 1);
@@ -329,10 +326,6 @@ BaseType_t init(uint8_t task_priority) {
   BaseType_t rval = xTaskCreate(serialGenericRxTask, "LPUartRx",
                                 // TODO - verify stack size
                                 2048, &PLUART::uart_handle, task_priority, NULL);
-  configASSERT(rval == pdTRUE);
-
-  // Create the task to execute the _postTxFunction callback
-  rval &= xTaskCreate(postTxCBTask, "PostTxCBTask", 128, NULL, task_priority, NULL);
   configASSERT(rval == pdTRUE);
 
   return rval;
