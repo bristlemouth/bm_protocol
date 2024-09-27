@@ -16,11 +16,8 @@
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
-#define DEFAULT_BAUD_RATE 115200
-/// NOTE - the RxLive uses Carriage Return for line term for incoming commands.
-/// It will terminate response lines with \r\n
-/// TODO - allow configuration of different Tx term and multi-char Rx line breaks
-#define DEFAULT_LINE_TERM 13 // CR / '\r', 0x0D
+#define DEFAULT_BAUD_RATE 9600
+#define DEFAULT_LINE_TERM 10
 #define BYTES_CLUSTER_MS 50
 
 // app_main passes a handle to the user config partition in NVM.
