@@ -42,8 +42,6 @@ void setup(void) {
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
   PLUART::setBaud(baud_rate_config);
-  // Set the RS485 transceiver to Half-Duplex (HFIO = 1)
-  IOWrite(&BF_HFIO, 1);
   // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
   // Enable parsing lines and passing to user app.
