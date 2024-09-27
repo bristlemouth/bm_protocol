@@ -90,6 +90,8 @@ class AutoBuilder:
             cmd += ["-DCMAKE_APP_TYPE=bristleback"]
         elif config["args"]["bsp"] == "bm_mote_v1.0":
             cmd += ["-DCMAKE_APP_TYPE=BMDK"]
+        elif config["args"]["bsp"] == "bm_mote_rs232":
+            cmd += ["-DCMAKE_APP_TYPE=rs232_expander"]
 
         if config["name"].startswith("aanderaa"):
             cmd += ["-DCMAKE_AANDERAA_TYPE=4830"]
