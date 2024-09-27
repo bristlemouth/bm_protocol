@@ -20,15 +20,6 @@
 // Number of buffers to queue up for transmission
 #define SERIAL_TX_QUEUE_SIZE 128
 
-//
-// Maximum time to spend transmitting a single message
-//
-// At 9600 baud, that's ~6kB. At 115200 that's 72kB. If you attempt
-// to transmit a single buffer larger than that (at those baud rates)
-// some data may be lost! (with a 5 second max time)
-//
-#define MAX_TX_TIME_MS (5000)
-
 // Queue for all serial outputs
 static xQueueHandle serialTxQueue = NULL;
 
@@ -54,7 +45,6 @@ void startSerial() {
   configASSERT(rval == pdTRUE);
 }
 
-// ReSharper disable once CppDFAEndlessLoop
 // Receive character from uart rx interrupt and place in stream buffer
 // to be processed in serialGenericRxTask
 BaseType_t serialGenericRxBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
@@ -229,7 +219,7 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     higherPriorityTaskWoken = handle->rxBytesFromISR(handle, &byte, 1);
   }
 
-  // Process bytes to transmit
+  // TXE will set when Tx Data Reg (TDR) is empty. Process next byte to transmit
   if( usart_IsActiveFlag_TXE((USART_TypeDef *)handle->device) &&
       usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
     uint8_t txByte;
@@ -245,7 +235,7 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     }
   }
 
-  // Check if transmission just completed, and clear flag if so
+  // Check if transmission just completed, and clear TC flag if so. TC will set when TDR and shift register are empty.
   if (LL_USART_IsActiveFlag_TC((USART_TypeDef *)handle->device)) {
       LL_USART_ClearFlag_TC((USART_TypeDef *)handle->device);
       // If have a postTxCb, call it.
@@ -321,6 +311,7 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
     } else {
 #ifndef NO_UART
       // Enable transmit interrupt if not already transmitting
+      //  When first enabled, this will trigger the interrupt and its IRQ handler because TDR will be empty.
       if(!usart_IsEnabledIT_TXE((USART_TypeDef *)handle->device)) {
         usart_EnableIT_TXE((USART_TypeDef *)handle->device);
       }
