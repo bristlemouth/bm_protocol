@@ -240,11 +240,12 @@ static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
   \param *netif lwip network interface to use
   \return none
 */
-BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configuration *sys_cfg) {
+BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configuration *sys_cfg,
+                DeviceCfg device) {
 
-  /* Create threads and Queues */
   CTX.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
 
+  device_init(device);
   bm_ip_init(CTX.queue);
 
   heartbeat_init();
