@@ -83,7 +83,25 @@ void bcl_init(NvmPartition *dfu_partition, cfg::Configuration *usr_cfg,
     printf("Could not join ff03::1\n");
   }
 
-  bcmp_init(dfu_partition, usr_cfg, sys_cfg);
+  uint8_t major, minor, patch;
+
+  getFWVersion(&major, &minor, &patch);
+
+  DeviceCfg device = {
+      .node_id = getNodeId(),
+      .git_sha = getGitSHA(),
+      .device_name = getUIDStr(),
+      .vers_str = getFWVersionStr(),
+      .vendor_id = 0,
+      .product_id = 0,
+      .hw_ver = 0,
+      .ver_major = major,
+      .ver_minor = minor,
+      .ver_patch = patch,
+      .sn = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'},
+  };
+
+  bcmp_init(dfu_partition, usr_cfg, sys_cfg, device);
   bcmp_cli_init();
 
   bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
