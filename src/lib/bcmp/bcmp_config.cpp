@@ -1,13 +1,12 @@
 #include "bcmp_config.h"
 #include "bcmp.h"
 #include "bm_util.h"
-#include "device_info.h"
 extern "C" {
 #include "packet.h"
 }
 
-static Configuration *_usr_cfg;
-static Configuration *_sys_cfg;
+static Configuration *USR_CFG;
+static Configuration *SYS_CFG;
 
 bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e partition,
                      size_t key_len, const char *key, err_t &err,
@@ -20,7 +19,7 @@ bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e parti
   configASSERT(get_msg);
   do {
     get_msg->header.target_node_id = target_node_id;
-    get_msg->header.source_node_id = getNodeId();
+    get_msg->header.source_node_id = node_id();
     get_msg->partition = partition;
     if (key_len > cfg::MAX_KEY_LEN_BYTES) {
       break;
@@ -49,7 +48,7 @@ bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e parti
   configASSERT(set_msg);
   do {
     set_msg->header.target_node_id = target_node_id;
-    set_msg->header.source_node_id = getNodeId();
+    set_msg->header.source_node_id = node_id();
     set_msg->partition = partition;
     if (key_len > cfg::MAX_KEY_LEN_BYTES) {
       break;
@@ -76,7 +75,7 @@ bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e pa
       (bm_common_config_commit_t *)pvPortMalloc(sizeof(bm_common_config_commit_t));
   configASSERT(commit_msg);
   commit_msg->header.target_node_id = target_node_id;
-  commit_msg->header.source_node_id = getNodeId();
+  commit_msg->header.source_node_id = node_id();
   commit_msg->partition = partition;
   err = bcmp_tx(&multicast_ll_addr, BcmpConfigCommitMessage, (uint8_t *)commit_msg,
                 sizeof(bm_common_config_commit_t));
@@ -96,7 +95,7 @@ bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partit
           sizeof(bm_common_config_status_request_t));
   configASSERT(status_req_msg);
   status_req_msg->header.target_node_id = target_node_id;
-  status_req_msg->header.source_node_id = getNodeId();
+  status_req_msg->header.source_node_id = node_id();
   status_req_msg->partition = partition;
   err = bcmp_tx(&multicast_ll_addr, BcmpConfigStatusRequestMessage, (uint8_t *)status_req_msg,
                 sizeof(bm_common_config_status_request_t), 0, reply_cb);
@@ -126,7 +125,7 @@ bool bcmp_config_status_response(uint64_t target_node_id,
   configASSERT(status_resp_msg);
   do {
     status_resp_msg->header.target_node_id = target_node_id;
-    status_resp_msg->header.source_node_id = getNodeId();
+    status_resp_msg->header.source_node_id = node_id();
     status_resp_msg->committed = commited;
     status_resp_msg->partition = partition;
     status_resp_msg->num_keys = num_keys;
@@ -152,11 +151,11 @@ static void bcmp_config_process_commit_msg(bm_common_config_commit_t *msg) {
   configASSERT(msg);
   switch (msg->partition) {
   case BM_COMMON_CFG_PARTITION_USER: {
-    _usr_cfg->saveConfig(); // Reboot!
+    USR_CFG->saveConfig(); // Reboot!
     break;
   }
   case BM_COMMON_CFG_PARTITION_SYSTEM: {
-    _sys_cfg->saveConfig(); // Reboot!
+    SYS_CFG->saveConfig(); // Reboot!
     break;
   }
   default:
@@ -172,9 +171,9 @@ static void bcmp_config_process_status_request_msg(bm_common_config_status_reque
   do {
     Configuration *cfg;
     if (msg->partition == BM_COMMON_CFG_PARTITION_USER) {
-      cfg = _usr_cfg;
+      cfg = USR_CFG;
     } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM) {
-      cfg = _sys_cfg;
+      cfg = SYS_CFG;
     } else {
       printf("Invalid configuration\n");
       break;
@@ -199,7 +198,7 @@ static bool bcmp_config_send_value(uint64_t target_node_id,
   configASSERT(value_msg);
   do {
     value_msg->header.target_node_id = target_node_id;
-    value_msg->header.source_node_id = getNodeId();
+    value_msg->header.source_node_id = node_id();
     value_msg->partition = partition;
     value_msg->data_length = data_length;
     memcpy(value_msg->data, data, data_length);
@@ -218,9 +217,9 @@ static void bcmp_config_process_config_get_msg(bm_common_config_get_t *msg, uint
   do {
     Configuration *cfg;
     if (msg->partition == BM_COMMON_CFG_PARTITION_USER) {
-      cfg = _usr_cfg;
+      cfg = USR_CFG;
     } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM) {
-      cfg = _sys_cfg;
+      cfg = SYS_CFG;
     } else {
       break;
     }
@@ -241,9 +240,9 @@ static void bcmp_config_process_config_set_msg(bm_common_config_set_t *msg, uint
   do {
     Configuration *cfg;
     if (msg->partition == BM_COMMON_CFG_PARTITION_USER) {
-      cfg = _usr_cfg;
+      cfg = USR_CFG;
     } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM) {
-      cfg = _sys_cfg;
+      cfg = SYS_CFG;
     } else {
       break;
     }
@@ -363,7 +362,7 @@ bool bcmp_config_del_key(uint64_t target_node_id, bm_common_config_partition_e p
       (bm_common_config_delete_key_request_t *)pvPortMalloc(msg_size);
   configASSERT(del_msg);
   del_msg->header.target_node_id = target_node_id;
-  del_msg->header.source_node_id = getNodeId();
+  del_msg->header.source_node_id = node_id();
   del_msg->partition = partition;
   del_msg->key_length = key_len;
   memcpy(del_msg->key, key, key_len);
@@ -386,7 +385,7 @@ static bool bcmp_config_send_del_key_response(uint64_t target_node_id,
       (bm_common_config_delete_key_response_t *)pvPortMalloc(msg_size);
   configASSERT(del_resp);
   del_resp->header.target_node_id = target_node_id;
-  del_resp->header.source_node_id = getNodeId();
+  del_resp->header.source_node_id = node_id();
   del_resp->partition = partition;
   del_resp->key_length = key_len;
   memcpy(del_resp->key, key, key_len);
@@ -405,9 +404,9 @@ static void bcmp_process_del_request_message(bm_common_config_delete_key_request
   do {
     Configuration *cfg;
     if (msg->partition == BM_COMMON_CFG_PARTITION_USER) {
-      cfg = _usr_cfg;
+      cfg = USR_CFG;
     } else if (msg->partition == BM_COMMON_CFG_PARTITION_SYSTEM) {
-      cfg = _sys_cfg;
+      cfg = SYS_CFG;
     } else {
       break;
     }
@@ -437,7 +436,7 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
   bool should_forward = false;
   bm_common_config_header_t *msg_header = (bm_common_config_header_t *)data.payload;
 
-  if (msg_header->target_node_id != getNodeId()) {
+  if (msg_header->target_node_id != node_id()) {
     should_forward = true;
   } else {
     switch (data.header->type) {
@@ -557,8 +556,8 @@ BmErr bcmp_config_init(Configuration *user_cfg, Configuration *sys_cfg) {
 
   if (user_cfg && sys_cfg) {
     err = BmOK;
-    _usr_cfg = user_cfg;
-    _sys_cfg = sys_cfg;
+    USR_CFG = user_cfg;
+    SYS_CFG = sys_cfg;
   }
 
   //TODO please handle this better

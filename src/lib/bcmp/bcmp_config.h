@@ -1,10 +1,7 @@
 #pragma once
 
-#include "bcmp.h"
-#include "bcmp_messages.h"
 #include "bm_common_structs.h"
 #include "configuration.h"
-#include "lwip/ip.h"
 #include "util.h"
 #include <stdint.h>
 

@@ -8,7 +8,6 @@ extern "C" {
 }
 #include "bcmp_linked_list_generic.h"
 #include "bcmp_neighbors.h"
-#include "device_info.h"
 
 #define ver_str_max_len (255)
 
@@ -26,48 +25,38 @@ static BCMP_Linked_List_Generic INFO_REQUEST_LIST;
 static BmErr bcmp_send_info(void *dst) {
 
   BmErr err = BmENOMEM;
-  char *ver_str = (char *)bm_malloc(ver_str_max_len);
+  uint8_t ver_str_len = strlen(vers_str());
+  uint8_t dev_name_len = strlen(device_name());
+  uint16_t info_len = sizeof(BcmpDeviceInfoReply) + ver_str_len + dev_name_len;
+  uint8_t *buf = (uint8_t *)bm_malloc(info_len);
 
-  if (ver_str) {
-    memset(ver_str, 0, ver_str_max_len);
+  if (buf) {
+    memset(buf, 0, info_len);
 
-    uint8_t ver_str_len =
-        snprintf(ver_str, ver_str_max_len, "%s@%s", APP_NAME, getFWVersionStr());
+    BcmpDeviceInfoReply *dev_info = (BcmpDeviceInfoReply *)buf;
+    dev_info->info.node_id = node_id();
 
-    // TODO - use device name instead of UID str
-    uint8_t dev_name_len = strlen(getUIDStr());
-    uint16_t info_len = sizeof(BcmpDeviceInfoReply) + ver_str_len + dev_name_len;
-    uint8_t *dev_info_buff = (uint8_t *)bm_malloc(info_len);
+    // TODO - fill these with actual values
+    dev_info->info.vendor_id = vendor_id();
+    dev_info->info.product_id = product_id();
 
-    if (dev_info_buff) {
-      memset(dev_info_buff, 0, info_len);
+    dev_info->info.git_sha = git_sha();
 
-      BcmpDeviceInfoReply *dev_info = (BcmpDeviceInfoReply *)dev_info_buff;
-      dev_info->info.node_id = getNodeId();
+    // TODO - get actual hardware version
+    dev_info->info.ver_hw = 0;
 
-      // TODO - fill these with actual values
-      dev_info->info.vendor_id = 0;
-      dev_info->info.product_id = 0;
-      memset(dev_info->info.serial_num, '0', sizeof(dev_info->info.serial_num));
+    dev_info->ver_str_len = ver_str_len;
+    dev_info->dev_name_len = dev_name_len;
 
-      dev_info->info.git_sha = getGitSHA();
-      getFWVersion(&dev_info->info.ver_major, &dev_info->info.ver_minor,
-                   &dev_info->info.ver_rev);
+    memcpy(&dev_info->strings[0], vers_str(), ver_str_len);
+    memcpy(&dev_info->strings[ver_str_len], device_name(), dev_name_len);
 
-      // TODO - get actual hardware version
-      dev_info->info.ver_hw = 0;
+    err = sn(dev_info->info.serial_num, member_size(BcmpDeviceInfo, serial_num));
+    bm_err_check(err, vers(&dev_info->info.ver_major, &dev_info->info.ver_minor,
+                           &dev_info->info.ver_rev));
+    bm_err_check(err, bcmp_tx(dst, BcmpDeviceInfoReplyMessage, buf, info_len));
 
-      dev_info->ver_str_len = ver_str_len;
-      dev_info->dev_name_len = dev_name_len;
-
-      memcpy(&dev_info->strings[0], ver_str, ver_str_len);
-      memcpy(&dev_info->strings[ver_str_len], getUIDStr(), dev_name_len);
-
-      err = bcmp_tx(dst, BcmpDeviceInfoReplyMessage, dev_info_buff, info_len);
-
-      bm_free(dev_info_buff);
-    }
-    bm_free(ver_str);
+    bm_free(buf);
   }
 
   return err;
@@ -86,7 +75,7 @@ static BmErr bcmp_send_info(void *dst) {
 static BmErr bcmp_process_info_request(BcmpProcessData data) {
   BcmpDeviceInfoRequest *request = (BcmpDeviceInfoRequest *)data.payload;
 
-  if ((request->target_node_id == 0) || (getNodeId() == request->target_node_id)) {
+  if ((request->target_node_id == 0) || (node_id() == request->target_node_id)) {
     // Send info back on the same address we received it on
     // TODO - add unicast support, this will only work with multicast dst
     bcmp_send_info(data.dst);
