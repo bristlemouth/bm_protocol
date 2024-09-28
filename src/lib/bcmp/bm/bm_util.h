@@ -23,8 +23,10 @@ extern const ip6_addr_t multicast_ll_addr;
 static inline uint64_t ip_to_nodeid(void *ip) {
   uint32_t msb = ((uint32_t *)(ip))[2];
   uint32_t lsb = ((uint32_t *)(ip))[3];
-  swap_32bit(&msb);
-  swap_32bit(&lsb);
+  if (is_little_endian()) {
+    swap_32bit(&msb);
+    swap_32bit(&lsb);
+  }
   return (uint64_t)msb << 32 | (uint64_t)lsb;
 }
 
