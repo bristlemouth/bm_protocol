@@ -1,27 +1,53 @@
 from bitstring import BitStream
 import struct
 
-test_no_detection = '04000000'
-test_single_detection = '04000000fc3c000045002e23020041'
-test_two_detection = '03000000FC3C000045002E230B0041FC3C000045002E23060041'
+# Test sensor-data payloads representing different detection scenarios in hex format.
+test_no_detection = '04000000'  # No detections
+test_single_detection = '04000000fc3c000045002e23020041'  # Single tag
+test_two_detection = '0A000000FC3C000045002E230B0041EC3C000045002E23060041'  # Two tags
+
 payloads = [
-    '04000000fc3c000045002e23020041',
-    '04000000fc3c000045002e23010041',
-    '04000000fc3c000045002e23010041',
-    '04000000fc3c000045002e23020041',
-    '04000000'
+    test_no_detection,
+    test_single_detection,
+    test_two_detection
 ]
 
+# Description of the detection structure to unpack from the payload.
+# Each tuple contains a type and a field name.
+# This is a representation of the C struct the data is serialized from:
+#       struct __attribute__((packed)) TagID {
+#           uint32_t tag_serial_no;
+#       uint16_t code_freq;
+#       uint16_t code_channel;
+#       uint16_t detection_count;
+#       char code_char;
+#       };
 detect_struct_description = [
-    ('uint32_t', 'tag_serial_no'),
-    ('uint16_t', 'code_freq'),
-    ('uint16_t', 'code_channel'),
-    ('uint16_t', 'detection_count'),
-    ('char', 'code_char'),
+    ('uint32_t', 'tag_serial_no'),  # 4-byte unsigned integer for tag serial number.
+    ('uint16_t', 'code_freq'),  # 2-byte unsigned integer for code frequency.
+    ('uint16_t', 'code_channel'),  # 2-byte unsigned integer for code channel.
+    ('uint16_t', 'detection_count'),  # 2-byte unsigned integer for detection count.
+    ('char', 'code_char'),  # Single character code.
 ]
 
 
 def hex_to_struct(hex_data, struct_description):
+    """
+    Converts hex data to a structured format using a provided struct description.
+
+    Args:
+        hex_data: The hexadecimal string or bytes to be converted.
+        struct_description: A list of tuples, where each tuple defines the type
+                            and name of each field in the struct.
+
+    Returns:
+        A dictionary where keys are field names from the struct description and
+        values are the corresponding unpacked data.
+
+    Raises:
+        ValueError: If hex_data is neither a string nor bytes, or if the hex_data
+                    does not match the expected struct size.
+    """
     # Convert the hex data to bytes.
     if type(hex_data) is str:
         byte_data = bytes.fromhex(hex_data.strip())
@@ -31,32 +57,32 @@ def hex_to_struct(hex_data, struct_description):
         raise ValueError(f'unsupported hex_data type: {type(hex_data)}')
 
     # Create the format string for struct.unpack based on the struct description.
-    # '>' is used for big endian (the most significant byte is stored in the smallest address).
-    # '<' is used for little endian (the least significant byte is stored in the smallest address).
+    # Using little-endian ('<') for the format string.
     format_string = '<'
     for data_type, _ in struct_description:
+        # Mapping of data types to format codes for struct.unpack.
         if data_type == 'uint8_t':
-            format_string += 'B'  # B is the format code for unsigned char (1 byte)
+            format_string += 'B'  # Unsigned char (1 byte)
         elif data_type == 'uint16_t':
-            format_string += 'H'  # H is the format code for unsigned short (2 bytes)
+            format_string += 'H'  # Unsigned short (2 bytes)
         elif data_type == 'uint32_t':
-            format_string += 'I'  # I is the format code for unsigned int (4 bytes)
+            format_string += 'I'  # Unsigned int (4 bytes)
         elif data_type == 'uint64_t':
-            format_string += 'Q'  # Q is the format code for unsigned long long (8 bytes)
+            format_string += 'Q'  # Unsigned long long (8 bytes)
         elif data_type == 'int8_t':
-            format_string += 'b'  # b is the format code for signed char (1 byte)
+            format_string += 'b'  # Signed char (1 byte)
         elif data_type == 'int16_t':
-            format_string += 'h'  # h is the format code for signed short (2 bytes)
+            format_string += 'h'  # Signed short (2 bytes)
         elif data_type == 'int32_t':
-            format_string += 'i'  # i is the format code for signed int (4 bytes)
+            format_string += 'i'  # Signed int (4 bytes)
         elif data_type == 'int64_t':
-            format_string += 'q'  # q is the format code for signed long long (8 bytes)
+            format_string += 'q'  # Signed long long (8 bytes)
         elif data_type == 'float':
-            format_string += 'f'  # f is the format code for float (4 bytes)
+            format_string += 'f'  # Float (4 bytes)
         elif data_type == 'double':
-            format_string += 'd'  # d is the format code for double (8 bytes)
+            format_string += 'd'  # Double (8 bytes)
         elif data_type == 'char':
-            format_string += 'c'  # 'c' format code for a single character
+            format_string += 'c'  # Single character
         else:
             raise ValueError(f"Unsupported data type: {data_type}")
 
@@ -65,59 +91,37 @@ def hex_to_struct(hex_data, struct_description):
     if len(byte_data) != expected_size:
         raise ValueError(f"Expected {expected_size} bytes, but got {len(byte_data)} bytes")
 
-    # Unpack the data.
+    # Unpack the data from the byte array based on the format string.
     values = struct.unpack(format_string, byte_data)
 
-    # Convert the values to a dictionary based on the struct description.
+    # Convert the unpacked values into a dictionary with field names.
     result = {name: value for (_, name), value in zip(struct_description, values)}
 
     return result
 
 
-def parse_bm_raw_binary_message(raw_hex):
-    parsed_message = {}
-    fmt_hex = raw_hex if raw_hex.startswith("0x") else "0x" + raw_hex
-    bitstream = BitStream('0x' + fmt_hex)
-    message_type = bitstream.read('uint:8')
-    if message_type != 222:
-        print(f"Error! Expecting message of type 222, but received type {message_type}")
-        exit(1)
-    # internal header data
-    unused_header_data = bitstream.read('uint:126')
-    node_id_lower = int(bitstream.read('uint:32'))
-    node_id_upper = int(bitstream.read('uint:32'))
-    parsed_message['node_id'] = f"{((node_id_upper<<32)+node_id_lower):02X}"
-    # internal config data
-    unused_config_data = bitstream.read('uint:34')
-    sensor_data = bytearray()
-    while bitstream.bitpos <= (bitstream.len - 8):
-        sensor_data.append(bitstream.read('uint:8'))
+if __name__ == '__main__':
+    for payload in payloads:
+        # Create a bitstream from the hex payload, prefixing with '0x'.
+        bitstream = BitStream('0x' + payload)
 
-    if bitstream.bitpos != bitstream.len:
-        print(f"{bitstream.len - bitstream.bitpos} bits left in bitstream unparsed")
+        print(f"Decoding data: {bitstream}")
 
-    parsed_message['devkit_payload'] = sensor_data.hex()
-    return parsed_message
+        # Read the number of Rx-Live status polls received (4 bytes, little-endian).
+        sts_count = int(bitstream.read('uintle:32'))
+        print(f"- {sts_count} Rx-Live Status Polls received.")
 
+        # Process remaining bits in the bitstream to extract detection data.
+        while bitstream.pos < bitstream.len:
+            # Read the next 11 bytes representing detection data.
+            detect_data = bitstream.read('bytes:11')
 
-# TODO - get example of raw message with Rx-Live data.
-parsed_message = parse_bm_raw_binary_message("de650efb19d5d50a01f9e92d8725e978c62238e79d2bb12295b27781fc2b013b08b64167ec3b3e2b01747b64425b9d163f")
+            # Convert detection data from bytes to a structured format.
+            detection_data = hex_to_struct(detect_data, detect_struct_description)
 
-print("Parsed raw message:")
-for key in parsed_message:
-    print(f"\t{key}: {parsed_message[key]}")
+            # Print the unpacked detection data.
+            print(f"- Detection data:")
+            for key in detection_data:
+                print(f"\t{key}: {detection_data[key]}")
 
-for payload in payloads:
-    bitstream = BitStream('0x' + payload)
-
-    print(f"Decoding data: {bitstream}")
-
-    sts_count = int(bitstream.read('uintle:32'))
-    print(f"{sts_count} Rx-Live Status Polls received.")
-    while bitstream.pos < bitstream.len:
-        detect_data = bitstream.read('bytes:11')
-        detection_data = hex_to_struct(detect_data, detect_struct_description)
-        print(f"Detection data:")
-        for key in detection_data:
-            print(f"\t{key}: {detection_data[key]}")
-    print("---------------------------------\n")
+        print("---------------------------------\n")
