@@ -38,7 +38,7 @@ void RxLiveSensor::computeCCCode() {
   }
 
   _ccCode = sum; // Set the computed CC code to the sum of the digits
-  printf("%llut | Computed CC Code: %d for serial: %d\n", uptimeGetMs(), _ccCode,
+  printf("%llut | Computed CC Code: %u for serial: %u\n", uptimeGetMs(), _ccCode,
          _serial_number);
 }
 
@@ -46,16 +46,15 @@ void RxLiveSensor::computeCCCode() {
 void RxLiveSensor::txCommand(const RxLiveCommand &command) const {
   // Transmit the command buffer using PLUART, with serial number and ccCode
   char formattedCommand[64] = {0};
-  snprintf(formattedCommand, sizeof(formattedCommand), "*%06d.0#%02d,%s\r", _serial_number,
-           _ccCode, command.command_buffer);
+  snprintf(formattedCommand, sizeof(formattedCommand), "*%06u.0#%02u,%s\r",
+            _serial_number, _ccCode, command.command_buffer);
 
   const size_t commandLen = strlen(formattedCommand);
   PLUART::startTransaction();
   PLUART::write(reinterpret_cast<uint8_t *>(formattedCommand), commandLen);
   PLUART::endTransaction();
 
-  printf("%llut | Tx'd command: %s\n", uptimeGetMs(),
-         formattedCommand); // Debug print the command
+  printf("%llut | Tx'd command: %s\n", uptimeGetMs(), formattedCommand);
 }
 
 // Sends a wakes up the sensor then sends the specified command.
@@ -83,14 +82,14 @@ bool RxLiveSensor::sendCommand(RxLiveCommandType command_type) {
   _pending_command = foundCommand; // Store the found command as pending
   printf("%llut | Waking up sensor, then will send command: %s\n", uptimeGetMs(),
          _pending_command->command_buffer);
-  txCommand(rxLiveCommandSet[0]);  // Transmit the found command
+  txCommand(rxLiveCommandSet[0]);  // Transmit the STATUS command
   transitionToState(RX_LIVE_WAKE); // Change state to RX_LIVE_WAKE
   return true;
 }
 
 bool RxLiveSensor::validateResponseHeader(const char *rx_data) const {
   char headerBuffer[13] = {0};
-  snprintf(headerBuffer, sizeof(headerBuffer), "*%06d.0#%02d", _serial_number, _ccCode);
+  snprintf(headerBuffer, sizeof(headerBuffer), "*%06u.0#%02u", _serial_number, _ccCode);
   return strstr(rx_data, headerBuffer) != nullptr;
 }
 
@@ -205,12 +204,12 @@ RxLiveStatusCode RxLiveSensor::run(const uint8_t *rx_data, const size_t rx_len) 
         const Value tag_serial_no = _std_parser.getValue(4);
         const Value tag_code_space = _std_parser.getValue(3);
         if (tag_serial_no.type != TYPE_UINT64) {
-          printf("%llut | Parsed invalid tag_serial_no data type: %d\n", uptimeGetMs(),
+          printf("%llut | Parsed invalid tag_serial_no data type: %u\n", uptimeGetMs(),
                  tag_serial_no.type);
           return RX_CODE_DETECTION_FAIL;
         }
         if (tag_code_space.type != TYPE_STRING) {
-          printf("%llut | Parsed invalid tag_code_space data type: %d\n", uptimeGetMs(),
+          printf("%llut | Parsed invalid tag_code_space data type: %u\n", uptimeGetMs(),
                  tag_code_space.type);
           return RX_CODE_DETECTION_FAIL;
         }
