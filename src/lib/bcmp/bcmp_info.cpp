@@ -25,38 +25,30 @@ static BCMP_Linked_List_Generic INFO_REQUEST_LIST;
 static BmErr bcmp_send_info(void *dst) {
 
   BmErr err = BmENOMEM;
-  uint8_t ver_str_len = strlen(vers_str());
-  uint8_t dev_name_len = strlen(device_name());
-  uint16_t info_len = sizeof(BcmpDeviceInfoReply) + ver_str_len + dev_name_len;
-  uint8_t *buf = (uint8_t *)bm_malloc(info_len);
+  uint8_t version_string_len = strlen(version_string());
+  uint8_t device_name_len = strlen(device_name());
+  uint16_t info_len = sizeof(BcmpDeviceInfoReply) + version_string_len + device_name_len;
+  BcmpDeviceInfoReply *dev_info = (BcmpDeviceInfoReply *)bm_malloc(info_len);
 
-  if (buf) {
-    memset(buf, 0, info_len);
-
-    BcmpDeviceInfoReply *dev_info = (BcmpDeviceInfoReply *)buf;
+  if (dev_info) {
+    memset(dev_info, 0, info_len);
     dev_info->info.node_id = node_id();
-
-    // TODO - fill these with actual values
     dev_info->info.vendor_id = vendor_id();
     dev_info->info.product_id = product_id();
-
     dev_info->info.git_sha = git_sha();
+    dev_info->info.ver_hw = hardware_revision();
+    dev_info->ver_str_len = version_string_len;
+    dev_info->dev_name_len = device_name_len;
 
-    // TODO - get actual hardware version
-    dev_info->info.ver_hw = 0;
+    memcpy(&dev_info->strings[0], version_string(), version_string_len);
+    memcpy(&dev_info->strings[version_string_len], device_name(), device_name_len);
 
-    dev_info->ver_str_len = ver_str_len;
-    dev_info->dev_name_len = dev_name_len;
+    err = serial_number(dev_info->info.serial_num, member_size(BcmpDeviceInfo, serial_num));
+    bm_err_check(err, firmware_version(&dev_info->info.ver_major, &dev_info->info.ver_minor,
+                                       &dev_info->info.ver_rev));
+    bm_err_check(err, bcmp_tx(dst, BcmpDeviceInfoReplyMessage, (uint8_t *)dev_info, info_len));
 
-    memcpy(&dev_info->strings[0], vers_str(), ver_str_len);
-    memcpy(&dev_info->strings[ver_str_len], device_name(), dev_name_len);
-
-    err = sn(dev_info->info.serial_num, member_size(BcmpDeviceInfo, serial_num));
-    bm_err_check(err, vers(&dev_info->info.ver_major, &dev_info->info.ver_minor,
-                           &dev_info->info.ver_rev));
-    bm_err_check(err, bcmp_tx(dst, BcmpDeviceInfoReplyMessage, buf, info_len));
-
-    bm_free(buf);
+    bm_free(dev_info);
   }
 
   return err;

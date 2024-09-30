@@ -1,6 +1,5 @@
 #include <string.h>
 
-#include "app_util.h"
 #include "bcmp_info.h"
 #include "bcmp_neighbors.h"
 #include "bm_util.h"
@@ -66,10 +65,10 @@ void bcmp_neighbor_foreach(neighbor_callback_t cb) {
   }
 }
 
-static void _neighbor_check(bm_neighbor_t *neighbor) {
+static void neighbor_check(bm_neighbor_t *neighbor) {
   if (neighbor->online &&
-      !timeRemainingTicks(neighbor->last_heartbeat_ticks,
-                          pdMS_TO_TICKS(2 * neighbor->heartbeat_period_s * 1000))) {
+      !time_remaining(neighbor->last_heartbeat_ticks, bm_get_tick_count(),
+                      bm_ms_to_ticks(2 * neighbor->heartbeat_period_s * 1000))) {
     printf("🏚  Neighbor offline :'( %016" PRIx64 "\n", neighbor->node_id);
     if (NEIGHBOR_DISCOVERY_CB) {
       NEIGHBOR_DISCOVERY_CB(false, neighbor);
@@ -83,7 +82,7 @@ static void _neighbor_check(bm_neighbor_t *neighbor) {
 
   \return none
 */
-void bcmp_check_neighbors() { bcmp_neighbor_foreach(_neighbor_check); }
+void bcmp_check_neighbors() { bcmp_neighbor_foreach(neighbor_check); }
 
 /*!
   Add neighbor to neigbhor table

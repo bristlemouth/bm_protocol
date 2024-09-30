@@ -154,7 +154,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        err_t err;
+        BmErr err;
         if (!bcmp_config_get(node_id, partition, key_str_str_len, key_str, err)) {
           printf("Failed to send message config get\n");
         } else {
@@ -205,7 +205,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        err_t err;
+        BmErr err;
         size_t buffer_size = cfg::MAX_STR_LEN_BYTES;
         uint8_t *cbor_buf = static_cast<uint8_t *>(pvPortMalloc(buffer_size));
         configASSERT(cbor_buf);
@@ -306,7 +306,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        err_t err;
+        BmErr err;
         if (!bcmp_config_commit(node_id, partition, err)) {
           printf("Failed to send config commit\n");
         } else {
@@ -333,7 +333,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        err_t err;
+        BmErr err;
         if (!bcmp_config_status_request(node_id, partition, err)) {
           printf("Failed to send status request \n");
         } else {
@@ -417,11 +417,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       BaseType_t node_id_str_len = 0;
       node_id_str = FreeRTOS_CLIGetParameter(commandString, 2, &node_id_str_len);
       if (!node_id_str) {
-        bcmp_resource_discovery::bcmp_resource_discovery_print_resources();
+        bcmp_resource_discovery_print_resources();
         break;
       }
       uint64_t node_id = strtoull(node_id_str, NULL, 16);
-      if (!bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id)) {
+      if (!bcmp_resource_discovery_send_request(node_id)) {
         printf("Failed to send discovery request.\n");
       } else {
         printf("Sent discovery request to %016" PRIx64 "\n", node_id);
