@@ -181,13 +181,14 @@ BmErr bcmp_tx(const void *dst, BcmpMessageType type, uint8_t *data, uint16_t siz
   return err;
 }
 
-/*! \brief Forward the payload to all ports other than the ingress port.
+/*!
+  \brief Forward the payload to all ports other than the ingress port.
 
-    See section 5.4.4.2 of the Bristlemouth spec for details.
+  \details See section 5.4.4.2 of the Bristlemouth spec for details.
 
-    \param[in] pbuf Packet buffer to forward.
-    \param[in] ingress_port Port on which the packet was received.
-    \return ERR_OK on success, or an error that occurred.
+  \param[in] pbuf Packet buffer to forward.
+  \param[in] ingress_port Port on which the packet was received.
+  \return ERR_OK on success, or an error that occurred.
 */
 BmErr bcmp_ll_forward(BcmpHeader *header, void *payload, uint32_t size, uint8_t ingress_port) {
   uint8_t port_specific_dst[sizeof(multicast_ll_addr)];
@@ -255,7 +256,7 @@ BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configurat
 
   bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
   bcmp_config_init(user_cfg, sys_cfg);
-  bcmp_resource_discovery::bcmp_resource_discovery_init();
+  bcmp_resource_discovery_init();
 
   return bm_task_create(bcmp_thread, "BCMP", 1024, NULL, BCMP_TASK_PRIORITY, NULL);
 }
