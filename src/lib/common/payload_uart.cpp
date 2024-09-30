@@ -56,10 +56,8 @@ void enableTransactions(HardwareControlFunc preTxFunc, HardwareControlFunc postT
 // Start a Tx transaction
 // TODO - return false if transaction already started?
 void startTransaction() {
-  taskENTER_CRITICAL();
   _transactionInProgress = true;
   _writeDuringTransaction = false;
-  taskEXIT_CRITICAL();
   if (_preTxFunction) {
     _preTxFunction(); // External start transaction function. Eg, enable Tx for Half-Duplex
   }
@@ -73,30 +71,21 @@ TODO - If users have multiple tasks interacting with PLUART transactions,
        this will heavily bork. This is not a currently supported use case.
  **/
 bool endTransaction(uint32_t wait_ms) {
-  taskENTER_CRITICAL();
   // If not in a transaction, bail and tell the user.
   if (!_transactionInProgress) {
-    taskEXIT_CRITICAL();
     return false;
   }
-
-  // If there were no writes during the transaction, don't wait for write complete semaphore token.
+  // transaction is in progress, and need to call _postTxFunction when writing is complete.
+  _transactionInProgress = false;
+  // If there were no writes during the transaction, don't wait for writes to complete.
   if (!_writeDuringTransaction) {
-    _transactionInProgress = false;
-    taskEXIT_CRITICAL();
     if (_postTxFunction != nullptr) _postTxFunction(); // Safely call the function
     return true;
   }
-
-  // transaction is in progress, and need to call _postTxFunction when writing is complete.
-  _transactionInProgress = false;
-  taskEXIT_CRITICAL();
-
-  // Exit ciritcal while we wait for final write to complete.
   // After each transmission compeltes, TC interrupt will call pluartPostTransactionCb,
   //    which will give a token to the semaphore.
-  // Each subsequent write inside the transaction will take from the semaphore,
-  //    so only the final write will leave a token available here.
+  // Each subsequent write inside of the transaction will take the token,
+  //    so only the completion of the final Tx transmission will leave a token available here.
   bool ret_value = true;
   if (xSemaphoreTake(_postTxSemaphore, pdMS_TO_TICKS(wait_ms)) == pdFALSE) {
     // Failed to take sempaphore within transaction timeout
