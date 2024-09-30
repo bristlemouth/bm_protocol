@@ -127,7 +127,19 @@ BmErr time_init(void) {
   BcmpPacketCfg time_request = {
       false,
       false,
-      bcmp_time_process_time_message,
+      bcmp_time_process_time_request_msg,
+  };
+
+  BcmpPacketCfg time_response = {
+      false,
+      false,
+      bcmp_time_process_time_response_msg,
+  };
+
+  BcmpPacketCfg time_set = {
+      false,
+      false,
+      bcmp_time_process_time_set_msg,
   };
 
   // TODO - handle the errors better
