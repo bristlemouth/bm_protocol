@@ -9,8 +9,17 @@ extern "C" {
 #include "packet.h"
 }
 
-bool bcmp_time_set_time(uint64_t target_node_id, uint64_t utc_us) {
-  bool ret = true;
+/*!
+ @brief Sets the system time on a target node.
+
+ This function sends a system time set message to the specified target node.
+
+ @param[in] target_node_id The ID of the target node.
+ @param[in] utc_us The UTC time in microseconds to set on the target node.
+ @return BmOK if the message was sent successfully, BmEINVAL otherwise.
+ */
+BmErr bcmp_time_set_time(uint64_t target_node_id, uint64_t utc_us) {
+  BmErr err = BmOK;
   uint64_t source_node_id = getNodeId();
   BcmpSystemTimeSet set_msg;
   set_msg.header.target_node_id = target_node_id;
@@ -19,13 +28,21 @@ bool bcmp_time_set_time(uint64_t target_node_id, uint64_t utc_us) {
   if (bcmp_tx(&multicast_ll_addr, BcmpSystemTimeSetMessage, (uint8_t *)&set_msg,
               sizeof(set_msg)) != BmOK) {
     printf("Failed to send system time response\n");
-    ret = false;
+    err = BmEINVAL;
   }
-  return ret;
+  return err;
 }
 
-bool bcmp_time_get_time(uint64_t target_node_id) {
-  bool ret = true;
+/*!
+ @brief Gets the system time from a target node.
+
+ This function sends a system time get message to the specified target node.
+
+ @param[in] target_node_id The ID of the target node.
+ @return BmErr if the message was sent successfully, BmEINVAL otherwise.
+ */
+BmErr bcmp_time_get_time(uint64_t target_node_id) {
+  BmErr err = BmOK;
   uint64_t source_node_id = getNodeId();
   BcmpSystemTimeRequest get_msg;
   get_msg.header.target_node_id = target_node_id;
@@ -33,11 +50,19 @@ bool bcmp_time_get_time(uint64_t target_node_id) {
   if (bcmp_tx(&multicast_ll_addr, BcmpSystemTimeRequestMessage, (uint8_t *)&get_msg,
               sizeof(get_msg)) != BmOK) {
     printf("Failed to send system time response\n");
-    ret = false;
+    err = BmEINVAL;
   }
-  return ret;
+  return err;
 }
 
+/*!
+ @brief Sends a system time response message.
+
+ This function sends a system time response message to the specified target node.
+
+ @param[in] target_node_id The ID of the target node.
+ @param[in] utc_us The UTC time in microseconds to send in the response.
+ */
 static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
   uint64_t source_node_id = getNodeId();
   BcmpSystemTimeResponse response;
@@ -50,8 +75,14 @@ static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
   }
 }
 
+/*!
+  @brief Processes a system time request message.
+
+  This function processes a system time request message and sends a response with the current system time.
+
+  @param[in] msg The system time request message to process.
+*/
 static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg) {
-  configASSERT(msg);
   do {
     RTCTimeAndDate_t time;
     if (rtcGet(&time) != pdPASS) {
@@ -62,8 +93,14 @@ static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg)
   } while (0);
 }
 
+/*!
+  @brief Processes a system time set message.
+
+  This function processes a system time set message and sets the system time to the specified value.
+
+  @param[in] msg The system time set message to process.
+*/
 static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
-  configASSERT(msg);
   utcDateTime_t datetime;
   dateTimeFromUtc(msg->utc_time_us, &datetime);
   RTCTimeAndDate_t time = {// TODO: Consolidate the time functions into util.h
@@ -79,9 +116,15 @@ static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
 }
 
 /*!
-    \return true if the caller should forward the message, false if the message was handled
+    @brief Process all of the system time messages
+
+    This function processes all of the system time messages. It will handle time requests, responses, and setting the time.
+    It will also forward messages to the correct node if the target node ID is not the current node.
+
+    @param[in] data The data to process.
+    @return BmOK if the message was processed successfully, BmEINVAL otherwise.
 */
-BmErr bcmp_time_process_time_message(BcmpProcessData data) {
+static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
   BmErr err = BmEINVAL;
   bool should_forward = false;
   do {
