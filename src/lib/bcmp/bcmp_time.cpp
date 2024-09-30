@@ -81,36 +81,42 @@ static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
 /*!
     \return true if the caller should forward the message, false if the message was handled
 */
-bool bcmp_time_process_time_message(BcmpMessageType bcmp_msg_type, uint8_t *payload) {
+BmErr bcmp_time_process_time_message(BcmpProcessData data) {
+  BmErr err = BmEINVAL;
   bool should_forward = false;
   do {
-    BcmpSystemTimeHeader *msg_header = (BcmpSystemTimeHeader *)payload;
+    BcmpMessageType time_msg_type = (BcmpMessageType)data.header->type;
+    BcmpSystemTimeHeader *msg_header = (BcmpSystemTimeHeader *)data.payload;
     if (msg_header->target_node_id != getNodeId() && msg_header->target_node_id != 0) {
       should_forward = true;
       break;
     }
-    switch (bcmp_msg_type) {
+    switch (time_msg_type) {
     case BcmpSystemTimeRequestMessage: {
       if (msg_header->target_node_id != getNodeId()) {
         break;
       }
-      bcmp_time_process_time_request_msg((BcmpSystemTimeRequest *)payload);
+      bcmp_time_process_time_request_msg((BcmpSystemTimeRequest *)data.payload);
+      err = BmOK;
       break;
     }
     case BcmpSystemTimeResponseMessage: {
       if (msg_header->target_node_id != getNodeId()) {
         break;
       }
-      BcmpSystemTimeResponse *resp = (BcmpSystemTimeResponse *)payload;
+      BcmpSystemTimeResponse *resp = (BcmpSystemTimeResponse *)data.payload;
       utcDateTime_t datetime;
+      // TODO - make this an abstraction
       dateTimeFromUtc(resp->utc_time_us, &datetime);
       printf("Response time node ID: %016" PRIx64 " to %d/%d/%d %02d:%02d:%02d.%03" PRIu32 "\n",
              resp->header.source_node_id, datetime.year, datetime.month, datetime.day,
              datetime.hour, datetime.min, datetime.sec, datetime.usec);
+      err = BmOK;
       break;
     }
     case BcmpSystemTimeSetMessage: {
-      bcmp_time_process_time_set_msg((BcmpSystemTimeSet *)payload);
+      bcmp_time_process_time_set_msg((BcmpSystemTimeSet *)data.payload);
+      err = BmOK;
       break;
     }
     default:
@@ -119,7 +125,12 @@ bool bcmp_time_process_time_message(BcmpMessageType bcmp_msg_type, uint8_t *payl
     }
   } while (0);
 
-  return should_forward;
+  if (should_forward) {
+    bcmp_ll_forward(data.header, data.payload, data.size, data.ingress_port);
+    err = BmOK;
+  }
+
+  return err;
 }
 
 BmErr time_init(void) {
@@ -127,20 +138,20 @@ BmErr time_init(void) {
   BcmpPacketCfg time_request = {
       false,
       false,
-      bcmp_time_process_time_request_msg,
+      bcmp_time_process_time_message,
   };
 
-  BcmpPacketCfg time_response = {
-      false,
-      false,
-      bcmp_time_process_time_response_msg,
-  };
+  // BcmpPacketCfg time_response = {
+  //     false,
+  //     false,
+  //     bcmp_time_process_time_message,
+  // };
 
-  BcmpPacketCfg time_set = {
-      false,
-      false,
-      bcmp_time_process_time_set_msg,
-  };
+  // BcmpPacketCfg time_set = {
+  //     false,
+  //     false,
+  //     bcmp_time_process_time_message,
+  // };
 
   // TODO - handle the errors better
   err = packet_add(&time_request, BcmpSystemTimeRequestMessage);
