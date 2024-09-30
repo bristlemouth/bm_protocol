@@ -141,18 +141,6 @@ BmErr time_init(void) {
       bcmp_time_process_time_message,
   };
 
-  // BcmpPacketCfg time_response = {
-  //     false,
-  //     false,
-  //     bcmp_time_process_time_message,
-  // };
-
-  // BcmpPacketCfg time_set = {
-  //     false,
-  //     false,
-  //     bcmp_time_process_time_message,
-  // };
-
   // TODO - handle the errors better
   err = packet_add(&time_request, BcmpSystemTimeRequestMessage);
   if (err != BmOK) {
