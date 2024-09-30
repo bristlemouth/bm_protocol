@@ -1,81 +1,75 @@
 #include "bcmp_resource_discovery.h"
-#include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bcmp_linked_list_generic.h"
 #include "bm_util.h"
-#include "device_info.h"
-#include "semphr.h"
 #include "string.h"
 #include <stdlib.h>
+extern "C" {
+#include "bm_os.h"
+#include "packet.h"
+}
 
-using namespace bcmp_resource_discovery;
+typedef struct BcmpResourceNode {
+  BcmpResource *resource;
+  BcmpResourceNode *next;
+} BcmpResourceNode;
 
-typedef struct bcmp_resource_node_t {
-  bcmp_resource_t *resource;
-  bcmp_resource_node_t *next;
-} bcmp_resource_node_t;
-
-typedef struct bcmp_resource_list_t {
-  bcmp_resource_node_t *start;
-  bcmp_resource_node_t *end;
+typedef struct BcmpResourceList {
+  BcmpResourceNode *start;
+  BcmpResourceNode *end;
   uint16_t num_resources;
-  SemaphoreHandle_t lock;
-} bcmp_resource_list_t;
+  BmSemaphore lock;
+} BcmpResourceList;
 
-static bcmp_resource_list_t _pub_list;
-static bcmp_resource_list_t _sub_list;
+static BcmpResourceList PUB_LIST;
+static BcmpResourceList SUB_LIST;
+static BCMP_Linked_List_Generic RESOURCE_REQUEST_LIST;
 
-static BCMP_Linked_List_Generic _resource_request_list;
+static bool bcmp_resource_discovery_find_resource(const char *resource,
+                                                  const uint16_t resource_len,
+                                                  ResourceType type);
+static bool bcmp_resource_compute_list_size(ResourceType type, size_t &msg_len);
+static bool bcmp_resource_populate_msg_data(ResourceType type, BcmpResourceTableReply *repl,
+                                            uint32_t &data_offset);
 
-static bool _bcmp_resource_discovery_find_resource(const char *resource,
-                                                   const uint16_t resource_len,
-                                                   resource_type_e type);
-static bool _bcmp_resource_compute_list_size(resource_type_e type, size_t &msg_len);
-static bool _bcmp_resource_populate_msg_data(resource_type_e type,
-                                             bcmp_resource_table_reply_t *repl,
-                                             uint32_t &data_offset);
-
-static bool _bcmp_resource_compute_list_size(resource_type_e type, size_t &msg_len) {
+static bool bcmp_resource_compute_list_size(ResourceType type, size_t &msg_len) {
   bool rval = false;
-  bcmp_resource_list_t *res_list = (type == SUB) ? &_sub_list : &_pub_list;
-  if (xSemaphoreTake(res_list->lock, pdMS_TO_TICKS(DEFAULT_RESOURCE_ADD_TIMEOUT_MS)) ==
-      pdPASS) {
+  BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
+  if (bm_semaphore_take(res_list->lock, DEFAULT_RESOURCE_ADD_TIMEOUT_MS) == pdPASS) {
     do {
-      bcmp_resource_node_t *cur = res_list->start;
+      BcmpResourceNode *cur = res_list->start;
       while (cur != NULL) {
-        msg_len += (sizeof(bcmp_resource_t) + cur->resource->resource_len);
+        msg_len += (sizeof(BcmpResource) + cur->resource->resource_len);
         cur = cur->next;
       }
       rval = true;
     } while (0);
-    xSemaphoreGive(res_list->lock);
+    bm_semaphore_give(res_list->lock);
   }
   return rval;
 }
 
-static bool _bcmp_resource_populate_msg_data(resource_type_e type,
-                                             bcmp_resource_table_reply_t *repl,
-                                             uint32_t &data_offset) {
+static bool bcmp_resource_populate_msg_data(ResourceType type, BcmpResourceTableReply *repl,
+                                            uint32_t &data_offset) {
   bool rval = false;
-  bcmp_resource_list_t *res_list = (type == SUB) ? &_sub_list : &_pub_list;
-  if (xSemaphoreTake(res_list->lock, pdMS_TO_TICKS(DEFAULT_RESOURCE_ADD_TIMEOUT_MS)) ==
-      pdPASS) {
+  BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
+  if (bm_semaphore_take(res_list->lock, DEFAULT_RESOURCE_ADD_TIMEOUT_MS) == pdPASS) {
     do {
       if (type == PUB) {
         repl->num_pubs = res_list->num_resources;
       } else { // SUB
         repl->num_subs = res_list->num_resources;
       }
-      bcmp_resource_node_t *cur = res_list->start;
+      BcmpResourceNode *cur = res_list->start;
       while (cur != NULL) {
-        size_t res_size = (sizeof(bcmp_resource_t) + cur->resource->resource_len);
+        size_t res_size = (sizeof(BcmpResource) + cur->resource->resource_len);
         memcpy(&repl->resource_list[data_offset], cur->resource, res_size);
         data_offset += res_size;
         cur = cur->next;
       }
       rval = true;
     } while (0);
-    xSemaphoreGive(res_list->lock);
+    bm_semaphore_give(res_list->lock);
   }
   return rval;
 }
@@ -87,43 +81,45 @@ static bool _bcmp_resource_populate_msg_data(resource_type_e type,
   \param in *dst - destination IP to reply to.
   \return - None
 */
-void bcmp_resource_discovery::bcmp_process_resource_discovery_request(
-    bcmp_resource_table_request_t *req, const ip_addr_t *dst) {
-  do {
-    if (req->target_node_id != getNodeId()) {
-      break;
-    }
-    size_t msg_len = sizeof(bcmp_resource_table_reply_t);
-    if (!_bcmp_resource_compute_list_size(PUB, msg_len)) {
+static BmErr bcmp_process_resource_discovery_request(BcmpProcessData data) {
+  BmErr err = BmEBADMSG;
+  BcmpResourceTableRequest *req = (BcmpResourceTableRequest *)data.payload;
+  if (req->target_node_id == node_id()) {
+    size_t msg_len = sizeof(BcmpResourceTableReply);
+    if (!bcmp_resource_compute_list_size(PUB, msg_len)) {
       printf("Failed to get publishers list\n.");
-      break;
+      return err;
     }
-    if (!_bcmp_resource_compute_list_size(SUB, msg_len)) {
+    if (!bcmp_resource_compute_list_size(SUB, msg_len)) {
       printf("Failed to get subscribers list\n.");
-      break;
+      return err;
     }
     // Create and fill the reply
     uint8_t *reply_buf = static_cast<uint8_t *>(pvPortMalloc(msg_len));
-    configASSERT(reply_buf);
-    do {
-      bcmp_resource_table_reply_t *repl =
-          reinterpret_cast<bcmp_resource_table_reply_t *>(reply_buf);
-      repl->node_id = getNodeId();
-      uint32_t data_offset = 0;
-      if (!_bcmp_resource_populate_msg_data(PUB, repl, data_offset)) {
-        printf("Failed to get publishers list\n.");
-        break;
-      }
-      if (!_bcmp_resource_populate_msg_data(SUB, repl, data_offset)) {
-        printf("Failed to get publishers list\n.");
-        break;
-      }
-      if (bcmp_tx(dst, BcmpResourceTableReplyMessage, reply_buf, msg_len) != BmOK) {
-        printf("Failed to send bcmp resource table reply\n");
-      }
-    } while (0);
-    vPortFree(reply_buf);
-  } while (0);
+    if (reply_buf) {
+      do {
+        BcmpResourceTableReply *repl = (BcmpResourceTableReply *)reply_buf;
+        repl->node_id = node_id();
+        uint32_t data_offset = 0;
+        if (!bcmp_resource_populate_msg_data(PUB, repl, data_offset)) {
+          printf("Failed to get publishers list\n.");
+          break;
+        }
+        if (!bcmp_resource_populate_msg_data(SUB, repl, data_offset)) {
+          printf("Failed to get publishers list\n.");
+          break;
+        }
+        if (bcmp_tx(data.dst, BcmpResourceTableReplyMessage, reply_buf, msg_len) != BmOK) {
+          printf("Failed to send bcmp resource table reply\n");
+        } else {
+          err = BmOK;
+        }
+      } while (0);
+      bm_free(reply_buf);
+    }
+  }
+
+  return err;
 }
 
 /*!
@@ -133,13 +129,13 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_request(
   \param in src_node_id - node ID of the source.
   \return - None
 */
-void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(
-    bcmp_resource_table_reply_t *repl, uint64_t src_node_id) {
-  do {
-    if (repl->node_id != src_node_id) {
-      break;
-    }
-    bcmp_ll_element_t *element = _resource_request_list.find(src_node_id);
+static BmErr bcmp_process_resource_discovery_reply(BcmpProcessData data) {
+  BmErr err = BmEBADMSG;
+  BcmpResourceTableReply *repl = (BcmpResourceTableReply *)data.payload;
+  uint64_t src_node_id = ip_to_nodeid(data.src);
+  if (repl->node_id == src_node_id) {
+    bcmp_ll_element_t *element = RESOURCE_REQUEST_LIST.find(src_node_id);
+
     if ((element != NULL) && (element->fp != NULL)) {
       element->fp(repl);
     } else {
@@ -148,26 +144,27 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(
       size_t offset = 0;
       printf("\tPublishers:\n");
       while (num_pubs) {
-        bcmp_resource_t *cur_resource =
-            reinterpret_cast<bcmp_resource_t *>(&repl->resource_list[offset]);
+        BcmpResource *cur_resource = (BcmpResource *)&repl->resource_list[offset];
         printf("\t* %.*s\n", cur_resource->resource_len, cur_resource->resource);
-        offset += (sizeof(bcmp_resource_t) + cur_resource->resource_len);
+        offset += (sizeof(BcmpResource) + cur_resource->resource_len);
         num_pubs--;
       }
       uint16_t num_subs = repl->num_subs;
       printf("\tSubscribers:\n");
       while (num_subs) {
-        bcmp_resource_t *cur_resource =
-            reinterpret_cast<bcmp_resource_t *>(&repl->resource_list[offset]);
+        BcmpResource *cur_resource = (BcmpResource *)&repl->resource_list[offset];
         printf("\t* %.*s\n", cur_resource->resource_len, cur_resource->resource);
-        offset += (sizeof(bcmp_resource_t) + cur_resource->resource_len);
+        offset += (sizeof(BcmpResource) + cur_resource->resource_len);
         num_subs--;
       }
+      err = BmOK;
     }
     if (element != NULL) {
-      _resource_request_list.remove(element);
+      RESOURCE_REQUEST_LIST.remove(element);
     }
-  } while (0);
+  }
+
+  return err;
 }
 
 /*!
@@ -175,17 +172,33 @@ void bcmp_resource_discovery::bcmp_process_resource_discovery_reply(
 
   \return - None
 */
-void bcmp_resource_discovery::bcmp_resource_discovery_init(void) {
-  _pub_list.start = NULL;
-  _pub_list.end = NULL;
-  _pub_list.num_resources = 0;
-  _pub_list.lock = xSemaphoreCreateMutex();
-  configASSERT(_pub_list.lock);
-  _sub_list.start = NULL;
-  _sub_list.end = NULL;
-  _sub_list.num_resources = 0;
-  _sub_list.lock = xSemaphoreCreateMutex();
-  configASSERT(_sub_list.lock);
+BmErr bcmp_resource_discovery_init(void) {
+  BmErr err = BmENOMEM;
+  BcmpPacketCfg resource_request = {
+      false,
+      false,
+      bcmp_process_resource_discovery_request,
+  };
+  BcmpPacketCfg resource_reply = {
+      false,
+      false,
+      bcmp_process_resource_discovery_reply,
+  };
+
+  PUB_LIST.start = NULL;
+  PUB_LIST.end = NULL;
+  PUB_LIST.num_resources = 0;
+  PUB_LIST.lock = bm_semaphore_create();
+  SUB_LIST.start = NULL;
+  SUB_LIST.end = NULL;
+  SUB_LIST.num_resources = 0;
+  SUB_LIST.lock = bm_semaphore_create();
+  if (PUB_LIST.lock && SUB_LIST.lock) {
+    err = BmOK;
+  }
+  bm_err_check(err, packet_add(&resource_request, BcmpResourceTableReplyMessage));
+  bm_err_check(err, packet_add(&resource_reply, BcmpResourceTableReplyMessage));
+  return err;
 }
 
 /*!
@@ -198,44 +211,41 @@ void bcmp_resource_discovery::bcmp_resource_discovery_init(void) {
   \param in timeoutMs - how long to wait to add resource in milliseconds.
   \return - true on success, false otherwise
 */
-bool bcmp_resource_discovery::bcmp_resource_discovery_add_resource(const char *res,
-                                                                   const uint16_t resource_len,
-                                                                   resource_type_e type,
-                                                                   uint32_t timeoutMs) {
+bool bcmp_resource_discovery_add_resource(const char *res, const uint16_t resource_len,
+                                          ResourceType type, uint32_t timeoutMs) {
   bool rval = false;
-  bcmp_resource_list_t *res_list = (type == SUB) ? &_sub_list : &_pub_list;
-  if (xSemaphoreTake(res_list->lock, pdMS_TO_TICKS(timeoutMs)) == pdPASS) {
+  BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
+  if (bm_semaphore_take(res_list->lock, timeoutMs) == pdPASS) {
     do {
       // Check for resource
-      if (_bcmp_resource_discovery_find_resource(res, resource_len, type)) {
+      if (bcmp_resource_discovery_find_resource(res, resource_len, type)) {
         // Already in list.
         break;
       }
       // Build resouce
-      size_t resource_size = sizeof(bcmp_resource_t) + resource_len;
-      uint8_t *resource_buffer = reinterpret_cast<uint8_t *>(pvPortMalloc(resource_size));
-      configASSERT(resource_buffer);
-      bcmp_resource_t *resource = reinterpret_cast<bcmp_resource_t *>(resource_buffer);
+      size_t resource_size = sizeof(BcmpResource) + resource_len;
+      uint8_t *resource_buffer = (uint8_t *)bm_malloc(resource_size);
+      BcmpResource *resource = (BcmpResource *)resource_buffer;
       resource->resource_len = resource_len;
       memcpy(resource->resource, res, resource_len);
 
       // Build Node
-      bcmp_resource_node_t *resource_node =
-          reinterpret_cast<bcmp_resource_node_t *>(pvPortMalloc(sizeof(bcmp_resource_node_t)));
-      configASSERT(resource_node);
-      resource_node->resource = resource;
-      resource_node->next = NULL;
-      // Add node to list
-      if (res_list->start == NULL) { // First resource
-        res_list->start = resource_node;
-      } else { // 2nd+ resource
-        res_list->end->next = resource_node;
+      BcmpResourceNode *resource_node = (BcmpResourceNode *)bm_malloc(sizeof(BcmpResourceNode));
+      if (resource_node) {
+        resource_node->resource = resource;
+        resource_node->next = NULL;
+        // Add node to list
+        if (res_list->start == NULL) { // First resource
+          res_list->start = resource_node;
+        } else { // 2nd+ resource
+          res_list->end->next = resource_node;
+        }
+        res_list->end = resource_node;
+        res_list->num_resources++;
+        rval = true;
       }
-      res_list->end = resource_node;
-      res_list->num_resources++;
-      rval = true;
     } while (0);
-    xSemaphoreGive(res_list->lock);
+    bm_semaphore_give(res_list->lock);
   }
   return rval;
 }
@@ -248,15 +258,14 @@ bool bcmp_resource_discovery::bcmp_resource_discovery_add_resource(const char *r
   \param in timeoutMs - how long to wait to add resource in milliseconds.
   \return - true on success, false otherwise
 */
-bool bcmp_resource_discovery::bcmp_resource_discovery_get_num_resources(uint16_t &num_resources,
-                                                                        resource_type_e type,
-                                                                        uint32_t timeoutMs) {
+bool bcmp_resource_discovery_get_num_resources(uint16_t &num_resources, ResourceType type,
+                                               uint32_t timeoutMs) {
   bool rval = false;
-  bcmp_resource_list_t *res_list = (type == SUB) ? &_sub_list : &_pub_list;
-  if (xSemaphoreTake(res_list->lock, pdMS_TO_TICKS(timeoutMs)) == pdPASS) {
+  BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
+  if (bm_semaphore_take(res_list->lock, timeoutMs) == pdPASS) {
     num_resources = res_list->num_resources;
     rval = true;
-    xSemaphoreGive(res_list->lock);
+    bm_semaphore_give(res_list->lock);
   }
   return rval;
 }
@@ -271,17 +280,14 @@ bool bcmp_resource_discovery::bcmp_resource_discovery_get_num_resources(uint16_t
   \param in timeoutMs - how long to wait to add resource in milliseconds.
   \return - true on success, false otherwise
 */
-bool bcmp_resource_discovery::bcmp_resource_discovery_find_resource(const char *res,
-                                                                    const uint16_t resource_len,
-                                                                    bool &found,
-                                                                    resource_type_e type,
-                                                                    uint32_t timeoutMs) {
+bool bcmp_resource_discovery_find_resource(const char *res, const uint16_t resource_len,
+                                           bool &found, ResourceType type, uint32_t timeoutMs) {
   bool rval = false;
-  bcmp_resource_list_t *res_list = (type == SUB) ? &_sub_list : &_pub_list;
-  if (xSemaphoreTake(res_list->lock, pdMS_TO_TICKS(timeoutMs)) == pdPASS) {
-    found = _bcmp_resource_discovery_find_resource(res, resource_len, type);
+  BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
+  if (bm_semaphore_take(res_list->lock, timeoutMs) == pdPASS) {
+    found = bcmp_resource_discovery_find_resource(res, resource_len, type);
     rval = true;
-    xSemaphoreGive(res_list->lock);
+    bm_semaphore_give(res_list->lock);
   }
   return rval;
 }
@@ -292,19 +298,18 @@ bool bcmp_resource_discovery::bcmp_resource_discovery_find_resource(const char *
   \param in target_node_id - requested node id
   \return - true on success, false otherwise
 */
-bool bcmp_resource_discovery::bcmp_resource_discovery_send_request(uint64_t target_node_id,
-                                                                   void (*fp)(void *)) {
+bool bcmp_resource_discovery_send_request(uint64_t target_node_id, void (*fp)(void *)) {
   bool rval = false;
   do {
-    bcmp_resource_table_request_t req = {
+    BcmpResourceTableRequest req = {
         .target_node_id = target_node_id,
     };
-    if (bcmp_tx(&multicast_ll_addr, BcmpResourceTableRequestMessage,
-                reinterpret_cast<uint8_t *>(&req), sizeof(req)) != BmOK) {
+    if (bcmp_tx(&multicast_ll_addr, BcmpResourceTableRequestMessage, (uint8_t *)&req,
+                sizeof(req)) != BmOK) {
       printf("Failed to send bcmp resource table request\n");
       break;
     }
-    _resource_request_list.add(target_node_id, fp);
+    RESOURCE_REQUEST_LIST.add(target_node_id, fp);
     rval = true;
   } while (0);
   return rval;
@@ -315,46 +320,44 @@ bool bcmp_resource_discovery::bcmp_resource_discovery_send_request(uint64_t targ
 
   \return - None
 */
-void bcmp_resource_discovery::bcmp_resource_discovery_print_resources(void) {
+void bcmp_resource_discovery_print_resources(void) {
   printf("Resource table:\n");
-  if (_pub_list.num_resources &&
-      xSemaphoreTake(_pub_list.lock, pdMS_TO_TICKS(DEFAULT_RESOURCE_ADD_TIMEOUT_MS)) ==
-          pdPASS) {
+  if (PUB_LIST.num_resources &&
+      bm_semaphore_take(PUB_LIST.lock, DEFAULT_RESOURCE_ADD_TIMEOUT_MS) == pdPASS) {
     printf("\tPubs:\n");
-    uint16_t num_items = _pub_list.num_resources;
-    bcmp_resource_node_t *cur_resource_node = _pub_list.start;
+    uint16_t num_items = PUB_LIST.num_resources;
+    BcmpResourceNode *cur_resource_node = PUB_LIST.start;
     while (num_items && cur_resource_node) {
       printf("\t* %.*s\n", cur_resource_node->resource->resource_len,
              cur_resource_node->resource->resource);
       cur_resource_node = cur_resource_node->next;
       num_items--;
     }
-    xSemaphoreGive(_pub_list.lock);
+    bm_semaphore_give(PUB_LIST.lock);
   }
-  if (_sub_list.num_resources &&
-      xSemaphoreTake(_sub_list.lock, pdMS_TO_TICKS(DEFAULT_RESOURCE_ADD_TIMEOUT_MS)) ==
-          pdPASS) {
+  if (SUB_LIST.num_resources &&
+      bm_semaphore_take(SUB_LIST.lock, DEFAULT_RESOURCE_ADD_TIMEOUT_MS) == pdPASS) {
     printf("\tSubs:\n");
-    uint16_t num_items = _sub_list.num_resources;
-    bcmp_resource_node_t *cur_resource_node = _sub_list.start;
+    uint16_t num_items = SUB_LIST.num_resources;
+    BcmpResourceNode *cur_resource_node = SUB_LIST.start;
     while (num_items && cur_resource_node) {
       printf("\t* %.*s\n", cur_resource_node->resource->resource_len,
              cur_resource_node->resource->resource);
       cur_resource_node = cur_resource_node->next;
       num_items--;
     }
-    xSemaphoreGive(_sub_list.lock);
+    bm_semaphore_give(SUB_LIST.lock);
   }
 }
 
 // TODO: Make this a table for faster lookup.
-static bool _bcmp_resource_discovery_find_resource(const char *resource,
-                                                   const uint16_t resource_len,
-                                                   resource_type_e type) {
+static bool bcmp_resource_discovery_find_resource(const char *resource,
+                                                  const uint16_t resource_len,
+                                                  ResourceType type) {
   bool rval = false;
-  bcmp_resource_list_t *res_list = (type == SUB) ? &_sub_list : &_pub_list;
+  BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
   do {
-    bcmp_resource_node_t *cur = res_list->start;
+    BcmpResourceNode *cur = res_list->start;
     while (cur) {
       if (memcmp(resource, cur->resource->resource, resource_len) == 0) {
         return true;
@@ -370,39 +373,39 @@ static bool _bcmp_resource_discovery_find_resource(const char *resource,
 
   \return - pointer to the resource table reply, caller is responsible for freeing the memory.
 */
-bcmp_resource_table_reply_t *
-bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources(void) {
+BcmpResourceTableReply *bcmp_resource_discovery_get_local_resources(void) {
   bool success = false;
-  bcmp_resource_table_reply_t *reply_rval = NULL;
-  size_t msg_len = sizeof(bcmp_resource_table_reply_t);
+  BcmpResourceTableReply *reply_rval = NULL;
+  size_t msg_len = sizeof(BcmpResourceTableReply);
   do {
-    if (!_bcmp_resource_compute_list_size(PUB, msg_len)) {
+    if (!bcmp_resource_compute_list_size(PUB, msg_len)) {
       printf("Failed to get publishers list\n.");
       break;
     }
-    if (!_bcmp_resource_compute_list_size(SUB, msg_len)) {
+    if (!bcmp_resource_compute_list_size(SUB, msg_len)) {
       printf("Failed to get subscribers list\n.");
       break;
     }
     // Create and fill the reply
-    reply_rval = static_cast<bcmp_resource_table_reply_t *>(pvPortMalloc(msg_len));
-    configASSERT(reply_rval);
-    reply_rval->node_id = getNodeId();
-    uint32_t data_offset = 0;
-    if (!_bcmp_resource_populate_msg_data(PUB, reply_rval, data_offset)) {
-      printf("Failed to populate publishers list\n.");
-      break;
+    reply_rval = (BcmpResourceTableReply *)bm_malloc(msg_len);
+    if (reply_rval) {
+      reply_rval->node_id = node_id();
+      uint32_t data_offset = 0;
+      if (!bcmp_resource_populate_msg_data(PUB, reply_rval, data_offset)) {
+        printf("Failed to populate publishers list\n.");
+        break;
+      }
+      if (!bcmp_resource_populate_msg_data(SUB, reply_rval, data_offset)) {
+        printf("Failed to populate publishers list\n.");
+        break;
+      }
+      success = true;
     }
-    if (!_bcmp_resource_populate_msg_data(SUB, reply_rval, data_offset)) {
-      printf("Failed to populate publishers list\n.");
-      break;
-    }
-    success = true;
   } while (0);
 
   if (!success) {
     if (reply_rval != NULL) {
-      vPortFree(reply_rval);
+      bm_free(reply_rval);
       reply_rval = NULL;
     }
   }

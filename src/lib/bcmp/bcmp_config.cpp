@@ -9,11 +9,11 @@ static Configuration *USR_CFG;
 static Configuration *SYS_CFG;
 
 bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e partition,
-                     size_t key_len, const char *key, err_t &err,
+                     size_t key_len, const char *key, BmErr &err,
                      BmErr (*reply_cb)(uint8_t *)) {
   configASSERT(key);
   bool rval = false;
-  err = ERR_VAL;
+  err = BmEINVAL;
   size_t msg_size = sizeof(bm_common_config_get_t) + key_len;
   bm_common_config_get_t *get_msg = (bm_common_config_get_t *)pvPortMalloc(msg_size);
   configASSERT(get_msg);
@@ -28,7 +28,7 @@ bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e parti
     memcpy(get_msg->key, key, key_len);
     err = bcmp_tx(&multicast_ll_addr, BcmpConfigGetMessage, (uint8_t *)get_msg, msg_size, 0,
                   reply_cb);
-    if (err == ERR_OK) {
+    if (err == BmOK) {
       rval = true;
     }
   } while (0);
@@ -37,12 +37,12 @@ bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e parti
 }
 
 bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e partition,
-                     size_t key_len, const char *key, size_t value_size, void *val, err_t &err,
+                     size_t key_len, const char *key, size_t value_size, void *val, BmErr &err,
                      BmErr (*reply_cb)(uint8_t *)) {
   configASSERT(key);
   configASSERT(key);
   bool rval = false;
-  err = ERR_VAL;
+  err = BmEINVAL;
   size_t msg_len = sizeof(bm_common_config_set_t) + key_len + value_size;
   bm_common_config_set_t *set_msg = (bm_common_config_set_t *)pvPortMalloc(msg_len);
   configASSERT(set_msg);
@@ -59,7 +59,7 @@ bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e parti
     memcpy(&set_msg->keyAndData[key_len], val, value_size);
     err = bcmp_tx(&multicast_ll_addr, BcmpConfigSetMessage, (uint8_t *)set_msg, msg_len, 0,
                   reply_cb);
-    if (err == ERR_OK) {
+    if (err == BmOK) {
       rval = true;
     }
   } while (0);
@@ -68,9 +68,9 @@ bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e parti
 }
 
 bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e partition,
-                        err_t &err) {
+                        BmErr &err) {
   bool rval = false;
-  err = ERR_VAL;
+  err = BmEINVAL;
   bm_common_config_commit_t *commit_msg =
       (bm_common_config_commit_t *)pvPortMalloc(sizeof(bm_common_config_commit_t));
   configASSERT(commit_msg);
@@ -79,7 +79,7 @@ bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e pa
   commit_msg->partition = partition;
   err = bcmp_tx(&multicast_ll_addr, BcmpConfigCommitMessage, (uint8_t *)commit_msg,
                 sizeof(bm_common_config_commit_t));
-  if (err == ERR_OK) {
+  if (err == BmOK) {
     rval = true;
   }
   vPortFree(commit_msg);
@@ -87,9 +87,9 @@ bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e pa
 }
 
 bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partition_e partition,
-                                err_t &err, BmErr (*reply_cb)(uint8_t *)) {
+                                BmErr &err, BmErr (*reply_cb)(uint8_t *)) {
   bool rval = false;
-  err = ERR_VAL;
+  err = BmEINVAL;
   bm_common_config_status_request_t *status_req_msg =
       (bm_common_config_status_request_t *)pvPortMalloc(
           sizeof(bm_common_config_status_request_t));
@@ -99,7 +99,7 @@ bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partit
   status_req_msg->partition = partition;
   err = bcmp_tx(&multicast_ll_addr, BcmpConfigStatusRequestMessage, (uint8_t *)status_req_msg,
                 sizeof(bm_common_config_status_request_t), 0, reply_cb);
-  if (err == ERR_OK) {
+  if (err == BmOK) {
     rval = true;
   }
   vPortFree(status_req_msg);
@@ -108,10 +108,10 @@ bool bcmp_config_status_request(uint64_t target_node_id, bm_common_config_partit
 
 bool bcmp_config_status_response(uint64_t target_node_id,
                                  bm_common_config_partition_e partition, bool commited,
-                                 uint8_t num_keys, const ConfigKey_t *keys, err_t &err,
+                                 uint8_t num_keys, const ConfigKey_t *keys, BmErr &err,
                                  uint16_t seq_num) {
   bool rval = false;
-  err = ERR_VAL;
+  err = BmEINVAL;
   size_t msg_size = sizeof(bm_common_config_status_response_t);
   for (int i = 0; i < num_keys; i++) {
     msg_size += sizeof(bm_common_config_status_key_data_t);
@@ -139,7 +139,7 @@ bool bcmp_config_status_response(uint64_t target_node_id,
     }
     err = bcmp_tx(&multicast_ll_addr, BcmpConfigStatusResponseMessage,
                   (uint8_t *)status_resp_msg, msg_size, seq_num);
-    if (err == ERR_OK) {
+    if (err == BmOK) {
       rval = true;
     }
   } while (0);
@@ -167,7 +167,7 @@ static void bcmp_config_process_commit_msg(bm_common_config_commit_t *msg) {
 static void bcmp_config_process_status_request_msg(bm_common_config_status_request_t *msg,
                                                    uint16_t seq_num) {
   configASSERT(msg);
-  err_t err;
+  BmErr err;
   do {
     Configuration *cfg;
     if (msg->partition == BM_COMMON_CFG_PARTITION_USER) {
@@ -182,7 +182,7 @@ static void bcmp_config_process_status_request_msg(bm_common_config_status_reque
     const ConfigKey_t *keys = cfg->getStoredKeys(num_keys);
     bcmp_config_status_response(msg->header.source_node_id, msg->partition, cfg->needsCommit(),
                                 num_keys, keys, err, seq_num);
-    if (err != ERR_OK) {
+    if (err != BmOK) {
       printf("Error processing config status request.\n");
     }
   } while (0);
@@ -190,9 +190,9 @@ static void bcmp_config_process_status_request_msg(bm_common_config_status_reque
 
 static bool bcmp_config_send_value(uint64_t target_node_id,
                                    bm_common_config_partition_e partition, uint32_t data_length,
-                                   void *data, err_t &err, uint16_t seq_num) {
+                                   void *data, BmErr &err, uint16_t seq_num) {
   bool rval = false;
-  err = ERR_VAL;
+  err = BmEINVAL;
   size_t msg_len = data_length + sizeof(bm_common_config_value_t);
   bm_common_config_value_t *value_msg = (bm_common_config_value_t *)pvPortMalloc(msg_len);
   configASSERT(value_msg);
@@ -204,7 +204,7 @@ static bool bcmp_config_send_value(uint64_t target_node_id,
     memcpy(value_msg->data, data, data_length);
     err = bcmp_tx(&multicast_ll_addr, BcmpConfigValueMessage, (uint8_t *)value_msg, msg_len,
                   seq_num);
-    if (err == ERR_OK) {
+    if (err == BmOK) {
       rval = true;
     }
   } while (0);
@@ -227,7 +227,7 @@ static void bcmp_config_process_config_get_msg(bm_common_config_get_t *msg, uint
     uint8_t *buffer = (uint8_t *)pvPortMalloc(buffer_len);
     configASSERT(buffer);
     if (cfg->getConfigCbor(msg->key, msg->key_length, buffer, buffer_len)) {
-      err_t err;
+      BmErr err;
       bcmp_config_send_value(msg->header.source_node_id, msg->partition, buffer_len, buffer,
                              err, seq_num);
     }
@@ -251,7 +251,7 @@ static void bcmp_config_process_config_set_msg(bm_common_config_set_t *msg, uint
     }
     if (cfg->setConfigCbor((const char *)msg->keyAndData, msg->key_length,
                            &msg->keyAndData[msg->key_length], msg->data_length)) {
-      err_t err;
+      BmErr err;
       bcmp_config_send_value(msg->header.source_node_id, msg->partition, msg->data_length,
                              &msg->keyAndData[msg->key_length], err, seq_num);
     }
@@ -512,7 +512,7 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
 }
 
 BmErr bcmp_config_init(Configuration *user_cfg, Configuration *sys_cfg) {
-  BmErr err = BmOK;
+  BmErr err = BmEINVAL;
   BcmpPacketCfg config_get = {
       false,
       true,
@@ -560,14 +560,13 @@ BmErr bcmp_config_init(Configuration *user_cfg, Configuration *sys_cfg) {
     SYS_CFG = sys_cfg;
   }
 
-  //TODO please handle this better
-  err = packet_add(&config_get, BcmpConfigGetMessage);
-  err = packet_add(&config_set, BcmpConfigSetMessage);
-  err = packet_add(&config_commit, BcmpConfigCommitMessage);
-  err = packet_add(&config_status_request, BcmpConfigStatusRequestMessage);
-  err = packet_add(&config_status_response, BcmpConfigStatusResponseMessage);
-  err = packet_add(&config_delete_request, BcmpConfigDeleteRequestMessage);
-  err = packet_add(&config_delete_response, BcmpConfigDeleteResponseMessage);
-  err = packet_add(&config_value, BcmpConfigValueMessage);
+  bm_err_check(err, packet_add(&config_get, BcmpConfigGetMessage));
+  bm_err_check(err, packet_add(&config_set, BcmpConfigSetMessage));
+  bm_err_check(err, packet_add(&config_commit, BcmpConfigCommitMessage));
+  bm_err_check(err, packet_add(&config_status_request, BcmpConfigStatusRequestMessage));
+  bm_err_check(err, packet_add(&config_status_response, BcmpConfigStatusResponseMessage));
+  bm_err_check(err, packet_add(&config_delete_request, BcmpConfigDeleteRequestMessage));
+  bm_err_check(err, packet_add(&config_delete_response, BcmpConfigDeleteResponseMessage));
+  bm_err_check(err, packet_add(&config_value, BcmpConfigValueMessage));
   return err;
 }
