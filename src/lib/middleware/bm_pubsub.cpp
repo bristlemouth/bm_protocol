@@ -1,15 +1,15 @@
-#include <string.h>
-#include "FreeRTOS.h"
-#include "lwip/ip_addr.h"
-#include "lwip/inet.h"
 #include "bm_pubsub.h"
-#include "middleware.h"
-#include "bm_util.h"
+#include "FreeRTOS.h"
 #include "bcmp_resource_discovery.h"
+#include "bm_util.h"
+#include "lwip/inet.h"
+#include "lwip/ip_addr.h"
+#include "middleware.h"
+#include <string.h>
 
 typedef struct {
   uint8_t type;
-  uint8_t flags;  
+  uint8_t flags;
   uint8_t topic_len;
   bm_common_pub_sub_header_t ext_header;
   const char topic[0];
@@ -22,23 +22,23 @@ typedef struct bm_cb_node_s {
 } bm_cb_node_t;
 
 typedef struct {
-    char *topic;
-    uint16_t topic_len;
-    bm_cb_node_t *callbacks;
+  char *topic;
+  uint16_t topic_len;
+  bm_cb_node_t *callbacks;
 } bm_sub_t;
 
 typedef struct bm_sub_node_s {
   bm_sub_t sub;
-  struct bm_sub_node_s* next;
+  struct bm_sub_node_s *next;
 } bm_sub_node_t;
 
 typedef struct {
   bm_sub_node_t subscription_list;
 } pubsubContext_t;
 
-static bm_sub_node_t* delete_sub(const char* topic, uint16_t topic_len);
-static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len);
-static bm_sub_node_t* get_last_sub(void);
+static bm_sub_node_t *delete_sub(const char *topic, uint16_t topic_len);
+static bm_sub_node_t *get_sub(const char *topic, uint16_t topic_len);
+static bm_sub_node_t *get_last_sub(void);
 static pubsubContext_t _ctx;
 
 /*!
@@ -53,7 +53,7 @@ bool bm_sub(const char *topic, const bm_cb_t callback) {
 
   uint16_t topic_len = strnlen(topic, BM_TOPIC_MAX_LEN);
 
-  if(topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
+  if (topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
     retv = bm_sub_wl(topic, topic_len, callback);
   }
 
@@ -74,18 +74,18 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
   do {
     // TODO - validate topic name if needed
 
-    if(!topic || !topic_len || !callback) {
+    if (!topic || !topic_len || !callback) {
       retv = false;
       break;
     }
 
-    if(topic_len >= BM_TOPIC_MAX_LEN) {
+    if (topic_len >= BM_TOPIC_MAX_LEN) {
       retv = false;
       // Invalid topic len
       break;
     }
 
-    bm_sub_node_t* ptr = get_sub(topic, topic_len);
+    bm_sub_node_t *ptr = get_sub(topic, topic_len);
 
     // Subscription already exists, add a new callback
     if (ptr) {
@@ -93,11 +93,11 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
       bm_cb_node_t *last_cb_node = ptr->sub.callbacks;
 
       // Go to last node (but stop if one already matches the requested callback)
-      while((ptr->sub.callbacks->callback_fn != callback) && last_cb_node->next) {
+      while ((ptr->sub.callbacks->callback_fn != callback) && last_cb_node->next) {
         last_cb_node = last_cb_node->next;
       }
 
-      if(ptr->sub.callbacks->callback_fn == callback) {
+      if (ptr->sub.callbacks->callback_fn == callback) {
         // Callback already subscribed to this topic!
         break;
       }
@@ -117,18 +117,18 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
       ptr = get_last_sub();
 
       // If there's no subscriptions, point to the start of the list
-      if(!ptr) {
+      if (!ptr) {
         ptr = &_ctx.subscription_list;
       }
 
       ptr->next = static_cast<bm_sub_node_t *>(pvPortMalloc(sizeof(bm_sub_node_t)));
-      if(!ptr->next){
+      if (!ptr->next) {
         break;
       }
 
       memset(ptr->next, 0x00, sizeof(bm_sub_node_t));
       ptr->next->sub.topic = static_cast<char *>(pvPortMalloc(topic_len + 1));
-      if(!ptr->next->sub.topic){
+      if (!ptr->next->sub.topic) {
         vPortFree(ptr->next);
         break;
       }
@@ -147,12 +147,12 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
       retv = true;
     }
 
-  } while(0);
+  } while (0);
 
   if (retv) {
     printf("Subscribing to Topic: %.*s\n", topic_len, topic);
-    if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len, bcmp_resource_discovery::SUB)){
-      printf("Added topic %.*s to BCMP resource table.\n",topic_len,topic);
+    if (bcmp_resource_discovery_add_resource(topic, topic_len, SUB)) {
+      printf("Added topic %.*s to BCMP resource table.\n", topic_len, topic);
     }
   } else {
     printf("Unable to Subscribe to topic\n");
@@ -173,7 +173,7 @@ bool bm_unsub(const char *topic, const bm_cb_t callback) {
 
   uint16_t topic_len = strnlen(topic, BM_TOPIC_MAX_LEN);
 
-  if(topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
+  if (topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
     retv = bm_unsub_wl(topic, topic_len, callback);
   }
 
@@ -193,12 +193,12 @@ bool bm_unsub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) 
   bool retv = false;
 
   do {
-    if(topic_len >= BM_TOPIC_MAX_LEN) {
+    if (topic_len >= BM_TOPIC_MAX_LEN) {
       // Invalid topic len
       break;
     }
 
-    bm_sub_node_t* ptr = get_sub(topic, topic_len);
+    bm_sub_node_t *ptr = get_sub(topic, topic_len);
     /* Subscription already exists, update */
     if (ptr) {
 
@@ -206,18 +206,18 @@ bool bm_unsub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) 
       bm_cb_node_t *prev_node = NULL;
 
       // Check nodes for matching callback
-      while((cb_node->callback_fn != callback) && cb_node->next) {
+      while ((cb_node->callback_fn != callback) && cb_node->next) {
         prev_node = cb_node;
         cb_node = cb_node->next;
       }
 
       // Didn't find a matching callback to unsubscribe :'(
-      if(cb_node->callback_fn != callback) {
+      if (cb_node->callback_fn != callback) {
         break;
       }
 
       // Link to the next node in list
-      if(prev_node) {
+      if (prev_node) {
         prev_node->next = cb_node->next;
       } else {
         ptr->sub.callbacks = cb_node->next;
@@ -227,7 +227,7 @@ bool bm_unsub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) 
       vPortFree(cb_node);
 
       // If there are no more callbacks, delete the sub entirely
-      if(ptr->sub.callbacks == NULL) {
+      if (ptr->sub.callbacks == NULL) {
         delete_sub(topic, topic_len);
       }
 
@@ -260,7 +260,7 @@ bool bm_pub(const char *topic, const void *data, uint16_t len, uint8_t type, uin
 
   uint16_t topic_len = strnlen(topic, BM_TOPIC_MAX_LEN);
 
-  if(topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
+  if (topic_len && (topic_len < BM_TOPIC_MAX_LEN)) {
     retv = bm_pub_wl(topic, topic_len, data, len, type, version);
   }
 
@@ -278,14 +278,15 @@ bool bm_pub(const char *topic, const void *data, uint16_t len, uint8_t type, uin
   \param[in] version of data to publish
   \return True if data has been queued to be publish (does not guarantee that it will be published though!)
 */
-bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t len, uint8_t type, uint8_t version) {
+bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t len,
+               uint8_t type, uint8_t version) {
   bool retv = true;
 
   do {
 
     uint16_t message_size = sizeof(bm_pubsub_header_t) + topic_len + len;
     struct pbuf *pbuf = pbuf_alloc(PBUF_TRANSPORT, message_size, PBUF_RAM);
-    if(!pbuf) {
+    if (!pbuf) {
       retv = false;
       break;
     }
@@ -309,11 +310,12 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
       // See: LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX
       do {
         struct pbuf *pbuf_local = pbuf_alloc(PBUF_TRANSPORT, message_size, PBUF_RAM);
-        if(!pbuf_local) {
+        if (!pbuf_local) {
           retv = false;
           break;
         }
-        bm_pubsub_header_t *local_header = reinterpret_cast<bm_pubsub_header_t *>(pbuf_local->payload);
+        bm_pubsub_header_t *local_header =
+            reinterpret_cast<bm_pubsub_header_t *>(pbuf_local->payload);
         // TODO actually set the type here
         local_header->type = 0;
         local_header->flags = 0;
@@ -327,7 +329,7 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
         // is so they don't run in the current task context, which will depend on the caller.
         bm_middleware_local_pub(pbuf_local);
         pbuf_free(pbuf_local);
-      } while(0);
+      } while (0);
     }
 
     if (middleware_net_tx(pbuf)) {
@@ -339,8 +341,8 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
   if (!retv) {
     printf("Unable to publish to topic\n");
   } else {
-    if(bcmp_resource_discovery::bcmp_resource_discovery_add_resource(topic, topic_len, bcmp_resource_discovery::PUB)){
-      printf("Added topic %.*s to BCMP resource table.\n",topic_len,topic);
+    if (bcmp_resource_discovery_add_resource(topic, topic_len, PUB)) {
+      printf("Added topic %.*s to BCMP resource table.\n", topic_len, topic);
     }
   }
 
@@ -359,19 +361,15 @@ void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
 
   // TODO check header type and flags and do something about it
 
-  bm_sub_node_t* ptr = get_sub(header->topic, header->topic_len);
+  bm_sub_node_t *ptr = get_sub(header->topic, header->topic_len);
 
   if (ptr && ptr->sub.callbacks) {
     bm_cb_node_t *cb_node = ptr->sub.callbacks;
 
-    while(cb_node) {
-      cb_node->callback_fn( node_id,
-                            header->topic,
-                            header->topic_len,
-                            (const uint8_t *)&header->topic[header->topic_len],
-                            data_len,
-                            header->ext_header.type,
-                            header->ext_header.version);
+    while (cb_node) {
+      cb_node->callback_fn(node_id, header->topic, header->topic_len,
+                           (const uint8_t *)&header->topic[header->topic_len], data_len,
+                           header->ext_header.type, header->ext_header.version);
       cb_node = cb_node->next;
     }
   }
@@ -383,9 +381,9 @@ void bm_handle_msg(uint64_t node_id, struct pbuf *pbuf) {
   \return *bm_sub_node_t, last element in linked list
 */
 void bm_print_subs(void) {
-  bm_sub_node_t* node = _ctx.subscription_list.next;
+  bm_sub_node_t *node = _ctx.subscription_list.next;
 
-  while(node != NULL) {
+  while (node != NULL) {
     // TODO, print number of callbacks subscribed
     printf("Node: %.*s\n", node->sub.topic_len, node->sub.topic);
     node = node->next;
@@ -398,16 +396,16 @@ void bm_print_subs(void) {
   Get all registered subscriptions. Returned value must be freed by user
   \return *char, string of subs
 */
-char* bm_get_subs(void) {
-  bm_sub_node_t* node = _ctx.subscription_list.next;
-  char* subs_string = static_cast<char *>(pvPortMalloc(MAX_SUB_STR_LEN));
+char *bm_get_subs(void) {
+  bm_sub_node_t *node = _ctx.subscription_list.next;
+  char *subs_string = static_cast<char *>(pvPortMalloc(MAX_SUB_STR_LEN));
   memset(subs_string, 0, MAX_SUB_STR_LEN);
   configASSERT(subs_string);
-  char* ptr = subs_string;
+  char *ptr = subs_string;
   char spacing[] = " | ";
   bool first = true;
 
-  while(node != NULL) {
+  while (node != NULL) {
     if (first) {
       first = false;
     } else {
@@ -430,20 +428,20 @@ char* bm_get_subs(void) {
   \param[in] *topic_len - byte length of topic
   \return pointer to bm_sub_node_t, NULL if not found
 */
-static bm_sub_node_t* delete_sub(const char* topic, uint16_t topic_len) {
-  bm_sub_node_t* node = _ctx.subscription_list.next;
-  bm_sub_node_t* prev = &_ctx.subscription_list;
+static bm_sub_node_t *delete_sub(const char *topic, uint16_t topic_len) {
+  bm_sub_node_t *node = _ctx.subscription_list.next;
+  bm_sub_node_t *prev = &_ctx.subscription_list;
 
-  while(node != NULL) {
+  while (node != NULL) {
     if ((node->sub.topic_len == topic_len) &&
-      (memcmp(node->sub.topic, topic, topic_len) == 0)) {
+        (memcmp(node->sub.topic, topic, topic_len) == 0)) {
 
       // Delete node from list
       prev->next = node->next;
 
       // Free any callbacks that might have been linked
       bm_cb_node_t *cb_node = node->sub.callbacks;
-      while(cb_node) {
+      while (cb_node) {
         bm_cb_node_t *to_del = cb_node;
         cb_node = cb_node->next;
 
@@ -467,12 +465,12 @@ static bm_sub_node_t* delete_sub(const char* topic, uint16_t topic_len) {
   \param[in] *topic_len - byte length of topic
   \return pointer to bm_sub_node_t, NULL if not found
 */
-static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len) {
-  bm_sub_node_t* node = _ctx.subscription_list.next;
+static bm_sub_node_t *get_sub(const char *topic, uint16_t topic_len) {
+  bm_sub_node_t *node = _ctx.subscription_list.next;
 
-  while(node != NULL) {
+  while (node != NULL) {
     if ((node->sub.topic_len == topic_len) &&
-      (memcmp(node->sub.topic, topic, topic_len) == 0)) {
+        (memcmp(node->sub.topic, topic, topic_len) == 0)) {
       break;
     }
     node = node->next;
@@ -485,11 +483,11 @@ static bm_sub_node_t* get_sub(const char* topic, uint16_t topic_len) {
   \param[in] *parameters - unused
   \return *bm_sub_node_t, last element in linked list
 */
-static bm_sub_node_t* get_last_sub(void) {
-  bm_sub_node_t* node = _ctx.subscription_list.next;
-  bm_sub_node_t* last = node;
+static bm_sub_node_t *get_last_sub(void) {
+  bm_sub_node_t *node = _ctx.subscription_list.next;
+  bm_sub_node_t *last = node;
 
-  while(node != NULL) {
+  while (node != NULL) {
     last = node;
     node = node->next;
   }
