@@ -170,8 +170,8 @@ static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
   } while (0);
 
   if (should_forward) {
-    bcmp_ll_forward(data.header, data.payload, data.size, data.ingress_port);
-    err = BmOK;
+    err = bcmp_ll_forward(data.header, data.payload, data.size, data.ingress_port);
+
   }
 
   return err;
