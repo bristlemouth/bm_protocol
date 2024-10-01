@@ -1,4 +1,6 @@
+extern "C" {
 #include "bm_configs_generic.h"
+}
 #include "configuration.h"
 
 using namespace cfg;
@@ -6,7 +8,7 @@ using namespace cfg;
 extern cfg::Configuration *userConfigurationPartition;
 extern cfg::Configuration *sysConfigurationPartition;
 
-const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t &num_stored_keys,
+const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t *num_stored_keys,
                                                     BmConfigPartition partition) {
   Configuration *cfg;
   if (partition == BM_CFG_PARTITION_USER) {
@@ -17,7 +19,7 @@ const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t &num_stored_keys,
     printf("Invalid configuration\n");
     return NULL;
   }
-  return (const GenericConfigKey *)cfg->getStoredKeys(num_stored_keys);
+  return (const GenericConfigKey *)cfg->getStoredKeys(*num_stored_keys);
 }
 
 bool bcmp_remove_key(const char *key, size_t key_len, BmConfigPartition partition) {
@@ -76,7 +78,7 @@ bool bcmp_set_config(const char *key, size_t key_len, uint8_t *value, size_t val
   return cfg->setConfigCbor((const char *)key, key_len, value, value_len);
 }
 
-bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value, size_t &value_len,
+bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value, size_t *value_len,
                      BmConfigPartition partition) {
   Configuration *cfg;
   if (partition == BM_CFG_PARTITION_USER) {
@@ -86,11 +88,16 @@ bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value, size_t &va
   } else {
     return false;
   }
-  return cfg->getConfigCbor(key, key_len, value, value_len);
+  return cfg->getConfigCbor(key, key_len, value, *value_len);
 }
 
 bool bm_cbor_type_to_config_type(const CborValue *value, GenericConfigDataTypes *configType) {
-  ConfigDataTypes_e return_config_type = (ConfigDataTypes_e)*configType;
+  bool ret = false;
+  ConfigDataTypes_e return_config_type;
   // TODO - have configuration.h use GenericConfigDataTypes
-  return Configuration::cborTypeToConfigType(value, return_config_type);
+  ret = Configuration::cborTypeToConfigType(value, return_config_type);
+  if (ret) {
+    *configType = (GenericConfigDataTypes)return_config_type;
+  }
+  return ret;
 }

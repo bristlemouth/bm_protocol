@@ -13,17 +13,20 @@
 using namespace cfg;
 
 #include "app_util.h"
-#include "bcmp_config.h"
-#include "bcmp_heartbeat.h"
-#include "bcmp_info.h"
-#include "bcmp_neighbors.h"
-#include "bcmp_ping.h"
-#include "bcmp_resource_discovery.h"
 #include "bcmp_time.h"
-#include "bcmp_topology.h"
 #include "bm_pubsub.h"
 #include "bm_util.h"
 #include "messages.h"
+extern "C" {
+#include "messages/config.h"
+#include "messages/heartbeat.h"
+#include "messages/info.h"
+#include "messages/neighbors.h"
+#include "messages/ping.h"
+#include "messages/resource_discovery.h"
+#include "messages/topology.h"
+}
+#include "util.h"
 
 #include "debug.h"
 
@@ -107,7 +110,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         } else {
           printf("Device not in neighbor table. Sending global request.\n");
           bcmp_expect_info_from_node_id(node_id);
-          if (bcmp_request_info(node_id, &multicast_global_addr) != BmOK) {
+          if (bcmp_request_info(node_id, &multicast_global_addr, NULL) != BmOK) {
             printf("Error sending request\n");
           }
         }
@@ -160,7 +163,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_get(node_id, partition, key_str_str_len, key_str, err)) {
+        if (!bcmp_config_get(node_id, partition, key_str_str_len, key_str, &err, NULL)) {
           printf("Failed to send message config get\n");
         } else {
           printf("Succesfully sent config get msg\n");
@@ -224,7 +227,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
             break;
           }
           if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, err)) {
+                               cbor_buf, &err, NULL)) {
             printf("Failed to send message config set\n");
           } else {
             printf("Succesfully sent config set msg\n");
@@ -237,7 +240,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
             break;
           }
           if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, err)) {
+                               cbor_buf, &err, NULL)) {
             printf("Failed to send message config get\n");
           } else {
             printf("Succesfully sent config get msg\n");
@@ -254,7 +257,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
             break;
           }
           if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, err)) {
+                               cbor_buf, &err, NULL)) {
             printf("Failed to send message config get\n");
           } else {
             printf("Succesfully sent config get msg\n");
@@ -266,7 +269,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
             break;
           }
           if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, err)) {
+                               cbor_buf, &err, NULL)) {
             printf("Failed to send message config get\n");
           } else {
             printf("Succesfully sent config get msg\n");
@@ -279,7 +282,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
             break;
           }
           if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, err)) {
+                               cbor_buf, &err, NULL)) {
             printf("Failed to send message config get\n");
           } else {
             printf("Succesfully sent config get msg\n");
@@ -312,7 +315,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_commit(node_id, partition, err)) {
+        if (!bcmp_config_commit(node_id, partition, &err)) {
           printf("Failed to send config commit\n");
         } else {
           printf("Succesfull config commit send\n");
@@ -339,7 +342,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_status_request(node_id, partition, err)) {
+        if (!bcmp_config_status_request(node_id, partition, &err, NULL)) {
           printf("Failed to send status request \n");
         } else {
           printf("Successful status request send\n");
@@ -368,7 +371,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        if (bcmp_config_del_key(node_id, partition, key_str_str_len, key_str)) {
+        if (bcmp_config_del_key(node_id, partition, key_str_str_len, key_str, NULL)) {
           printf("Successfully sent del key request\n");
         } else {
           printf("Failed to send del key request\n");
@@ -426,7 +429,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         break;
       }
       uint64_t node_id = strtoull(node_id_str, NULL, 16);
-      if (!bcmp_resource_discovery_send_request(node_id)) {
+      if (!bcmp_resource_discovery_send_request(node_id, NULL)) {
         printf("Failed to send discovery request.\n");
       } else {
         printf("Sent discovery request to %016" PRIx64 "\n", node_id);

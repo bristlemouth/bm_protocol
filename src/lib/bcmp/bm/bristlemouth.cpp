@@ -2,6 +2,8 @@
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
+#include "bcmp_messages.h"
+#include "bm_dfu.h"
 #include "device_info.h"
 #include "queue.h"
 #include "task.h"
@@ -15,7 +17,10 @@
 #include "bm_l2.h"
 #include "bm_ports.h"
 
+extern "C" {
 #include "bcmp.h"
+#include "device.h"
+}
 #include "bcmp_cli.h"
 
 #include "middleware.h"
@@ -82,10 +87,9 @@ void bcl_init(void) {
     printf("Could not join ff03::1\n");
   }
 
+  //TODO: This should all be moved to user code
   uint8_t major, minor, patch;
-
   getFWVersion(&major, &minor, &patch);
-
   DeviceCfg device = {
       .node_id = getNodeId(),
       .git_sha = getGitSHA(),
@@ -99,8 +103,12 @@ void bcl_init(void) {
       .ver_patch = patch,
       .sn = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'},
   };
+  device_init(device);
+  //TODO: These items need to be moved into bcmp again once we figure out how
+  //      to get partitions/configurations configurable by the user
+  //bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
 
-  bcmp_init(device);
+  bcmp_init();
   bcmp_cli_init();
 
   bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
