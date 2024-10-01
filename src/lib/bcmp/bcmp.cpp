@@ -251,6 +251,7 @@ BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configurat
 
   heartbeat_init();
   ping_init();
+  time_init();
   bcmp_topology_init();
   bcmp_process_info_init();
 
