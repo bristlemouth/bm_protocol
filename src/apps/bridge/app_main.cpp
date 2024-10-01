@@ -299,7 +299,7 @@ static const DebugGpio_t debugGpioPins[] = {
     {"tp10", &TP10, GPIO_OUT},
 };
 
-static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
+static void neighborDiscoveredCb(bool discovered, BcmpNeighbor *neighbor) {
   configASSERT(neighbor);
   const char *action = (discovered) ? "added" : "lost";
   bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,

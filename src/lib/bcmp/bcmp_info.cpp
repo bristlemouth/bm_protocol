@@ -82,7 +82,7 @@ static BmErr bcmp_process_info_request(BcmpProcessData data) {
   @param *dev_info - device info to populate with
   @return true if successful, false otherwise
 */
-static bool populate_neighbor_info(bm_neighbor_t *neighbor, BcmpDeviceInfoReply *dev_info) {
+static bool populate_neighbor_info(BcmpNeighbor *neighbor, BcmpDeviceInfoReply *dev_info) {
   bool rval = false;
   if (neighbor) {
     memcpy(&neighbor->info, &dev_info->info, sizeof(BcmpDeviceInfo));
@@ -95,9 +95,11 @@ static bool populate_neighbor_info(bm_neighbor_t *neighbor, BcmpDeviceInfoReply 
         bm_free(neighbor->version_str);
       }
       neighbor->version_str = (char *)bm_malloc(dev_info->ver_str_len + 1);
-      configASSERT(neighbor->version_str);
-      memcpy(neighbor->version_str, &dev_info->strings[0], dev_info->ver_str_len);
-      neighbor->version_str[dev_info->ver_str_len] = 0; // null terminate string
+      if (neighbor->version_str) {
+        memcpy(neighbor->version_str, &dev_info->strings[0], dev_info->ver_str_len);
+        neighbor->version_str[dev_info->ver_str_len] = 0; // null terminate string
+        rval = true;
+      }
     }
 
     if (dev_info->dev_name_len) {
@@ -106,25 +108,29 @@ static bool populate_neighbor_info(bm_neighbor_t *neighbor, BcmpDeviceInfoReply 
         bm_free(neighbor->device_name);
       }
       neighbor->device_name = (char *)bm_malloc(dev_info->dev_name_len + 1);
-      configASSERT(neighbor->device_name);
-      memcpy(neighbor->device_name, &dev_info->strings[dev_info->ver_str_len],
-             dev_info->dev_name_len);
-      neighbor->device_name[dev_info->dev_name_len] = 0; // null terminate string
+      if (neighbor->device_name) {
+        memcpy(neighbor->device_name, &dev_info->strings[dev_info->ver_str_len],
+               dev_info->dev_name_len);
+        neighbor->device_name[dev_info->dev_name_len] = 0; // null terminate string
+        rval = true;
+      }
     }
-    rval = true;
   }
 
   return rval;
 }
 
 /*!
-  Process device information reply
+  @brief Process device information reply
 
-  \param *dev_info - device information data
-  \return ERR_OK
+  @param *dev_info - device information data
+
+  @return BmOK on success
+  @return BmErr on failure
 */
 static BmErr bcmp_process_info_reply(BcmpProcessData data) {
   BcmpDeviceInfoReply *info = (BcmpDeviceInfoReply *)data.payload;
+  BmErr err = BmEBADMSG;
 
   bcmp_ll_element_t *element = INFO_REQUEST_LIST.find(info->info.node_id);
   if ((element != NULL) && (element->fp != NULL)) {
@@ -134,30 +140,32 @@ static BmErr bcmp_process_info_reply(BcmpProcessData data) {
     // Find neighbor and add info to table if present
     // Only add neighbor info when received to link local multicast address
     //
-    bm_neighbor_t *neighbor = bcmp_find_neighbor(info->info.node_id);
+    BcmpNeighbor *neighbor = bcmp_find_neighbor(info->info.node_id);
     if (neighbor) {
       // Update neighbor info
       populate_neighbor_info(neighbor, info);
     } else if (INFO_EXPECT_NODE_ID && (info->info.node_id == INFO_EXPECT_NODE_ID)) {
       INFO_EXPECT_NODE_ID = 0;
+      err = BmENOMEM;
 
       // Create temporary neighbor struct that is used by the print function
-      bm_neighbor_t *tmp_neighbor =
-          static_cast<bm_neighbor_t *>(pvPortMalloc(sizeof(bm_neighbor_t)));
-      memset(tmp_neighbor, 0, sizeof(bm_neighbor_t));
+      BcmpNeighbor *tmp_neighbor = (BcmpNeighbor *)bm_malloc(sizeof(BcmpNeighbor));
+      if (tmp_neighbor) {
+        memset(tmp_neighbor, 0, sizeof(BcmpNeighbor));
 
-      populate_neighbor_info(tmp_neighbor, info);
-      bcmp_print_neighbor_info(tmp_neighbor);
+        populate_neighbor_info(tmp_neighbor, info);
+        bcmp_print_neighbor_info(tmp_neighbor);
 
-      // Clean up
-      configASSERT(bcmp_free_neighbor(tmp_neighbor));
+        // Clean up
+        err = bcmp_free_neighbor(tmp_neighbor) ? BmOK : err;
+      }
     }
   }
   if (element != NULL) {
     INFO_REQUEST_LIST.remove(element);
   }
 
-  return BmOK;
+  return err;
 }
 
 /*!
@@ -189,6 +197,12 @@ BmErr bcmp_request_info(uint64_t target_node_id, const void *addr, void (*cb)(vo
   return bcmp_tx(addr, BcmpDeviceInfoRequestMessage, (uint8_t *)&info_req, sizeof(info_req));
 }
 
+/*!
+  @brief Initialize BCMP Device Info Module
+
+  @return BmOK on success
+  @return BmErr on fail
+ */
 BmErr bcmp_process_info_init(void) {
   BmErr err = BmOK;
   BcmpPacketCfg device_info_request = {
