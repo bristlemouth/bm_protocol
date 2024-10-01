@@ -1,6 +1,5 @@
 #pragma once
 
-#include "FreeRTOS.h"
 #include "lwip/ip_addr.h"
 
 #include <stdint.h>

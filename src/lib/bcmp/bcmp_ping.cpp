@@ -26,49 +26,50 @@ static uint16_t EXPECTED_PAYLOAD_LEN = 0;
 BmErr bcmp_send_ping_request(uint64_t node, const void *addr, const uint8_t *payload,
                              uint16_t payload_len) {
 
+  BmErr err = BmENOMEM;
   if (payload == NULL) {
     payload_len = 0;
   }
 
   uint16_t echo_len = sizeof(BcmpEchoRequest) + payload_len;
-
   uint8_t *echo_req_buff = (uint8_t *)bm_malloc(echo_len);
-  // configASSERT(echo_req_buff);
 
-  memset(echo_req_buff, 0, echo_len);
+  if (echo_req_buff) {
+    memset(echo_req_buff, 0, echo_len);
 
-  BcmpEchoRequest *echo_req = (BcmpEchoRequest *)echo_req_buff;
+    BcmpEchoRequest *echo_req = (BcmpEchoRequest *)echo_req_buff;
 
-  echo_req->target_node_id = node;
-  echo_req->id = (uint16_t)node_id(); // TODO - make this a randomly generated number
-  echo_req->seq_num = BCMP_SEQ++;
-  echo_req->payload_len = payload_len;
+    echo_req->target_node_id = node;
+    echo_req->id = (uint16_t)node_id(); // TODO - make this a randomly generated number
+    echo_req->seq_num = BCMP_SEQ++;
+    echo_req->payload_len = payload_len;
 
-  // clear the expected payload
-  if (EXPECTED_PAYLOAD != NULL) {
-    bm_free(EXPECTED_PAYLOAD);
-    EXPECTED_PAYLOAD = NULL;
-    EXPECTED_PAYLOAD_LEN = 0;
+    // clear the expected payload
+    if (EXPECTED_PAYLOAD != NULL) {
+      bm_free(EXPECTED_PAYLOAD);
+      EXPECTED_PAYLOAD = NULL;
+      EXPECTED_PAYLOAD_LEN = 0;
+    }
+
+    // Lets only copy the paylaod if it isn't NULL just in case
+    if (payload != NULL && payload_len > 0) {
+      memcpy(&echo_req->payload[0], payload, payload_len);
+      EXPECTED_PAYLOAD = (uint8_t *)bm_malloc(payload_len);
+      memcpy(EXPECTED_PAYLOAD, payload, payload_len);
+      EXPECTED_PAYLOAD_LEN = payload_len;
+    }
+
+    printf("PING (%016" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id,
+           echo_req->payload_len);
+
+    err = bcmp_tx(addr, BcmpEchoRequestMessage, (uint8_t *)echo_req, echo_len, 0);
+
+    PING_REQUEST_TIMEOUT = bm_ticks_to_ms(bm_get_tick_count());
+
+    bm_free(echo_req_buff);
   }
 
-  // Lets only copy the paylaod if it isn't NULL just in case
-  if (payload != NULL && payload_len > 0) {
-    memcpy(&echo_req->payload[0], payload, payload_len);
-    EXPECTED_PAYLOAD = (uint8_t *)bm_malloc(payload_len);
-    memcpy(EXPECTED_PAYLOAD, payload, payload_len);
-    EXPECTED_PAYLOAD_LEN = payload_len;
-  }
-
-  printf("PING (%016" PRIx64 "): %" PRIu16 " data bytes\n", echo_req->target_node_id,
-         echo_req->payload_len);
-
-  BmErr rval = bcmp_tx(addr, BcmpEchoRequestMessage, (uint8_t *)echo_req, echo_len, 0);
-
-  PING_REQUEST_TIMEOUT = bm_ticks_to_ms(bm_get_tick_count());
-
-  bm_free(echo_req_buff);
-
-  return rval;
+  return err;
 }
 
 /*!

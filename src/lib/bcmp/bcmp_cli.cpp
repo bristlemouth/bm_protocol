@@ -64,7 +64,7 @@ static void print_subscriptions(uint64_t node_id, const char *topic, uint16_t to
   printf("\n");
 }
 
-void print_neighbor_basic(bm_neighbor_t *neighbor) {
+void print_neighbor_basic(BcmpNeighbor *neighbor) {
   printf("%016" PRIx64 " |   %u  | %7s | %0.3f\n", neighbor->node_id, neighbor->port,
          neighbor->online ? "online" : "offline",
          (float)((xTaskGetTickCount() - neighbor->last_heartbeat_ticks)) / 1000.0);
@@ -96,7 +96,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       if (node_id_str_len > 0) {
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
 
-        bm_neighbor_t *neighbor = bcmp_find_neighbor(node_id);
+        BcmpNeighbor *neighbor = bcmp_find_neighbor(node_id);
         if (neighbor) {
           bcmp_print_neighbor_info(neighbor);
         } else {
@@ -411,7 +411,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         break;
       }
     } else if (strncmp("topo", command, command_str_len) == 0) {
-      bcmp_topology_start(networkTopologyPrint); // use generic print as callback
+      bcmp_topology_start(network_topology_print); // use generic print as callback
     } else if (strncmp("resources", command, command_str_len) == 0) {
       const char *node_id_str;
       BaseType_t node_id_str_len = 0;

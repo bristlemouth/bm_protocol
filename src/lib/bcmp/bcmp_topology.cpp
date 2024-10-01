@@ -7,12 +7,12 @@
 #include "bcmp_topology.h"
 #include "bm_l2.h"
 #include "bm_util.h"
-#include "device_info.h"
 #include "messages.h"
 
 extern "C" {
 #include "bm_os.h"
 #include "packet.h"
+#include "util.h"
 }
 
 #define BCMP_TOPO_EVT_QUEUE_LEN 32
@@ -27,64 +27,63 @@ typedef enum {
   BCMP_TOPO_EVT_TIMEOUT,
   BCMP_TOPO_EVT_RESTART,
   BCMP_TOPO_EVT_END,
-} bcmp_topo_queue_type_e;
+} BcmpTopoQueueType;
 
 typedef struct {
-  bcmp_topo_queue_type_e type;
-  neighborTableEntry_t *neighborEntry;
-  bcmp_topo_cb_t callback;
-} bcmp_topo_queue_item_t;
+  BcmpTopoQueueType type;
+  neighborTableEntry_t *neighbor_entry;
+  BcmpTopoCb callback;
+} BcmpQueueItem;
 
 typedef struct {
   BmQueue evt_queue;
   BmTimer topo_timer;
-  networkTopology_t *networkTopology;
+  networkTopology_t *network_topology;
   bool in_progress;
-  bcmp_topo_cb_t callback;
-} bcmpTopoContext_t;
+  BcmpTopoCb callback;
+} BcmpTopoContext;
 
-static bcmpTopoContext_t _ctx;
-static TaskHandle_t bcmpTopologyTask = NULL;
+static BcmpTopoContext CTX;
+static TaskHandle_t BCMP_TOPOLOGY_TASK = NULL;
 
-static uint64_t _target_node_id = 0;
-static bool _sent_request = false;
-static bool _insert_before = false;
+static uint64_t TARGET_NODE_ID = 0;
+static bool SENT_REQUEST = false;
+static bool INSERT_BEFORE = false;
 
 static void bcmp_topology_thread(void *parameters);
-
-static void freeNeighborTableEntry(neighborTableEntry_t **entry);
-static networkTopology_t *newNetworkTopology(void);
-static void freeNetworkTopology(networkTopology_t **networkTopology);
-static void networkTopologyClear(networkTopology_t *networkTopology);
-static void networkTopologyMoveFront(networkTopology_t *networkTopology);
-static void networkTopologyMovePrev(networkTopology_t *networkTopology);
-static void networkTopologyMoveNext(networkTopology_t *networkTopology);
-static void networkTopologyPrepend(networkTopology_t *networkTopology,
-                                   neighborTableEntry_t *entry);
-static void networkTopologyAppend(networkTopology_t *networkTopology,
-                                  neighborTableEntry_t *entry);
-static void networkTopologyInsertAfter(networkTopology_t *networkTopology,
-                                       neighborTableEntry_t *entry);
-static void networkTopologyInsertBefore(networkTopology_t *networkTopology,
-                                        neighborTableEntry_t *entry);
-static void networkTopologyDeleteBack(networkTopology_t *networkTopology);
-static void networkTopologyIncrementPortCount(networkTopology_t *networkTopology);
-static uint8_t networkTopologyGetPortCount(networkTopology_t *networkTopology);
-static bool networkTopologyIsRoot(networkTopology_t *networkTopology);
-static bool networkTopologyNodeIdInTopology(networkTopology_t *networkTopology,
-                                            uint64_t node_id);
-static uint64_t networkTopologyCheckNeighborNodeIds(networkTopology_t *networkTopology);
-static bool networkTopologyCheckAllPortsExplored(networkTopology_t *networkTopology);
+static void free_neighbor_table_entry(neighborTableEntry_t **entry);
+static networkTopology_t *new_network_topology(void);
+static void free_network_topology(networkTopology_t **network_topology);
+static void network_topology_clear(networkTopology_t *network_topology);
+static void network_topology_move_to_front(networkTopology_t *network_topology);
+static void network_topology_move_prev(networkTopology_t *network_topology);
+static void network_topology_move_next(networkTopology_t *network_topology);
+static void network_topology_prepend(networkTopology_t *network_topology,
+                                     neighborTableEntry_t *entry);
+static void network_topology_append(networkTopology_t *network_topology,
+                                    neighborTableEntry_t *entry);
+static void network_topology_insert_after(networkTopology_t *network_topology,
+                                          neighborTableEntry_t *entry);
+static void network_topology_insert_before(networkTopology_t *network_topology,
+                                           neighborTableEntry_t *entry);
+static void network_topology_delete_back(networkTopology_t *network_topology);
+static void network_topology_increment_port_count(networkTopology_t *network_topology);
+static uint8_t network_topology_get_port_count(networkTopology_t *network_topology);
+static bool network_topology_is_root(networkTopology_t *network_topology);
+static bool network_topology_node_id_in_topology(networkTopology_t *network_topology,
+                                                 uint64_t node_id);
+static uint64_t network_topology_check_neighbor_node_ids(networkTopology_t *network_topology);
+static bool network_topology_check_all_ports_explored(networkTopology_t *network_topology);
 
 // assembles the neighbor info list
-static void _assemble_neighbor_info_list(BcmpNeighborInfo *_neighbor_info_list,
-                                         bm_neighbor_t *neighbor, uint8_t num_neighbors) {
-  uint16_t _neighbor_count = 0;
-  while (neighbor != NULL && _neighbor_count < num_neighbors) {
-    _neighbor_info_list[_neighbor_count].node_id = neighbor->node_id;
-    _neighbor_info_list[_neighbor_count].port = neighbor->port;
-    _neighbor_info_list[_neighbor_count].online = (uint8_t)neighbor->online;
-    _neighbor_count++;
+static void assemble_neighbor_info_list(BcmpNeighborInfo *neighbor_info_list,
+                                        BcmpNeighbor *neighbor, uint8_t num_neighbors) {
+  uint16_t neighbor_count = 0;
+  while (neighbor != NULL && neighbor_count < num_neighbors) {
+    neighbor_info_list[neighbor_count].node_id = neighbor->node_id;
+    neighbor_info_list[neighbor_count].port = neighbor->port;
+    neighbor_info_list[neighbor_count].online = (uint8_t)neighbor->online;
+    neighbor_count++;
     // Go to the next one
     neighbor = neighbor->next;
   }
@@ -92,118 +91,121 @@ static void _assemble_neighbor_info_list(BcmpNeighborInfo *_neighbor_info_list,
 
 static void process_start_topology_event(void) {
   // here we will need to kick off the topo process by looking at our own neighbors and then sending out a request
-  _ctx.networkTopology = newNetworkTopology();
+  CTX.network_topology = new_network_topology();
 
   static uint8_t num_ports = bm_l2_get_num_ports();
 
   // Check our neighbors
   uint8_t num_neighbors = 0;
-  bm_neighbor_t *neighbor = bcmp_get_neighbors(num_neighbors);
+  BcmpNeighbor *neighbor = bcmp_get_neighbors(num_neighbors);
 
   // here we will assemble the entry for the SM
-  uint8_t *neighbor_entry_buff = (uint8_t *)(pvPortMalloc(sizeof(neighborTableEntry_t)));
+  uint8_t *neighbor_entry_buff = (uint8_t *)bm_malloc(sizeof(neighborTableEntry_t));
 
-  memset(neighbor_entry_buff, 0, sizeof(neighborTableEntry_t));
+  if (neighbor_entry_buff) {
+    memset(neighbor_entry_buff, 0, sizeof(neighborTableEntry_t));
 
-  neighborTableEntry_t *neighbor_entry = (neighborTableEntry_t *)(neighbor_entry_buff);
+    neighborTableEntry_t *neighbor_entry = (neighborTableEntry_t *)(neighbor_entry_buff);
 
-  uint32_t neighbor_table_len = sizeof(bcmp_neighbor_table_reply_t) +
-                                sizeof(bcmp_port_info_t) * num_ports +
-                                sizeof(BcmpNeighborInfo) * num_neighbors;
-  neighbor_entry->neighbor_table_reply =
-      (bcmp_neighbor_table_reply_t *)pvPortMalloc(neighbor_table_len);
+    uint32_t neighbor_table_len = sizeof(BcmpNeighborTableReply) +
+                                  sizeof(BcmpPortInfo) * num_ports +
+                                  sizeof(BcmpNeighborInfo) * num_neighbors;
+    neighbor_entry->neighbor_table_reply =
+        (BcmpNeighborTableReply *)bm_malloc(neighbor_table_len);
 
-  neighbor_entry->neighbor_table_reply->node_id = getNodeId();
+    neighbor_entry->neighbor_table_reply->node_id = node_id();
 
-  // set the other vars
-  neighbor_entry->neighbor_table_reply->port_len = num_ports;
-  neighbor_entry->neighbor_table_reply->neighbor_len = num_neighbors;
+    // set the other vars
+    neighbor_entry->neighbor_table_reply->port_len = num_ports;
+    neighbor_entry->neighbor_table_reply->neighbor_len = num_neighbors;
 
-  // assemble the port list here
-  for (uint8_t port = 0; port < num_ports; port++) {
-    neighbor_entry->neighbor_table_reply->port_list[port].state = bm_l2_get_port_state(port);
+    // assemble the port list here
+    for (uint8_t port = 0; port < num_ports; port++) {
+      neighbor_entry->neighbor_table_reply->port_list[port].state = bm_l2_get_port_state(port);
+    }
+
+    assemble_neighbor_info_list(
+        (BcmpNeighborInfo *)&neighbor_entry->neighbor_table_reply->port_list[num_ports],
+        neighbor, num_neighbors);
+
+    // this is the root
+    neighbor_entry->is_root = true;
+
+    network_topology_append(CTX.network_topology, neighbor_entry);
+    network_topology_move_to_front(CTX.network_topology);
+
+    BcmpQueueItem check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
+    bm_queue_send(CTX.evt_queue, &check_item, 0);
   }
-
-  _assemble_neighbor_info_list(
-      (BcmpNeighborInfo *)&neighbor_entry->neighbor_table_reply->port_list[num_ports], neighbor,
-      num_neighbors);
-
-  // this is the root
-  neighbor_entry->is_root = true;
-
-  networkTopologyAppend(_ctx.networkTopology, neighbor_entry);
-  networkTopologyMoveFront(_ctx.networkTopology);
-
-  bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
-  bm_queue_send(_ctx.evt_queue, &check_item, 0);
 }
 
 static void process_check_node_event(void) {
-  if (networkTopologyCheckAllPortsExplored(_ctx.networkTopology)) {
-    if (networkTopologyIsRoot(_ctx.networkTopology)) {
-      bcmp_topo_queue_item_t end_item = {BCMP_TOPO_EVT_END, NULL, NULL};
-      bm_queue_send(_ctx.evt_queue, &end_item, 0);
+  if (network_topology_check_all_ports_explored(CTX.network_topology)) {
+    if (network_topology_is_root(CTX.network_topology)) {
+      BcmpQueueItem end_item = {BCMP_TOPO_EVT_END, NULL, NULL};
+      bm_queue_send(CTX.evt_queue, &end_item, 0);
     } else {
-      if (_insert_before) {
-        networkTopologyMoveNext(_ctx.networkTopology);
+      if (INSERT_BEFORE) {
+        network_topology_move_next(CTX.network_topology);
       } else {
-        networkTopologyMovePrev(_ctx.networkTopology);
+        network_topology_move_prev(CTX.network_topology);
       }
-      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
-      bm_queue_send(_ctx.evt_queue, &check_item, 0);
+      BcmpQueueItem check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
+      bm_queue_send(CTX.evt_queue, &check_item, 0);
     }
   } else {
-    if (networkTopologyIsRoot(_ctx.networkTopology) &&
-        networkTopologyGetPortCount(_ctx.networkTopology) == 1) {
-      _insert_before = true;
+    if (network_topology_is_root(CTX.network_topology) &&
+        network_topology_get_port_count(CTX.network_topology) == 1) {
+      INSERT_BEFORE = true;
     }
-    uint64_t new_node = networkTopologyCheckNeighborNodeIds(_ctx.networkTopology);
-    networkTopologyIncrementPortCount(_ctx.networkTopology);
+    uint64_t new_node = network_topology_check_neighbor_node_ids(CTX.network_topology);
+    network_topology_increment_port_count(CTX.network_topology);
     if (new_node) {
       bcmp_request_neighbor_table(new_node, &multicast_global_addr);
     } else {
-      if (_insert_before) {
-        networkTopologyMoveNext(_ctx.networkTopology);
+      if (INSERT_BEFORE) {
+        network_topology_move_next(CTX.network_topology);
       } else {
-        networkTopologyMovePrev(_ctx.networkTopology);
+        network_topology_move_prev(CTX.network_topology);
       }
-      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
-      bm_queue_send(_ctx.evt_queue, &check_item, 0);
+      BcmpQueueItem check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
+      bm_queue_send(CTX.evt_queue, &check_item, 0);
     }
   }
 }
 
 /*!
-  Send neighbor table request to node(s)
+  @brief Send neighbor table request to node(s)
 
-  \param target_node_id - target node id to send request to (0 for all nodes)
-  \param *addr - ip address to send to send request to
-  \ret ERR_OK if successful
+  @param target_node_id - target node id to send request to (0 for all nodes)
+  @param *addr - ip address to send to send request to
+  @ret ERR_OK if successful
 */
-err_t bcmp_request_neighbor_table(uint64_t target_node_id, const ip_addr_t *addr) {
+BmErr bcmp_request_neighbor_table(uint64_t target_node_id, const void *addr) {
   bcmp_neighbor_table_request_t neighbor_table_req = {.target_node_id = target_node_id};
-  _target_node_id = target_node_id;
-  bm_timer_start(_ctx.topo_timer, 10);
+  TARGET_NODE_ID = target_node_id;
+  bm_timer_start(CTX.topo_timer, 10);
   return bcmp_tx(addr, BcmpNeighborTableRequestMessage, (uint8_t *)&neighbor_table_req,
                  sizeof(neighbor_table_req));
 }
 
 /*!
-  Send reply to neighbor table request
+  @brief Send reply to neighbor table request
 
-  \param *neighbor_table_reply - reply message
-  \param *addr - ip address to send reply to
-  \ret ERR_OK if successful
+  @param *neighbor_table_reply - reply message
+  @param *addr - ip address to send reply to
+  @ret ERR_OK if successful
 */
 static BmErr bcmp_send_neighbor_table(void *addr) {
   static uint8_t num_ports = bm_l2_get_num_ports();
+  BmErr err = BmENOMEM;
 
   // Check our neighbors
   uint8_t num_neighbors = 0;
-  bm_neighbor_t *neighbor = bcmp_get_neighbors(num_neighbors);
+  BcmpNeighbor *neighbor = bcmp_get_neighbors(num_neighbors);
 
-  uint16_t neighbor_table_len = sizeof(bcmp_neighbor_table_reply_t) +
-                                sizeof(bcmp_port_info_t) * num_ports +
+  uint16_t neighbor_table_len = sizeof(BcmpNeighborTableReply) +
+                                sizeof(BcmpPortInfo) * num_ports +
                                 sizeof(BcmpNeighborInfo) * num_neighbors;
 
   // TODO - handle more gracefully
@@ -211,94 +213,97 @@ static BmErr bcmp_send_neighbor_table(void *addr) {
     return BmEINVAL;
   }
 
-  uint8_t *neighbor_table_reply_buff = (uint8_t *)pvPortMalloc(neighbor_table_len);
-  configASSERT(neighbor_table_reply_buff);
+  uint8_t *neighbor_table_reply_buff = (uint8_t *)bm_malloc(neighbor_table_len);
+  if (neighbor_table_reply_buff) {
+    memset(neighbor_table_reply_buff, 0, neighbor_table_len);
 
-  memset(neighbor_table_reply_buff, 0, neighbor_table_len);
+    BcmpNeighborTableReply *neighbor_table_reply =
+        (BcmpNeighborTableReply *)neighbor_table_reply_buff;
+    neighbor_table_reply->node_id = node_id();
 
-  bcmp_neighbor_table_reply_t *neighbor_table_reply =
-      (bcmp_neighbor_table_reply_t *)neighbor_table_reply_buff;
-  neighbor_table_reply->node_id = getNodeId();
+    // set the other vars
+    neighbor_table_reply->port_len = num_ports;
+    neighbor_table_reply->neighbor_len = num_neighbors;
 
-  // set the other vars
-  neighbor_table_reply->port_len = num_ports;
-  neighbor_table_reply->neighbor_len = num_neighbors;
+    // assemble the port list here
+    for (uint8_t port = 0; port < num_ports; port++) {
+      neighbor_table_reply->port_list[port].state = bm_l2_get_port_state(port);
+    }
 
-  // assemble the port list here
-  for (uint8_t port = 0; port < num_ports; port++) {
-    neighbor_table_reply->port_list[port].state = bm_l2_get_port_state(port);
+    assemble_neighbor_info_list((BcmpNeighborInfo *)&neighbor_table_reply->port_list[num_ports],
+                                neighbor, num_neighbors);
+
+    err = bcmp_tx(addr, BcmpNeighborTableReplyMessage, (uint8_t *)neighbor_table_reply,
+                  neighbor_table_len);
+
+    bm_free(neighbor_table_reply_buff);
   }
-
-  _assemble_neighbor_info_list((BcmpNeighborInfo *)&neighbor_table_reply->port_list[num_ports],
-                               neighbor, num_neighbors);
-
-  BmErr err = bcmp_tx(addr, BcmpNeighborTableReplyMessage, (uint8_t *)neighbor_table_reply,
-                      neighbor_table_len);
-
-  vPortFree(neighbor_table_reply_buff);
 
   return err;
 }
 
 /*!
-  Handle neighbor table requests
+  @brief Handle neighbor table requests
 
-  \param *neighbor_table_req - message to process
-  \param *src - source ip of requester
-  \param *dst - destination ip of request (used for responding to the correct multicast address)
-  \ret ERR_OK if successful
+  @param *neighbor_table_req - message to process
+  @param *src - source ip of requester
+  @param *dst - destination ip of request (used for responding to the correct multicast address)
+  @return BmOK if successful
+  @return BmErr if failed
 */
 static BmErr bcmp_process_neighbor_table_request(BcmpProcessData data) {
   BmErr err = BmEINVAL;
   BcmpNeighborTableRequest *request = (BcmpNeighborTableRequest *)data.payload;
-  if (request && ((request->target_node_id == 0) || getNodeId() == request->target_node_id)) {
+  if (request && ((request->target_node_id == 0) || node_id() == request->target_node_id)) {
     err = bcmp_send_neighbor_table(data.dst);
   }
   return err;
 }
 
 /*!
-  Handle neighbor table replies
+  @brief Handle neighbor table replies
 
-  \param *neighbor_table_reply - reply message to process
-  \
+  @param *neighbor_table_reply - reply message to process
 */
 static BmErr bcmp_process_neighbor_table_reply(BcmpProcessData data) {
   BmErr err = BmEINVAL;
   BcmpNeighborTableReply *reply = (BcmpNeighborTableReply *)data.payload;
 
-  if (_target_node_id == reply->node_id && _sent_request) {
-    err = BmOK;
-
-    bm_timer_stop(_ctx.topo_timer, 10);
+  if (TARGET_NODE_ID == reply->node_id && SENT_REQUEST) {
+    err = bm_timer_stop(CTX.topo_timer, 10);
     // here we will assemble the entry for the SM
     // malloc the buffer then memcpy it over
-    uint8_t *neighbor_entry_buff = (uint8_t *)(pvPortMalloc(sizeof(neighborTableEntry_t)));
-    configASSERT(neighbor_entry_buff);
+    uint8_t *neighbor_entry_buff = (uint8_t *)bm_malloc(sizeof(neighborTableEntry_t));
+    if (err == BmOK && neighbor_entry_buff) {
 
-    memset(neighbor_entry_buff, 0, sizeof(neighborTableEntry_t));
-    neighborTableEntry_t *neighbor_entry = (neighborTableEntry_t *)neighbor_entry_buff;
+      memset(neighbor_entry_buff, 0, sizeof(neighborTableEntry_t));
+      neighborTableEntry_t *neighbor_entry = (neighborTableEntry_t *)neighbor_entry_buff;
 
-    uint16_t neighbor_table_len = sizeof(bcmp_neighbor_table_reply_t) +
-                                  sizeof(bcmp_port_info_t) * reply->port_len +
-                                  sizeof(BcmpNeighborInfo) * reply->neighbor_len;
-    neighbor_entry->neighbor_table_reply =
-        (bcmp_neighbor_table_reply_t *)pvPortMalloc(neighbor_table_len);
+      uint16_t neighbor_table_len = sizeof(BcmpNeighborTableReply) +
+                                    sizeof(BcmpPortInfo) * reply->port_len +
+                                    sizeof(BcmpNeighborInfo) * reply->neighbor_len;
+      neighbor_entry->neighbor_table_reply =
+          (BcmpNeighborTableReply *)bm_malloc(neighbor_table_len);
 
-    memcpy(neighbor_entry->neighbor_table_reply, reply, neighbor_table_len);
+      memcpy(neighbor_entry->neighbor_table_reply, reply, neighbor_table_len);
 
-    bcmp_topo_queue_item_t item = {
-        .type = BCMP_TOPO_EVT_ADD_NODE, .neighborEntry = neighbor_entry, .callback = NULL};
+      BcmpQueueItem item = {
+          .type = BCMP_TOPO_EVT_ADD_NODE, .neighbor_entry = neighbor_entry, .callback = NULL};
 
-    bm_queue_send(_ctx.evt_queue, &item, 0);
+      bm_queue_send(CTX.evt_queue, &item, 0);
+    } else if (!neighbor_entry_buff) {
+      err = BmENOMEM;
+    }
   }
 
   return err;
 }
 
-/*
-  FreeRTOS timer handler for timeouts while waiting for neigbor tables. No work is done in the timer
-  handler, but instead an event is queued up to be handled in the BCMP task.
+/*!
+  @brief Timer handler for timeouts while waiting for neigbor tables
+
+  @details No work is done in the timer handler, but instead an event is queued
+           up to be handled in the BCMP task.
 
   \param tmr unused
   \return none
@@ -306,36 +311,38 @@ static BmErr bcmp_process_neighbor_table_reply(BcmpProcessData data) {
 static void topology_timer_handler(BmTimer tmr) {
   (void)tmr;
 
-  bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_TIMEOUT, NULL, NULL};
+  BcmpQueueItem item = {BCMP_TOPO_EVT_TIMEOUT, NULL, NULL};
 
-  bm_queue_send(_ctx.evt_queue, &item, 0);
+  bm_queue_send(CTX.evt_queue, &item, 0);
 }
 
-/*
-  BCMP Topology Task. Handles stepping through the network to request node's neighbor
-  tables. Callback can be assigned/called to do something with the assembled network
-  topology.
+/*!
+  @brief BCMP Topology Task
 
-  \param parameters unused
-  \return none
+  @details Handles stepping through the network to request node's neighbor
+           tables. Callback can be assigned/called to do something with the assembled network
+           topology.
+
+  @param parameters unused
+  @return none
 */
 static void bcmp_topology_thread(void *parameters) {
   (void)parameters;
 
-  _ctx.topo_timer = bm_timer_create(topology_timer_handler, "topology_timer",
-                                    BCMP_TOPO_TIMEOUT_S * 1000, NULL);
+  CTX.topo_timer = bm_timer_create(topology_timer_handler, "topology_timer",
+                                   BCMP_TOPO_TIMEOUT_S * 1000, NULL);
 
   for (;;) {
-    bcmp_topo_queue_item_t item;
+    BcmpQueueItem item;
 
-    bm_queue_receive(_ctx.evt_queue, &item, portMAX_DELAY);
+    bm_queue_receive(CTX.evt_queue, &item, portMAX_DELAY);
 
     switch (item.type) {
     case BCMP_TOPO_EVT_START: {
-      if (!_ctx.in_progress) {
-        _ctx.in_progress = true;
-        _sent_request = true;
-        _ctx.callback = item.callback;
+      if (!CTX.in_progress) {
+        CTX.in_progress = true;
+        SENT_REQUEST = true;
+        CTX.callback = item.callback;
         process_start_topology_event();
       } else {
         item.callback(NULL);
@@ -344,22 +351,22 @@ static void bcmp_topology_thread(void *parameters) {
     }
 
     case BCMP_TOPO_EVT_ADD_NODE: {
-      if (item.neighborEntry) {
-        if (!networkTopologyNodeIdInTopology(
-                _ctx.networkTopology, item.neighborEntry->neighbor_table_reply->node_id)) {
-          if (_insert_before) {
-            networkTopologyInsertBefore(_ctx.networkTopology, item.neighborEntry);
-            networkTopologyMovePrev(_ctx.networkTopology);
+      if (item.neighbor_entry) {
+        if (!network_topology_node_id_in_topology(
+                CTX.network_topology, item.neighbor_entry->neighbor_table_reply->node_id)) {
+          if (INSERT_BEFORE) {
+            network_topology_insert_before(CTX.network_topology, item.neighbor_entry);
+            network_topology_move_prev(CTX.network_topology);
           } else {
-            networkTopologyInsertAfter(_ctx.networkTopology, item.neighborEntry);
-            networkTopologyMoveNext(_ctx.networkTopology);
+            network_topology_insert_after(CTX.network_topology, item.neighbor_entry);
+            network_topology_move_next(CTX.network_topology);
           }
-          networkTopologyIncrementPortCount(
-              _ctx.networkTopology); // we have come from one of the ports so it must have been checked
+          network_topology_increment_port_count(
+              CTX.network_topology); // we have come from one of the ports so it must have been checked
         }
       }
-      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
-      bm_queue_send(_ctx.evt_queue, &check_item, 0);
+      BcmpQueueItem check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
+      bm_queue_send(CTX.evt_queue, &check_item, 0);
       break;
     }
 
@@ -369,25 +376,25 @@ static void bcmp_topology_thread(void *parameters) {
     }
 
     case BCMP_TOPO_EVT_END: {
-      if (_ctx.callback) {
-        _ctx.callback(_ctx.networkTopology);
+      if (CTX.callback) {
+        CTX.callback(CTX.network_topology);
       }
       // Free the network topology now that we are done
-      freeNetworkTopology(&_ctx.networkTopology);
-      _insert_before = false;
-      _sent_request = false;
-      _ctx.in_progress = false;
+      free_network_topology(&CTX.network_topology);
+      INSERT_BEFORE = false;
+      SENT_REQUEST = false;
+      CTX.in_progress = false;
       break;
     }
 
     case BCMP_TOPO_EVT_TIMEOUT: {
-      if (_insert_before) {
-        networkTopologyMoveNext(_ctx.networkTopology);
+      if (INSERT_BEFORE) {
+        network_topology_move_next(CTX.network_topology);
       } else {
-        networkTopologyMovePrev(_ctx.networkTopology);
+        network_topology_move_prev(CTX.network_topology);
       }
-      bcmp_topo_queue_item_t check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
-      bm_queue_send(_ctx.evt_queue, &check_item, 0);
+      BcmpQueueItem check_item = {BCMP_TOPO_EVT_CHECK_NODE, NULL, NULL};
+      bm_queue_send(CTX.evt_queue, &check_item, 0);
       break;
     }
 
@@ -403,7 +410,7 @@ static void bcmp_topology_thread(void *parameters) {
 
   @return BmOK on success
   @return BmErr on failure
- */
+*/
 BmErr bcmp_topology_init(void) {
   BmErr err = BmOK;
   BcmpPacketCfg neighbor_request = {
@@ -422,206 +429,212 @@ BmErr bcmp_topology_init(void) {
   return err;
 }
 
-void bcmp_topology_start(bcmp_topo_cb_t callback) {
+BmErr bcmp_topology_start(BcmpTopoCb callback) {
+  BmErr err = BmOK;
 
   // create the task if it is not already created
-  if (!bcmpTopologyTask) {
-    _ctx.evt_queue = bm_queue_create(BCMP_TOPO_EVT_QUEUE_LEN, sizeof(bcmp_topo_queue_item_t));
+  if (!BCMP_TOPOLOGY_TASK) {
+    CTX.evt_queue = bm_queue_create(BCMP_TOPO_EVT_QUEUE_LEN, sizeof(BcmpQueueItem));
 
-    BaseType_t rval = xTaskCreate(bcmp_topology_thread, "BCMP_TOPO", 1024, NULL,
-                                  BCMP_TOPO_TASK_PRIORITY, &bcmpTopologyTask);
-    configASSERT(rval == pdPASS);
+    bm_err_check(err, bm_task_create(bcmp_topology_thread, "BCMP_TOPO", 1024, NULL,
+                                     BCMP_TOPO_TASK_PRIORITY, &BCMP_TOPOLOGY_TASK));
   }
 
   // send the first request out
-  bcmp_topo_queue_item_t item = {BCMP_TOPO_EVT_START, NULL, callback};
-  bm_queue_send(_ctx.evt_queue, &item, 0);
+  BcmpQueueItem item = {BCMP_TOPO_EVT_START, NULL, callback};
+  bm_err_check(err, bm_queue_send(CTX.evt_queue, &item, 0));
+
+  return err;
 }
 
-// free a neighbor table entry that is within the network topology
-static void freeNeighborTableEntry(neighborTableEntry_t **entry) {
+/*!
+ @brief Free a neighbor table entry that is within the network topology
+
+ @param entry entry to be freed
+ */
+static void free_neighbor_table_entry(neighborTableEntry_t **entry) {
 
   if (entry != NULL && *entry != NULL) {
-    vPortFree((*entry)->neighbor_table_reply);
-    vPortFree(*entry);
+    bm_free((*entry)->neighbor_table_reply);
+    bm_free(*entry);
     *entry = NULL;
   }
 }
-static networkTopology_t *newNetworkTopology(void) {
-  networkTopology_t *networkTopology =
-      (networkTopology_t *)pvPortMalloc(sizeof(networkTopology_t));
-  memset(networkTopology, 0, sizeof(networkTopology_t));
-  networkTopology->index = -1;
-  return networkTopology;
+static networkTopology_t *new_network_topology(void) {
+  networkTopology_t *network_topology =
+      (networkTopology_t *)bm_malloc(sizeof(networkTopology_t));
+  memset(network_topology, 0, sizeof(networkTopology_t));
+  network_topology->index = -1;
+  return network_topology;
 }
 
-static void freeNetworkTopology(networkTopology_t **networkTopology) {
-  if (networkTopology != NULL && *networkTopology != NULL) {
-    networkTopologyClear(*networkTopology);
-    vPortFree(*networkTopology);
-    *networkTopology = NULL;
+static void free_network_topology(networkTopology_t **network_topology) {
+  if (network_topology != NULL && *network_topology != NULL) {
+    network_topology_clear(*network_topology);
+    bm_free(*network_topology);
+    *network_topology = NULL;
   }
 }
 
-static void networkTopologyClear(networkTopology_t *networkTopology) {
-  if (networkTopology) {
-    while (networkTopology->length) {
-      networkTopologyDeleteBack(networkTopology);
+static void network_topology_clear(networkTopology_t *network_topology) {
+  if (network_topology) {
+    while (network_topology->length) {
+      network_topology_delete_back(network_topology);
     }
   }
 }
 
-static void networkTopologyMoveFront(networkTopology_t *networkTopology) {
-  if (networkTopology && networkTopology->length) {
-    networkTopology->cursor = networkTopology->front;
-    networkTopology->index = 0;
+static void network_topology_move_to_front(networkTopology_t *network_topology) {
+  if (network_topology && network_topology->length) {
+    network_topology->cursor = network_topology->front;
+    network_topology->index = 0;
   }
 }
 
-static void networkTopologyMovePrev(networkTopology_t *networkTopology) {
-  if (networkTopology) {
-    if (networkTopology->index > 0) {
-      networkTopology->cursor = networkTopology->cursor->prevNode;
-      networkTopology->index--;
+static void network_topology_move_prev(networkTopology_t *network_topology) {
+  if (network_topology) {
+    if (network_topology->index > 0) {
+      network_topology->cursor = network_topology->cursor->prevNode;
+      network_topology->index--;
     }
   }
 }
 
-static void networkTopologyMoveNext(networkTopology_t *networkTopology) {
-  if (networkTopology) {
-    if (networkTopology->index < networkTopology->length - 1) {
-      networkTopology->cursor = networkTopology->cursor->nextNode;
-      networkTopology->index++;
+static void network_topology_move_next(networkTopology_t *network_topology) {
+  if (network_topology) {
+    if (network_topology->index < network_topology->length - 1) {
+      network_topology->cursor = network_topology->cursor->nextNode;
+      network_topology->index++;
     }
   }
 }
 
 // insert at the front
-static void networkTopologyPrepend(networkTopology_t *networkTopology,
-                                   neighborTableEntry_t *entry) {
-  if (networkTopology && entry) {
-    if (networkTopology->length == 0) {
-      networkTopology->front = entry;
-      networkTopology->back = entry;
-      networkTopology->front->prevNode = NULL;
-      networkTopology->front->nextNode = NULL;
-      networkTopology->index++;
+static void network_topology_prepend(networkTopology_t *network_topology,
+                                     neighborTableEntry_t *entry) {
+  if (network_topology && entry) {
+    if (network_topology->length == 0) {
+      network_topology->front = entry;
+      network_topology->back = entry;
+      network_topology->front->prevNode = NULL;
+      network_topology->front->nextNode = NULL;
+      network_topology->index++;
     } else {
-      entry->nextNode = networkTopology->front;
-      networkTopology->front->prevNode = entry;
-      networkTopology->front = entry;
+      entry->nextNode = network_topology->front;
+      network_topology->front->prevNode = entry;
+      network_topology->front = entry;
     }
-    networkTopology->length++;
-    if (networkTopology->index >= 0) {
-      networkTopology->index++;
+    network_topology->length++;
+    if (network_topology->index >= 0) {
+      network_topology->index++;
     }
   }
 }
 
 // insert at the end
-static void networkTopologyAppend(networkTopology_t *networkTopology,
-                                  neighborTableEntry_t *entry) {
-  if (networkTopology && entry) {
-    if (networkTopology->length == 0) {
-      networkTopology->front = entry;
-      networkTopology->back = entry;
-      networkTopology->front->prevNode = NULL;
-      networkTopology->front->nextNode = NULL;
-      networkTopology->index++;
+static void network_topology_append(networkTopology_t *network_topology,
+                                    neighborTableEntry_t *entry) {
+  if (network_topology && entry) {
+    if (network_topology->length == 0) {
+      network_topology->front = entry;
+      network_topology->back = entry;
+      network_topology->front->prevNode = NULL;
+      network_topology->front->nextNode = NULL;
+      network_topology->index++;
     } else {
-      entry->prevNode = networkTopology->back;
-      networkTopology->back->nextNode = entry;
-      networkTopology->back = entry;
+      entry->prevNode = network_topology->back;
+      network_topology->back->nextNode = entry;
+      network_topology->back = entry;
     }
-    networkTopology->length++;
+    network_topology->length++;
   }
 }
 
 // insert after the cursor entry
-static void networkTopologyInsertAfter(networkTopology_t *networkTopology,
-                                       neighborTableEntry_t *entry) {
-  if (networkTopology && entry) {
-    if (networkTopology->length == 0) {
-      networkTopologyAppend(networkTopology, entry);
-    } else if (networkTopology->index == networkTopology->length - 1) {
-      networkTopologyAppend(networkTopology, entry);
+static void network_topology_insert_after(networkTopology_t *network_topology,
+                                          neighborTableEntry_t *entry) {
+  if (network_topology && entry) {
+    if (network_topology->length == 0) {
+      network_topology_append(network_topology, entry);
+    } else if (network_topology->index == network_topology->length - 1) {
+      network_topology_append(network_topology, entry);
     } else {
-      entry->nextNode = networkTopology->cursor->nextNode;
-      networkTopology->cursor->nextNode->prevNode = entry;
-      entry->prevNode = networkTopology->cursor;
-      networkTopology->cursor->nextNode = entry;
-      networkTopology->length++;
+      entry->nextNode = network_topology->cursor->nextNode;
+      network_topology->cursor->nextNode->prevNode = entry;
+      entry->prevNode = network_topology->cursor;
+      network_topology->cursor->nextNode = entry;
+      network_topology->length++;
     }
   }
 }
 
 // insert before the cursor entry
-static void networkTopologyInsertBefore(networkTopology_t *networkTopology,
-                                        neighborTableEntry_t *entry) {
-  if (networkTopology && entry) {
-    if (networkTopology->length == 0) {
-      networkTopologyPrepend(networkTopology, entry);
-    } else if (networkTopology->index == 0) {
-      networkTopologyPrepend(networkTopology, entry);
+static void network_topology_insert_before(networkTopology_t *network_topology,
+                                           neighborTableEntry_t *entry) {
+  if (network_topology && entry) {
+    if (network_topology->length == 0) {
+      network_topology_prepend(network_topology, entry);
+    } else if (network_topology->index == 0) {
+      network_topology_prepend(network_topology, entry);
     } else {
-      networkTopology->cursor->prevNode->nextNode = entry;
-      entry->nextNode = networkTopology->cursor;
-      entry->prevNode = networkTopology->cursor->prevNode;
-      networkTopology->cursor->prevNode = entry;
-      networkTopology->length++;
-      networkTopology->index++;
+      network_topology->cursor->prevNode->nextNode = entry;
+      entry->nextNode = network_topology->cursor;
+      entry->prevNode = network_topology->cursor->prevNode;
+      network_topology->cursor->prevNode = entry;
+      network_topology->length++;
+      network_topology->index++;
     }
   }
 }
 
 // delete the last entry
-static void networkTopologyDeleteBack(networkTopology_t *networkTopology) {
+static void network_topology_delete_back(networkTopology_t *network_topology) {
   neighborTableEntry_t *temp_entry = NULL;
 
-  if (networkTopology && networkTopology->length) {
-    temp_entry = networkTopology->back;
-    if (networkTopology->length > 1) {
-      networkTopology->back = networkTopology->back->prevNode;
-      networkTopology->back->nextNode = NULL;
-      if (networkTopology->index == networkTopology->length - 1) {
-        networkTopology->cursor = networkTopology->back;
+  if (network_topology && network_topology->length) {
+    temp_entry = network_topology->back;
+    if (network_topology->length > 1) {
+      network_topology->back = network_topology->back->prevNode;
+      network_topology->back->nextNode = NULL;
+      if (network_topology->index == network_topology->length - 1) {
+        network_topology->cursor = network_topology->back;
       }
     } else {
-      networkTopology->cursor = NULL;
-      networkTopology->back = NULL;
-      networkTopology->front = NULL;
-      networkTopology->index = -1;
+      network_topology->cursor = NULL;
+      network_topology->back = NULL;
+      network_topology->front = NULL;
+      network_topology->index = -1;
     }
-    networkTopology->length--;
-    freeNeighborTableEntry(&temp_entry);
+    network_topology->length--;
+    free_neighbor_table_entry(&temp_entry);
   }
 }
 
-static void networkTopologyIncrementPortCount(networkTopology_t *networkTopology) {
-  if (networkTopology && networkTopology->cursor) {
-    networkTopology->cursor->ports_explored++;
+static void network_topology_increment_port_count(networkTopology_t *network_topology) {
+  if (network_topology && network_topology->cursor) {
+    network_topology->cursor->ports_explored++;
   }
 }
 
-static uint8_t networkTopologyGetPortCount(networkTopology_t *networkTopology) {
-  if (networkTopology && networkTopology->cursor) {
-    return networkTopology->cursor->ports_explored;
+static uint8_t network_topology_get_port_count(networkTopology_t *network_topology) {
+  if (network_topology && network_topology->cursor) {
+    return network_topology->cursor->ports_explored;
   }
   return -1;
 }
 
-static bool networkTopologyIsRoot(networkTopology_t *networkTopology) {
-  if (networkTopology && networkTopology->cursor) {
-    return networkTopology->cursor->is_root;
+static bool network_topology_is_root(networkTopology_t *network_topology) {
+  if (network_topology && network_topology->cursor) {
+    return network_topology->cursor->is_root;
   }
   return false;
 }
 
-static bool networkTopologyNodeIdInTopology(networkTopology_t *networkTopology,
-                                            uint64_t node_id) {
+static bool network_topology_node_id_in_topology(networkTopology_t *network_topology,
+                                                 uint64_t node_id) {
   neighborTableEntry_t *temp_entry;
-  if (networkTopology) {
-    for (temp_entry = networkTopology->front; temp_entry != NULL;
+  if (network_topology) {
+    for (temp_entry = network_topology->front; temp_entry != NULL;
          temp_entry = temp_entry->nextNode) {
       if (temp_entry->neighbor_table_reply->node_id == node_id) {
         return true;
@@ -631,16 +644,16 @@ static bool networkTopologyNodeIdInTopology(networkTopology_t *networkTopology,
   return false;
 }
 
-static uint64_t networkTopologyCheckNeighborNodeIds(networkTopology_t *networkTopology) {
-  if (networkTopology) {
+static uint64_t network_topology_check_neighbor_node_ids(networkTopology_t *network_topology) {
+  if (network_topology) {
     for (uint8_t neighbors_count = 0;
-         neighbors_count < networkTopology->cursor->neighbor_table_reply->neighbor_len;
+         neighbors_count < network_topology->cursor->neighbor_table_reply->neighbor_len;
          neighbors_count++) {
-      bcmp_neighbor_table_reply_t *temp_table = networkTopology->cursor->neighbor_table_reply;
+      BcmpNeighborTableReply *temp_table = network_topology->cursor->neighbor_table_reply;
       BcmpNeighborInfo *neighbor_info =
           (BcmpNeighborInfo *)&temp_table->port_list[temp_table->port_len];
       uint64_t node_id = neighbor_info[neighbors_count].node_id;
-      if (!networkTopologyNodeIdInTopology(networkTopology, node_id)) {
+      if (!network_topology_node_id_in_topology(network_topology, node_id)) {
         return node_id;
       }
     }
@@ -648,42 +661,42 @@ static uint64_t networkTopologyCheckNeighborNodeIds(networkTopology_t *networkTo
   return 0;
 }
 
-static bool networkTopologyCheckAllPortsExplored(networkTopology_t *networkTopology) {
-  if (networkTopology) {
+static bool network_topology_check_all_ports_explored(networkTopology_t *network_topology) {
+  if (network_topology) {
     uint16_t neighbors_online_count = 0;
-    neighborTableEntry_t *cursor_entry = networkTopology->cursor;
+    neighborTableEntry_t *cursor_entry = network_topology->cursor;
     uint8_t num_ports = cursor_entry->neighbor_table_reply->port_len;
     BcmpNeighborInfo *neighbor_info =
         (BcmpNeighborInfo *)&cursor_entry->neighbor_table_reply->port_list[num_ports];
 
     // loop through the neighbors and make sure they port is up
     for (uint16_t neighbor_count = 0;
-         neighbor_count < networkTopology->cursor->neighbor_table_reply->neighbor_len;
+         neighbor_count < network_topology->cursor->neighbor_table_reply->neighbor_len;
          neighbor_count++) {
       // get the port number that is associated with a neighbor
       uint8_t neighbors_port_number =
           neighbor_info[neighbor_count].port -
           1; // subtract 1 since we save the ports as 1,2,... (this means a port cannot be labeled '0')
-      if (networkTopology->cursor->neighbor_table_reply->port_list[neighbors_port_number]
+      if (network_topology->cursor->neighbor_table_reply->port_list[neighbors_port_number]
               .state) {
         neighbors_online_count++;
       }
     }
 
-    if (neighbors_online_count == networkTopology->cursor->ports_explored) {
+    if (neighbors_online_count == network_topology->cursor->ports_explored) {
       return true;
     }
   }
   return false;
 }
 
-void networkTopologyPrint(networkTopology_t *networkTopology) {
-  if (networkTopology) {
+void network_topology_print(networkTopology_t *network_topology) {
+  if (network_topology) {
     neighborTableEntry_t *temp_entry;
-    for (temp_entry = networkTopology->front; temp_entry != NULL;
+    for (temp_entry = network_topology->front; temp_entry != NULL;
          temp_entry = temp_entry->nextNode) {
       if (temp_entry->prevNode) {
-        bcmp_neighbor_table_reply_t *temp_table = temp_entry->neighbor_table_reply;
+        BcmpNeighborTableReply *temp_table = temp_entry->neighbor_table_reply;
         BcmpNeighborInfo *neighbor_info =
             (BcmpNeighborInfo *)&temp_table->port_list[temp_table->port_len];
         for (uint16_t neighbor_count = 0; neighbor_count < temp_table->neighbor_len;
@@ -700,7 +713,7 @@ void networkTopologyPrint(networkTopology_t *networkTopology) {
         printf("%016" PRIx64 "", temp_entry->neighbor_table_reply->node_id);
       }
       if (temp_entry->nextNode) {
-        bcmp_neighbor_table_reply_t *temp_table = temp_entry->neighbor_table_reply;
+        BcmpNeighborTableReply *temp_table = temp_entry->neighbor_table_reply;
         BcmpNeighborInfo *neighbor_info =
             (BcmpNeighborInfo *)&temp_table->port_list[temp_table->port_len];
         for (uint16_t neighbor_count = 0; neighbor_count < temp_table->neighbor_len;
@@ -711,7 +724,7 @@ void networkTopologyPrint(networkTopology_t *networkTopology) {
           }
         }
       }
-      if (temp_entry != networkTopology->back && temp_entry->nextNode != NULL) {
+      if (temp_entry != network_topology->back && temp_entry->nextNode != NULL) {
         printf(" | ");
       }
     }
