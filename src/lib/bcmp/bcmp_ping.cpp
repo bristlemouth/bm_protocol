@@ -1,8 +1,9 @@
-#include "bcmp_ping.h"
-#include "bcmp.h"
-#include "bm_os.h"
 #include <string.h>
+#include "bcmp.h"
+#include "bcmp_ping.h"
+
 extern "C" {
+#include "bm_os.h"
 #include "packet.h"
 }
 
@@ -165,10 +166,8 @@ BmErr ping_init(void) {
       bcmp_process_ping_reply,
   };
 
-  BmErr err;
-  err = packet_add(&ping_request, BcmpEchoRequestMessage);
-  if (err == BmOK) {
-    err = packet_add(&ping_reply, BcmpEchoReplyMessage);
-  }
+  BmErr err = BmOK;
+  bm_err_check(err, packet_add(&ping_request, BcmpEchoRequestMessage));
+  bm_err_check(err, packet_add(&ping_reply, BcmpEchoReplyMessage));
   return err;
 }
