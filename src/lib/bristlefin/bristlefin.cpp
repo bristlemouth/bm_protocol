@@ -143,6 +143,37 @@ void Bristlefin::setLed(uint8_t led_num, led_state_e led_state) {
   }
 }
 
+void Bristlefin::setRS485HalfDuplex() {
+  // Set the RS485 transceiver to Half-Duplex (HFIO = 1)
+  // Per MAX3089ECSD Datasheet
+  IOWrite(&BF_HFIO, 1);
+}
+
+void Bristlefin::setRS485FullDuplex() {
+  // Set the RS485 transceiver to Full-Duplex (HFIO = 0)
+  // Per MAX3089ECSD Datasheet
+  IOWrite(&BF_HFIO, 0);
+}
+
+void Bristlefin::setRS485Tx() {
+  /// For more details see driver datasheet: https://www.notion.so/bristlemouth/Internal-Bristlemouth-VEMCO-Receiver-Integration-043988c56f84454db1a31381fd825beb?pvs=4#85bbbf0ea1cf43a69e7624427f5e2356
+  // Disable the Rx-enable so we don't listen to ourselves (RE).
+  // Enable the Tx-enable (DE).
+  IOWrite(&GPIO1, 1); // GPIO1 is connected to DE active HIGH
+  IOWrite(&GPIO2, 1); // GPIO2 is connected to RE active LOW
+  // A 62 us setup delay is required,
+  //  but 1ms is the smallest thread-safe non-blocking RTOS delay we have.
+  vTaskDelay(1);
+}
+
+void Bristlefin::setRS485Rx() {
+  /// For more details see driver datasheet: https://www.notion.so/bristlemouth/Internal-Bristlemouth-VEMCO-Receiver-Integration-043988c56f84454db1a31381fd825beb?pvs=4#85bbbf0ea1cf43a69e7624427f5e2356
+  // Enable the Rx-receiver.
+  // Disable the Tx-driver (DE). This is to save power, and may be required for some devices.
+  IOWrite(&GPIO1, 0); // GPIO1 is connected to DE active HIGH
+  IOWrite(&GPIO2, 0); // GPIO2 is connected to RE active LOW
+}
+
 Bristlefin::version_e Bristlefin::getVersion() {return version_;}
 
 TCA::Channel_t Bristlefin::getMuxChannel() {
