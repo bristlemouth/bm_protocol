@@ -393,14 +393,14 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint64_t utc_us = strtoull(utc_us_str, NULL, 0);
-        if (!bcmp_time_set_time(node_id, utc_us)) {
+        if (bcmp_time_set_time(node_id, utc_us) != BmOK) {
           printf("bcmp set time failed to be sent\n");
           break;
         } else {
           printf("succesfully sent time set cmd\n");
         }
       } else if (strncmp("get", cmdstr, cmdstr_len) == 0) {
-        if (!bcmp_time_get_time(node_id)) {
+        if (bcmp_time_get_time(node_id) != BmOK) {
           printf("bcmp get time failed to be sent\n");
           break;
         } else {
