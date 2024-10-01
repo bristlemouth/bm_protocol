@@ -17,8 +17,9 @@
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 #define DEFAULT_BAUD_RATE 9600
-#define DEFAULT_LINE_TERM 10 // FL / '\n', 0x0A
-#define BYTES_CLUSTER_MS 50
+#define DEFAULT_LINE_TERM 10 // newline, '\n', 0x0A
+#define BYTES_CLUSTER_MS 50 // used for console printing convenience
+#define DEFAULT_UART_MODE MODE_RS232
 
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
@@ -27,6 +28,7 @@ extern cfg::Configuration *userConfigurationPartition;
 static int32_t ledLinePulse = -1;
 static u_int32_t baud_rate_config = DEFAULT_BAUD_RATE;
 static u_int32_t line_term_config = DEFAULT_LINE_TERM;
+static u_int32_t uart_mode_config = DEFAULT_UART_MODE;
 
 // A buffer for our data from the payload uart
 char payload_buffer[2048];
@@ -38,6 +40,13 @@ void setup(void) {
                                         baud_rate_config);
   userConfigurationPartition->getConfig("plUartLineTerm", strlen("plUartLineTerm"),
                                         line_term_config);
+  userConfigurationPartition->getConfig("plUartMode", strlen("plUartMode"),
+                                        uart_mode_config);
+  if (uart_mode_config >= MODE_MAX) {
+    printf("ERROR - PLUART UART MODE %lu is not supported. Reverting to MODE_RS232\n",
+      uart_mode_config, MODE_RS232);
+    uart_mode_config = MODE_RS232;
+  }
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
@@ -50,6 +59,12 @@ void setup(void) {
   PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter((char)line_term_config);
+  if (uart_mode_config == MODE_RS485_HD) {
+    printf("Enabling RS485 Half-Duplex.\n");
+    bristlefin.setRS485HalfDuplex();  // Set the RS485 transceiver to Half-Duplex.
+    // Set up PLUART transactions for proper RS485 enable Tx / enable Rx
+    PLUART::enableTransactions(Bristlefin::setRS485Tx, Bristlefin::setRS485Rx);
+  }
   // Turn on the UART.
   PLUART::enable();
   // Enable the input to the Vout power supply.
