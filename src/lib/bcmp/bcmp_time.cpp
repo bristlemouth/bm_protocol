@@ -1,11 +1,12 @@
 #include "bcmp_time.h"
 #include "app_util.h"
-#include "bcmp.h"
-#include "bm_util.h"
 #include "stm32_rtc.h"
+#include "util.h"
 
 extern "C" {
+#include "bcmp.h"
 #include "bm_rtc.h"
+#include "device.h"
 #include "packet.h"
 }
 
@@ -26,7 +27,7 @@ BmErr bcmp_time_set_time(uint64_t target_node_id, uint64_t utc_us) {
   set_msg.header.source_node_id = source_node_id;
   set_msg.utc_time_us = utc_us;
   if (bcmp_tx(&multicast_ll_addr, BcmpSystemTimeSetMessage, (uint8_t *)&set_msg,
-              sizeof(set_msg)) != BmOK) {
+              sizeof(set_msg), 0, NULL) != BmOK) {
     printf("Failed to send system time response\n");
     err = BmEINVAL;
   }
@@ -48,7 +49,7 @@ BmErr bcmp_time_get_time(uint64_t target_node_id) {
   get_msg.header.target_node_id = target_node_id;
   get_msg.header.source_node_id = source_node_id;
   if (bcmp_tx(&multicast_ll_addr, BcmpSystemTimeRequestMessage, (uint8_t *)&get_msg,
-              sizeof(get_msg)) != BmOK) {
+              sizeof(get_msg), 0, NULL) != BmOK) {
     printf("Failed to send system time response\n");
     err = BmEINVAL;
   }
@@ -70,7 +71,7 @@ static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
   response.header.source_node_id = source_node_id;
   response.utc_time_us = utc_us;
   if (bcmp_tx(&multicast_ll_addr, BcmpSystemTimeResponseMessage, (uint8_t *)&response,
-              sizeof(response)) != BmOK) {
+              sizeof(response), 0, NULL) != BmOK) {
     printf("Failed to send system time response\n");
   }
 }
@@ -106,10 +107,10 @@ static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
   // TODO: make this an abstraction
   date_time_from_utc(msg->utc_time_us, &datetime);
   RtcTimeAndDate time = {// TODO: Consolidate the time functions into util.h
-                           .year = datetime.year,       .month = datetime.month,
-                           .day = datetime.day,         .hour = datetime.hour,
-                           .minute = datetime.min,      .second = datetime.sec,
-                           .ms = (datetime.usec / 1000)};
+                         .year = datetime.year,       .month = datetime.month,
+                         .day = datetime.day,         .hour = datetime.hour,
+                         .minute = datetime.min,      .second = datetime.sec,
+                         .ms = (datetime.usec / 1000)};
   if (bm_rtc_set(&time) == BmOK) {
     bcmp_time_send_response(msg->header.source_node_id, msg->utc_time_us);
   } else {
@@ -172,7 +173,6 @@ static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
 
   if (should_forward) {
     err = bcmp_ll_forward(data.header, data.payload, data.size, data.ingress_port);
-
   }
 
   return err;
