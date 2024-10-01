@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "bm_util.h"
+#include "util.h"
 #include "bm_pubsub.h"
 
 #define USE_TIMESTAMP 1
