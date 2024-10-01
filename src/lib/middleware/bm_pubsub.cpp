@@ -1,10 +1,12 @@
 #include "bm_pubsub.h"
 #include "FreeRTOS.h"
-#include "bcmp_resource_discovery.h"
-#include "bm_util.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
+extern "C" {
+#include "messages/resource_discovery.h"
+}
 #include "middleware.h"
+#include "util.h"
 #include <string.h>
 
 typedef struct {
@@ -151,7 +153,8 @@ bool bm_sub_wl(const char *topic, uint16_t topic_len, const bm_cb_t callback) {
 
   if (retv) {
     printf("Subscribing to Topic: %.*s\n", topic_len, topic);
-    if (bcmp_resource_discovery_add_resource(topic, topic_len, SUB)) {
+    if (bcmp_resource_discovery_add_resource(topic, topic_len, SUB,
+                                             default_resource_add_timeout_ms) == BmOK) {
       printf("Added topic %.*s to BCMP resource table.\n", topic_len, topic);
     }
   } else {
@@ -341,7 +344,8 @@ bool bm_pub_wl(const char *topic, uint16_t topic_len, const void *data, uint16_t
   if (!retv) {
     printf("Unable to publish to topic\n");
   } else {
-    if (bcmp_resource_discovery_add_resource(topic, topic_len, PUB)) {
+    if (bcmp_resource_discovery_add_resource(topic, topic_len, PUB,
+                                             default_resource_add_timeout_ms) == BmOK) {
       printf("Added topic %.*s to BCMP resource table.\n", topic_len, topic);
     }
   }
