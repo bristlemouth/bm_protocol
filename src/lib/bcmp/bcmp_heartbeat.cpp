@@ -8,7 +8,7 @@ extern "C" {
 #include "packet.h"
 }
 
-extern neighbor_discovery_callback_t
+extern NeighborDiscoveryCallback
     NEIGHBOR_DISCOVERY_CB; // FIXME - https://github.com/wavespotter/bristlemouth/issues/384
 
 /*!
@@ -36,7 +36,7 @@ static BmErr bcmp_process_heartbeat(BcmpProcessData data) {
   BmErr err = BmEINVAL;
   BcmpHeartbeat *heartbeat = (BcmpHeartbeat *)data.payload;
 
-  bm_neighbor_t *neighbor = bcmp_update_neighbor(ip_to_nodeid(data.src), data.ingress_port);
+  BcmpNeighbor *neighbor = bcmp_update_neighbor(ip_to_nodeid(data.src), data.ingress_port);
   if (neighbor) {
     err = BmOK;
 

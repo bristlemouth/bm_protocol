@@ -1,7 +1,9 @@
 #include "bcmp_config.h"
+#include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bm_util.h"
 extern "C" {
+#include "bm_os.h"
 #include "packet.h"
 }
 
@@ -15,7 +17,7 @@ bool bcmp_config_get(uint64_t target_node_id, bm_common_config_partition_e parti
   bool rval = false;
   err = BmEINVAL;
   size_t msg_size = sizeof(bm_common_config_get_t) + key_len;
-  bm_common_config_get_t *get_msg = (bm_common_config_get_t *)pvPortMalloc(msg_size);
+  bm_common_config_get_t *get_msg = (bm_common_config_get_t *)bm_malloc(msg_size);
   configASSERT(get_msg);
   do {
     get_msg->header.target_node_id = target_node_id;
@@ -44,7 +46,7 @@ bool bcmp_config_set(uint64_t target_node_id, bm_common_config_partition_e parti
   bool rval = false;
   err = BmEINVAL;
   size_t msg_len = sizeof(bm_common_config_set_t) + key_len + value_size;
-  bm_common_config_set_t *set_msg = (bm_common_config_set_t *)pvPortMalloc(msg_len);
+  bm_common_config_set_t *set_msg = (bm_common_config_set_t *)bm_malloc(msg_len);
   configASSERT(set_msg);
   do {
     set_msg->header.target_node_id = target_node_id;
@@ -72,7 +74,7 @@ bool bcmp_config_commit(uint64_t target_node_id, bm_common_config_partition_e pa
   bool rval = false;
   err = BmEINVAL;
   bm_common_config_commit_t *commit_msg =
-      (bm_common_config_commit_t *)pvPortMalloc(sizeof(bm_common_config_commit_t));
+      (bm_common_config_commit_t *)bm_malloc(sizeof(bm_common_config_commit_t));
   configASSERT(commit_msg);
   commit_msg->header.target_node_id = target_node_id;
   commit_msg->header.source_node_id = node_id();
@@ -439,6 +441,7 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
   if (msg_header->target_node_id != node_id()) {
     should_forward = true;
   } else {
+    err = BmOK;
     switch (data.header->type) {
     case BcmpConfigGetMessage: {
       bcmp_config_process_config_get_msg((bm_common_config_get_t *)(data.payload),
@@ -503,11 +506,9 @@ static BmErr bcmp_process_config_message(BcmpProcessData data) {
   }
 
   if (should_forward) {
-    bcmp_ll_forward(data.header, data.payload, data.size, data.ingress_port);
+    err = bcmp_ll_forward(data.header, data.payload, data.size, data.ingress_port);
   }
 
-  //TODO properly assign this
-  err = BmOK;
   return err;
 }
 

@@ -95,7 +95,7 @@ static BmErr bcmp_process_resource_discovery_request(BcmpProcessData data) {
       return err;
     }
     // Create and fill the reply
-    uint8_t *reply_buf = static_cast<uint8_t *>(pvPortMalloc(msg_len));
+    uint8_t *reply_buf = (uint8_t *)bm_malloc(msg_len);
     if (reply_buf) {
       do {
         BcmpResourceTableReply *repl = (BcmpResourceTableReply *)reply_buf;
@@ -138,6 +138,7 @@ static BmErr bcmp_process_resource_discovery_reply(BcmpProcessData data) {
 
     if ((element != NULL) && (element->fp != NULL)) {
       element->fp(repl);
+      err = BmOK;
     } else {
       printf("Node Id %016" PRIx64 " resource table:\n", src_node_id);
       uint16_t num_pubs = repl->num_pubs;

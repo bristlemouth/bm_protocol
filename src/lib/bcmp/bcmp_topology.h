@@ -1,7 +1,5 @@
 #pragma once
 
-#include "bcmp_messages.h"
-#include "lwip/ip.h"
 #include "messages.h"
 #include "util.h"
 
@@ -17,7 +15,7 @@ typedef struct neighborTableEntry_t {
 
   bool is_root;
 
-  bcmp_neighbor_table_reply_t *neighbor_table_reply;
+  BcmpNeighborTableReply *neighbor_table_reply;
 
 } neighborTableEntry_t;
 
@@ -35,13 +33,13 @@ typedef enum {
   TOPO_EMPTY,
 } networkTopology_status_t;
 
-typedef void (*bcmp_topo_cb_t)(networkTopology_t *networkTopology);
+typedef void (*BcmpTopoCb)(networkTopology_t *networkTopology);
 
-void networkTopologyPrint(networkTopology_t *networkTopology);
+void network_topology_print(networkTopology_t *networkTopology);
 
 // Neighbor table request defines, used to create the network topology
-err_t bcmp_request_neighbor_table(uint64_t target_node_id, const ip_addr_t *addr);
+BmErr bcmp_request_neighbor_table(uint64_t target_node_id, const void *addr);
 
 BmErr bcmp_topology_init(void);
 // Topology task defines
-void bcmp_topology_start(const bcmp_topo_cb_t callback);
+BmErr bcmp_topology_start(const BcmpTopoCb callback);
