@@ -81,8 +81,6 @@ public:
   // Constructor to initialize empty instance
   RxLiveSensor();
 
-  void setSerialNumber(uint32_t serial);
-
   // Sends a wakes up the sensor then sends the specified command.
   bool sendCommand(RxLiveCommandType command_type);
 

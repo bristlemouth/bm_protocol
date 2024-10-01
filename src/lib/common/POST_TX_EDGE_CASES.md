@@ -1,3 +1,7 @@
+This document maps out happy-path and edge cases for PLUART Post Tx callback behavior.
+# Transaction Disabled
+TODO
+# Transactions Enabled
 ## One write in the transaction
 ```c++
 PLUART::startTransaction();
@@ -5,20 +9,20 @@ PLUART::write(A);
 PLUART::endTransaction();
 ```
 1. **user task**::`startTransaction` **opens**:
-   - in critical: sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
+   - sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
    - executes `_preTxFunction()`.
    - **user task**::`startTransaction` **closes**.
 
 
 2. **user task**::`write` **opens**:
-   - in critical: sets `writeDuringTransaction` flag.
+   - sets `writeDuringTransaction` flag.
    - No tokens available in `_postTxCntSemaphore`, so does not enter loop to take.
    - `serialWrite` -> `serialWriteNocopy` -> submit data to `serialTxQueue`.
    - **user task**::`write` **closes**:
 
 
 3. **user task**::`endTransaction` **opens**:
-   - in critical: retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
+   - retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
    - First wait for the token to be given to `_postTxCntSemaphore`, otherwise the while loop could shoot through.
 
 
@@ -72,14 +76,14 @@ PLUART::startTransaction();
 PLUART::endTransaction();
 ```
 1. **user task**::`startTransaction` **opens**:
-    - in critical: sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
+    - sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
     - executes `_preTxFunction()`.
     - **user task**::`startTransaction` **closes**.
 
 
 2. **user task**::`endTransaction` **opens**:
-    - in critical: retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
-    - `writeDuringTransaction` is not set, exits critical and calls `_postTxFunction()`.
+    - retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
+    - `writeDuringTransaction` is not set, calls `_postTxFunction()`.
 ---
 
 ## both CBs null
@@ -89,19 +93,19 @@ PLUART::write(A);
 PLUART::endTransaction();
 ```
 1. **user task**::`startTransaction` **opens**:
-    - in critical: sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
+    - sets `transactionInProgress` flag and clears `writeDuringTransaction` flag.
     - **user task**::`startTransaction` **closes**.
 
 
 2. **user task**::`write` **opens**:
-    - in critical: sets `writeDuringTransaction` flag.
+    - sets `writeDuringTransaction` flag.
     - No tokens available in `_postTxCntSemaphore`, so does not enter loop to take.
     - `serialWrite` -> `serialWriteNocopy` -> submit data to `serialTxQueue`.
     - **user task**::`write` **closes**:
 
 
 3. **user task**::`endTransaction` **opens**:
-    - in critical: retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
+    - retrieves and interprets `writeDuringTransaction` and `transactionInProgress` flags.
     - .
 
 
