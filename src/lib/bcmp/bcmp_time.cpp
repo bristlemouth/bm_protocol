@@ -2,7 +2,6 @@
 #include "app_util.h"
 #include "bcmp.h"
 #include "bm_util.h"
-#include "device_info.h"
 #include "stm32_rtc.h"
 
 extern "C" {
@@ -20,7 +19,7 @@ extern "C" {
  */
 BmErr bcmp_time_set_time(uint64_t target_node_id, uint64_t utc_us) {
   BmErr err = BmOK;
-  uint64_t source_node_id = getNodeId();
+  uint64_t source_node_id = node_id();
   BcmpSystemTimeSet set_msg;
   set_msg.header.target_node_id = target_node_id;
   set_msg.header.source_node_id = source_node_id;
@@ -43,7 +42,7 @@ BmErr bcmp_time_set_time(uint64_t target_node_id, uint64_t utc_us) {
  */
 BmErr bcmp_time_get_time(uint64_t target_node_id) {
   BmErr err = BmOK;
-  uint64_t source_node_id = getNodeId();
+  uint64_t source_node_id = node_id();
   BcmpSystemTimeRequest get_msg;
   get_msg.header.target_node_id = target_node_id;
   get_msg.header.source_node_id = source_node_id;
@@ -64,7 +63,7 @@ BmErr bcmp_time_get_time(uint64_t target_node_id) {
  @param[in] utc_us The UTC time in microseconds to send in the response.
  */
 static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
-  uint64_t source_node_id = getNodeId();
+  uint64_t source_node_id = node_id();
   BcmpSystemTimeResponse response;
   response.header.target_node_id = target_node_id;
   response.header.source_node_id = source_node_id;
@@ -85,6 +84,7 @@ static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
 static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg) {
   do {
     RTCTimeAndDate_t time;
+    // TODO: make this an abstraction
     if (rtcGet(&time) != pdPASS) {
       printf("Failed to get time.\n");
       break;
@@ -102,6 +102,7 @@ static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg)
 */
 static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
   utcDateTime_t datetime;
+  // TODO: make this an abstraction
   dateTimeFromUtc(msg->utc_time_us, &datetime);
   RTCTimeAndDate_t time = {// TODO: Consolidate the time functions into util.h
                            .year = datetime.year,       .month = datetime.month,
@@ -130,13 +131,13 @@ static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
   do {
     BcmpMessageType time_msg_type = (BcmpMessageType)data.header->type;
     BcmpSystemTimeHeader *msg_header = (BcmpSystemTimeHeader *)data.payload;
-    if (msg_header->target_node_id != getNodeId() && msg_header->target_node_id != 0) {
+    if (msg_header->target_node_id != node_id() && msg_header->target_node_id != 0) {
       should_forward = true;
       break;
     }
     switch (time_msg_type) {
     case BcmpSystemTimeRequestMessage: {
-      if (msg_header->target_node_id != getNodeId()) {
+      if (msg_header->target_node_id != node_id()) {
         break;
       }
       bcmp_time_process_time_request_msg((BcmpSystemTimeRequest *)data.payload);
@@ -144,7 +145,7 @@ static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
       break;
     }
     case BcmpSystemTimeResponseMessage: {
-      if (msg_header->target_node_id != getNodeId()) {
+      if (msg_header->target_node_id != node_id()) {
         break;
       }
       BcmpSystemTimeResponse *resp = (BcmpSystemTimeResponse *)data.payload;
@@ -184,15 +185,8 @@ BmErr time_init(void) {
       bcmp_time_process_time_message,
   };
 
-  // TODO - handle the errors better
-  err = packet_add(&time_request, BcmpSystemTimeRequestMessage);
-  if (err != BmOK) {
-    return err;
-  }
-  err = packet_add(&time_request, BcmpSystemTimeResponseMessage);
-  if (err != BmOK) {
-    return err;
-  }
-  err = packet_add(&time_request, BcmpSystemTimeSetMessage);
+  bm_err_check(err, packet_add(&time_request, BcmpSystemTimeRequestMessage));
+  bm_err_check(err, packet_add(&time_request, BcmpSystemTimeResponseMessage));
+  bm_err_check(err, packet_add(&time_request, BcmpSystemTimeSetMessage));
   return err;
 }
