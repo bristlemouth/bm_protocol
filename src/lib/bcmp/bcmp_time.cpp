@@ -5,6 +5,7 @@
 #include "stm32_rtc.h"
 
 extern "C" {
+#include "bm_rtc.h"
 #include "packet.h"
 }
 
