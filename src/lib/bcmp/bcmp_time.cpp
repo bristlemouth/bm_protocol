@@ -83,13 +83,13 @@ static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
 */
 static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg) {
   do {
-    RTCTimeAndDate_t time;
+    RtcTimeAndDate time;
     // TODO: make this an abstraction
-    if (rtcGet(&time) != pdPASS) {
+    if (bm_rtc_get(&time) != pdPASS) {
       printf("Failed to get time.\n");
       break;
     }
-    bcmp_time_send_response(msg->header.source_node_id, rtcGetMicroSeconds(&time));
+    bcmp_time_send_response(msg->header.source_node_id, bm_rtc_get_micro_seconds(&time));
   } while (0);
 }
 
@@ -101,15 +101,15 @@ static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg)
   @param[in] msg The system time set message to process.
 */
 static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
-  utcDateTime_t datetime;
+  UtcDateTime datetime;
   // TODO: make this an abstraction
-  dateTimeFromUtc(msg->utc_time_us, &datetime);
-  RTCTimeAndDate_t time = {// TODO: Consolidate the time functions into util.h
+  date_time_from_utc(msg->utc_time_us, &datetime);
+  RtcTimeAndDate time = {// TODO: Consolidate the time functions into util.h
                            .year = datetime.year,       .month = datetime.month,
                            .day = datetime.day,         .hour = datetime.hour,
                            .minute = datetime.min,      .second = datetime.sec,
                            .ms = (datetime.usec / 1000)};
-  if (rtcSet(&time) == pdPASS) {
+  if (bm_rtc_set(&time) == pdPASS) {
     bcmp_time_send_response(msg->header.source_node_id, msg->utc_time_us);
   } else {
     printf("Failed to set time.\n");
@@ -149,9 +149,9 @@ static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
         break;
       }
       BcmpSystemTimeResponse *resp = (BcmpSystemTimeResponse *)data.payload;
-      utcDateTime_t datetime;
+      UtcDateTime datetime;
       // TODO - make this an abstraction
-      dateTimeFromUtc(resp->utc_time_us, &datetime);
+      date_time_from_utc(resp->utc_time_us, &datetime);
       printf("Response time node ID: %016" PRIx64 " to %d/%d/%d %02d:%02d:%02d.%03" PRIu32 "\n",
              resp->header.source_node_id, datetime.year, datetime.month, datetime.day,
              datetime.hour, datetime.min, datetime.sec, datetime.usec);
