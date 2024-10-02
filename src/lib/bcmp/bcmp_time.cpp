@@ -86,7 +86,7 @@ static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg)
   do {
     RtcTimeAndDate time;
     // TODO: make this an abstraction
-    if (bm_rtc_get(&time) != pdPASS) {
+    if (bm_rtc_get(&time) != BmOK) {
       printf("Failed to get time.\n");
       break;
     }
@@ -110,7 +110,7 @@ static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
                            .day = datetime.day,         .hour = datetime.hour,
                            .minute = datetime.min,      .second = datetime.sec,
                            .ms = (datetime.usec / 1000)};
-  if (bm_rtc_set(&time) == pdPASS) {
+  if (bm_rtc_set(&time) == BmOK) {
     bcmp_time_send_response(msg->header.source_node_id, msg->utc_time_us);
   } else {
     printf("Failed to set time.\n");
