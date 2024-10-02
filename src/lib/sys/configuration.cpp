@@ -42,7 +42,7 @@ bool Configuration::loadAndVerifyNvmConfig(void) {
 
 /*!
  * @brief Get the the entire cbor encoded Configuration CRC.
- * @note This differs from the ConfigPartition_t header.crc32, 
+ * @note This differs from the ConfigPartition_t header.crc32,
  * which is strictly used for partition validation.
  * @return The CRC32 of the entire cbor encoded Configuration.
  */

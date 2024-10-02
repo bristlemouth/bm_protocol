@@ -244,6 +244,9 @@ static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
 BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configuration *sys_cfg,
                 DeviceCfg device) {
 
+  (void) user_cfg;
+  (void) sys_cfg;
+
   CTX.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
 
   device_init(device);
@@ -256,7 +259,7 @@ BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *user_cfg, Configurat
   bcmp_process_info_init();
 
   bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
-  bcmp_config_init(user_cfg, sys_cfg);
+  bcmp_config_init();
   bcmp_resource_discovery_init();
 
   return bm_task_create(bcmp_thread, "BCMP", 1024, NULL, BCMP_TASK_PRIORITY, NULL);
