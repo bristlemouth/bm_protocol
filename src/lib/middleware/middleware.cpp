@@ -76,7 +76,7 @@ int32_t middleware_net_tx(struct pbuf *pbuf) {
   // Don't try to transmit if the payload is too big
   if(pbuf->len <= MAX_PAYLOAD_LEN){
     // TODO - Do we always send global multicast or link local?
-    rval = safe_udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, _ctx.port, _ctx.netif);
+    rval = safe_udp_sendto_if(_ctx.pcb, pbuf, (const ip_addr_t *)&multicast_global_addr, _ctx.port, _ctx.netif);
   }
 
   return rval;
