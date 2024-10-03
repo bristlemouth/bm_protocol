@@ -161,7 +161,7 @@ void stress_test_init(struct netif* netif, uint16_t port) {
   \return 0 if OK nonzero otherwise (see udp_send for error codes)
 */
 int32_t stress_test_tx(struct pbuf *pbuf) {
-  return safe_udp_sendto_if(_ctx.pcb, pbuf, &multicast_global_addr, _ctx.port, _ctx.netif);
+  return safe_udp_sendto_if(_ctx.pcb, pbuf, (const ip_addr_t *)&multicast_global_addr, _ctx.port, _ctx.netif);
 }
 
 /*!
