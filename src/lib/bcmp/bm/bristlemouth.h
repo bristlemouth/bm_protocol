@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-void bcl_init(NvmPartition * dfu_partition, cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg);
+void bcl_init(NvmPartition * dfu_partition, cfg::Configuration* sys_cfg);
 const char *bcl_get_ip_str(uint8_t ip);
 
 #ifdef __cplusplus
