@@ -7,9 +7,15 @@
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
+
 #include "task_priorities.h"
 #include "device_info.h"
 #include "lpm.h"
+
+extern "C" {
+#include "messages.h"
+#include "packet.h"
+}
 
 using namespace cfg;
 
@@ -519,6 +525,23 @@ static void bm_dfu_event_thread(void*) {
     }
 }
 
+///*!
+//  Process a DFU message. Allocates memory that the consumer is in charge of freeing.
+//  \param pbuf[in] pbuf buffer
+//  \return none
+//*/
+static BmErr dfu_copy_and_process_message(BcmpProcessData data) {
+  BmErr err = BmEINVAL;
+//   bcmp_header_t *header = reinterpret_cast<bcmp_header_t *>(data.payload);
+  uint8_t *buf = static_cast<uint8_t *>(pvPortMalloc((data.size)));
+  if (buf) {
+    memcpy(buf, data.payload, (data.size));
+    bm_dfu_process_message(buf, (data.size));
+    err = BmOK;
+  }
+  return err;
+}
+
 void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition, cfg::Configuration* sys_cfg) {
     configASSERT(bcmp_dfu_tx);
     configASSERT(sys_cfg);
@@ -563,6 +586,24 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition, c
     if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
         printf("Message could not be added to Queue\n");
     }
+
+    BcmpPacketCfg process_dfu_message = {
+      false,
+      false,
+      dfu_copy_and_process_message,
+  };
+  BmErr err = BmOK;
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUStartMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUPayloadReqMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUPayloadMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUEndMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUAckMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUAbortMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUHeartbeatMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFURebootReqMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFURebootMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFUBootCompleteMessage));
+  bm_err_check(err, packet_add(&process_dfu_message, BcmpDFULastMessageMessage));
 }
 
 bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, update_finish_cb_t update_finish_callback, uint32_t timeoutMs) {
