@@ -16,6 +16,7 @@
 #include "task_priorities.h"
 
 #include "app_pub_sub.h"
+#include "app_util.h"
 #include "bm_l2.h"
 #include "bm_pubsub.h"
 #include "bristlefin.h"
@@ -54,7 +55,6 @@
 #include "sys_info_service.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
-#include "app_util.h"
 #include "w25.h"
 #include "watchdog.h"
 
@@ -136,6 +136,7 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
+// TODO - make a getter API for this
 cfg::Configuration *userConfigurationPartition = NULL;
 cfg::Configuration *systemConfigurationPartition = NULL;
 
@@ -390,7 +391,7 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  bcl_init(&dfu_partition, &debug_configuration_system);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
