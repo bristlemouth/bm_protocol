@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+// TODO - use the bm_os/freertos functions
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "timers.h"
@@ -10,15 +11,12 @@
 
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
-// #include "bootutil/bootutil_public.h"
-// #include "flash_map_backend/flash_map_backend.h"
-// #include "stm32_flash.h"
-// #include "sysflash/sysflash.h"
 extern "C" {
 #include "bm_dfu_generic.h"
 }
+// TODO - get a crc16_ccitt function in bm_core/common
 #include "crc.h"
-// #include "reset_reason.h"
+// TODO - use the util.h file from bm_common for the versioning functions
 #include "device_info.h"
 
 typedef struct dfu_client_ctx_t {
