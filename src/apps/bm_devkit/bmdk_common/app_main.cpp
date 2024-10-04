@@ -136,6 +136,7 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
+// TODO - make a getter API for this
 cfg::Configuration *userConfigurationPartition = NULL;
 cfg::Configuration *sysConfigurationPartition = NULL;
 
