@@ -19,6 +19,7 @@
 #include "bcmp_topology.h"
 #include "bm_pubsub.h"
 #include "bm_util.h"
+#include "messages.h"
 
 #include "debug.h"
 
@@ -145,11 +146,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        bm_common_config_partition_e partition;
+        BmConfigPartition partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_USER;
+          partition = BM_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
+          partition = BM_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -181,11 +182,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        bm_common_config_partition_e partition;
+        BmConfigPartition partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_USER;
+          partition = BM_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
+          partition = BM_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -297,11 +298,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        bm_common_config_partition_e partition;
+        BmConfigPartition partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_USER;
+          partition = BM_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
+          partition = BM_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -324,11 +325,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        bm_common_config_partition_e partition;
+        BmConfigPartition partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_USER;
+          partition = BM_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
+          partition = BM_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
@@ -354,11 +355,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        bm_common_config_partition_e partition;
+        BmConfigPartition partition;
         if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_USER;
+          partition = BM_CFG_PARTITION_USER;
         } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_COMMON_CFG_PARTITION_SYSTEM;
+          partition = BM_CFG_PARTITION_SYSTEM;
         } else {
           printf("Invalid arguments\n");
           break;
