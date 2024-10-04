@@ -136,7 +136,9 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
+// TODO - make a getter API for this
 cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *sysConfigurationPartition = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
@@ -383,6 +385,7 @@ static void defaultTask(void *parameters) {
   debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
+  sysConfigurationPartition = &debug_configuration_system;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
@@ -390,7 +393,7 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  bcl_init(&dfu_partition, &debug_configuration_system);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
