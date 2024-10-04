@@ -120,9 +120,6 @@ void bm_dfu_process_message(uint8_t *buf, size_t len);
 bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id,
                             update_finish_cb_t update_finish_callback, uint32_t timeoutMs);
 
-bool bm_dfu_confirm_is_enabled(void);
-void bm_dfu_confirm_enable(bool en);
-
 /*!
  * UNIT TEST FUNCTIONS BELOW HERE
  */

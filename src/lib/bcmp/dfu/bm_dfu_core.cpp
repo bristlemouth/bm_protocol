@@ -8,7 +8,6 @@
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
 #include "bm_dfu_generic.h"
-
 #include "task_priorities.h"
 #include "device_info.h"
 #include "lpm.h"

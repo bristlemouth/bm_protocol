@@ -37,7 +37,7 @@ void bm_link_change_cb(uint8_t port, bool state) {
   bcmp_link_change(port, state);
 }
 
-void bcl_init(NvmPartition *dfu_partition, cfg::Configuration *sys_cfg) {
+void bcl_init(NvmPartition *dfu_partition) {
   err_t mld6_err;
   // int         rval;
   ip6_addr_t multicast_glob_addr;
