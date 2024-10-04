@@ -241,8 +241,7 @@ static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
   \param *netif lwip network interface to use
   \return none
 */
-BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *sys_cfg,
-                DeviceCfg device) {
+BmErr bcmp_init(NvmPartition *dfu_partition, DeviceCfg device) {
 
   CTX.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
 
@@ -255,7 +254,7 @@ BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *sys_cfg,
   bcmp_topology_init();
   bcmp_process_info_init();
 
-  bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
+  bm_dfu_init(bcmp_dfu_tx, dfu_partition);
   bcmp_config_init();
   bcmp_resource_discovery_init();
 

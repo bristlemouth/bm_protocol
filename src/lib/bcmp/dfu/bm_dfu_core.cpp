@@ -7,6 +7,7 @@
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
+#include "bm_dfu_generic.h"
 
 #include "task_priorities.h"
 #include "device_info.h"
@@ -16,8 +17,6 @@ extern "C" {
 #include "messages.h"
 #include "packet.h"
 }
-
-using namespace cfg;
 
 typedef struct dfu_core_ctx_t {
     libSmContext_t sm_ctx;
@@ -30,10 +29,7 @@ typedef struct dfu_core_ctx_t {
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     NvmPartition *dfu_partition;
     update_finish_cb_t update_finish_callback;
-    Configuration* sys_cfg;
 } dfu_core_ctx_t;
-
-static constexpr char dfu_confirm_config_key[] = "dfu_confirm";
 
 #ifndef CI_TEST
 ReboootClientUpdateInfo_t client_update_reboot_info __attribute__((section(".noinit")));
@@ -542,9 +538,8 @@ static BmErr dfu_copy_and_process_message(BcmpProcessData data) {
   return err;
 }
 
-void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition, cfg::Configuration* sys_cfg) {
+void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
     configASSERT(bcmp_dfu_tx);
-    configASSERT(sys_cfg);
     if(!dfu_partition) {
         printf("Dfu NVM partition not configured, DFU unavailible.\n");
         // TODO - update direct-to-flash
@@ -552,7 +547,6 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition, c
     }
     dfu_ctx.dfu_partition = dfu_partition;
     dfu_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
-    dfu_ctx.sys_cfg = sys_cfg;
     bm_dfu_event_t evt;
     int retval;
 
@@ -650,18 +644,6 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
 
 bm_dfu_err_t bm_dfu_get_error(void) {
     return dfu_ctx.error;
-}
-
-bool bm_dfu_confirm_is_enabled(void) {
-    uint32_t val = 1;
-    dfu_ctx.sys_cfg->getConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key), val);
-    return val;
-}
-
-void bm_dfu_confirm_enable(bool en) {
-    uint32_t val = en;
-    dfu_ctx.sys_cfg->setConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key), val);
-    dfu_ctx.sys_cfg->saveConfig(true);
 }
 
 /*!

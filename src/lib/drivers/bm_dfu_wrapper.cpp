@@ -3,7 +3,13 @@
 #include "flash_map_backend/flash_map_backend.h"
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
+#include "configuration.h"
 #include "reset_reason.h"
+
+static constexpr char dfu_confirm_config_key[] = "dfu_confirm";
+
+using namespace cfg;
+extern cfg::Configuration *sysConfigurationPartition;
 
 BmErr bm_dfu_set_confirmed(void) {
   if (boot_set_confirmed() == 0) {
@@ -51,4 +57,16 @@ BmErr bm_dfu_flash_area_erase(const void *flash_area, uint32_t off, uint32_t len
 
 uint32_t bm_dfu_flash_area_get_size(const void *flash_area) {
   return flash_area_get_size((const struct flash_area *)flash_area);
+}
+
+bool bm_dfu_confirm_is_enabled(void) {
+    uint32_t val = 1;
+    dfu_ctx.sys_cfg->getConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key), val);
+    return val;
+}
+
+void bm_dfu_confirm_enable(bool en) {
+    uint32_t val = en;
+    dfu_ctx.sys_cfg->setConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key), val);
+    dfu_ctx.sys_cfg->saveConfig(true);
 }

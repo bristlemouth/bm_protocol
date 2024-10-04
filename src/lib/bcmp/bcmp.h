@@ -22,7 +22,7 @@ using namespace cfg;
 
 static constexpr uint32_t DEFAULT_MESSAGE_TIMEOUT_MS = 24;
 
-BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *sys_cfg, DeviceCfg device);
+BmErr bcmp_init(NvmPartition *dfu_partition, DeviceCfg device);
 BmErr bcmp_tx(const void *dst, BcmpMessageType type, uint8_t *data, uint16_t size,
               uint32_t seq_num = 0, BmErr (*reply_cb)(uint8_t *payload) = NULL);
 BmErr bcmp_ll_forward(BcmpHeader *header, void *data, uint32_t size, uint8_t ingress_port);
