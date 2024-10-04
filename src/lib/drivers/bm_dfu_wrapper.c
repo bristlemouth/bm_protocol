@@ -52,3 +52,6 @@ BmErr bm_dfu_flash_area_erase(const void *flash_area, uint32_t off, uint32_t len
 uint32_t bm_dfu_flash_area_get_size(const void *flash_area) {
   return flash_area_get_size((const struct flash_area *)flash_area);
 }
+
+
+// Get a different sha for testing!
