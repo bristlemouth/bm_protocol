@@ -65,19 +65,27 @@ uint32_t bm_dfu_client_flash_area_get_size(const void *flash_area) {
 
 bool bm_dfu_client_confirm_is_enabled(void) {
   uint32_t val = 1;
+  if (!sysConfigurationPartition){
+    return false;
+  }
   sysConfigurationPartition->getConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
                                        val);
-  return val;
+  return val == 1;
 }
 
 void bm_dfu_client_confirm_enable(bool en) {
   uint32_t val = en;
-  sysConfigurationPartition->setConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
-                                       val);
-  sysConfigurationPartition->saveConfig(true);
+  if (sysConfigurationPartition) {
+    sysConfigurationPartition->setConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
+                                        val);
+    sysConfigurationPartition->saveConfig(true);
+  }
 }
 
 BmErr bm_dfu_host_get_chunk(uint32_t offset, uint8_t *buffer, size_t len, uint32_t timeout_ms) {
+  if (!dfu_partition_global) {
+    return BmEINVAL;
+  }
   if (!dfu_partition_global->read(offset, buffer, len, timeout_ms)) {
     return BmEINVAL;
   }

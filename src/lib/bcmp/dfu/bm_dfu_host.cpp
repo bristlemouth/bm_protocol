@@ -17,7 +17,6 @@ typedef struct dfu_host_ctx_t {
     uint64_t self_node_id;
     uint64_t client_node_id;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
-    NvmPartition * dfu_partition;
     uint32_t bytes_remaining;
     update_finish_cb_t update_complete_callback;
     TimerHandle_t update_timer;
@@ -323,11 +322,9 @@ void s_host_update_run(void) {
     }
 }
 
-void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
+void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     configASSERT(bcmp_dfu_tx);
-    configASSERT(dfu_partition);
     host_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
-    host_ctx.dfu_partition = dfu_partition;
     int tmr_id = 0;
 
     /* Store relevant variables */

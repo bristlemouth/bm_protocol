@@ -26,7 +26,6 @@ typedef struct dfu_core_ctx_t {
     uint64_t self_node_id;
     uint64_t client_node_id;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
-    NvmPartition *dfu_partition;
     update_finish_cb_t update_finish_callback;
 } dfu_core_ctx_t;
 
@@ -537,14 +536,8 @@ static BmErr dfu_copy_and_process_message(BcmpProcessData data) {
   return err;
 }
 
-void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
+void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     configASSERT(bcmp_dfu_tx);
-    if(!dfu_partition) {
-        printf("Dfu NVM partition not configured, DFU unavailible.\n");
-        // TODO - update direct-to-flash
-        return;
-    }
-    dfu_ctx.dfu_partition = dfu_partition;
     dfu_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
     bm_dfu_event_t evt;
     int retval;
@@ -562,7 +555,7 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
     configASSERT(dfu_event_queue);
 
     bm_dfu_client_init(bcmp_dfu_tx);
-    bm_dfu_host_init(bcmp_dfu_tx, dfu_partition);
+    bm_dfu_host_init(bcmp_dfu_tx);
 
     evt.type = DFU_EVENT_INIT_SUCCESS;
     evt.buf = NULL;
