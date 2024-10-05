@@ -139,7 +139,7 @@ static int32_t bm_dfu_process_payload(uint16_t len, uint8_t * buf)
                 client_ctx.img_page_byte_counter = 0;
 
                 /* Perform page write and increment flash byte counter */
-                retval = bm_dfu_flash_area_write(client_ctx.fa, client_ctx.img_flash_offset, client_ctx.img_page_buf, BM_IMG_PAGE_LENGTH);
+                retval = bm_dfu_client_flash_area_write(client_ctx.fa, client_ctx.img_flash_offset, client_ctx.img_page_buf, BM_IMG_PAGE_LENGTH);
                 if (retval) {
                     printf("Unable to write DFU frame to Flash");
                     break;
@@ -156,7 +156,7 @@ static int32_t bm_dfu_process_payload(uint16_t len, uint8_t * buf)
                 client_ctx.img_page_byte_counter = 0;
 
                 /* Perform page write and increment flash byte counter */
-                retval = bm_dfu_flash_area_write(client_ctx.fa, client_ctx.img_flash_offset, client_ctx.img_page_buf, BM_IMG_PAGE_LENGTH);
+                retval = bm_dfu_client_flash_area_write(client_ctx.fa, client_ctx.img_flash_offset, client_ctx.img_page_buf, BM_IMG_PAGE_LENGTH);
                 if (retval) {
                     printf("Unable to write DFU frame to Flash");
                     break;
@@ -187,7 +187,7 @@ static int32_t bm_dfu_process_end(void) {
     /* If there are any dirty bytes, write to flash */
     if (client_ctx.img_page_byte_counter != 0) {
         /* Perform page write and increment flash byte counter */
-        retval = bm_dfu_flash_area_write(client_ctx.fa, client_ctx.img_flash_offset, client_ctx.img_page_buf, (client_ctx.img_page_byte_counter));
+        retval = bm_dfu_client_flash_area_write(client_ctx.fa, client_ctx.img_flash_offset, client_ctx.img_page_buf, (client_ctx.img_page_byte_counter));
         if (retval) {
             printf("Unable to write DFU frame to Flash\n");
         } else {
@@ -195,7 +195,7 @@ static int32_t bm_dfu_process_end(void) {
         }
     }
 
-    bm_dfu_flash_area_close(client_ctx.fa);
+    bm_dfu_client_flash_area_close(client_ctx.fa);
     return retval;
 }
 
@@ -246,15 +246,15 @@ void bm_dfu_client_process_update_request(void) {
         client_ctx.crc16 = img_info_evt->img_info.crc16;
 
             /* Open the secondary image slot */
-        if (bm_dfu_flash_area_open(&client_ctx.fa) != 0) {
+        if (bm_dfu_client_flash_area_close(&client_ctx.fa) != 0) {
             bm_dfu_send_ack(client_ctx.host_node_id, 0, BM_DFU_ERR_FLASH_ACCESS);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);
         } else {
 
-            if(bm_dfu_flash_area_get_size(client_ctx.fa) > image_size) { // TODO - no we can just use flash_area_get_size_here duhhhh!
+            if(bm_dfu_client_flash_area_get_size(client_ctx.fa) > image_size) { // TODO - no we can just use flash_area_get_size_here duhhhh!
                 /* Erase memory in secondary image slot */
                 printf("Erasing flash\n");
-                if(bm_dfu_flash_area_erase(client_ctx.fa, 0, bm_dfu_flash_area_get_size(client_ctx.fa)) != 0) {
+                if(bm_dfu_client_flash_area_erase(client_ctx.fa, 0, bm_dfu_client_flash_area_get_size(client_ctx.fa)) != 0) {
                     printf("Error erasing flash!\n");
                     bm_dfu_send_ack(client_ctx.host_node_id, 0, BM_DFU_ERR_FLASH_ACCESS);
                     bm_dfu_client_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);
@@ -430,7 +430,7 @@ void s_client_activating_entry(void)
     // boot_set_pending(0);
     // resetSystem(RESET_REASON_MCUBOOT);
 
-    bm_dfu_set_pending_and_reset();
+    bm_dfu_client_set_pending_and_reset();
 }
 
 /**
@@ -487,10 +487,10 @@ void s_client_update_done_entry(void) {
     if(getGitSHA() == client_update_reboot_info.gitSHA) {
         // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration,
         // confirm, reset the config flag, and then reboot.
-        if(!bm_dfu_confirm_is_enabled()){
+        if(!bm_dfu_client_confirm_is_enabled()){
             memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
-            bm_dfu_set_confirmed();
-            bm_dfu_confirm_enable(true); // Reboot!
+            bm_dfu_client_set_confirmed();
+            bm_dfu_client_confirm_enable(true); // Reboot!
         } else {
             bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
             /* Kickoff Chunk timeout */
@@ -515,7 +515,7 @@ void s_client_update_done_run(void) {
     if (curr_evt.type == DFU_EVENT_UPDATE_END) {
         configASSERT(curr_evt.buf);
         configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
-        bm_dfu_set_confirmed();
+        bm_dfu_client_set_confirmed();
         printf("Boot confirmed!\n Update success!\n");
         bm_dfu_update_end(client_update_reboot_info.host_node_id, true, BM_DFU_ERR_NONE);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_IDLE);
@@ -569,7 +569,7 @@ static void bm_dfu_client_fail_update_and_reboot(void) {
     memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
     vTaskDelay(100); // Wait a bit for any previous messages sent.
     // resetSystem(RESET_REASON_UPDATE_FAILED); // Revert to the previous image.
-    bm_dfu_fail_update_and_reset();
+    bm_dfu_client_fail_update_and_reset();
 }
 
 bool bm_dfu_client_host_node_valid(uint64_t host_node_id) {

@@ -136,9 +136,10 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
-// TODO - make a getter API for this
+// TODO - make a getter API for these
 cfg::Configuration *userConfigurationPartition = NULL;
 cfg::Configuration *sysConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
@@ -388,6 +389,7 @@ static void defaultTask(void *parameters) {
   sysConfigurationPartition = &debug_configuration_system;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
+  dfu_partition_global = &dfu_partition;
   debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
                          &debug_configuration_system);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);

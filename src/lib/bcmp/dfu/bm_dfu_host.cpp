@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "bm_dfu.h"
+#include "bm_dfu_generic.h"
 #include "bm_dfu_host.h"
 #include "device_info.h"
 #include "external_flash_partitions.h"
@@ -140,7 +141,7 @@ static void bm_dfu_host_send_chunk(bm_dfu_event_chunk_request_t* req) {
 
     uint32_t flash_offset = DFU_IMG_START_OFFSET_BYTES + host_ctx.img_info.image_size - host_ctx.bytes_remaining;
     do {
-        if(!host_ctx.dfu_partition->read(flash_offset, payload_header->chunk.payload_buf, payload_len, FLASH_READ_TIMEOUT_MS)){
+        if (bm_dfu_host_get_chunk(flash_offset, payload_header->chunk.payload_buf, payload_len, FLASH_READ_TIMEOUT_MS) != BmOK) {
             printf("Failed to read chunk from flash.\n");
             bm_dfu_host_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);
             break;
