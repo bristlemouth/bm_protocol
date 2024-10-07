@@ -7,7 +7,6 @@
 #include "queue.h"
 #include "timers.h"
 #include "semphr.h"
-#include "nvmPartition.h"
 
 #ifdef __cplusplus
 extern "C"
