@@ -247,7 +247,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
     }
 
     bool valid_packet = true;
-    switch(getCurrentStateEnum(dfu_ctx.sm_ctx)){
+    switch(getCurrentStateEnum(&(dfu_ctx.sm_ctx))){
         case BM_DFU_STATE_INIT:
         case BM_DFU_STATE_IDLE:
         case BM_DFU_STATE_ERROR: {
@@ -511,7 +511,7 @@ static void bm_dfu_event_thread(void*) {
     while (1) {
         dfu_ctx.current_event.type = DFU_EVENT_NONE;
         if(xQueueReceive(dfu_event_queue, &dfu_ctx.current_event, portMAX_DELAY) == pdPASS) {
-            libSmRun(dfu_ctx.sm_ctx);
+            libSmRun(&(dfu_ctx.sm_ctx));
         }
         if (dfu_ctx.current_event.buf) {
             vPortFree(dfu_ctx.current_event.buf);
@@ -549,7 +549,7 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     dfu_ctx.current_event = {DFU_EVENT_NONE, NULL, 0};
 
     /* Set initial state of DFU State Machine*/
-    libSmInit(dfu_ctx.sm_ctx, dfu_states[BM_DFU_STATE_INIT], bm_dfu_check_transitions);
+    libSmInit(&(dfu_ctx.sm_ctx), &(dfu_states[BM_DFU_STATE_INIT]), bm_dfu_check_transitions);
 
     dfu_event_queue = xQueueCreate( 5, sizeof(bm_dfu_event_t));
     configASSERT(dfu_event_queue);
@@ -599,7 +599,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
             printf("Invalid chunk size for DFU\n");
             break;
         }
-        if(getCurrentStateEnum(dfu_ctx.sm_ctx) != BM_DFU_STATE_IDLE) {
+        if(getCurrentStateEnum(&(dfu_ctx.sm_ctx)) != BM_DFU_STATE_IDLE) {
             printf("Not ready to start update.\n");
             if(update_finish_callback) {
                 update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS, dest_node_id);

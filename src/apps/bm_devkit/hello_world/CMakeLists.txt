@@ -32,6 +32,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/lib/bm_core/src/platform/bm_lwip.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/platform/bm_freertos.c
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/lib_state_machine.c
 
     ${BCMP_FILES}
     )
@@ -57,7 +58,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
+    # ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
