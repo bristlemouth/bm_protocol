@@ -8,8 +8,6 @@
 #include "lwip/inet.h"
 
 #include "serial.h"
-#include "nvmPartition.h"
-#include "configuration.h"
 
 #ifdef __cplusplus
 extern "C" {

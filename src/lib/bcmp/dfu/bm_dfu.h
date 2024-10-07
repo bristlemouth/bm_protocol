@@ -9,9 +9,7 @@
 #include "queue.h"
 
 #include "bcmp_messages.h"
-#include "configuration.h"
 #include "lib_state_machine.h"
-#include "nvmPartition.h"
 
 #ifdef __cplusplus
 extern "C" {

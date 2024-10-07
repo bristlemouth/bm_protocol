@@ -9,10 +9,6 @@ extern "C" {
 #include "messages.h"
 #include "util.h"
 
-#include "configuration.h"
-#include "nvmPartition.h"
-
-using namespace cfg;
 /* Ingress and Egress ports are mapped to the 5th and 6th byte of the IPv6 src address as per
     the bristlemouth protocol spec */
 #define CLEAR_PORTS(x) (x[1] &= (~(0xFFFFU)))
