@@ -43,8 +43,7 @@ void setup(void) {
   userConfigurationPartition->getConfig("plUartMode", strlen("plUartMode"),
                                         uart_mode_config);
   if (uart_mode_config >= MODE_MAX) {
-    printf("ERROR - PLUART UART MODE %lu is not supported. Reverting to MODE_RS232\n",
-      uart_mode_config, MODE_RS232);
+    printf("ERROR - PLUART UART MODE %lu is not supported. Reverting to MODE_RS232\n", uart_mode_config);
     uart_mode_config = MODE_RS232;
   }
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
@@ -73,6 +72,8 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
+// enable 5V out.
+  bristlefin.enable5V();
 }
 
 void loop(void) {
