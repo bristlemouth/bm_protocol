@@ -2,6 +2,77 @@
 add_subdirectory("util")
 
 #
+# Sensor Sampler
+#
+
+add_executable(sensor_sampler_tests)
+target_include_directories(sensor_sampler_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${SRC_DIR}/lib/sensor_sampler
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${SRC_DIR}/third_party/fnv
+    ${TEST_DIR}/third_party/fff
+)
+
+target_sources(sensor_sampler_tests
+    PRIVATE
+    # Utility files
+    ${SRC_DIR}/lib/common/ll.c
+    ${SRC_DIR}/third_party/fnv/hash_32a.c
+
+    # Mocks
+    ${TEST_DIR}/stubs/mock_FreeRTOS.c
+    ${TEST_DIR}/stubs/mock_uptime.cpp
+
+    # Stubs
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c
+
+    # Unit test wrapper for test
+    sensorSampler_ut.cpp
+)
+
+target_link_libraries(sensor_sampler_tests gtest gmock gtest_main)
+target_compile_options(sensor_sampler_tests PRIVATE "-Wno-format")
+
+add_test(
+  NAME
+    sensor_sampler_tests
+  COMMAND
+   sensor_sampler_tests
+)
+
+#
+# LL tests
+#
+add_executable(ll_tests)
+target_include_directories(ll_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+)
+
+target_sources(ll_tests
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/common/ll.c
+
+    # Unit test wrapper for test
+    ll_ut.cpp
+)
+
+target_link_libraries(ll_tests gtest gmock gtest_main)
+
+add_test(
+  NAME
+    ll_tests
+  COMMAND
+    ll_tests
+)
+
+#
 # Tokenize tests
 #
 add_executable(tokenize_tests)
@@ -332,7 +403,7 @@ target_sources(differenceSignal
     ${SRC_DIR}/lib/common/differenceSignal.cpp
 
     # Support files
-    
+
     # Mock
     ${TEST_DIR}/stubs/mock_FreeRTOS.c
 

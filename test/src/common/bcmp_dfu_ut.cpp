@@ -74,6 +74,7 @@ class BcmpDfuTest : public ::testing::Test {
         xTimerGenericCommand_fake.return_val = pdPASS;
         getNodeId_fake.return_val = 0xdeadbeefbeeffeed;
         fake_bcmp_tx_func_fake.return_val = true;
+        EXPECT_STREQ(test_info.versionStr, "test");
         getVersionInfo_fake.return_val = &test_info;
         getGitSHA_fake.return_val = 0xd00dd00d;
         memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
@@ -118,7 +119,7 @@ class BcmpDfuTest : public ::testing::Test {
         .hwVersion = 1,
         .flags = 0,
         .versionStrLen = 5,
-        .versionStr = {"test"},
+        "test",
     };
     static constexpr size_t CHUNK_SIZE = 512;
     static constexpr size_t IMAGE_SIZE = 2048;

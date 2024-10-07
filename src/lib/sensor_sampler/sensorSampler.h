@@ -1,6 +1,8 @@
 #pragma once
 
-#include "stm32_rtc.h"
+#include "ll.h"
+#include "FreeRTOS.h"
+#include "timers.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -8,31 +10,21 @@
 extern "C" {
 #endif
 
-typedef bool (*sensorSampleFn)();
-typedef bool (*sensorInitFn)();
-typedef bool (*sensorCheckFn)();
+// We're using a 32-bit variable for sample flags (with two reserved)
+#define MAX_SENSORS 30
 
-typedef struct {
-  uint64_t uptime;
-  RTCTimeAndDate_t rtcTime;
-  uint16_t address;
-  float voltage;
-  float current;
-} __attribute__((packed)) powerSample_t;
+/// Used to initialize sensor node
+#define SENSOR_NODE_INIT(init, sample, check) \
+    { .list = { \
+          .sensor = { .initFn = init, .sampleFn = sample, .checkFn = check }, \
+          .name = NULL, \
+          .timer = NULL, \
+          .flag = 0, }, \
+      .node = {0, 0, 0, 0}, }
 
-typedef struct {
-  uint64_t uptime;
-  RTCTimeAndDate_t rtcTime;
-  float temperature;
-  float humidity;
-} __attribute__((packed)) humTempSample_t;
-
-typedef struct {
-  uint64_t uptime;
-  RTCTimeAndDate_t rtcTime;
-  float temperature;
-  float pressure;
-} __attribute__((packed)) pressureSample_t;
+typedef bool (*sensorSampleFn)(void);
+typedef bool (*sensorInitFn)(void);
+typedef bool (*sensorCheckFn)(void);
 
 typedef struct {
   /// Initialization function
@@ -50,16 +42,34 @@ typedef struct {
   uint32_t sensorsPollIntervalMs;
 } sensorConfig_t;
 
+typedef struct{
+  /// Pointer to actual sensor struct
+  sensor_t sensor;
+  /// Sensor name/identifier
+  const char *name;
+  /// Sampling timer
+  TimerHandle_t timer;
+  /// Flag (single bit) used for task notification
+  uint32_t flag;
+} sensorListItem_t;
+
+typedef struct {
+    sensorListItem_t list;
+    LLNode_t node;
+} sensorNode_t;
+
 // Default configuration used in case sysConfig isn't loaded
 #define SENSOR_DEFAULT_CONFIG { \
-          .sensorCheckIntervalS=(30 * 60)}
+          .sensorCheckIntervalS=(30 * 60), \
+          .sensorsPollIntervalMs=(1000), }
 
 void sensorSamplerInit(sensorConfig_t *config);
-bool sensorSamplerAdd(sensor_t *sensor, const char *name);
+void sensorSamplerDeinit(void);
+bool sensorSamplerAdd(sensorNode_t *sensor, const char *name);
 bool sensorSamplerEnable(const char *name);
 bool sensorSamplerDisable(const char *name);
-bool sensorSamplerDisableChecks();
-bool sensorSamplerEnableChecks();
+bool sensorSamplerDisableChecks(void);
+bool sensorSamplerEnableChecks(void);
 uint32_t sensorSamplerGetSamplingPeriodMs(const char * name);
 bool sensorSamplerChangeSamplingPeriodMs(const char * name, uint32_t new_period_ms);
 

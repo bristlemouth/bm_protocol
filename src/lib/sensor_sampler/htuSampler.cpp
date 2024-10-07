@@ -7,6 +7,7 @@
 #include "bm_pubsub.h"
 #include "bsp.h"
 #include "debug.h"
+#include "htuSampler.h"
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
@@ -72,11 +73,9 @@ static bool htuSample() {
   return success;
 }
 
-static sensor_t htuSensor = {
-  .initFn = htuInit,
-  .sampleFn = htuSample,
-  .checkFn = NULL
-};
+static sensorNode_t htuSensor = SENSOR_NODE_INIT(htuInit,
+                                                 htuSample,
+                                                 NULL);
 
 void htuSamplerInit(AbstractHtu *sensor) {
   _htu = sensor;
