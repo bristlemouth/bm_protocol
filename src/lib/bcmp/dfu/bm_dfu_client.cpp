@@ -246,7 +246,7 @@ void bm_dfu_client_process_update_request(void) {
         client_ctx.crc16 = img_info_evt->img_info.crc16;
 
             /* Open the secondary image slot */
-        if (bm_dfu_client_flash_area_close(&client_ctx.fa) != 0) {
+        if (bm_dfu_client_flash_area_open(&client_ctx.fa) != 0) {
             bm_dfu_send_ack(client_ctx.host_node_id, 0, BM_DFU_ERR_FLASH_ACCESS);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);
         } else {

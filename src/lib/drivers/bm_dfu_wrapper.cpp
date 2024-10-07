@@ -31,7 +31,7 @@ BmErr bm_dfu_client_fail_update_and_reset(void) {
   return BmOK;
 }
 
-BmErr bm_dfu_client_flash_area_close(const void **flash_area) {
+BmErr bm_dfu_client_flash_area_open(const void **flash_area) {
   if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), (const struct flash_area **)flash_area) ==
       0) {
     return BmOK;
