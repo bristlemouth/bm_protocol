@@ -88,3 +88,10 @@ bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value,
   }
   return cfg->getConfigCbor(key, key_len, value, value_len);
 }
+
+bool bm_cbor_type_to_config_type(const CborValue *value, GenericConfigDataTypes *configType) {
+
+  ConfigDataTypes_e return_config_type = (ConfigDataTypes_e)*configType;
+
+  return Configuration::cborTypeToConfigType(value, return_config_type); // TODO - have configuration.h use GenericConfigDataTypes
+}

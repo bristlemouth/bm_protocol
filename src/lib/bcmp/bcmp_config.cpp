@@ -246,7 +246,7 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
       break;
     }
     GenericConfigDataTypes type;
-    if (!Configuration::cborTypeToConfigType(&it, type)) {
+    if (!bm_cbor_type_to_config_type(&it, &type)) {
       break;
     }
     switch (type) {
