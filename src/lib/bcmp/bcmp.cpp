@@ -66,20 +66,6 @@ void bcmp_link_change(uint8_t port, bool state) {
   }
 }
 
-//TODO implemnent with updated packet module
-///*!
-//  Process a DFU message. Allocates memory that the consumer is in charge of freeing.
-//  \param pbuf[in] pbuf buffer
-//  \return none
-//*/
-//static void dfu_copy_and_process_message(BcmpProcessData data) {
-//  bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
-//  uint8_t *buf = static_cast<uint8_t *>(pvPortMalloc((pbuf->len) - sizeof(bcmp_header_t)));
-//  configASSERT(buf);
-//  memcpy(buf, data.payload, (pbuf->len) - sizeof(bcmp_header_t));
-//  bm_dfu_process_message(buf, (pbuf->len) - sizeof(bcmp_header_t));
-//}
-
 /*!
   FreeRTOS timer handler for sending out heartbeats. No work is done in the timer
   handler, but instead an event is queued up to be handled in the BCMP task.
