@@ -1,12 +1,13 @@
-#include "configuration.h"
 #include "bm_configs_generic.h"
+#include "configuration.h"
 
 using namespace cfg;
 
 extern cfg::Configuration *userConfigurationPartition;
 extern cfg::Configuration *sysConfigurationPartition;
 
-const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t &num_stored_keys, BmConfigPartition partition) {
+const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t &num_stored_keys,
+                                                    BmConfigPartition partition) {
   Configuration *cfg;
   if (partition == BM_CFG_PARTITION_USER) {
     cfg = userConfigurationPartition;
@@ -33,16 +34,16 @@ bool bcmp_remove_key(const char *key, size_t key_len, BmConfigPartition partitio
 
 bool bcmp_config_needs_commit(BmConfigPartition partition) {
   switch (partition) {
-    case BM_CFG_PARTITION_USER: {
-      return userConfigurationPartition->needsCommit();
-    }
-    case BM_CFG_PARTITION_SYSTEM: {
-      return userConfigurationPartition->needsCommit();
-    }
-    default: {
-      printf("Invalid partition\n");
-      return false;
-    }
+  case BM_CFG_PARTITION_USER: {
+    return userConfigurationPartition->needsCommit();
+  }
+  case BM_CFG_PARTITION_SYSTEM: {
+    return userConfigurationPartition->needsCommit();
+  }
+  default: {
+    printf("Invalid partition\n");
+    return false;
+  }
   }
 }
 
@@ -62,8 +63,8 @@ bool bcmp_commit_config(BmConfigPartition partition) {
   }
 }
 
-bool bcmp_set_config(const char *key, size_t key_len, uint8_t *value,
-                     size_t value_len, BmConfigPartition partition) {
+bool bcmp_set_config(const char *key, size_t key_len, uint8_t *value, size_t value_len,
+                     BmConfigPartition partition) {
   Configuration *cfg;
   if (partition == BM_CFG_PARTITION_USER) {
     cfg = userConfigurationPartition;
@@ -72,12 +73,11 @@ bool bcmp_set_config(const char *key, size_t key_len, uint8_t *value,
   } else {
     return false;
   }
-  return cfg->setConfigCbor((const char *)key, key_len,
-                       value, value_len);
+  return cfg->setConfigCbor((const char *)key, key_len, value, value_len);
 }
 
-bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value,
-                     size_t &value_len, BmConfigPartition partition) {
+bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value, size_t &value_len,
+                     BmConfigPartition partition) {
   Configuration *cfg;
   if (partition == BM_CFG_PARTITION_USER) {
     cfg = userConfigurationPartition;
@@ -90,8 +90,7 @@ bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value,
 }
 
 bool bm_cbor_type_to_config_type(const CborValue *value, GenericConfigDataTypes *configType) {
-
   ConfigDataTypes_e return_config_type = (ConfigDataTypes_e)*configType;
-
-  return Configuration::cborTypeToConfigType(value, return_config_type); // TODO - have configuration.h use GenericConfigDataTypes
+  // TODO - have configuration.h use GenericConfigDataTypes
+  return Configuration::cborTypeToConfigType(value, return_config_type);
 }

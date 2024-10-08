@@ -65,7 +65,7 @@ uint32_t bm_dfu_client_flash_area_get_size(const void *flash_area) {
 
 bool bm_dfu_client_confirm_is_enabled(void) {
   uint32_t val = 1;
-  if (!sysConfigurationPartition){
+  if (!sysConfigurationPartition) {
     return false;
   }
   sysConfigurationPartition->getConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
@@ -77,7 +77,7 @@ void bm_dfu_client_confirm_enable(bool en) {
   uint32_t val = en;
   if (sysConfigurationPartition) {
     sysConfigurationPartition->setConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
-                                        val);
+                                         val);
     sysConfigurationPartition->saveConfig(true);
   }
 }
