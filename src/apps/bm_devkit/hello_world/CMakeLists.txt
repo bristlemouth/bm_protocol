@@ -1,10 +1,5 @@
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
-# Include bm_core
-add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
-target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
-target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
-
 # Include FreeRTOS
 add_subdirectory(${SRC_DIR}/third_party/FreeRTOS freertos_build)
 
@@ -30,10 +25,6 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
     ${SRC_DIR}/lib/middleware/middleware.cpp
-    ${SRC_DIR}/lib/bm_core/src/platform/bm_lwip.c
-    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/platform/bm_freertos.c
-    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/lib_state_machine.c
-
     ${BCMP_FILES}
     )
 
@@ -244,7 +235,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
@@ -274,6 +264,28 @@ set(APP_LIBS
     lwipcore
     bmcore
     )
+
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BCMP_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
+target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
+target_link_libraries(bmcore PUBLIC lwipcore)
+
 
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
