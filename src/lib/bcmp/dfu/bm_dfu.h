@@ -9,7 +9,9 @@
 #include "queue.h"
 
 #include "bcmp_messages.h"
+extern "C" {
 #include "lib_state_machine.h"
+}
 
 #ifdef __cplusplus
 extern "C" {
