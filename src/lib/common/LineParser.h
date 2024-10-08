@@ -14,6 +14,7 @@ typedef enum {
   TYPE_UINT64,
   TYPE_INT64,
   TYPE_DOUBLE,
+  TYPE_STRING
 } ValueType;
 
 // Define ValueData as a union
@@ -21,6 +22,7 @@ union ValueData {
   uint64_t uint64_val;
   int64_t int64_val;
   double double_val;
+  char* string_val_ptr;
 };
 
 // Define Value as a struct
@@ -37,8 +39,9 @@ public:
   bool init();
   bool parseLine(const char* line, uint16_t len);
   const Value* getValues() { return (const Value*)_values; }
-  Value getValue(uint16_t index);
+  const Value& getValue(uint16_t index);
 protected:
+  virtual ~LineParser(); // Add virtual destructor
   bool parseValueFromToken(const char* token, size_t index);
 private:
   virtual bool parseValues(char* workStr) = 0;

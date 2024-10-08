@@ -53,6 +53,12 @@ public:
   // LED control functions
   void setLed(uint8_t led_num, led_state_e led_state);
 
+  // RS485 control functions
+  void setRS485HalfDuplex();
+  void setRS485FullDuplex();
+  static void setRS485Tx();
+  static void setRS485Rx();
+
   version_e getVersion();
   TCA::Channel_t getMuxChannel();
   void setMuxChannel(TCA::Channel_t ch);

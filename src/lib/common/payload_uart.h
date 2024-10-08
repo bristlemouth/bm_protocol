@@ -6,6 +6,15 @@
 
 namespace PLUART {
 
+#define DEFAULT_POST_TRANSACTION_WAIT_MS MAX_TX_TIME_MS
+
+// Function pointers for hardware-specific actions for transaction control
+typedef void (*HardwareControlFunc)();
+void enableTransactions(HardwareControlFunc preTxFunc, HardwareControlFunc postTxFunc);
+void startTransaction();
+bool endTransaction(uint32_t wait_ms = DEFAULT_POST_TRANSACTION_WAIT_MS);
+
+
 // Set the baud rate for the LPUART
 void setBaud(uint32_t new_baud_rate);
 

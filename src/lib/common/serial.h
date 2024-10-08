@@ -12,6 +12,15 @@
 extern "C" {
 #endif
 
+  //
+  // Maximum time to spend transmitting a single message
+  //
+  // At 9600 baud, that's ~6kB. At 115200 that's 72kB. If you attempt
+  // to transmit a single buffer larger than that (at those baud rates)
+  // some data may be lost! (with a 5 second max time)
+  //
+#define MAX_TX_TIME_MS (5000)
+
 typedef struct {
   uint8_t *buffer;
   size_t idx;

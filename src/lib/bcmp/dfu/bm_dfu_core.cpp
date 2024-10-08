@@ -214,6 +214,9 @@ static void s_error_entry(void) {
         case BM_DFU_ERR_IN_PROGRESS:
             printf("A FW update is already in progress.\n");
             break;
+        case BM_DFU_ERR_CONFIRMATION_ABORT:
+            printf("BM Aborted Error During Reboot Confirmation\n");
+            break;
         case BM_DFU_ERR_NONE:
         default:
             break;
