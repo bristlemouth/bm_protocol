@@ -13,11 +13,10 @@
 #include "uptime.h"
 #include "usart.h"
 #include "util.h"
+#include "exo3s_sensor.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
-#define DEFAULT_BAUD_RATE 1200
-#define DEFAULT_LINE_TERM 10 // FL / '\n', 0x0A
 #define BYTES_CLUSTER_MS 50
 
 // app_main passes a handle to the user config partition in NVM.
@@ -25,43 +24,36 @@ extern cfg::Configuration *userConfigurationPartition;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
-static u_int32_t baud_rate_config = DEFAULT_BAUD_RATE;
-static u_int32_t line_term_config = DEFAULT_LINE_TERM;
+//static u_int32_t baud_rate_config = DEFAULT_BAUD_RATE;
+// line_term_config is only the received string termination character
+//static u_int32_t line_term_config = DEFAULT_LINE_TERM;
 
 // A buffer for our data from the payload uart
 char payload_buffer[2048];
+static SondeEXO3sSensor sondeEXO3sSensor;
+char result;
 
 void setup(void) {
-  /* USER ONE-TIME SETUP CODE GOES HERE */
-  // Retrieve user-set config values out of NVM.
-  userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
-                                        baud_rate_config);
-  userConfigurationPartition->getConfig("plUartLineTerm", strlen("plUartLineTerm"),
-                                        line_term_config);
-  // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
-  PLUART::init(USER_TASK_PRIORITY);
-  // Baud set per expected baud rate of the sensor.
-  PLUART::setBaud(baud_rate_config);
-  // Enable passing raw bytes to user app.
-  PLUART::setUseByteStreamBuffer(true);
-  // Enable parsing lines and passing to user app.
-  /// Warning: PLUART only stores a single line at a time. If your attached payload sends lines
-  /// faster than the app reads them, they will be overwritten and data will be lost.
-  PLUART::setUseLineBuffer(true);
-  // Set a line termination character per protocol of the sensor.
-  PLUART::setTerminationCharacter((char)line_term_config);
-  // Turn on the UART.
-  PLUART::enable();
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
+  // Initializing
+  sondeEXO3sSensor.init();
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
+  sondeEXO3sSensor.sdi_wake(1000);
+  printf("Testing\n");
+//  Serial.println("Asking for the identity of the probe");
+  result = sondeEXO3sSensor.sdi_cmd("0I!");
+
+
+
+
   static bool led2State = false;
   /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.
   ///   Each time this happens, we pulse LED2 Green.
@@ -77,6 +69,8 @@ void loop(void) {
     ledLinePulse = -1;
     led2State = false;
   }
+
+  //printf("Testing\n");
 
   /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
   ///   like blinking an LED.
