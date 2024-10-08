@@ -1,8 +1,6 @@
 #ifndef __BM_L2_H__
 #define __BM_L2_H__
 
-#include "bm_config.h"
-#include "lwip/netif.h"
 #include "util.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -16,6 +14,21 @@ extern "C" {
    in bytes 5 (index 4) and 6 (index 5) of the SRC IPv6 address. */
 #define EGRESS_PORT_IDX 4
 #define INGRESS_PORT_IDX 5
+/* Define for actual netdev instance count here, as some of the later code currently iterates devices
+   using BM_NETDEV_MAX_DEVICES (which specifies the number of enum entries, not the actual number of devices).
+   If you added a new enum entry, but didn't change the instance array, the current code would crash. */
+#define BM_NETDEV_COUNT (2)
+
+typedef enum {
+  BM_NETDEV_TYPE_NONE,
+  BM_NETDEV_TYPE_ADIN2111,
+  BM_NETDEV_TYPE_MAX
+} bm_netdev_type_t;
+
+typedef struct bm_netdev_config_s {
+  bm_netdev_type_t type;
+  void *config;
+} bm_netdev_config_t;
 
 typedef void (*bm_l2_link_change_cb_t)(uint8_t port, bool state);
 
