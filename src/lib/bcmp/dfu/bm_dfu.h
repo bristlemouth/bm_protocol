@@ -122,7 +122,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id,
  * UNIT TEST FUNCTIONS BELOW HERE
  */
 #ifdef CI_TEST
-libSmContext_t *bm_dfu_test_get_sm_ctx(void);
+LibSmContext *bm_dfu_test_get_sm_ctx(void);
 void bm_dfu_test_set_dfu_event_and_run_sm(bm_dfu_event_t evt);
 void bm_dfu_test_set_client_fa(const struct flash_area *fa);
 #endif //CI_TEST

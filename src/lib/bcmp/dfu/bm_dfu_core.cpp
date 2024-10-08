@@ -18,7 +18,7 @@ extern "C" {
 }
 
 typedef struct dfu_core_ctx_t {
-    libSmContext_t sm_ctx;
+    LibSmContext sm_ctx;
     bm_dfu_event_t current_event;
     bool pending_state_change;
     uint8_t new_state;
@@ -40,7 +40,7 @@ static dfu_core_ctx_t dfu_ctx;
 static QueueHandle_t dfu_event_queue;
 
 static void bm_dfu_send_nop_event(void);
-static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state);
+static const LibSmState* bm_dfu_check_transitions(uint8_t current_state);
 
 static void s_init_run(void);
 static void s_idle_entry(void);
@@ -49,76 +49,76 @@ static void s_idle_run(void);
 static void s_error_run(void) {}
 static void s_error_entry(void);
 
-static const libSmState_t dfu_states[BM_NUM_DFU_STATES] = {
+static const LibSmState dfu_states[BM_NUM_DFU_STATES] = {
     {
-        .stateEnum = BM_DFU_STATE_INIT,
-        .stateName = "Init", // The name MUST NOT BE NULL
+        .state_enum = BM_DFU_STATE_INIT,
+        .state_name = "Init", // The name MUST NOT BE NULL
         .run = s_init_run, // This function MUST NOT BE NULL
-        .onStateExit = NULL, // This function can be NULL
-        .onStateEntry = NULL, // This function can be NULL
+        .on_state_exit = NULL, // This function can be NULL
+        .on_state_entry = NULL, // This function can be NULL
     },
     {
-        .stateEnum = BM_DFU_STATE_IDLE,
-        .stateName = "Idle",
+        .state_enum = BM_DFU_STATE_IDLE,
+        .state_name = "Idle",
         .run = s_idle_run,
-        .onStateExit = s_idle_exit,
-        .onStateEntry = s_idle_entry,
+        .on_state_exit = s_idle_exit,
+        .on_state_entry = s_idle_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_ERROR,
-        .stateName = "Error",
+        .state_enum = BM_DFU_STATE_ERROR,
+        .state_name = "Error",
         .run = s_error_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_error_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_error_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_CLIENT_RECEIVING,
-        .stateName = "Client Rx",
+        .state_enum = BM_DFU_STATE_CLIENT_RECEIVING,
+        .state_name = "Client Rx",
         .run = s_client_receiving_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_client_receiving_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_client_receiving_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_CLIENT_VALIDATING,
-        .stateName = "Client Validating",
+        .state_enum = BM_DFU_STATE_CLIENT_VALIDATING,
+        .state_name = "Client Validating",
         .run = s_client_validating_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_client_validating_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_client_validating_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_CLIENT_REBOOT_REQ,
-        .stateName = "Client Reboot Request",
+        .state_enum = BM_DFU_STATE_CLIENT_REBOOT_REQ,
+        .state_name = "Client Reboot Request",
         .run = s_client_reboot_req_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_client_reboot_req_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_client_reboot_req_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_CLIENT_REBOOT_DONE,
-        .stateName = "Client Reboot Done",
+        .state_enum = BM_DFU_STATE_CLIENT_REBOOT_DONE,
+        .state_name = "Client Reboot Done",
         .run = s_client_update_done_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_client_update_done_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_client_update_done_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_CLIENT_ACTIVATING,
-        .stateName = "Client Activating",
+        .state_enum = BM_DFU_STATE_CLIENT_ACTIVATING,
+        .state_name = "Client Activating",
         .run = s_client_activating_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_client_activating_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_client_activating_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_HOST_REQ_UPDATE,
-        .stateName = "Host Reqeust Update",
+        .state_enum = BM_DFU_STATE_HOST_REQ_UPDATE,
+        .state_name = "Host Reqeust Update",
         .run = s_host_req_update_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_host_req_update_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_host_req_update_entry,
     },
     {
-        .stateEnum = BM_DFU_STATE_HOST_UPDATE,
-        .stateName = "Host Update",
+        .state_enum = BM_DFU_STATE_HOST_UPDATE,
+        .state_name = "Host Update",
         .run = s_host_update_run,
-        .onStateExit = NULL,
-        .onStateEntry = s_host_update_entry,
+        .on_state_exit = NULL,
+        .on_state_entry = s_host_update_entry,
     },
 };
 
@@ -130,7 +130,7 @@ static void bm_dfu_send_nop_event(void) {
     }
 }
 
-static const libSmState_t* bm_dfu_check_transitions(uint8_t current_state){
+static const LibSmState* bm_dfu_check_transitions(uint8_t current_state){
     if (dfu_ctx.pending_state_change) {
         dfu_ctx.pending_state_change = false;
         return &dfu_states[dfu_ctx.new_state];
@@ -247,7 +247,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
     }
 
     bool valid_packet = true;
-    switch(getCurrentStateEnum(&(dfu_ctx.sm_ctx))){
+    switch(get_current_state_enum(&(dfu_ctx.sm_ctx))){
         case BM_DFU_STATE_INIT:
         case BM_DFU_STATE_IDLE:
         case BM_DFU_STATE_ERROR: {
@@ -403,7 +403,7 @@ void bm_dfu_set_error(bm_dfu_err_t error) {
 void bm_dfu_set_pending_state_change(uint8_t new_state) {
     dfu_ctx.pending_state_change = 1;
     dfu_ctx.new_state = new_state;
-    printf("Transitioning to state: %s\n", dfu_states[new_state].stateName);
+    printf("Transitioning to state: %s\n", dfu_states[new_state].state_name);
     bm_dfu_send_nop_event();
 }
 
@@ -511,7 +511,7 @@ static void bm_dfu_event_thread(void*) {
     while (1) {
         dfu_ctx.current_event.type = DFU_EVENT_NONE;
         if(xQueueReceive(dfu_event_queue, &dfu_ctx.current_event, portMAX_DELAY) == pdPASS) {
-            libSmRun(&(dfu_ctx.sm_ctx));
+            lib_sm_run(&(dfu_ctx.sm_ctx));
         }
         if (dfu_ctx.current_event.buf) {
             vPortFree(dfu_ctx.current_event.buf);
@@ -549,7 +549,7 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     dfu_ctx.current_event = {DFU_EVENT_NONE, NULL, 0};
 
     /* Set initial state of DFU State Machine*/
-    libSmInit(&(dfu_ctx.sm_ctx), &(dfu_states[BM_DFU_STATE_INIT]), bm_dfu_check_transitions);
+    lib_sm_init(&(dfu_ctx.sm_ctx), &(dfu_states[BM_DFU_STATE_INIT]), bm_dfu_check_transitions);
 
     dfu_event_queue = xQueueCreate( 5, sizeof(bm_dfu_event_t));
     configASSERT(dfu_event_queue);
@@ -599,7 +599,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
             printf("Invalid chunk size for DFU\n");
             break;
         }
-        if(getCurrentStateEnum(&(dfu_ctx.sm_ctx)) != BM_DFU_STATE_IDLE) {
+        if(get_current_state_enum(&(dfu_ctx.sm_ctx)) != BM_DFU_STATE_IDLE) {
             printf("Not ready to start update.\n");
             if(update_finish_callback) {
                 update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS, dest_node_id);
@@ -642,12 +642,12 @@ bm_dfu_err_t bm_dfu_get_error(void) {
  * UNIT TEST FUNCTIONS BELOW HERE
  */
 #ifdef CI_TEST
-libSmContext_t* bm_dfu_test_get_sm_ctx(void) {
+LibSmContext* bm_dfu_test_get_sm_ctx(void) {
     return &dfu_ctx.sm_ctx;
 }
 
 void bm_dfu_test_set_dfu_event_and_run_sm(bm_dfu_event_t evt) {
     memcpy(&dfu_ctx.current_event, &evt, sizeof(bm_dfu_event_t));
-    libSmRun(dfu_ctx.sm_ctx);
+    lib_sm_run(dfu_ctx.sm_ctx);
 }
 #endif //CI_TEST
