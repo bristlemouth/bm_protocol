@@ -526,7 +526,6 @@ static void bm_dfu_event_thread(void*) {
 //*/
 static BmErr dfu_copy_and_process_message(BcmpProcessData data) {
   BmErr err = BmEINVAL;
-//   bcmp_header_t *header = reinterpret_cast<bcmp_header_t *>(data.payload);
   uint8_t *buf = static_cast<uint8_t *>(pvPortMalloc((data.size)));
   if (buf) {
     memcpy(buf, data.payload, (data.size));

@@ -251,7 +251,7 @@ void bm_dfu_client_process_update_request(void) {
             bm_dfu_client_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);
         } else {
 
-            if(bm_dfu_client_flash_area_get_size(client_ctx.fa) > image_size) { // TODO - no we can just use flash_area_get_size_here duhhhh!
+            if(bm_dfu_client_flash_area_get_size(client_ctx.fa) > image_size) {
                 /* Erase memory in secondary image slot */
                 printf("Erasing flash\n");
                 if(bm_dfu_client_flash_area_erase(client_ctx.fa, 0, bm_dfu_client_flash_area_get_size(client_ctx.fa)) != 0) {
@@ -426,10 +426,6 @@ void s_client_activating_entry(void)
 
     /* Add a small delay so DFU_END message can get out to (Host Node + Desktop) before resetting device */
     vTaskDelay(10);
-
-    // boot_set_pending(0);
-    // resetSystem(RESET_REASON_MCUBOOT);
-
     bm_dfu_client_set_pending_and_reset();
 }
 
@@ -568,7 +564,6 @@ static void bm_dfu_client_transition_to_error(bm_dfu_err_t err) {
 static void bm_dfu_client_fail_update_and_reboot(void) {
     memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
     vTaskDelay(100); // Wait a bit for any previous messages sent.
-    // resetSystem(RESET_REASON_UPDATE_FAILED); // Revert to the previous image.
     bm_dfu_client_fail_update_and_reset();
 }
 
@@ -581,6 +576,6 @@ bool bm_dfu_client_host_node_valid(uint64_t host_node_id) {
  */
 #ifdef CI_TEST
 void bm_dfu_test_set_client_fa(const struct flash_area *fa) {
-    client_ctx.fa = fa; // TODO - will my changing this to a void* break the unit tests???
+    client_ctx.fa = fa;
 }
 #endif //CI_TEST
