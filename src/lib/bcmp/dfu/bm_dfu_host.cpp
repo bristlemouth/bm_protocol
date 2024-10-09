@@ -1,25 +1,29 @@
 #include <stdio.h>
 #include <string.h>
+#include "bm_os.h"
 #include "bm_dfu.h"
 #include "bm_dfu_generic.h"
 #include "bm_dfu_host.h"
-#include "device_info.h"
-#include "external_flash_partitions.h"
-#include "FreeRTOS.h"
+
+//TODO - abstract this??? Move this into bm_core or bm_common???
 #include "timer_callback_handler.h"
 
+extern "C" {
+#include "device.h"
+}
+
 typedef struct dfu_host_ctx_t {
-    QueueHandle_t dfu_event_queue;
-    TimerHandle_t ack_timer;
+    BmQueue dfu_event_queue;
+    BmTimer ack_timer;
     uint8_t ack_retry_num;
-    TimerHandle_t heartbeat_timer;
+    BmTimer heartbeat_timer;
     bm_dfu_img_info_t img_info;
     uint64_t self_node_id;
     uint64_t client_node_id;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
     uint32_t bytes_remaining;
     update_finish_cb_t update_complete_callback;
-    TimerHandle_t update_timer;
+    BmTimer update_timer;
     uint32_t host_timeout_ms;
 } dfu_host_ctx_t;
 
@@ -27,9 +31,9 @@ static constexpr uint32_t FLASH_READ_TIMEOUT_MS = 5 * 1000;
 
 static dfu_host_ctx_t host_ctx;
 
-static void ack_timer_handler(TimerHandle_t tmr);
-static void heartbeat_timer_handler(TimerHandle_t tmr);
-static void update_timer_handler(TimerHandle_t tmr);
+static void ack_timer_handler(BmTimer tmr);
+static void heartbeat_timer_handler(BmTimer tmr);
+static void update_timer_handler(BmTimer tmr);
 
 static void bm_dfu_host_req_update();
 static void bm_dfu_host_send_reboot();
@@ -44,11 +48,11 @@ static void bm_dfu_host_start_update_timer(uint32_t timeoutMs);
  * @param *tmr    Pointer to Timer struct
  * @return none
  */
-static void ack_timer_handler(TimerHandle_t tmr) {
+static void ack_timer_handler(BmTimer tmr) {
     (void) tmr;
     bm_dfu_event_t evt = {DFU_EVENT_ACK_TIMEOUT, NULL,0};
 
-    if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
+    if(bm_queue_send(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
         configASSERT(false);
     }
 }
@@ -74,7 +78,7 @@ static void send_hb_timer_cb(void *arg) {
  * @param *tmr    Pointer to Timer struct
  * @return none
  */
-static void heartbeat_timer_handler(TimerHandle_t tmr) {
+static void heartbeat_timer_handler(BmTimer tmr) {
     (void) tmr;
     timer_callback_handler_send_cb(send_hb_timer_cb,NULL,0);
 }
@@ -86,12 +90,12 @@ static void heartbeat_timer_handler(TimerHandle_t tmr) {
  *
  * @return none
  */
-static void update_timer_handler(TimerHandle_t tmr) {
+static void update_timer_handler(BmTimer tmr) {
     (void) tmr;
     bm_dfu_event_t evt = {DFU_EVENT_ABORT, NULL,0};
 
-    if(xQueueSend(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
-        configASSERT(false);
+    if(bm_queue_send(host_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
+        // configASSERT(false);
     }
 }
 
@@ -131,7 +135,7 @@ static void bm_dfu_host_send_chunk(bm_dfu_event_chunk_request_t* req) {
     uint32_t payload_len = (host_ctx.bytes_remaining >= host_ctx.img_info.chunk_size) ? host_ctx.img_info.chunk_size : host_ctx.bytes_remaining;
     uint32_t payload_len_plus_header = sizeof(bcmp_dfu_payload_t) + payload_len;
     uint8_t* buf = static_cast<uint8_t*>(pvPortMalloc(payload_len_plus_header));
-    configASSERT(buf);
+    // configASSERT(buf);
     bcmp_dfu_payload_t *payload_header = reinterpret_cast<bcmp_dfu_payload_t *>(buf);
     payload_header->header.frame_type = BCMP_DFU_PAYLOAD;
     payload_header->chunk.addresses.src_node_id = host_ctx.self_node_id;
@@ -202,7 +206,8 @@ void s_host_req_update_entry(void) {
     bm_dfu_host_req_update();
 
     /* Kickoff ACK timeout */
-    configASSERT(xTimerStart(host_ctx.ack_timer, 10));
+    // configASSERT(xTimerStart(host_ctx.ack_timer, 10));
+    bm_timer_start(host_ctx.ack_timer, 10);
 }
 
 /**
@@ -218,8 +223,9 @@ void s_host_req_update_run(void)
 
     if (curr_evt.type == DFU_EVENT_ACK_RECEIVED) {
         /* Stop ACK Timer */
-        configASSERT(xTimerStop(host_ctx.ack_timer, 10));
-        configASSERT(curr_evt.buf);
+        // configASSERT(xTimerStop(host_ctx.ack_timer, 10));
+        bm_timer_stop(host_ctx.ack_timer, 10);
+        // configASSERT(curr_evt.buf);
         bm_dfu_frame_t *frame = reinterpret_cast<bm_dfu_frame_t *>(curr_evt.buf);
         bm_dfu_event_result_t* result_evt = reinterpret_cast<bm_dfu_event_result_t*>(&(reinterpret_cast<uint8_t *>(frame))[1]);
 
@@ -236,7 +242,8 @@ void s_host_req_update_run(void)
             bm_dfu_host_transition_to_error(BM_DFU_ERR_TIMEOUT);
         } else {
             bm_dfu_host_req_update();
-            configASSERT(xTimerStart(host_ctx.ack_timer, 10));
+            // configASSERT(xTimerStart(host_ctx.ack_timer, 10));
+            bm_timer_start(host_ctx.ack_timer, 10);
         }
     } else if (curr_evt.type == DFU_EVENT_ABORT) {
         bm_dfu_err_t err = BM_DFU_ERR_ABORTED;
@@ -283,12 +290,14 @@ void s_host_update_run(void) {
 
         /* Request Next Chunk */
         /* Send Heartbeat to Client */
-        configASSERT(xTimerStart(host_ctx.heartbeat_timer, 10));
+        // configASSERT(xTimerStart(host_ctx.heartbeat_timer, 10));
+        bm_timer_start(host_ctx.heartbeat_timer, 10);
 
         /* resend the frame to the client as is */
         bm_dfu_host_send_chunk(chunk_req_evt);
 
-        configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
+        // configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
+        bm_timer_stop(host_ctx.heartbeat_timer, 10);
     } else if (curr_evt.type == DFU_EVENT_REBOOT_REQUEST) {
         configASSERT(frame);
         bm_dfu_host_send_reboot();
@@ -297,8 +306,9 @@ void s_host_update_run(void) {
         bm_dfu_update_end(host_ctx.client_node_id, true, BM_DFU_ERR_NONE);
     }
     else if (curr_evt.type == DFU_EVENT_UPDATE_END) {
-        configASSERT(xTimerStop(host_ctx.update_timer, 100));
-        configASSERT(frame);
+        // configASSERT(xTimerStop(host_ctx.update_timer, 100));
+        bm_timer_stop(host_ctx.update_timer, 100);
+        // configASSERT(frame);
         bm_dfu_event_result_t* update_end_evt = reinterpret_cast<bm_dfu_event_result_t*>(&(reinterpret_cast<uint8_t *>(frame))[1]);
 
         if (update_end_evt->success) {
@@ -328,21 +338,21 @@ void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     int tmr_id = 0;
 
     /* Store relevant variables */
-    host_ctx.self_node_id = getNodeId();
+    host_ctx.self_node_id = node_id();
 
     /* Get DFU Subsystem Queue */
     host_ctx.dfu_event_queue = bm_dfu_get_event_queue();
 
     /* Initialize ACK and Heartbeat Timer */
-    host_ctx.ack_timer = xTimerCreate("DFU Host Ack", (BM_DFU_HOST_ACK_TIMEOUT_MS / portTICK_RATE_MS),
-                                      pdFALSE, (void *) &tmr_id, ack_timer_handler);
+    host_ctx.ack_timer = bm_timer_create("DFU Host Ack", bm_ms_to_ticks(BM_DFU_HOST_ACK_TIMEOUT_MS),
+                                      false, (void *) &tmr_id, ack_timer_handler);
     configASSERT(host_ctx.ack_timer);
 
-    host_ctx.heartbeat_timer = xTimerCreate("DFU Host Heartbeat", (BM_DFU_HOST_HEARTBEAT_TIMEOUT_MS / portTICK_RATE_MS),
-                                      pdTRUE, (void *) &tmr_id, heartbeat_timer_handler);
+    host_ctx.heartbeat_timer = bm_timer_create("DFU Host Heartbeat", bm_ms_to_ticks(BM_DFU_HOST_HEARTBEAT_TIMEOUT_MS),
+                                      true, (void *) &tmr_id, heartbeat_timer_handler);
     configASSERT(host_ctx.heartbeat_timer);
-    host_ctx.update_timer = xTimerCreate("update timer", pdMS_TO_TICKS(BM_DFU_UPDATE_DEFAULT_TIMEOUT_MS),
-                                    pdFALSE, (void *) &tmr_id, update_timer_handler);
+    host_ctx.update_timer = bm_timer_create("update timer", bm_ms_to_ticks(BM_DFU_UPDATE_DEFAULT_TIMEOUT_MS),
+                                    false, (void *) &tmr_id, update_timer_handler);
     configASSERT(host_ctx.update_timer);
 }
 
@@ -352,15 +362,21 @@ void bm_dfu_host_set_params(update_finish_cb_t update_complete_callback, uint32_
 }
 
 static void bm_dfu_host_start_update_timer(uint32_t timeoutMs) {
-    configASSERT(xTimerStop(host_ctx.update_timer, 100));
-    configASSERT(xTimerChangePeriod(host_ctx.update_timer, pdMS_TO_TICKS(timeoutMs), 100));
-    configASSERT(xTimerStart(host_ctx.update_timer, 100));
+    // configASSERT(xTimerStop(host_ctx.update_timer, 100));
+    // configASSERT(xTimerChangePeriod(host_ctx.update_timer, bm_ms_to_ticks(timeoutMs), 100));
+    // configASSERT(xTimerStart(host_ctx.update_timer, 100));
+    bm_timer_stop(host_ctx.update_timer, 100);
+    bm_timer_change_period(host_ctx.update_timer, bm_ms_to_ticks(timeoutMs), 100);
+    bm_timer_start(host_ctx.update_timer, 100);
 }
 
 static void bm_dfu_host_transition_to_error(bm_dfu_err_t err) {
-    configASSERT(xTimerStop(host_ctx.update_timer, 100));
-    configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
-    configASSERT(xTimerStop(host_ctx.ack_timer, 10));
+    // configASSERT(xTimerStop(host_ctx.update_timer, 100));
+    // configASSERT(xTimerStop(host_ctx.heartbeat_timer, 10));
+    // configASSERT(xTimerStop(host_ctx.ack_timer, 10));
+    bm_timer_stop(host_ctx.update_timer, 100);
+    bm_timer_stop(host_ctx.heartbeat_timer, 10);
+    bm_timer_stop(host_ctx.ack_timer, 10);
     bm_dfu_set_error(err);
     bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
 }

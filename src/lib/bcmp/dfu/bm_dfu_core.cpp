@@ -1,20 +1,19 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
+#include "bm_os.h"
+// TODO remove this when we have defined the priority somewhere else... bm_os.h?
+#include "task_priorities.h"
 
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
 #include "bm_dfu_generic.h"
-#include "task_priorities.h"
-#include "device_info.h"
-#include "lpm.h"
 
 extern "C" {
 #include "messages.h"
 #include "packet.h"
+#include "device.h"
 }
 
 typedef struct dfu_core_ctx_t {
@@ -37,7 +36,7 @@ ReboootClientUpdateInfo_t client_update_reboot_info;
 
 static dfu_core_ctx_t dfu_ctx;
 
-static QueueHandle_t dfu_event_queue;
+static BmQueue dfu_event_queue;
 
 static void bm_dfu_send_nop_event(void);
 static const LibSmState* bm_dfu_check_transitions(uint8_t current_state);
@@ -125,7 +124,7 @@ static const LibSmState dfu_states[BM_NUM_DFU_STATES] = {
 static void bm_dfu_send_nop_event(void) {
     /* Force running the current state by sending a NOP event */
     bm_dfu_event_t evt = {DFU_EVENT_NONE, NULL, 0};
-    if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
+    if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
         printf("Message could not be added to Queue\n");
     }
 }
@@ -149,7 +148,7 @@ static void s_init_run(void) {
 }
 
 static void s_idle_entry(void) {
-    lpmPeripheralInactive(LPM_DFU_BRISTLEMOUTH);
+    bm_dfu_core_lpm_peripheral_inactive();
     memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
 }
 
@@ -168,7 +167,7 @@ static void s_idle_run(void) {
 }
 
 static void s_idle_exit(void) {
-    lpmPeripheralActive(LPM_DFU_BRISTLEMOUTH);
+    bm_dfu_core_lpm_peripheral_active();
 }
 
 /**
@@ -179,7 +178,7 @@ static void s_idle_exit(void) {
  * @return none
  */
 static void s_error_entry(void) {
-    lpmPeripheralInactive(LPM_DFU_BRISTLEMOUTH);
+    bm_dfu_core_lpm_peripheral_inactive();
     switch (dfu_ctx.error) {
         case BM_DFU_ERR_FLASH_ACCESS:
             printf("Flash access error (Fatal Error)\n");
@@ -236,13 +235,13 @@ static void s_error_entry(void) {
 /* Consumes any incoming packets from the BCMP service. The payload types are translated
    into events that are placed into the subystem queue and are consumed by the DFU event thread. */
 void bm_dfu_process_message(uint8_t *buf, size_t len) {
-    configASSERT(buf);
+    // configASSERT(buf);
     bm_dfu_event_t evt;
     bm_dfu_frame_t *frame = reinterpret_cast<bm_dfu_frame_t *>(buf);
 
     /* If this node is not the intended destination, then discard and continue to wait on queue */
     if (dfu_ctx.self_node_id != (reinterpret_cast<bm_dfu_event_address_t *>(frame->payload))->dst_node_id) {
-        vPortFree(buf);
+        bm_free(buf);
         return;
     }
 
@@ -271,11 +270,12 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
             break;
         }
         default:
-            configASSERT(false);
+            // configASSERT(false);
+            break;
     }
 
     if(!valid_packet) {
-        vPortFree(buf);
+        bm_free(buf);
         return;
     }
 
@@ -286,81 +286,82 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_START:
             evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
             printf("Received update request\n");
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_PAYLOAD:
             evt.type = DFU_EVENT_IMAGE_CHUNK;
             printf("Received Payload\n");
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_END:
             evt.type = DFU_EVENT_UPDATE_END;
             printf("Received DFU End\n");
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_ACK:
             evt.type = DFU_EVENT_ACK_RECEIVED;
             printf("Received ACK\n");
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_ABORT:
             evt.type = DFU_EVENT_ABORT;
             printf("Received Abort\n");
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_HEARTBEAT:
             evt.type = DFU_EVENT_HEARTBEAT;
             printf("Received DFU Heartbeat\n");
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_PAYLOAD_REQ:
             evt.type = DFU_EVENT_CHUNK_REQUEST;
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_REBOOT_REQ:
             evt.type = DFU_EVENT_REBOOT_REQUEST;
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_REBOOT:
             evt.type = DFU_EVENT_REBOOT;
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_BOOT_COMPLETE:
             evt.type = DFU_EVENT_BOOT_COMPLETE;
-            if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-                vPortFree(buf);
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+                bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         default:
-            configASSERT(false);
+            // configASSERT(false);
+            break;
         }
 }
 
@@ -370,9 +371,9 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
  * @note Used by DFU host and client contexts to put events into the Subsystem Queue
  *
  * @param none
- * @return QueueHandle_t to DFU Subsystem event Queue
+ * @return BmQueue to DFU Subsystem event Queue
  */
-QueueHandle_t bm_dfu_get_event_queue(void) {
+BmQueue bm_dfu_get_event_queue(void) {
     return dfu_event_queue;
 }
 
@@ -510,11 +511,11 @@ static void bm_dfu_event_thread(void*) {
 
     while (1) {
         dfu_ctx.current_event.type = DFU_EVENT_NONE;
-        if(xQueueReceive(dfu_event_queue, &dfu_ctx.current_event, portMAX_DELAY) == pdPASS) {
+        if(bm_queue_receive(dfu_event_queue, &dfu_ctx.current_event, portMAX_DELAY) == pdPASS) {
             lib_sm_run(&(dfu_ctx.sm_ctx));
         }
         if (dfu_ctx.current_event.buf) {
-            vPortFree(dfu_ctx.current_event.buf);
+            bm_free(dfu_ctx.current_event.buf);
         }
     }
 }
@@ -526,7 +527,7 @@ static void bm_dfu_event_thread(void*) {
 //*/
 static BmErr dfu_copy_and_process_message(BcmpProcessData data) {
   BmErr err = BmEINVAL;
-  uint8_t *buf = static_cast<uint8_t *>(pvPortMalloc((data.size)));
+  uint8_t *buf = static_cast<uint8_t *>(bm_malloc((data.size)));
   if (buf) {
     memcpy(buf, data.payload, (data.size));
     bm_dfu_process_message(buf, (data.size));
@@ -536,13 +537,13 @@ static BmErr dfu_copy_and_process_message(BcmpProcessData data) {
 }
 
 void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
-    configASSERT(bcmp_dfu_tx);
+    // configASSERT(bcmp_dfu_tx);
     dfu_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
     bm_dfu_event_t evt;
-    int retval;
+    BmErr retval;
 
     /* Store relevant variables from bristlemouth.c */
-    dfu_ctx.self_node_id = getNodeId();
+    dfu_ctx.self_node_id = node_id();
 
     /* Initialize current event to NULL */
     dfu_ctx.current_event = {DFU_EVENT_NONE, NULL, 0};
@@ -550,8 +551,8 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     /* Set initial state of DFU State Machine*/
     lib_sm_init(&(dfu_ctx.sm_ctx), &(dfu_states[BM_DFU_STATE_INIT]), bm_dfu_check_transitions);
 
-    dfu_event_queue = xQueueCreate( 5, sizeof(bm_dfu_event_t));
-    configASSERT(dfu_event_queue);
+    dfu_event_queue = bm_queue_create( 5, sizeof(bm_dfu_event_t));
+    // configASSERT(dfu_event_queue);
 
     bm_dfu_client_init(bcmp_dfu_tx);
     bm_dfu_host_init(bcmp_dfu_tx);
@@ -560,15 +561,20 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     evt.buf = NULL;
     evt.len = 0;
 
-    retval = xTaskCreate(bm_dfu_event_thread,
+    // TODO - figure out how where it is best to define the priority... in bm_os.h?
+    retval = bm_task_create(bm_dfu_event_thread,
                        "DFU Event",
                        1024,
                        NULL,
                        BM_DFU_EVENT_TASK_PRIORITY,
                        NULL);
-    configASSERT(retval == pdPASS);
+    if (retval != BmOK) {
+        // TODO - handle this better
+        printf("Failed to create DFU Event thread\n");
+    }
+    // configASSERT(retval == pdPASS);
 
-    if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
+    if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
         printf("Message could not be added to Queue\n");
     }
 
@@ -608,8 +614,8 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
         bm_dfu_event_t evt;
         size_t size = sizeof(dfu_host_start_event_t);
         evt.type = DFU_EVENT_BEGIN_HOST;
-        uint8_t *buf = static_cast<uint8_t*>(pvPortMalloc(size));
-        configASSERT(buf);
+        uint8_t *buf = static_cast<uint8_t*>(bm_malloc(size));
+        // configASSERT(buf);
 
         dfu_host_start_event_t *start_event = reinterpret_cast<dfu_host_start_event_t*>(buf);
         start_event->start.header.frame_type = BCMP_DFU_START;
@@ -620,8 +626,8 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
         start_event->timeoutMs = timeoutMs;
         evt.buf = buf;
         evt.len = size;
-        if(xQueueSend(dfu_event_queue, &evt, 0) != pdTRUE) {
-            vPortFree(buf);
+        if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            bm_free(buf);
             if(update_finish_callback) {
                 update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS, dest_node_id);
             }

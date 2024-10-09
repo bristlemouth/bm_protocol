@@ -92,13 +92,14 @@ static void bcmp_thread(void *parameters) {
 
   // Start listening for BCMP packets
   CTX.heartbeat_timer =
-      bm_timer_create(heartbeat_timer_handler, "bcmp_heartbeat", bcmp_heartbeat_s * 1000, NULL);
+      bm_timer_create("bcmp_heartbeat", bm_ms_to_ticks(bcmp_heartbeat_s * 1000), true, NULL,
+                      heartbeat_timer_handler);
 
   // TODO - send out heartbeats on link change
   for (;;) {
     BcmpQueueItem item;
 
-    BmErr err = bm_queue_receive(CTX.queue, &item, portMAX_DELAY);
+    BmErr err = bm_queue_receive(CTX.queue, &item, BM_MAX_DELAY_UINT32);
 
     if (err == BmOK) {
       switch (item.type) {
@@ -217,8 +218,10 @@ BmErr bcmp_ll_forward(BcmpHeader *header, void *payload, uint32_t size, uint8_t 
   \return true if succesful false otherwise.
 */
 static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
-  configASSERT(type >= BCMP_DFU_START && type <= BCMP_DFU_LAST_MESSAGE);
-  return (bcmp_tx(&multicast_global_addr, (BcmpMessageType)type, buff, len) == BmOK);
+  if (type >= BCMP_DFU_START && type <= BCMP_DFU_LAST_MESSAGE) {
+    return (bcmp_tx(&multicast_global_addr, (BcmpMessageType)type, buff, len) == BmOK);
+  }
+  return false;
 }
 
 /*!
