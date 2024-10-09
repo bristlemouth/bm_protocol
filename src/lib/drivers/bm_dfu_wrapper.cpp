@@ -94,7 +94,7 @@ BmErr bm_dfu_host_get_chunk(uint32_t offset, uint8_t *buffer, size_t len, uint32
 }
 
 void bm_dfu_core_lpm_peripheral_active(void) {
-  // Do nothing.
+  lpmPeripheralActive(LPM_DFU_BRISTLEMOUTH);
 }
 
 void bm_dfu_core_lpm_peripheral_inactive(void) {
