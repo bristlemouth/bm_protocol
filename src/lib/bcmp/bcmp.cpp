@@ -66,20 +66,6 @@ void bcmp_link_change(uint8_t port, bool state) {
   }
 }
 
-//TODO implemnent with updated packet module
-///*!
-//  Process a DFU message. Allocates memory that the consumer is in charge of freeing.
-//  \param pbuf[in] pbuf buffer
-//  \return none
-//*/
-//static void dfu_copy_and_process_message(BcmpProcessData data) {
-//  bcmp_header_t *header = static_cast<bcmp_header_t *>(pbuf->payload);
-//  uint8_t *buf = static_cast<uint8_t *>(pvPortMalloc((pbuf->len) - sizeof(bcmp_header_t)));
-//  configASSERT(buf);
-//  memcpy(buf, data.payload, (pbuf->len) - sizeof(bcmp_header_t));
-//  bm_dfu_process_message(buf, (pbuf->len) - sizeof(bcmp_header_t));
-//}
-
 /*!
   FreeRTOS timer handler for sending out heartbeats. No work is done in the timer
   handler, but instead an event is queued up to be handled in the BCMP task.
@@ -241,8 +227,7 @@ static bool bcmp_dfu_tx(bcmp_message_type_t type, uint8_t *buff, uint16_t len) {
   \param *netif lwip network interface to use
   \return none
 */
-BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *sys_cfg,
-                DeviceCfg device) {
+BmErr bcmp_init(DeviceCfg device) {
 
   CTX.queue = bm_queue_create(bcmp_evt_queue_len, sizeof(BcmpQueueItem));
 
@@ -255,7 +240,7 @@ BmErr bcmp_init(NvmPartition *dfu_partition, Configuration *sys_cfg,
   bcmp_topology_init();
   bcmp_process_info_init();
 
-  bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
+  bm_dfu_init(bcmp_dfu_tx);
   bcmp_config_init();
   bcmp_resource_discovery_init();
 

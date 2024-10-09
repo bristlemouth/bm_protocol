@@ -63,7 +63,7 @@ typedef struct {
 } GlobalContext_t;
 
 static GlobalContext_t _global_ctx;
-static const libSmState_t states[NUM_STAGES] = {
+static const LibSmState states[NUM_STAGES] = {
     {
         .stateEnum = STAGE_1,
         .stateName = "Stage1", // The name MUST NOT BE NULL
@@ -95,7 +95,7 @@ static const libSmState_t states[NUM_STAGES] = {
 };
 
 // Transitions function
-const libSmState_t* checkTransitions(uint8_t current_state){
+const LibSmState* checkTransitions(uint8_t current_state){
     switch ((stageEnum_t)current_state){
         case STAGE_1: {
             if(_global_ctx.count_s1 == 2) {
@@ -209,7 +209,7 @@ TEST_F(LibStateMachineTest, BadContext)
 }
 
 // An invalid transition (Used for BadContext test)
-const libSmState_t* badTransition(uint8_t current_state) {
+const LibSmState* badTransition(uint8_t current_state) {
     (void)(current_state);
     return NULL;
 }
@@ -224,7 +224,7 @@ TEST_F(LibStateMachineTest, BadTransition)
 TEST_F(LibStateMachineTest, BadStateName)
 {
   libSmContext_t ctx;
-  libSmState_t badNameState = {
+  LibSmState badNameState = {
     .stateEnum = 0,
     .stateName = NULL,
     .run = stage1Run,

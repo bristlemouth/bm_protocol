@@ -1,4 +1,5 @@
 #include <string.h>
+#include <cinttypes>
 #include "bcmp.h"
 #include "bcmp_ping.h"
 
