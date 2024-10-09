@@ -12,7 +12,9 @@
 // TODO - get a crc16_ccitt function in bm_core/common
 #include "crc.h"
 // TODO - use the util.h file from bm_common for the versioning functions
-#include "device_info.h"
+extern "C" {
+#include "device.h"
+}
 
 typedef struct dfu_client_ctx_t {
     BmQueue dfu_event_queue;
@@ -225,7 +227,7 @@ void bm_dfu_client_process_update_request(void) {
     major_version = img_info_evt->img_info.major_ver;
     client_ctx.host_node_id = img_info_evt->addresses.src_node_id;
 
-    if (img_info_evt->img_info.gitSHA != getGitSHA() || img_info_evt->img_info.filter_key == BM_DFU_IMG_INFO_FORCE_UPDATE) {
+    if (img_info_evt->img_info.gitSHA != git_sha() || img_info_evt->img_info.filter_key == BM_DFU_IMG_INFO_FORCE_UPDATE) {
         if(chunk_size > BM_DFU_MAX_CHUNK_SIZE) {
             bm_dfu_client_abort(BM_DFU_ERR_ABORTED);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_CHUNK_SIZE);
@@ -487,7 +489,7 @@ void s_client_reboot_req_run(void) {
 void s_client_update_done_entry(void) {
     client_ctx.host_node_id = client_update_reboot_info.host_node_id;
     client_ctx.chunk_retry_num = 0;
-    if(getGitSHA() == client_update_reboot_info.gitSHA) {
+    if(git_sha() == client_update_reboot_info.gitSHA) {
         // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration,
         // confirm, reset the config flag, and then reboot.
         if(!bm_dfu_client_confirm_is_enabled()){
@@ -555,7 +557,7 @@ void bm_dfu_client_init(bcmp_dfu_tx_func_t bcmp_dfu_tx)
     int32_t tmr_id = 0;
 
     /* Store relevant variables */
-    client_ctx.self_node_id = getNodeId();
+    client_ctx.self_node_id = node_id();
 
     /* Get DFU Subsystem Queue */
     client_ctx.dfu_event_queue = bm_dfu_get_event_queue();
