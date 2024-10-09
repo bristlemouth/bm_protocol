@@ -3,7 +3,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-// TODO - use the bm_os/freertos functions
 #include "bm_os.h"
 
 #include "bm_dfu.h"
