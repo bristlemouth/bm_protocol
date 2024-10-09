@@ -8,14 +8,12 @@
 #include "lwip/inet.h"
 
 #include "serial.h"
-#include "nvmPartition.h"
-#include "configuration.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void bcl_init(NvmPartition * dfu_partition, cfg::Configuration* sys_cfg);
+void bcl_init(void);
 const char *bcl_get_ip_str(uint8_t ip);
 
 #ifdef __cplusplus

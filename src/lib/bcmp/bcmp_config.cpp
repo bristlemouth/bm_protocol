@@ -1,8 +1,10 @@
+#include <string.h>
 #include "bcmp_config.h"
 #include "bm_configs_generic.h"
 #include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bm_util.h"
+#include "cbor.h"
 extern "C" {
 #include "bm_os.h"
 #include "packet.h"
@@ -21,7 +23,7 @@ bool bcmp_config_get(uint64_t target_node_id, BmConfigPartition partition,
         get_msg->header.target_node_id = target_node_id;
         get_msg->header.source_node_id = node_id();
         get_msg->partition = partition;
-        if (key_len > cfg::MAX_KEY_LEN_BYTES) {
+        if (key_len > BM_MAX_KEY_LEN_BYTES) {
           break;
         }
         get_msg->key_length = key_len;
@@ -51,7 +53,7 @@ bool bcmp_config_set(uint64_t target_node_id, BmConfigPartition partition,
         set_msg->header.target_node_id = target_node_id;
         set_msg->header.source_node_id = node_id();
         set_msg->partition = partition;
-        if (key_len > cfg::MAX_KEY_LEN_BYTES) {
+        if (key_len > BM_MAX_KEY_LEN_BYTES) {
           break;
         }
         set_msg->key_length = key_len;
@@ -203,7 +205,7 @@ static bool bcmp_config_send_value(uint64_t target_node_id,
 static void bcmp_config_process_config_get_msg(BmConfigGet *msg, uint16_t seq_num) {
   if (msg) {
     do {
-      size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
+      size_t buffer_len = BM_MAX_CONFIG_BUFFER_SIZE_BYTES;
       uint8_t *buffer = (uint8_t *)bm_malloc(buffer_len);
       if (buffer) {
         if (bcmp_get_config(msg->key, msg->key_length, buffer, buffer_len, msg->partition)) {
@@ -220,7 +222,7 @@ static void bcmp_config_process_config_get_msg(BmConfigGet *msg, uint16_t seq_nu
 static void bcmp_config_process_config_set_msg(BmConfigSet *msg, uint16_t seq_num) {
   if (msg) {
     do {
-      if (msg->data_length > cfg::MAX_CONFIG_BUFFER_SIZE_BYTES || msg->data_length == 0) {
+      if (msg->data_length > BM_MAX_CONFIG_BUFFER_SIZE_BYTES || msg->data_length == 0) {
         break;
       }
       if (bcmp_set_config((const char *)msg->keyAndData, msg->key_length,
@@ -243,12 +245,12 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
     if (!cbor_value_is_valid(&it)) {
       break;
     }
-    ConfigDataTypes_e type;
-    if (!Configuration::cborTypeToConfigType(&it, type)) {
+    GenericConfigDataTypes type;
+    if (!bm_cbor_type_to_config_type(&it, &type)) {
       break;
     }
     switch (type) {
-    case cfg::ConfigDataTypes_e::UINT32: {
+    case UINT32: {
       uint64_t temp;
       if (cbor_value_get_uint64(&it, &temp) != CborNoError) {
         break;
@@ -256,7 +258,7 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
       printf("Node Id: %016" PRIx64 " Value:%" PRIu32 "\n", msg->header.source_node_id, temp);
       break;
     }
-    case cfg::ConfigDataTypes_e::INT32: {
+    case INT32: {
       int64_t temp;
       if (cbor_value_get_int64(&it, &temp) != CborNoError) {
         break;
@@ -264,7 +266,7 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
       printf("Node Id: %016" PRIx64 " Value:%" PRId64 "\n", msg->header.source_node_id, temp);
       break;
     }
-    case cfg::ConfigDataTypes_e::FLOAT: {
+    case FLOAT: {
       float temp;
       if (cbor_value_get_float(&it, &temp) != CborNoError) {
         break;
@@ -272,15 +274,15 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
       printf("Node Id: %016" PRIx64 " Value:%f\n", msg->header.source_node_id, temp);
       break;
     }
-    case cfg::ConfigDataTypes_e::STR: {
-      size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
+    case STR: {
+      size_t buffer_len = BM_MAX_CONFIG_BUFFER_SIZE_BYTES;
       char *buffer = (char *)bm_malloc(buffer_len);
       if (buffer) {
         do {
           if (cbor_value_copy_text_string(&it, buffer, &buffer_len, NULL) != CborNoError) {
             break;
           }
-          if (buffer_len >= cfg::MAX_CONFIG_BUFFER_SIZE_BYTES) {
+          if (buffer_len >= BM_MAX_CONFIG_BUFFER_SIZE_BYTES) {
             break;
           }
           buffer[buffer_len] = '\0';
@@ -290,8 +292,8 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
       }
       break;
     }
-    case cfg::ConfigDataTypes_e::BYTES: {
-      size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
+    case BYTES: {
+      size_t buffer_len = BM_MAX_CONFIG_BUFFER_SIZE_BYTES;
       uint8_t *buffer = (uint8_t *)bm_malloc(buffer_len);
       if (buffer) {
         do {
@@ -311,9 +313,9 @@ static void bcmp_process_value_message(BmConfigValue *msg) {
       }
       break;
     }
-    case cfg::ConfigDataTypes_e::ARRAY: {
+    case ARRAY: {
       printf("Node Id: %016" PRIx64 " Value: Array\n", msg->header.source_node_id);
-      size_t buffer_len = cfg::MAX_CONFIG_BUFFER_SIZE_BYTES;
+      size_t buffer_len = BM_MAX_CONFIG_BUFFER_SIZE_BYTES;
       uint8_t *buffer = static_cast<uint8_t *>(bm_malloc(buffer_len));
       if (buffer) {
         for (size_t i = 0; i < buffer_len; i++) {
