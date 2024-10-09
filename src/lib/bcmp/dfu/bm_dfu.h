@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// Includes for FreeRTOS
 #include "bm_os.h"
 
 #include "bcmp_messages.h"
