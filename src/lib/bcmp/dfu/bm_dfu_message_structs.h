@@ -1,5 +1,7 @@
 #pragma once
 #include <stdint.h>
+#include <assert.h>
+#include <stdlib.h>
 
 typedef struct __attribute__((__packed__)) bm_dfu_img_info_s {
     uint32_t image_size;
@@ -52,3 +54,15 @@ typedef struct __attribute__((__packed__)) bm_dfu_event_img_info_s {
     bm_dfu_event_address_t addresses;
     bm_dfu_img_info_t img_info;
 } bm_dfu_event_img_info_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define DFU_HEADER_OFFSET_BYTES (0)
+#define DFU_IMG_START_OFFSET_BYTES (sizeof(bm_dfu_img_info_t))
+static_assert(DFU_IMG_START_OFFSET_BYTES > DFU_HEADER_OFFSET_BYTES, "Invalid DFU image offset");
+
+#ifdef __cplusplus
+}
+#endif
