@@ -7,7 +7,6 @@
 #include "queue.h"
 #include "timers.h"
 #include "semphr.h"
-#include "nvmPartition.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -26,7 +25,7 @@ void s_host_req_update_run(void);
 void s_host_update_entry(void);
 void s_host_update_run(void);
 
-void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition);
+void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx);
 void bm_dfu_host_set_params(update_finish_cb_t update_complete_callback, uint32_t hostTimeoutMs);
 bool bm_dfu_host_client_node_valid(uint64_t client_node_id);
 

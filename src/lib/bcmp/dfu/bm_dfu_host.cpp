@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "bm_dfu.h"
+#include "bm_dfu_generic.h"
 #include "bm_dfu_host.h"
 #include "device_info.h"
 #include "external_flash_partitions.h"
@@ -16,7 +17,6 @@ typedef struct dfu_host_ctx_t {
     uint64_t self_node_id;
     uint64_t client_node_id;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
-    NvmPartition * dfu_partition;
     uint32_t bytes_remaining;
     update_finish_cb_t update_complete_callback;
     TimerHandle_t update_timer;
@@ -140,7 +140,7 @@ static void bm_dfu_host_send_chunk(bm_dfu_event_chunk_request_t* req) {
 
     uint32_t flash_offset = DFU_IMG_START_OFFSET_BYTES + host_ctx.img_info.image_size - host_ctx.bytes_remaining;
     do {
-        if(!host_ctx.dfu_partition->read(flash_offset, payload_header->chunk.payload_buf, payload_len, FLASH_READ_TIMEOUT_MS)){
+        if (bm_dfu_host_get_chunk(flash_offset, payload_header->chunk.payload_buf, payload_len, FLASH_READ_TIMEOUT_MS) != BmOK) {
             printf("Failed to read chunk from flash.\n");
             bm_dfu_host_transition_to_error(BM_DFU_ERR_FLASH_ACCESS);
             break;
@@ -322,11 +322,9 @@ void s_host_update_run(void) {
     }
 }
 
-void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx, NvmPartition * dfu_partition) {
+void bm_dfu_host_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
     configASSERT(bcmp_dfu_tx);
-    configASSERT(dfu_partition);
     host_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
-    host_ctx.dfu_partition = dfu_partition;
     int tmr_id = 0;
 
     /* Store relevant variables */

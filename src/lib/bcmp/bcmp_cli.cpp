@@ -8,6 +8,10 @@
 #include "bcmp.h"
 #include "bcmp_cli.h"
 
+#include "configuration.h"
+
+using namespace cfg;
+
 #include "app_util.h"
 #include "bcmp_config.h"
 #include "bcmp_heartbeat.h"
