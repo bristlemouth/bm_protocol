@@ -124,7 +124,7 @@ static const LibSmState dfu_states[BM_NUM_DFU_STATES] = {
 static void bm_dfu_send_nop_event(void) {
     /* Force running the current state by sending a NOP event */
     bm_dfu_event_t evt = {DFU_EVENT_NONE, NULL, 0};
-    if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+    if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
         printf("Message could not be added to Queue\n");
     }
 }
@@ -286,7 +286,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_START:
             evt.type = DFU_EVENT_RECEIVED_UPDATE_REQUEST;
             printf("Received update request\n");
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
@@ -294,7 +294,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_PAYLOAD:
             evt.type = DFU_EVENT_IMAGE_CHUNK;
             printf("Received Payload\n");
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
@@ -302,7 +302,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_END:
             evt.type = DFU_EVENT_UPDATE_END;
             printf("Received DFU End\n");
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
@@ -310,7 +310,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_ACK:
             evt.type = DFU_EVENT_ACK_RECEIVED;
             printf("Received ACK\n");
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
@@ -318,7 +318,7 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_ABORT:
             evt.type = DFU_EVENT_ABORT;
             printf("Received Abort\n");
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
@@ -326,35 +326,35 @@ void bm_dfu_process_message(uint8_t *buf, size_t len) {
         case BCMP_DFU_HEARTBEAT:
             evt.type = DFU_EVENT_HEARTBEAT;
             printf("Received DFU Heartbeat\n");
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_PAYLOAD_REQ:
             evt.type = DFU_EVENT_CHUNK_REQUEST;
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_REBOOT_REQ:
             evt.type = DFU_EVENT_REBOOT_REQUEST;
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_REBOOT:
             evt.type = DFU_EVENT_REBOOT;
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
             break;
         case BCMP_DFU_BOOT_COMPLETE:
             evt.type = DFU_EVENT_BOOT_COMPLETE;
-            if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+            if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
                 bm_free(buf);
                 printf("Message could not be added to Queue\n");
             }
@@ -511,7 +511,7 @@ static void bm_dfu_event_thread(void*) {
 
     while (1) {
         dfu_ctx.current_event.type = DFU_EVENT_NONE;
-        if(bm_queue_receive(dfu_event_queue, &dfu_ctx.current_event, portMAX_DELAY) == pdPASS) {
+        if(bm_queue_receive(dfu_event_queue, &dfu_ctx.current_event, BM_MAX_DELAY_UINT32) == BmOK) {
             lib_sm_run(&(dfu_ctx.sm_ctx));
         }
         if (dfu_ctx.current_event.buf) {
@@ -572,9 +572,9 @@ void bm_dfu_init(bcmp_dfu_tx_func_t bcmp_dfu_tx) {
         // TODO - handle this better
         printf("Failed to create DFU Event thread\n");
     }
-    // configASSERT(retval == pdPASS);
+    // configASSERT(retval == BmOK);
 
-    if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+    if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
         printf("Message could not be added to Queue\n");
     }
 
@@ -626,7 +626,7 @@ bool bm_dfu_initiate_update(bm_dfu_img_info_t info, uint64_t dest_node_id, updat
         start_event->timeoutMs = timeoutMs;
         evt.buf = buf;
         evt.len = size;
-        if(bm_queue_send(dfu_event_queue, &evt, 0) != pdTRUE) {
+        if(bm_queue_send(dfu_event_queue, &evt, 0) != BmOK) {
             bm_free(buf);
             if(update_finish_callback) {
                 update_finish_callback(false, BM_DFU_ERR_IN_PROGRESS, dest_node_id);
