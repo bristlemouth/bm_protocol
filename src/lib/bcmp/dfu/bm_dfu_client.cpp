@@ -11,7 +11,6 @@
 #include "bm_dfu_generic.h"
 // TODO - get a crc16_ccitt function in bm_core/common
 #include "crc.h"
-// TODO - use the util.h file from bm_common for the versioning functions
 extern "C" {
 #include "device.h"
 }
