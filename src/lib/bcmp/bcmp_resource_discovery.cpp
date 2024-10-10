@@ -216,7 +216,7 @@ bool bcmp_resource_discovery_add_resource(const char *res, const uint16_t resour
                                           ResourceType type, uint32_t timeoutMs) {
   bool rval = false;
   BcmpResourceList *res_list = (type == SUB) ? &SUB_LIST : &PUB_LIST;
-  if (bm_semaphore_take(res_list->lock, timeoutMs) == pdPASS) {
+  if (bm_semaphore_take(res_list->lock, timeoutMs) == BmOK) {
     do {
       // Check for resource
       if (bcmp_resource_discovery_find_resource(res, resource_len, type)) {
