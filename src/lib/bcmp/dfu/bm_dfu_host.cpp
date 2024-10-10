@@ -6,7 +6,10 @@
 #include "bm_dfu_host.h"
 
 //TODO - abstract this??? Move this into bm_core or bm_common???
+// This is essentially its own task that is handling the timer callbacks
+extern "C" {
 #include "timer_callback_handler.h"
+}
 
 extern "C" {
 #include "device.h"

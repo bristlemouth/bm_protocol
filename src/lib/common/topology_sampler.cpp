@@ -3,7 +3,9 @@
 #include "semphr.h"
 #include "task.h"
 #include "task_priorities.h"
+extern "C" {
 #include "timer_callback_handler.h"
+}
 #include "timers.h"
 #include <stdarg.h>
 #include <string.h>

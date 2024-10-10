@@ -15,7 +15,9 @@
 #include "seapointTurbiditySensor.h"
 #include "task.h"
 #include "task_priorities.h"
+extern "C" {
 #include "timer_callback_handler.h"
+}
 #include "timers.h"
 #include "topology_sampler.h"
 #include <string.h>

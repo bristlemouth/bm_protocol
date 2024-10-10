@@ -1,7 +1,9 @@
 #include "sensorWatchdog.h"
 #include "bm_printf.h"
 #include "semphr.h"
+extern "C" {
 #include "timer_callback_handler.h"
+}
 #include "uptime.h"
 
 namespace SensorWatchdog {

@@ -33,6 +33,7 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/bm_core/src/platform/bm_lwip.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/platform/bm_freertos.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/lib_state_machine.c
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/timer_callback_handler.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc/crc16.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc/crc32.c
 
@@ -72,7 +73,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
+    # ${SRC_DIR}/lib/common/timer_callback_handler.cpp
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp

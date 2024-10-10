@@ -42,7 +42,9 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
+extern "C" {
 #include "timer_callback_handler.h"
+}
 #include "usb.h"
 #include "app_util.h"
 #include "w25.h"

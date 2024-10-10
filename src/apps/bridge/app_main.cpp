@@ -56,7 +56,9 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "sys_info_service.h"
+extern "C" {
 #include "timer_callback_handler.h"
+}
 #include "topology_sampler.h"
 #include "usb.h"
 #include "app_util.h"

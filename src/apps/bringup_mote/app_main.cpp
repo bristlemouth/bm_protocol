@@ -56,7 +56,9 @@
 #include "watchdog.h"
 #include "debug_htu.h"
 #include "debug_nvm_cli.h"
+extern "C" {
 #include "timer_callback_handler.h"
+}
 #include "bme280driver.h"
 #include "bristlefin.h"
 #ifdef USE_BOOTLOADER
