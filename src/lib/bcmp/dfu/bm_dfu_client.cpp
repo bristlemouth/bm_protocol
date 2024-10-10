@@ -8,7 +8,6 @@
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_generic.h"
-// TODO - get a crc16_ccitt function in bm_core/common
 #include "crc.h"
 extern "C" {
 #include "device.h"
