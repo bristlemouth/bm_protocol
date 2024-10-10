@@ -2,9 +2,6 @@
 #include <stdio.h>
 
 #include "bm_os.h"
-// TODO remove this when we have defined the priority somewhere else... bm_os.h?
-#include "task_priorities.h"
-
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_host.h"
