@@ -18,7 +18,7 @@ extern "C" {
 #include "bm_common_structs.h"
 #include "bm_l2.h"
 #include "bm_serial.h"
-#include "bm_util.h"
+#include "util.h"
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "config_cbor_map_service.h"
@@ -115,7 +115,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     memset(_node_list.nodes, 0, sizeof(_node_list.nodes));
     memset(_node_list.sensor_type, 0, sizeof(_node_list.sensor_type));
 
-    neighborTableEntry_t *cursor = NULL;
+    NeighborTableEntry *cursor = NULL;
     uint16_t counter;
     xQueueReset(_sys_info_queue);
     xQueueReset(_config_cbor_map_queue);
