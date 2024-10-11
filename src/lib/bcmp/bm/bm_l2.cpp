@@ -8,9 +8,6 @@ extern "C" {
 #include "util.h"
 }
 
-//TODO: this will have to be moved as we go along
-extern struct netif netif;
-
 #define ethernet_packet_size_byte 14
 #define ipv6_version_traffic_class_flow_label_size_bytes 4
 #define ipv6_payload_length_size_bytes 2
