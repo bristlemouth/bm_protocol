@@ -2,9 +2,7 @@
 
 #include "FreeRTOS.h"
 #include "timers.h"
-extern "C" {
 #include "timer_callback_handler.h"
-}
 #include "task.h"
 #include "semphr.h"
 #include "bm_pubsub.h"

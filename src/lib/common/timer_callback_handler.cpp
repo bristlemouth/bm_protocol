@@ -1,6 +1,4 @@
-extern "C" {
 #include "timer_callback_handler.h"
-}
 #include "FreeRTOS.h"
 #include "task.h"
 #include "task_priorities.h"

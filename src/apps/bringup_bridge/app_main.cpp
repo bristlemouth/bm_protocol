@@ -48,9 +48,7 @@
 #include "w25.h"
 #include "watchdog.h"
 #include "debug_htu.h"
-extern "C" {
 #include "timer_callback_handler.h"
-}
 #ifdef USE_BOOTLOADER
 #include "mcuboot_cli.h"
 #endif
