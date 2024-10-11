@@ -104,19 +104,12 @@ static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg)
 static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
   UtcDateTime datetime;
   date_time_from_utc(msg->utc_time_us, &datetime);
-<<<<<<< HEAD
   RtcTimeAndDate time = {.year = datetime.year,
                          .month = datetime.month,
                          .day = datetime.day,
                          .hour = datetime.hour,
                          .minute = datetime.min,
                          .second = datetime.sec,
-=======
-  RtcTimeAndDate time = {// TODO: Consolidate the time functions into util.h
-                         .year = datetime.year,       .month = datetime.month,
-                         .day = datetime.day,         .hour = datetime.hour,
-                         .minute = datetime.min,      .second = datetime.sec,
->>>>>>> experiment/bm_core
                          .ms = (datetime.usec / 1000)};
   if (bm_rtc_set(&time) == BmOK) {
     bcmp_time_send_response(msg->header.source_node_id, msg->utc_time_us);

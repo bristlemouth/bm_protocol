@@ -44,6 +44,9 @@ static void bm_dfu_client_send_boot_complete(uint64_t host_node_id);
 static void bm_dfu_client_transition_to_error(bm_dfu_err_t err);
 static void bm_dfu_client_fail_update_and_reboot(void);
 
+// TODO - throughout this file there are a bunch of configASSERTs that need to be replaced with error handling
+// or have something in bm_common that either calls and assert or perhaps some sort of print error function
+
 /**
  * @brief Send DFU Abort to Host
  *
