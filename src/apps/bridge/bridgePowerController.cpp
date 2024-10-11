@@ -362,6 +362,10 @@ uint32_t BridgePowerController::getCurrentTimeS() {
 uint32_t BridgePowerController::_alignNextInterval(uint32_t nowEpochS,
                                                    uint32_t lastIntervalStartS,
                                                    uint32_t sampleIntervalS) {
+  if (!lastIntervalStartS) {
+    // Prevent many loops from occurring and tripping watchdog
+    lastIntervalStartS = nowEpochS - (nowEpochS % sampleIntervalS);
+  }
   uint32_t alignedEpoch = lastIntervalStartS + sampleIntervalS;
   while (alignedEpoch < nowEpochS) {
     // If the aligned epoch is in the past, the timebase must have just jumped forward.
