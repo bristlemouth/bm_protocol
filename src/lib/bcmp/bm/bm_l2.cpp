@@ -1,9 +1,6 @@
 #include "bm_l2.h"
 #include "bm_config.h"
 #include "eth_adin2111.h"
-#include "lwip/ethip6.h"
-#include "lwip/prot/ethernet.h"
-#include "lwip/snmp.h"
 #include "task_priorities.h"
 extern "C" {
 #include "bm_ip.h"
@@ -28,10 +25,10 @@ extern struct netif netif;
 #define ipv6_destination_address_offset                                                        \
   (ipv6_source_address_offset + ipv6_source_address_size_bytes)
 
-#define ADD_EGRESS_PORT(addr, port) (addr[ipv6_source_address_offset + EGRESS_PORT_IDX] = port)
-#define ADD_INGRESS_PORT(addr, port)                                                           \
+#define add_egress_port(addr, port) (addr[ipv6_source_address_offset + EGRESS_PORT_IDX] = port)
+#define add_ingress_port(addr, port)                                                           \
   (addr[ipv6_source_address_offset + INGRESS_PORT_IDX] = port)
-#define IS_GLOBAL_MULTICAST(addr)                                                              \
+#define is_global_multicast(addr)                                                              \
   (((uint8_t *)(addr))[ipv6_destination_address_offset] == 0xFFU &&                            \
    ((uint8_t *)(addr))[ipv6_destination_address_offset + 1] == 0x03U)
 
@@ -49,12 +46,12 @@ typedef struct {
 } bm_netdev_ctx_t;
 
 typedef enum {
-  BM_L2_TX,
-  BM_L2_RX,
-  BM_L2_LINK_UP,
-  BM_L2_LINK_DOWN,
-  BM_L2_SET_NETIF_UP,
-  BM_L2_SET_NETIF_DOWN,
+  L2Tx,
+  L2Rx,
+  L2LinkUp,
+  L2LinkDown,
+  L2SetNetifUp,
+  L2SetNetifDown,
 } bm_l2_queue_type_e;
 
 typedef struct {
@@ -107,7 +104,7 @@ static BmErr bm_l2_tx(void *buf, uint32_t length, uint8_t port_mask) {
 
   // device_handle not needed for tx
   // Don't send to ports that are offline
-  l2_queue_element_t tx_evt = {NULL, port_mask & CTX.enabled_port_mask, buf, BM_L2_TX, length};
+  l2_queue_element_t tx_evt = {NULL, port_mask & CTX.enabled_port_mask, buf, L2Tx, length};
 
   bm_l2_tx_prep(buf, length);
   if (bm_queue_send(CTX.evt_queue, &tx_evt, 10) != BmOK) {
@@ -133,7 +130,7 @@ static BmErr bm_l2_rx(void *device_handle, uint8_t *payload, uint16_t payload_le
                       uint8_t port_mask) {
   BmErr err = BmOK;
 
-  l2_queue_element_t tx_evt = {device_handle, port_mask, NULL, BM_L2_RX, payload_len};
+  l2_queue_element_t tx_evt = {device_handle, port_mask, NULL, L2Rx, payload_len};
 
   do {
     tx_evt.buf = bm_l2_new(payload_len);
@@ -166,7 +163,7 @@ static void bm_l2_process_tx_evt(l2_queue_element_t *tx_evt) {
   uint8_t mask_idx = 0;
 
   if (tx_evt) {
-    for (uint32_t idx = 0; idx < BM_NETDEV_TYPE_MAX; idx++) {
+    for (uint32_t idx = 0; idx < BM_NETDEV_COUNT; idx++) {
       switch (CTX.devices[idx].type) {
       case BM_NETDEV_TYPE_ADIN2111: {
         err_t retv = adin2111_tx((adin2111_DeviceHandle_t)CTX.devices[idx].device_handle,
@@ -220,9 +217,9 @@ static void bm_l2_process_rx_evt(l2_queue_element_t *rx_evt) {
     }
 
     /* We need to code the RX Port into the IPV6 address passed to lwip */
-    ADD_INGRESS_PORT(((uint8_t *)bm_l2_get_payload(rx_evt->buf)), rx_port_mask);
+    add_ingress_port(((uint8_t *)bm_l2_get_payload(rx_evt->buf)), rx_port_mask);
 
-    if (IS_GLOBAL_MULTICAST(bm_l2_get_payload(rx_evt->buf))) {
+    if (is_global_multicast(bm_l2_get_payload(rx_evt->buf))) {
       uint8_t new_port_mask = CTX.available_ports_mask & ~(rx_port_mask);
       bm_l2_tx(rx_evt->buf, rx_evt->length, new_port_mask);
     }
@@ -247,9 +244,9 @@ static void bm_l2_process_rx_evt(l2_queue_element_t *rx_evt) {
 */
 static void link_change_cb(void *device_handle, uint8_t port, bool state) {
 
-  l2_queue_element_t link_change_evt = {device_handle, port, NULL, BM_L2_LINK_DOWN, 0};
+  l2_queue_element_t link_change_evt = {device_handle, port, NULL, L2LinkDown, 0};
   if (state) {
-    link_change_evt.type = BM_L2_LINK_UP;
+    link_change_evt.type = L2LinkUp;
   }
 
   if (device_handle) {
@@ -325,28 +322,28 @@ static void bm_l2_thread(void *parameters) {
     l2_queue_element_t event;
     if (bm_queue_receive(CTX.evt_queue, &event, UINT32_MAX) == BmOK) {
       switch (event.type) {
-      case BM_L2_TX: {
+      case L2Tx: {
         bm_l2_process_tx_evt(&event);
         break;
       }
-      case BM_L2_RX: {
+      case L2Rx: {
         bm_l2_process_rx_evt(&event);
         break;
       }
-      case BM_L2_LINK_UP: {
+      case L2LinkUp: {
         handle_link_change(event.device_handle, event.port_mask, true);
         break;
       }
-      case BM_L2_LINK_DOWN: {
+      case L2LinkDown: {
         handle_link_change(event.device_handle, event.port_mask, false);
         break;
       }
-      case BM_L2_SET_NETIF_UP: {
+      case L2SetNetifUp: {
         bm_l2_process_netif_evt(event.device_handle, true);
         bm_l2_set_netif(true);
         break;
       }
-      case BM_L2_SET_NETIF_DOWN: {
+      case L2SetNetifDown: {
         bm_l2_set_netif(false);
         bm_l2_process_netif_evt(event.device_handle, false);
         break;
@@ -427,8 +424,8 @@ BmErr bm_l2_link_output(void *buf, uint32_t length) {
 
   // if the application set an egress port, send only to that port
   constexpr size_t bcmp_egress_port_offset_in_dest_addr = 13;
-  const size_t egress_port_idx = sizeof(struct eth_hdr) + offsetof(struct ip6_hdr, dest) +
-                                 bcmp_egress_port_offset_in_dest_addr;
+  const size_t egress_port_idx =
+      ipv6_destination_address_offset + bcmp_egress_port_offset_in_dest_addr;
   uint8_t *eth_frame = (uint8_t *)bm_l2_get_payload(buf);
   uint8_t egress_port = eth_frame[egress_port_idx];
   constexpr uint8_t num_adin_ports = 2; // TODO generalize
@@ -498,10 +495,10 @@ bool bm_l2_get_port_state(uint8_t port) { return (bool)(CTX.enabled_port_mask & 
   \return none
 */
 void bm_l2_netif_set_power(void *dev, bool on) {
-  l2_queue_element_t pwr_evt = {dev, 0, NULL, BM_L2_SET_NETIF_DOWN, 0};
+  l2_queue_element_t pwr_evt = {dev, 0, NULL, L2SetNetifDown, 0};
   if (dev) {
     if (on) {
-      pwr_evt.type = BM_L2_SET_NETIF_UP;
+      pwr_evt.type = L2SetNetifUp;
     }
 
     // Schedule netif pwr event
