@@ -377,20 +377,20 @@ BmErr bm_l2_init(bm_l2_link_change_cb_t cb) {
     CTX.devices[idx].type = bm_netdev_config[idx].type;
     switch (CTX.devices[idx].type) {
     case BM_NETDEV_TYPE_ADIN2111: {
-      configASSERT(bm_netdev_config[idx].config);
-      adin2111_config_t *adin_cfg = (adin2111_config_t *)bm_netdev_config[idx].config;
-      configASSERT(adin_cfg->dev);
-      if (adin2111_hw_init(adin_cfg->dev, bm_l2_rx, link_change_cb, adin_cfg->port_mask) ==
-          ADI_ETH_SUCCESS) {
-        CTX.devices[idx].device_handle = adin_cfg->dev;
-        CTX.devices[idx].num_ports = ADIN2111_PORT_NUM;
-        CTX.devices[idx].start_port_idx = CTX.available_port_mask_idx;
-        CTX.devices[idx].dev_pwr_func = adin2111_power_cb;
-        CTX.devices[idx].enabled_ports_mask = adin_cfg->port_mask;
-        CTX.available_ports_mask |= (ADIN2111_PORT_MASK << CTX.available_port_mask_idx);
-        CTX.available_port_mask_idx += CTX.devices[idx].num_ports;
-      } else {
-        printf("Failed to init ADIN2111");
+      if (bm_netdev_config[idx].config) {
+        adin2111_config_t *adin_cfg = (adin2111_config_t *)bm_netdev_config[idx].config;
+        if (adin_cfg->dev && adin2111_hw_init(adin_cfg->dev, bm_l2_rx, link_change_cb,
+                                              adin_cfg->port_mask) == ADI_ETH_SUCCESS) {
+          CTX.devices[idx].device_handle = adin_cfg->dev;
+          CTX.devices[idx].num_ports = ADIN2111_PORT_NUM;
+          CTX.devices[idx].start_port_idx = CTX.available_port_mask_idx;
+          CTX.devices[idx].dev_pwr_func = adin2111_power_cb;
+          CTX.devices[idx].enabled_ports_mask = adin_cfg->port_mask;
+          CTX.available_ports_mask |= (ADIN2111_PORT_MASK << CTX.available_port_mask_idx);
+          CTX.available_port_mask_idx += CTX.devices[idx].num_ports;
+        } else {
+          printf("Failed to init ADIN2111");
+        }
       }
       break;
     }
