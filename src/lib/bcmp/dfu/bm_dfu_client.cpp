@@ -3,22 +3,18 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-// TODO - use the bm_os/freertos functions
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "timers.h"
-#include "semphr.h"
+#include "bm_os.h"
 
 #include "bm_dfu.h"
 #include "bm_dfu_client.h"
 #include "bm_dfu_generic.h"
-// TODO - get a crc16_ccitt function in bm_core/common
 #include "crc.h"
-// TODO - use the util.h file from bm_common for the versioning functions
-#include "device_info.h"
+extern "C" {
+#include "device.h"
+}
 
 typedef struct dfu_client_ctx_t {
-    QueueHandle_t dfu_event_queue;
+    BmQueue dfu_event_queue;
     /* Variables from DFU Start */
     uint32_t image_size;
     uint16_t num_chunks;
@@ -34,7 +30,7 @@ typedef struct dfu_client_ctx_t {
     /* Chunk variables */
     uint8_t chunk_retry_num;
     uint16_t current_chunk;
-    TimerHandle_t chunk_timer;
+    BmTimer chunk_timer;
     uint64_t self_node_id;
     uint64_t host_node_id;
     bcmp_dfu_tx_func_t bcmp_dfu_tx;
@@ -47,6 +43,9 @@ static void bm_dfu_client_send_reboot_request();
 static void bm_dfu_client_send_boot_complete(uint64_t host_node_id);
 static void bm_dfu_client_transition_to_error(bm_dfu_err_t err);
 static void bm_dfu_client_fail_update_and_reboot(void);
+
+// TODO - throughout this file there are a bunch of configASSERTs that need to be replaced with error handling
+// or have something in bm_common that either calls and assert or perhaps some sort of print error function
 
 /**
  * @brief Send DFU Abort to Host
@@ -105,12 +104,12 @@ static void bm_dfu_client_send_boot_complete(uint64_t host_node_id) {
  * @param *tmr    Timer handler
  * @return none
  */
-static void chunk_timer_handler(TimerHandle_t tmr) {
+static void chunk_timer_handler(BmTimer tmr) {
     (void) tmr;
     bm_dfu_event_t evt = {DFU_EVENT_CHUNK_TIMEOUT, NULL, 0};
 
-    if(xQueueSend(client_ctx.dfu_event_queue, &evt, 0) != pdTRUE) {
-        configASSERT(false);
+    if(bm_queue_send(client_ctx.dfu_event_queue, &evt, 0) != BmOK) {
+        // configASSERT(false);
     }
 }
 
@@ -127,8 +126,8 @@ static int32_t bm_dfu_process_payload(uint16_t len, uint8_t * buf)
 {
     int32_t retval = 0;
 
-    configASSERT(len);
-    configASSERT(buf);
+    // configASSERT(len);
+    // configASSERT(buf);
 
     do {
         if ( BM_IMG_PAGE_LENGTH > (len + client_ctx.img_page_byte_counter)) {
@@ -228,7 +227,7 @@ void bm_dfu_client_process_update_request(void) {
     major_version = img_info_evt->img_info.major_ver;
     client_ctx.host_node_id = img_info_evt->addresses.src_node_id;
 
-    if (img_info_evt->img_info.gitSHA != getGitSHA() || img_info_evt->img_info.filter_key == BM_DFU_IMG_INFO_FORCE_UPDATE) {
+    if (img_info_evt->img_info.gitSHA != git_sha() || img_info_evt->img_info.filter_key == BM_DFU_IMG_INFO_FORCE_UPDATE) {
         if(chunk_size > BM_DFU_MAX_CHUNK_SIZE) {
             bm_dfu_client_abort(BM_DFU_ERR_ABORTED);
             bm_dfu_client_transition_to_error(BM_DFU_ERR_CHUNK_SIZE);
@@ -269,7 +268,7 @@ void bm_dfu_client_process_update_request(void) {
                     client_update_reboot_info.magic = DFU_REBOOT_MAGIC;
 
                     /* TODO: Fix this. Is this needed for FreeRTOS */
-                    vTaskDelay(10); // Needed so ACK can properly be sent/processed
+                    bm_delay(10); // Needed so ACK can properly be sent/processed
                     bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_RECEIVING);
 
                 }
@@ -307,7 +306,8 @@ void s_client_receiving_entry(void) {
     bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
 
     /* Kickoff Chunk timeout */
-    configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+    // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+    bm_timer_start(client_ctx.chunk_timer, 10);
 }
 
 /**
@@ -321,12 +321,13 @@ void s_client_receiving_run(void) {
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
     if (curr_evt.type == DFU_EVENT_IMAGE_CHUNK) {
-        configASSERT(curr_evt.buf);
+        // configASSERT(curr_evt.buf);
         bm_dfu_frame_t *frame = reinterpret_cast<bm_dfu_frame_t *>(curr_evt.buf);
         bm_dfu_event_image_chunk_t* image_chunk_evt = (bm_dfu_event_image_chunk_t*) &(reinterpret_cast<uint8_t *>(frame))[1];
 
         /* Stop Chunk Timer */
-        configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        // configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        bm_timer_stop(client_ctx.chunk_timer, 10);
 
         /* Get Chunk Length and Chunk */
         client_ctx.chunk_length = image_chunk_evt->payload_length;
@@ -345,7 +346,8 @@ void s_client_receiving_run(void) {
 
         if (client_ctx.current_chunk < client_ctx.num_chunks) {
             bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
-            configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            bm_timer_start(client_ctx.chunk_timer, 10);
         } else {
             /* Process the frame */
             if (bm_dfu_process_end()) {
@@ -362,10 +364,12 @@ void s_client_receiving_run(void) {
             bm_dfu_client_transition_to_error(BM_DFU_ERR_TIMEOUT);
         } else {
             bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
-            configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            bm_timer_start(client_ctx.chunk_timer, 10);
         }
     } else if (curr_evt.type == DFU_EVENT_RECEIVED_UPDATE_REQUEST) { // The host dropped our previous ack to the image, and we need to sync up.
-        configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        // configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        bm_timer_stop(client_ctx.chunk_timer, 10);
         bm_dfu_send_ack(client_ctx.host_node_id, 1, BM_DFU_ERR_NONE);
         // Start image from the beginning
         client_ctx.current_chunk = 0;
@@ -373,14 +377,16 @@ void s_client_receiving_run(void) {
         client_ctx.img_page_byte_counter = 0;
         client_ctx.img_flash_offset = 0;
         client_ctx.running_crc16 = 0;
-        vTaskDelay(100); // Allow host to process ACK and Get ready to send chunk.
+        bm_delay(100); // Allow host to process ACK and Get ready to send chunk.
         bm_dfu_req_next_chunk(client_ctx.host_node_id, client_ctx.current_chunk);
-        configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+        // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+        bm_timer_start(client_ctx.chunk_timer, 10);
     }
     /* TODO: (IMPLEMENT THIS PERIODICALLY ON HOST SIDE)
        If host is still waiting for chunk, it will send a heartbeat to client */
     else if (curr_evt.type == DFU_EVENT_HEARTBEAT) {
-        configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+        // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+        bm_timer_start(client_ctx.chunk_timer, 10);
     }
 }
 
@@ -425,7 +431,7 @@ void s_client_activating_entry(void)
     printf("Successful transfer. Should be resetting\n");
 
     /* Add a small delay so DFU_END message can get out to (Host Node + Desktop) before resetting device */
-    vTaskDelay(10);
+    bm_delay(10);
     bm_dfu_client_set_pending_and_reset();
 }
 
@@ -442,7 +448,8 @@ void s_client_reboot_req_entry(void) {
     bm_dfu_client_send_reboot_request();
 
     /* Kickoff Chunk timeout */
-    configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+    // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+    bm_timer_start(client_ctx.chunk_timer, 10);
 }
 
 /**
@@ -456,8 +463,9 @@ void s_client_reboot_req_run(void) {
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
     if (curr_evt.type == DFU_EVENT_REBOOT) {
-        configASSERT(curr_evt.buf);
-        configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        // configASSERT(curr_evt.buf);
+        // configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        bm_timer_stop(client_ctx.chunk_timer, 10);
         bm_dfu_set_pending_state_change(BM_DFU_STATE_CLIENT_ACTIVATING);
     } else if (curr_evt.type == DFU_EVENT_CHUNK_TIMEOUT) {
         client_ctx.chunk_retry_num++;
@@ -467,7 +475,8 @@ void s_client_reboot_req_run(void) {
             bm_dfu_client_transition_to_error(BM_DFU_ERR_TIMEOUT);
         } else {
             bm_dfu_client_send_reboot_request();
-            configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            bm_timer_start(client_ctx.chunk_timer, 10);
         }
     }
 }
@@ -480,7 +489,7 @@ void s_client_reboot_req_run(void) {
 void s_client_update_done_entry(void) {
     client_ctx.host_node_id = client_update_reboot_info.host_node_id;
     client_ctx.chunk_retry_num = 0;
-    if(getGitSHA() == client_update_reboot_info.gitSHA) {
+    if(git_sha() == client_update_reboot_info.gitSHA) {
         // We usually want to confirm the update, but if we want to force-confirm, we read a flag in the configuration,
         // confirm, reset the config flag, and then reboot.
         if(!bm_dfu_client_confirm_is_enabled()){
@@ -490,7 +499,8 @@ void s_client_update_done_entry(void) {
         } else {
             bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
             /* Kickoff Chunk timeout */
-            configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            bm_timer_start(client_ctx.chunk_timer, 10);
         }
     } else {
         bm_dfu_update_end(client_update_reboot_info.host_node_id, false, BM_DFU_ERR_WRONG_VER);
@@ -509,8 +519,9 @@ void s_client_update_done_run(void) {
     bm_dfu_event_t curr_evt = bm_dfu_get_current_event();
 
     if (curr_evt.type == DFU_EVENT_UPDATE_END) {
-        configASSERT(curr_evt.buf);
-        configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        // configASSERT(curr_evt.buf);
+        // configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+        bm_timer_stop(client_ctx.chunk_timer, 10);
         bm_dfu_client_set_confirmed();
         printf("Boot confirmed!\n Update success!\n");
         bm_dfu_update_end(client_update_reboot_info.host_node_id, true, BM_DFU_ERR_NONE);
@@ -524,7 +535,8 @@ void s_client_update_done_run(void) {
         } else {
             /* Request confirmation */
             bm_dfu_client_send_boot_complete(client_update_reboot_info.host_node_id);
-            configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            // configASSERT(xTimerStart(client_ctx.chunk_timer, 10));
+            bm_timer_start(client_ctx.chunk_timer, 10);
         }
     }
 }
@@ -540,30 +552,31 @@ void s_client_update_done_run(void) {
 
 void bm_dfu_client_init(bcmp_dfu_tx_func_t bcmp_dfu_tx)
 {
-    configASSERT(bcmp_dfu_tx);
+    // configASSERT(bcmp_dfu_tx);
     client_ctx.bcmp_dfu_tx = bcmp_dfu_tx;
     int32_t tmr_id = 0;
 
     /* Store relevant variables */
-    client_ctx.self_node_id = getNodeId();
+    client_ctx.self_node_id = node_id();
 
     /* Get DFU Subsystem Queue */
     client_ctx.dfu_event_queue = bm_dfu_get_event_queue();
 
-    client_ctx.chunk_timer = xTimerCreate("DFU Client Chunk Timer", (BM_DFU_CLIENT_CHUNK_TIMEOUT_MS / portTICK_RATE_MS),
-                                      pdFALSE, (void *) &tmr_id, chunk_timer_handler);
-    configASSERT(client_ctx.chunk_timer);
+    client_ctx.chunk_timer = bm_timer_create("DFU Client Chunk Timer", bm_ms_to_ticks(BM_DFU_CLIENT_CHUNK_TIMEOUT_MS),
+                                      false, (void *) &tmr_id, chunk_timer_handler);
+    // configASSERT(client_ctx.chunk_timer);
 }
 
 static void bm_dfu_client_transition_to_error(bm_dfu_err_t err) {
-    configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+    // configASSERT(xTimerStop(client_ctx.chunk_timer, 10));
+    bm_timer_stop(client_ctx.chunk_timer, 10);
     bm_dfu_set_error(err);
     bm_dfu_set_pending_state_change(BM_DFU_STATE_ERROR);
 }
 
 static void bm_dfu_client_fail_update_and_reboot(void) {
     memset(&client_update_reboot_info, 0, sizeof(client_update_reboot_info));
-    vTaskDelay(100); // Wait a bit for any previous messages sent.
+    bm_delay(100); // Wait a bit for any previous messages sent.
     bm_dfu_client_fail_update_and_reset();
 }
 

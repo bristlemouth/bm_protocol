@@ -86,7 +86,6 @@ static void bcmp_time_send_response(uint64_t target_node_id, uint64_t utc_us) {
 static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg) {
   do {
     RtcTimeAndDate time;
-    // TODO: make this an abstraction
     if (bm_rtc_get(&time) != BmOK) {
       printf("Failed to get time.\n");
       break;
@@ -104,12 +103,13 @@ static void bcmp_time_process_time_request_msg(const BcmpSystemTimeRequest *msg)
 */
 static void bcmp_time_process_time_set_msg(const BcmpSystemTimeSet *msg) {
   UtcDateTime datetime;
-  // TODO: make this an abstraction
   date_time_from_utc(msg->utc_time_us, &datetime);
-  RtcTimeAndDate time = {// TODO: Consolidate the time functions into util.h
-                         .year = datetime.year,       .month = datetime.month,
-                         .day = datetime.day,         .hour = datetime.hour,
-                         .minute = datetime.min,      .second = datetime.sec,
+  RtcTimeAndDate time = {.year = datetime.year,
+                         .month = datetime.month,
+                         .day = datetime.day,
+                         .hour = datetime.hour,
+                         .minute = datetime.min,
+                         .second = datetime.sec,
                          .ms = (datetime.usec / 1000)};
   if (bm_rtc_set(&time) == BmOK) {
     bcmp_time_send_response(msg->header.source_node_id, msg->utc_time_us);
@@ -152,7 +152,6 @@ static BmErr bcmp_time_process_time_message(BcmpProcessData data) {
       }
       BcmpSystemTimeResponse *resp = (BcmpSystemTimeResponse *)data.payload;
       UtcDateTime datetime;
-      // TODO - make this an abstraction
       date_time_from_utc(resp->utc_time_us, &datetime);
       printf("Response time node ID: %016" PRIx64 " to %d/%d/%d %02d:%02d:%02d.%03" PRIu32 "\n",
              resp->header.source_node_id, datetime.year, datetime.month, datetime.day,

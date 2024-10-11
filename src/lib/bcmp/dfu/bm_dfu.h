@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// Includes for FreeRTOS
-#include "FreeRTOS.h"
-#include "queue.h"
+#include "bm_os.h"
 
 #include "bcmp_messages.h"
 extern "C" {
@@ -104,7 +102,7 @@ extern ReboootClientUpdateInfo_t client_update_reboot_info __attribute__((sectio
 extern ReboootClientUpdateInfo_t client_update_reboot_info;
 #endif // CI_TEST
 
-QueueHandle_t bm_dfu_get_event_queue(void);
+BmQueue bm_dfu_get_event_queue(void);
 bm_dfu_event_t bm_dfu_get_current_event(void);
 void bm_dfu_set_error(bm_dfu_err_t error);
 bm_dfu_err_t bm_dfu_get_error(void);
