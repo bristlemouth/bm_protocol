@@ -33,9 +33,6 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/bm_core/src/platform/bm_lwip.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/platform/bm_freertos.c
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/lib_state_machine.c
-    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/src/timer_callback_handler.c
-    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc/crc16.c
-    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc/crc32.c
 
     ${BCMP_FILES}
     )
