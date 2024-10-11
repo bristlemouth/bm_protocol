@@ -13,7 +13,6 @@
 using namespace cfg;
 
 #include "app_util.h"
-#include "bcmp_time.h"
 #include "bm_pubsub.h"
 #include "bm_util.h"
 #include "messages.h"
@@ -24,6 +23,7 @@ extern "C" {
 #include "messages/neighbors.h"
 #include "messages/ping.h"
 #include "messages/resource_discovery.h"
+#include "messages/time.h"
 #include "messages/topology.h"
 }
 #include "util.h"
