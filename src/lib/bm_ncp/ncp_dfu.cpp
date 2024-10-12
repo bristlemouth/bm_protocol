@@ -1,6 +1,6 @@
 #include "ncp_dfu.h"
 #include "FreeRTOS.h"
-#include "bm_dfu.h"
+#include "dfu/dfu.h"
 #include "bm_serial.h"
 #include "bootutil/bootutil_public.h"
 #include "bootutil/image.h"

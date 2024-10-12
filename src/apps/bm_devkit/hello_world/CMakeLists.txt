@@ -44,7 +44,9 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${SRC_DIR}/lib/bm_core/include
+    ${SRC_DIR}/lib/bm_core/third_party/tinycbor/src
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
     ${BCMP_INCLUDES}
     ${BM_COMMON_MESSAGES_INCLUDES}
     )
