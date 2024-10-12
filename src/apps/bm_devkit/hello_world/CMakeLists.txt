@@ -126,11 +126,6 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    # ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
-    # ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
-    # ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
-    # ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
-    # ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     ${SRC_DIR}/lib/drivers/bme280driver.cpp
     ${SRC_DIR}/third_party/BME280_driver/bme280.c
     )
@@ -158,7 +153,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/bristlefin
     ${SRC_DIR}/lib/sensor_sampler
     ${SRC_DIR}/lib/sys
-    # ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/third_party/BME280_driver
     )
 
