@@ -358,9 +358,9 @@ static void adin2111_thread(void *parameters) {
       pcapTxPacket(rxMsg->bufDesc.pBuf, rxMsg->bufDesc.trxSize);
 
       uint8_t rx_port_mask = (1 << rxMsg->bufDesc.port);
-      err_t retv =
-          _rx_callback(rxMsg->dev, rxMsg->bufDesc.pBuf, rxMsg->bufDesc.trxSize, rx_port_mask);
-      if (retv != ERR_OK) {
+      BmErr retv = (BmErr)_rx_callback(rxMsg->dev, rxMsg->bufDesc.pBuf, rxMsg->bufDesc.trxSize,
+                                       rx_port_mask);
+      if (retv != BmOK) {
         printf("Unable to pass to the L2 layer\n");
         // Don't break since we still want to re-add it to the adin rx queue below
       }
