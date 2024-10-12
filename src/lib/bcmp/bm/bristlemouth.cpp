@@ -2,7 +2,7 @@
 
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
-#include "bcmp_messages.h"
+#include "messages.h"
 #include "dfu/dfu.h"
 #include "device_info.h"
 #include "queue.h"
