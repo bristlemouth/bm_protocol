@@ -44,7 +44,9 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${SRC_DIR}/lib/bm_core/include
+    ${SRC_DIR}/lib/bm_core/third_party/tinycbor/src
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
     ${BCMP_INCLUDES}
     ${BM_COMMON_MESSAGES_INCLUDES}
     )
@@ -126,11 +128,6 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     ${SRC_DIR}/lib/drivers/bme280driver.cpp
     ${SRC_DIR}/third_party/BME280_driver/bme280.c
     )
@@ -151,7 +148,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc/
-    ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
@@ -159,7 +155,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/bristlefin
     ${SRC_DIR}/lib/sensor_sampler
     ${SRC_DIR}/lib/sys
-    ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/third_party/BME280_driver
     )
 
