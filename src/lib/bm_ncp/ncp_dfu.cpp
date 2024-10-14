@@ -117,7 +117,7 @@ static BmDfuErr _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
       break;
     }
 
-    bm_dfu_img_info_t info = {
+    BmDfuImgInfo info = {
         .image_size = dfu_start->image_size,
         .chunk_size = dfu_start->chunk_size,
         .crc16 = dfu_start->crc16,

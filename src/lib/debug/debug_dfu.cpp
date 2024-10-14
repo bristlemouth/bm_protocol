@@ -87,8 +87,8 @@ static BaseType_t dfuCommand( char *writeBuffer,
             uint64_t node_id = strtoull(nodeIdStr, NULL, 0);
             uint32_t filter_key = strtoul(filterKeyStr, NULL, 0);
             uint32_t timeoutMS = strtoul(timeoutMsStr, NULL, 0);
-            bm_dfu_img_info_t image_info;
-            if(!_dfu_cli_partition->read(DFU_HEADER_OFFSET_BYTES, reinterpret_cast<uint8_t*>(&image_info), sizeof(bm_dfu_img_info_t), 1000)){
+            BmDfuImgInfo image_info;
+            if(!_dfu_cli_partition->read(DFU_HEADER_OFFSET_BYTES, reinterpret_cast<uint8_t*>(&image_info), sizeof(BmDfuImgInfo), 1000)){
                 printf("Failed to read DFU header.\n");
                 break;
             }
