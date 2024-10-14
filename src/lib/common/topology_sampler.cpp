@@ -10,7 +10,7 @@
 
 #include "bcmp.h"
 #include "bcmp_info.h"
-#include "bcmp_messages.h"
+#include "messages.h"
 #include "bcmp_neighbors.h"
 #include "bcmp_topology.h"
 #include "bm_common_structs.h"
