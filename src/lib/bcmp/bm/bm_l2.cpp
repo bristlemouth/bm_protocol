@@ -1,6 +1,5 @@
 #include "bm_l2.h"
 #include "bm_config.h"
-#include "eth_adin2111.h"
 #include "task_priorities.h"
 extern "C" {
 #include "bm_ip.h"
@@ -22,35 +21,20 @@ extern "C" {
 #define ipv6_destination_address_offset                                                        \
   (ipv6_source_address_offset + ipv6_source_address_size_bytes)
 
-#define add_egress_port(addr, port) (addr[ipv6_source_address_offset + EGRESS_PORT_IDX] = port)
+#define add_egress_port(addr, port) (addr[ipv6_source_address_offset + egress_port_idx] = port)
 #define add_ingress_port(addr, port)                                                           \
-  (addr[ipv6_source_address_offset + INGRESS_PORT_IDX] = port)
+  (addr[ipv6_source_address_offset + ingress_port_idx] = port)
 #define is_global_multicast(addr)                                                              \
   (((uint8_t *)(addr))[ipv6_destination_address_offset] == 0xFFU &&                            \
    ((uint8_t *)(addr))[ipv6_destination_address_offset + 1] == 0x03U)
 
 #define evt_queue_len (32)
 
-static adin2111_DeviceStruct_t adin_device;
-
-static adin2111_config_t adin_cfg = {
-    .port_mask = ADIN_PORT_MASK_ALL,
-    .dev = &adin_device,
-};
-
-static const bm_netdev_config_t bm_netdev_config[] = {{BM_NETDEV_TYPE_ADIN2111, &adin_cfg},
-                                                      {BM_NETDEV_TYPE_NONE, NULL}};
-
-typedef int (*bm_l2_dev_powerdwn_cb_t)(const void *devHandle, bool on, uint8_t port_mask);
-
 typedef struct {
-  uint8_t num_ports;
-  uint8_t enabled_ports_mask;
-  void *device_handle;
+  BmNetDevCfg cfg;
   uint8_t start_port_idx;
-  bm_netdev_type_t type;
-  bm_l2_dev_powerdwn_cb_t dev_pwr_func;
-} bm_netdev_ctx_t;
+  uint8_t num_ports_mask;
+} BmNetdevCtx;
 
 typedef enum {
   L2Tx,
@@ -59,35 +43,41 @@ typedef enum {
   L2LinkDown,
   L2SetNetifUp,
   L2SetNetifDown,
-} bm_l2_queue_type_e;
+} BmL2QueueType;
 
 typedef struct {
   void *device_handle;
   uint8_t port_mask;
   void *buf;
-  bm_l2_queue_type_e type;
+  BmL2QueueType type;
   uint32_t length;
-} l2_queue_element_t;
+} L2QueueElement;
 
 typedef struct {
-  bm_netdev_ctx_t devices[BM_NETDEV_COUNT];
-  bm_l2_link_change_cb_t link_change_cb;
-
+  BmNetdevCtx *devices;
+  BmL2ModuleLinkChangeCb link_change_cb;
   uint8_t available_ports_mask;
   uint8_t available_port_mask_idx;
   uint8_t enabled_port_mask;
+  uint8_t num_devices;
   BmQueue evt_queue;
-} bm_l2_ctx_t;
+} BmL2Ctx;
 
-static bm_l2_ctx_t CTX;
+static BmL2Ctx CTX;
 
-/* TODO: ADIN2111-specifc, let's move to ADIN driver.
-   Rx Callback can only get the MAC Handle, not the Device handle itself */
+/*!
+  @brief Obtain The Index Of A Device By Its Handle
+
+  @param device_handle handle of device to get index for
+
+  @return index of device if found
+  @return -1 if not found
+ */
 static int32_t bm_l2_get_device_index(const void *device_handle) {
   int32_t rval = -1;
 
-  for (int32_t idx = 0; idx < BM_NETDEV_TYPE_MAX; idx++) {
-    if (device_handle == ((adin2111_DeviceHandle_t)CTX.devices[idx].device_handle)) {
+  for (int32_t idx = 0; idx < CTX.num_devices; idx++) {
+    if (device_handle == CTX.devices[idx].cfg.device_handle) {
       rval = idx;
     }
   }
@@ -96,11 +86,27 @@ static int32_t bm_l2_get_device_index(const void *device_handle) {
 }
 
 /*!
+  @brief Turn Port Count To Bit Mask
+
+  @param count number of ports
+
+  @return bitmask of number of ports
+ */
+static uint8_t port_count_to_bit_mask(uint8_t count) {
+  uint8_t ret = 0;
+  for (uint8_t i = 0; i < count; i++) {
+    ret |= 1 << i;
+  }
+  return ret;
+}
+
+/*!
   @brief L2 TX Function
 
   @details Queues buffer to be sent over the network
 
   @param *buf buffer with frame/data to send out
+  @param length size of buffer in bytes
   @param port_mask port(s) to transmit message over
 
   @return BmOK if successful
@@ -111,7 +117,7 @@ static BmErr bm_l2_tx(void *buf, uint32_t length, uint8_t port_mask) {
 
   // device_handle not needed for tx
   // Don't send to ports that are offline
-  l2_queue_element_t tx_evt = {NULL, port_mask & CTX.enabled_port_mask, buf, L2Tx, length};
+  L2QueueElement tx_evt = {NULL, port_mask & CTX.enabled_port_mask, buf, L2Tx, length};
 
   bm_l2_tx_prep(buf, length);
   if (bm_queue_send(CTX.evt_queue, &tx_evt, 10) != BmOK) {
@@ -127,7 +133,7 @@ static BmErr bm_l2_tx(void *buf, uint32_t length, uint8_t port_mask) {
 
   @param device_handle device handle
   @param payload buffer with received data
-  @param payload_len buffer length
+  @param payload_len buffer length in bytes
   @param port_mask which port was this received over
 
   @return BmOK if successful
@@ -137,7 +143,7 @@ static BmErr bm_l2_rx(void *device_handle, uint8_t *payload, uint16_t payload_le
                       uint8_t port_mask) {
   BmErr err = BmOK;
 
-  l2_queue_element_t tx_evt = {device_handle, port_mask, NULL, L2Rx, payload_len};
+  L2QueueElement tx_evt = {device_handle, port_mask, NULL, L2Rx, payload_len};
 
   do {
     tx_evt.buf = bm_l2_new(payload_len);
@@ -166,31 +172,20 @@ static BmErr bm_l2_rx(void *device_handle, uint8_t *payload, uint16_t payload_le
 
   @param *tx_evt tx event with buffer, port, and other information
 */
-static void bm_l2_process_tx_evt(l2_queue_element_t *tx_evt) {
+static void bm_l2_process_tx_evt(L2QueueElement *tx_evt) {
   uint8_t mask_idx = 0;
 
   if (tx_evt) {
-    for (uint32_t idx = 0; idx < BM_NETDEV_COUNT; idx++) {
-      switch (CTX.devices[idx].type) {
-      case BM_NETDEV_TYPE_ADIN2111: {
-        err_t retv = adin2111_tx((adin2111_DeviceHandle_t)CTX.devices[idx].device_handle,
-                                 (uint8_t *)bm_l2_get_payload(tx_evt->buf), tx_evt->length,
-                                 (tx_evt->port_mask >> mask_idx) & ADIN2111_PORT_MASK,
-                                 CTX.devices[idx].start_port_idx);
-        mask_idx += CTX.devices[idx].num_ports;
-        if (retv != ERR_OK) {
-          printf("Failed to submit TX buffer to ADIN\n");
+    for (uint32_t idx = 0; idx < CTX.num_devices; idx++) {
+      if (CTX.devices[idx].cfg.tx_cb) {
+        BmErr retv = CTX.devices[idx].cfg.tx_cb(
+            CTX.devices[idx].cfg.device_handle, (uint8_t *)bm_l2_get_payload(tx_evt->buf),
+            tx_evt->length, (tx_evt->port_mask >> mask_idx) & CTX.devices[idx].num_ports_mask,
+            CTX.devices[idx].start_port_idx);
+        mask_idx += CTX.devices[idx].cfg.num_ports;
+        if (retv != BmOK) {
+          printf("Failed to submit TX buffer\n");
         }
-        break;
-      }
-      case BM_NETDEV_TYPE_NONE: {
-        /* No device */
-        break;
-      }
-      default: {
-        /* Unsupported device */
-        break;
-      }
       }
     }
     bm_l2_free(tx_evt->buf);
@@ -204,40 +199,31 @@ static void bm_l2_process_tx_evt(l2_queue_element_t *tx_evt) {
              1. re-transmit over other port if the message is multicast
              2. send up to lwip for processing via net_if->input()
 
-  \param *rx_evt - rx event with buffer, port, and other information
-  \return none
+  @param *rx_evt - rx event with buffer, port, and other information
 */
-static void bm_l2_process_rx_evt(l2_queue_element_t *rx_evt) {
+static void bm_l2_process_rx_evt(L2QueueElement *rx_evt) {
   if (rx_evt) {
     uint8_t rx_port_mask = 0;
     uint8_t device_idx = bm_l2_get_device_index(rx_evt->device_handle);
-    switch (CTX.devices[device_idx].type) {
-    case BM_NETDEV_TYPE_ADIN2111:
-      rx_port_mask =
-          ((rx_evt->port_mask & ADIN2111_PORT_MASK) << CTX.devices[device_idx].start_port_idx);
-      break;
-    case BM_NETDEV_TYPE_NONE:
-    default:
-      /* No device or not supported. How did we get here? */
-      rx_port_mask = 0;
-      break;
-    }
+    if (CTX.devices[device_idx].cfg.device_handle) {
+      rx_port_mask = ((rx_evt->port_mask & CTX.devices[device_idx].num_ports_mask)
+                      << CTX.devices[device_idx].start_port_idx);
+      // We need to code the RX Port into the IPV6 address passed up the stack
+      add_ingress_port(((uint8_t *)bm_l2_get_payload(rx_evt->buf)), rx_port_mask);
 
-    /* We need to code the RX Port into the IPV6 address passed to lwip */
-    add_ingress_port(((uint8_t *)bm_l2_get_payload(rx_evt->buf)), rx_port_mask);
+      if (is_global_multicast(bm_l2_get_payload(rx_evt->buf))) {
+        uint8_t new_port_mask = CTX.available_ports_mask & ~(rx_port_mask);
+        bm_l2_tx(rx_evt->buf, rx_evt->length, new_port_mask);
+      }
 
-    if (is_global_multicast(bm_l2_get_payload(rx_evt->buf))) {
-      uint8_t new_port_mask = CTX.available_ports_mask & ~(rx_port_mask);
-      bm_l2_tx(rx_evt->buf, rx_evt->length, new_port_mask);
-    }
-
-    /* TODO: This is the place where routing and filtering functions would happen, to prevent passing the
+      /* TODO: This is the place where routing and filtering functions would happen, to prevent passing the
        packet to net_if->input() if unnecessary, as well as forwarding routed multicast data to interested
        neighbors and user devices. */
 
-    // Submit packet to ip stack.
-    // Upper level RX Callback is responsible for freeing the packet
-    bm_l2_submit(rx_evt->buf, rx_evt->length);
+      // Submit packet to ip stack.
+      // Upper level RX Callback is responsible for freeing the packet
+      bm_l2_submit(rx_evt->buf, rx_evt->length);
+    }
   }
 }
 
@@ -251,7 +237,7 @@ static void bm_l2_process_rx_evt(l2_queue_element_t *rx_evt) {
 */
 static void link_change_cb(void *device_handle, uint8_t port, bool state) {
 
-  l2_queue_element_t link_change_evt = {device_handle, port, NULL, L2LinkDown, 0};
+  L2QueueElement link_change_evt = {device_handle, port, NULL, L2LinkDown, 0};
   if (state) {
     link_change_evt.type = L2LinkUp;
   }
@@ -273,8 +259,8 @@ static void link_change_cb(void *device_handle, uint8_t port, bool state) {
 */
 static void handle_link_change(const void *device_handle, uint8_t port, bool state) {
   if (device_handle) {
-    for (uint8_t device = 0; device < BM_NETDEV_COUNT; device++) {
-      if (device_handle == CTX.devices[device].device_handle) {
+    for (uint8_t device = 0; device < CTX.num_devices; device++) {
+      if (device_handle == CTX.devices[device].cfg.device_handle) {
         // Get the overall port number
         uint8_t port_idx = CTX.devices[device].start_port_idx + port;
         // Keep track of what ports are enabled/disabled so we don't try and send messages
@@ -303,11 +289,11 @@ static void handle_link_change(const void *device_handle, uint8_t port, bool sta
   @param on true to turn the interface on, false to turn the interface off.
 */
 static void bm_l2_process_netif_evt(const void *device_handle, bool on) {
-  for (uint8_t device = 0; device < BM_NETDEV_COUNT; device++) {
-    if (device_handle == CTX.devices[device].device_handle) {
-      if (CTX.devices[device].dev_pwr_func) {
-        if (CTX.devices[device].dev_pwr_func((void *)device_handle, on,
-                                             CTX.devices[device].enabled_ports_mask) == 0) {
+  for (uint8_t device = 0; device < CTX.num_devices; device++) {
+    if (device_handle == CTX.devices[device].cfg.device_handle) {
+      if (CTX.devices[device].cfg.power_cb) {
+        if (CTX.devices[device].cfg.power_cb((void *)device_handle, on,
+                                             CTX.devices[device].cfg.port_mask) == 0) {
           printf("Powered device %d : %s\n", device, (on) ? "on" : "off");
         } else {
           printf("Failed to power device %d : %s\n", device, (on) ? "on" : "off");
@@ -326,7 +312,7 @@ static void bm_l2_thread(void *parameters) {
   (void)parameters;
 
   while (true) {
-    l2_queue_element_t event;
+    L2QueueElement event;
     if (bm_queue_receive(CTX.evt_queue, &event, UINT32_MAX) == BmOK) {
       switch (event.type) {
       case L2Tx: {
@@ -365,14 +351,20 @@ static void bm_l2_thread(void *parameters) {
 /*!
   @brief Initialize L2 layer
 
+  @details This should only be called once as it allocates memory for the
+           devices configured for this function
+
   @param cb link change callback that will be called when the ethernet driver
             changes the link status
+  @param cfg pointer to array of network device configurations
+  @param count number of network device configurations
 
   @return BmOK if successful
   @return BmErr if unsuccessful
  */
-BmErr bm_l2_init(bm_l2_link_change_cb_t cb) {
+BmErr bm_l2_init(BmL2ModuleLinkChangeCb cb, const BmNetDevCfg *cfg, uint8_t count) {
   BmErr err = BmENODEV;
+  uint32_t size_devices = sizeof(BmNetdevCtx) * count;
 
   CTX.link_change_cb = cb;
 
@@ -380,37 +372,30 @@ BmErr bm_l2_init(bm_l2_link_change_cb_t cb) {
   CTX.available_ports_mask = 0;
   CTX.available_port_mask_idx = 0;
 
-  for (uint32_t idx = 0; idx < BM_NETDEV_COUNT; idx++) {
-    CTX.devices[idx].type = bm_netdev_config[idx].type;
-    switch (CTX.devices[idx].type) {
-    case BM_NETDEV_TYPE_ADIN2111: {
-      if (bm_netdev_config[idx].config) {
-        adin2111_config_t *adin_cfg = (adin2111_config_t *)bm_netdev_config[idx].config;
-        if (adin_cfg->dev && adin2111_hw_init(adin_cfg->dev, bm_l2_rx, link_change_cb,
-                                              adin_cfg->port_mask) == ADI_ETH_SUCCESS) {
-          CTX.devices[idx].device_handle = adin_cfg->dev;
-          CTX.devices[idx].num_ports = ADIN2111_PORT_NUM;
-          CTX.devices[idx].start_port_idx = CTX.available_port_mask_idx;
-          CTX.devices[idx].dev_pwr_func = adin2111_power_cb;
-          CTX.devices[idx].enabled_ports_mask = adin_cfg->port_mask;
-          CTX.available_ports_mask |= (ADIN2111_PORT_MASK << CTX.available_port_mask_idx);
-          CTX.available_port_mask_idx += CTX.devices[idx].num_ports;
-        } else {
-          printf("Failed to init ADIN2111");
-        }
+  if (cfg && size_devices) {
+    CTX.num_devices = count;
+    CTX.devices = (BmNetdevCtx *)bm_malloc(size_devices);
+    memset(CTX.devices, 0, size_devices);
+    for (uint32_t idx = 0; idx < count; idx++) {
+      // Only assign variables if there is a device handle and the device
+      // can be initialized
+      if (cfg[idx].device_handle && cfg[idx].init_cb &&
+          cfg[idx].init_cb(cfg[idx].device_handle, bm_l2_rx, link_change_cb,
+                           cfg[idx].port_mask) == BmOK) {
+        CTX.devices[idx].cfg = cfg[idx];
+        CTX.devices[idx].start_port_idx = CTX.available_port_mask_idx;
+        CTX.devices[idx].num_ports_mask =
+            port_count_to_bit_mask(CTX.devices[idx].cfg.num_ports);
+        CTX.available_ports_mask |=
+            (CTX.devices[idx].num_ports_mask << CTX.available_port_mask_idx);
+        CTX.available_port_mask_idx += CTX.devices[idx].cfg.num_ports;
+      } else {
+        printf("Failed to init module at index %d\n", idx);
       }
-      break;
-    }
-    case BM_NETDEV_TYPE_NONE:
-    default:
-      /* No device or not supported */
-      CTX.devices[idx].device_handle = NULL;
-      CTX.devices[idx].num_ports = 0;
-      break;
     }
   }
 
-  CTX.evt_queue = bm_queue_create(evt_queue_len, sizeof(l2_queue_element_t));
+  CTX.evt_queue = bm_queue_create(evt_queue_len, sizeof(L2QueueElement));
   err = bm_task_create(bm_l2_thread, "L2 TX Thread", 2048, NULL, BM_L2_TX_TASK_PRIORITY, NULL);
 
   return err;
@@ -419,8 +404,8 @@ BmErr bm_l2_init(bm_l2_link_change_cb_t cb) {
 /*!
   @brief bm_l2_tx wrapper for network stack
 
-  @param *netif lwip network interface
-  @param *buf buf with data to send out
+  @param *buf buffer of data to transmit
+  @param length buffer size in bytes
 
   @return BmOK if successful
   @return BMErr if unsuccessful
@@ -430,18 +415,18 @@ BmErr bm_l2_link_output(void *buf, uint32_t length) {
   uint8_t port_mask = CTX.available_ports_mask;
 
   // if the application set an egress port, send only to that port
-  constexpr size_t bcmp_egress_port_offset_in_dest_addr = 13;
-  const size_t egress_port_idx =
+  static const size_t bcmp_egress_port_offset_in_dest_addr = 13;
+  const size_t egress_idx =
       ipv6_destination_address_offset + bcmp_egress_port_offset_in_dest_addr;
   uint8_t *eth_frame = (uint8_t *)bm_l2_get_payload(buf);
-  uint8_t egress_port = eth_frame[egress_port_idx];
-  constexpr uint8_t num_adin_ports = 2; // TODO generalize
-  if (egress_port > 0 && egress_port <= num_adin_ports) {
+  uint8_t egress_port = eth_frame[egress_idx];
+
+  if (egress_port > 0 && egress_port <= CTX.available_port_mask_idx) {
     port_mask = 1 << (egress_port - 1);
   }
 
   // clear the egress port set by the application
-  eth_frame[egress_port_idx] = 0;
+  eth_frame[egress_idx] = 0;
 
   return bm_l2_tx(buf, length, port_mask);
 }
@@ -449,32 +434,36 @@ BmErr bm_l2_link_output(void *buf, uint32_t length) {
 /*!
   @brief Get the total number of ports
 
-  \return number of ports
+  @return number of ports
 */
-uint8_t bm_l2_get_num_ports(void) { return BM_NETDEV_COUNT; }
+uint8_t bm_l2_get_num_ports(void) { return CTX.available_port_mask_idx; }
+
+/*!
+ @brief Get The Total Number Of Devices
+
+ @return number of devices
+ */
+uint8_t bm_l2_get_num_devices(void) { return CTX.num_devices; }
 
 /*!
   @brief Get the raw device handle for a specific port
 
   @param dev_idx port index to get the handle from
   @param *device_handle pointer to variable to store device handle in
-  @param *type pointer to variable to store the device type
   @param *start_port_idx pointer to variable to store the start port for this device
 
   @return true if successful
   @return false if unsuccessful
 */
-bool bm_l2_get_device_handle(uint8_t dev_idx, void **device_handle, bm_netdev_type_t *type,
-                             uint32_t *start_port_idx) {
+bool bm_l2_get_device_handle(uint8_t dev_idx, void **device_handle, uint32_t *start_port_idx) {
   bool rval = false;
-  if (device_handle && type && start_port_idx) {
+  if (device_handle && start_port_idx) {
     do {
-      if (dev_idx >= BM_NETDEV_COUNT) {
+      if (dev_idx >= CTX.num_devices) {
         break;
       }
 
-      *type = CTX.devices[dev_idx].type;
-      *device_handle = CTX.devices[dev_idx].device_handle;
+      *device_handle = CTX.devices[dev_idx].cfg.device_handle;
       *start_port_idx = CTX.devices[dev_idx].start_port_idx;
       rval = true;
     } while (0);
@@ -502,7 +491,7 @@ bool bm_l2_get_port_state(uint8_t port) { return (bool)(CTX.enabled_port_mask & 
   \return none
 */
 void bm_l2_netif_set_power(void *dev, bool on) {
-  l2_queue_element_t pwr_evt = {dev, 0, NULL, L2SetNetifDown, 0};
+  L2QueueElement pwr_evt = {dev, 0, NULL, L2SetNetifDown, 0};
   if (dev) {
     if (on) {
       pwr_evt.type = L2SetNetifUp;

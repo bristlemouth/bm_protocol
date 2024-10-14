@@ -1,6 +1,7 @@
 #include "bridgePowerController.h"
 #include "FreeRTOS.h"
 #include "app_pub_sub.h"
+#include "app_util.h"
 #include "bm_l2.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
@@ -9,7 +10,6 @@
 #include "stm32_rtc.h"
 #include "task.h"
 #include "task_priorities.h"
-#include "app_util.h"
 #include <cinttypes>
 #include <stdio.h>
 #ifdef RAW_PRESSURE_ENABLE
@@ -312,13 +312,12 @@ void BridgePowerController::powerControllerRun(void *arg) {
 
 bool BridgePowerController::getAdinDevice() {
   bool rval = false;
-  for (uint32_t port = 0; port < bm_l2_get_num_ports(); port++) {
+  for (uint32_t device = 0; device < bm_l2_get_num_devices(); device++) {
     adin2111_DeviceHandle_t adin_handle;
-    bm_netdev_type_t dev_type = BM_NETDEV_TYPE_NONE;
     uint32_t start_port_idx;
-    if (bm_l2_get_device_handle(port, reinterpret_cast<void **>(&adin_handle), &dev_type,
+    if (bm_l2_get_device_handle(device, reinterpret_cast<void **>(&adin_handle),
                                 &start_port_idx) &&
-        (dev_type == BM_NETDEV_TYPE_ADIN2111)) {
+        (adin_handle != NULL)) {
       _adin_handle = adin_handle;
       rval = true;
       break;
