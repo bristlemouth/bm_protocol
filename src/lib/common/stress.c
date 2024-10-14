@@ -262,12 +262,12 @@ void stress_print_stats() {
   _ctx.last_bytes_received = _ctx.total_bytes_received;
   _ctx.last_bytes_ticks = xTaskGetTickCount();
 
-  for (uint32_t port = 0; port < bm_l2_get_num_ports(); port++) {
+  //TODO this will have to be updated when more devices are supported
+  for (uint32_t device = 0; device < bm_l2_get_num_devices(); device++) {
     adin2111_DeviceHandle_t adin_handle;
-    bm_netdev_type_t dev_type = BM_NETDEV_TYPE_NONE;
     uint32_t start_port_idx;
-    if (!bm_l2_get_device_handle(port, (void **)&adin_handle, &dev_type, &start_port_idx) ||
-        (dev_type != BM_NETDEV_TYPE_ADIN2111)) {
+    if (!bm_l2_get_device_handle(device, (void **)&adin_handle, &start_port_idx) ||
+        (adin_handle != NULL)) {
 
       // Not an ADIN interface, skip it
       continue;
