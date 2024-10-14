@@ -429,7 +429,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         break;
       }
       uint64_t node_id = strtoull(node_id_str, NULL, 16);
-      if (!bcmp_resource_discovery_send_request(node_id, NULL)) {
+      if (bcmp_resource_discovery_send_request(node_id, NULL) != BmOK) {
         printf("Failed to send discovery request.\n");
       } else {
         printf("Sent discovery request to %016" PRIx64 "\n", node_id);
