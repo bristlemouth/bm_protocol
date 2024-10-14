@@ -19,6 +19,9 @@ extern "C" {
 #include "middleware.h"
 #include "task_priorities.h"
 
+#include "bm_config.h"
+#include "eth_adin2111.h"
+
 #ifdef STRESS_TEST_ENABLE
 #include "stress.h"
 #endif
@@ -56,7 +59,30 @@ void bcl_init(void) {
   printf("Starting up BCL\n");
   device_init(device);
 
-  bm_l2_init(bm_link_change_cb);
+  // TODO: this is specific configuration to the netif driver.
+  // this should be placed elsewhere based on the users chosen 10BASE-T1L
+  // chipset selection
+  static adin2111_DeviceStruct_t adin_device;
+  static const BmNetDevCfg bm_netdev_config[] = {
+      {
+          &adin_device,
+          ADIN_PORT_MASK_ALL,
+          ADIN2111_PORT_NUM,
+          adin2111_hw_init,
+          adin2111_power_cb,
+          adin2111_tx,
+      },
+      {
+          NULL,
+          0,
+          0,
+          NULL,
+          NULL,
+          NULL,
+      },
+  };
+
+  bm_l2_init(bm_link_change_cb, bm_netdev_config, array_size(bm_netdev_config));
 
   bm_ip_init();
 

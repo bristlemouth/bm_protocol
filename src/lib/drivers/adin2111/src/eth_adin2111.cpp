@@ -72,8 +72,8 @@ typedef struct {
   void *args;
 } portStatsReqEvt_t;
 
-static adin_rx_callback_t _rx_callback;
-static adin_link_change_callback_t _link_change_callback;
+static BmL2RxCb _rx_callback;
+static BmL2DeviceLinkChangeCb _link_change_callback;
 
 #define ETH_EVT_QUEUE_LEN 32
 
@@ -229,7 +229,7 @@ void _link_change(linkChangeEvt_t *linkChangeEvt) {
 
     // Pass data to callback function if present
     if (_link_change_callback) {
-      _link_change_callback(linkChangeEvt->handle, linkChangeEvt->port,
+      _link_change_callback((void *)linkChangeEvt->handle, linkChangeEvt->port,
                             (status == ADI_ETH_LINK_STATUS_UP));
     }
   }
@@ -443,12 +443,11 @@ static void _irq_evt_cb_from_isr(BaseType_t *pxHigherPriorityTaskWoken) {
   \param link_change_callback Callback function to be called when link state changes
   \return 0 if successful, nonzero otherwise
 */
-adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice,
-                                  adin_rx_callback_t rx_callback,
-                                  adin_link_change_callback_t link_change_callback,
-                                  uint8_t enabled_port_mask) {
-  adi_eth_Result_e result = ADI_ETH_SUCCESS;
+BmErr adin2111_hw_init(void *device, BmL2RxCb rx_callback,
+                       BmL2DeviceLinkChangeCb link_change_callback, uint8_t enabled_port_mask) {
+  BmErr result = BmOK;
   BaseType_t rval;
+  adin2111_DeviceHandle_t hDevice = (adin2111_DeviceHandle_t)device;
 
   configASSERT(rx_callback);
   _rx_callback = rx_callback;
@@ -460,7 +459,7 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice,
     /* Initialize BSP to kickoff thread to service GPIO and SPI DMA interrupts
         TODO: Provide a SPI interface? */
     if (adi_bsp_init()) {
-      result = ADI_ETH_HW_ERROR;
+      result = BmENOENT;
       break;
     }
 
@@ -470,15 +469,15 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice,
     adi_bsp_register_irq_evt(_irq_evt_cb_from_isr);
 
     /* ADIN2111 Init process */
-    result = adin2111_Init(hDevice, &drvConfig);
-    if (result != ADI_ETH_SUCCESS) {
+    if (adin2111_Init(hDevice, &drvConfig) != ADI_ETH_SUCCESS) {
+      result = BmENODEV;
       break;
     }
 
     /* Register Callback for link change */
-    result =
-        adin2111_RegisterCallback(hDevice, adin2111_link_change_cb, ADI_MAC_EVT_LINK_CHANGE);
-    if (result != ADI_ETH_SUCCESS) {
+    if (adin2111_RegisterCallback(hDevice, adin2111_link_change_cb, ADI_MAC_EVT_LINK_CHANGE) !=
+        ADI_ETH_SUCCESS) {
+      result = BmENOMEM;
       break;
     }
 
@@ -490,8 +489,8 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice,
       // Submit rx buffer to ADIN's RX queue
       // Once buffer is used, adin2111_rx_cb will be called
       // and it can be re-added to the queue with this same function
-      result = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
-      if (result != ADI_ETH_SUCCESS) {
+      if (adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc) != ADI_ETH_SUCCESS) {
+        result = BmENOMEM;
         printf("Unable to re-submit RX Buffer\n");
         configASSERT(0);
         break;
@@ -499,13 +498,13 @@ adi_eth_Result_e adin2111_hw_init(adin2111_DeviceHandle_t hDevice,
     }
 
     // Failed to initialize
-    if (result != ADI_ETH_SUCCESS) {
+    if (result != BmOK) {
       break;
     }
 
     /* Confirm device configuration */
-    result = adin2111_SyncConfig(hDevice);
-    if (result != ADI_ETH_SUCCESS) {
+    if (adin2111_SyncConfig(hDevice) != ADI_ETH_SUCCESS) {
+      result = BmETIMEDOUT;
       break;
     }
     rval = xTaskCreate(adin2111_thread, "ADIN2111 Service Thread", 8192, NULL,
@@ -538,7 +537,7 @@ static void add_egress_port(uint8_t *buff, uint8_t port) {
 
   // Modify egress port byte in IP address
   uint8_t *pbyte = (uint8_t *)&header->ip6_hdr.src;
-  pbyte[EGRESS_PORT_IDX] = port;
+  pbyte[egress_port_idx] = port;
 
   //
   // Correct checksum to account for change in ip address
@@ -657,19 +656,20 @@ static void free_tx_msg_req(txMsgEvt_t *txMsg) {
   \param port_offset 🤷‍♂️ (TODO - figure out why this is)
   \return none
 */
-err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t *buf, uint16_t buf_len,
-                  uint8_t port_mask, uint8_t port_offset) {
-  err_t retv = ERR_OK;
+BmErr adin2111_tx(void *device, uint8_t *buf, uint16_t buf_len, uint8_t port_mask,
+                  uint8_t port_offset) {
+  BmErr retv = BmOK;
+  adin2111_DeviceHandle_t hDevice = (adin2111_DeviceHandle_t)device;
 
   do {
     if (!hDevice) {
       // no device provided!
-      retv = ERR_IF;
+      retv = BmEINVAL;
       break;
     }
 
     if (!buf) {
-      retv = ERR_BUF;
+      retv = BmEINVAL;
       break;
     }
 
@@ -687,18 +687,18 @@ err_t adin2111_tx(adin2111_DeviceHandle_t hDevice, uint8_t *buf, uint16_t buf_le
           ethEvt_t event = {.type = EVT_ETH_TX, .data = txMsg};
           if (xQueueSend(_eth_evt_queue, &event, 100) == pdFALSE) {
             free_tx_msg_req(txMsg);
-            retv = ERR_MEM;
+            retv = BmENOMEM;
             break;
           }
 
         } else {
-          retv = ERR_MEM;
+          retv = BmENOMEM;
           break;
         }
       }
     }
 
-    if (retv != ERR_OK) {
+    if (retv != BmOK) {
       break;
     }
   } while (0);
@@ -780,62 +780,70 @@ bool adin2111_get_port_stats(adin2111_DeviceHandle_t dev, adin2111_Port_e port,
   return rval;
 }
 
-int adin2111_power_cb(const void *devHandle, bool on, uint8_t port_mask) {
-  int rval = 0;
+BmErr adin2111_power_cb(const void *devHandle, bool on, uint8_t port_mask) {
+  BmErr rval = BmOK;
+  int err = 0;
   adin2111_DeviceHandle_t hDevice =
       reinterpret_cast<adin2111_DeviceHandle_t>(const_cast<void *>(devHandle));
   if (on) {
     do {
       IOWrite(&ADIN_PWR, 1);
-      rval = adin2111_Init(hDevice, &drvConfig);
-      if (rval != ADI_ETH_SUCCESS) {
+      err = adin2111_Init(hDevice, &drvConfig);
+      if (err != ADI_ETH_SUCCESS) {
+        rval = BmENODEV;
         break;
       }
 
-      rval =
+      err =
           adin2111_RegisterCallback(hDevice, adin2111_link_change_cb, ADI_MAC_EVT_LINK_CHANGE);
-      if (rval != ADI_ETH_SUCCESS) {
+      if (err != ADI_ETH_SUCCESS) {
+        rval = BmENOMEM;
         break;
       }
       for (uint32_t idx = 0; idx < RX_QUEUE_NUM_ENTRIES; idx++) {
         // Submit rx buffer to ADIN's RX queue
-        rval = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
-        if (rval != ADI_ETH_SUCCESS) {
+        err = adin2111_SubmitRxBuffer(hDevice, &adin_rx_buf_mem[idx]->bufDesc);
+        if (err != ADI_ETH_SUCCESS) {
           printf("Unable to re-submit RX Buffer\n");
+          rval = BmENOMEM;
           configASSERT(0);
           break;
         }
       }
       // Failed to initialize
-      if (rval != ADI_ETH_SUCCESS) {
+      if (err != ADI_ETH_SUCCESS) {
+        rval = BmENODEV;
         break;
       }
-      rval = adin2111_SyncConfig(hDevice);
-      if (rval != ADI_ETH_SUCCESS) {
+      err = adin2111_SyncConfig(hDevice);
+      if (err != ADI_ETH_SUCCESS) {
+        rval = BmETIMEDOUT;
         break;
       }
-      rval = adin2111_hw_start(hDevice, port_mask);
-      if (rval != ADI_ETH_SUCCESS) {
+      err = adin2111_hw_start(hDevice, port_mask);
+      if (err != ADI_ETH_SUCCESS) {
+        rval = BmENODEV;
         break;
       }
       if (!resume_pause_adin_task(true, xTaskGetCurrentTaskHandle(),
                                   PAUSE_RESUME_TASKS_TIMEOUT_MS)) {
-        rval = ADI_ETH_COMM_ERROR;
+        rval = BmECANCELED;
         break;
       }
     } while (0);
-    if (rval != ADI_ETH_SUCCESS) {
+    if (err != ADI_ETH_SUCCESS) {
       IOWrite(&ADIN_PWR, 0);
     }
   } else {
     do {
       if (!resume_pause_adin_task(false, xTaskGetCurrentTaskHandle(),
                                   PAUSE_RESUME_TASKS_TIMEOUT_MS)) {
-        rval = ADI_ETH_COMM_ERROR;
+        rval = BmECANCELED;
         break;
       }
-      rval = adin2111_hw_stop(hDevice, port_mask);
-      if (rval != ADI_ETH_SUCCESS) {
+      err = adin2111_hw_stop(hDevice, port_mask);
+      if (err != ADI_ETH_SUCCESS) {
+        rval = BmEALREADY;
         break;
       }
       IOWrite(&ADIN_PWR, 0);
