@@ -92,7 +92,7 @@ void bcl_init(void) {
 
   bcmp_cli_init();
 
-  bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
+  bm_middleware_init(BM_MIDDLEWARE_PORT);
 
 #ifdef STRESS_TEST_ENABLE
   stress_test_init(&netif, STRESS_TEST_PORT);
