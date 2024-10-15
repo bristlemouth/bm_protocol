@@ -3,10 +3,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "bcmp.h"
 #include "bm_printf.h"
 
 #define MAX_FILE_NAME_LEN 64
-#define MAX_STR_LEN(fname_len) (int32_t)(1500 - sizeof(struct ip6_hdr) - sizeof(bm_print_publication_t) - fname_len)
+#define MAX_STR_LEN(fname_len) (int32_t)(max_payload_len - sizeof(bm_print_publication_t) - fname_len)
 static constexpr uint8_t fprintfType = 1;
 static constexpr uint8_t printfType = 1;
 static constexpr uint8_t fappendType = 1;
