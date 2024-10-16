@@ -18,7 +18,7 @@
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bcmp_neighbors.h"
-#include "bm_l2.h"
+#include "l2.h"
 #include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"

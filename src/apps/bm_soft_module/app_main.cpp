@@ -16,7 +16,7 @@
 #include "task_priorities.h"
 
 #include "app_pub_sub.h"
-#include "bm_l2.h"
+#include "l2.h"
 #include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bristlemouth.h"

@@ -14,7 +14,7 @@
 #include "bcmp_neighbors.h"
 #include "bcmp_topology.h"
 #include "bm_common_structs.h"
-#include "bm_l2.h"
+#include "l2.h"
 #include "bm_serial.h"
 #include "util.h"
 #include "bridgeLog.h"
