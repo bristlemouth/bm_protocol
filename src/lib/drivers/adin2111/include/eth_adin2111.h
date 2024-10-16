@@ -1,7 +1,7 @@
 #pragma once
 
 #include "adin2111.h"
-#include "bm_l2.h"
+#include "l2.h"
 #include "lwip/netif.h"
 #include "util.h"
 #include <stdbool.h>

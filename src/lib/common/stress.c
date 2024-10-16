@@ -7,7 +7,6 @@
 // FreeRTOS+CLI includes.
 #include "FreeRTOS_CLI.h"
 
-#include "bm_l2.h"
 #include "eth_adin2111.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"

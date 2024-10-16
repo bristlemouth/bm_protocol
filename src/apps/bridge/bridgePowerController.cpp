@@ -2,7 +2,7 @@
 #include "FreeRTOS.h"
 #include "app_pub_sub.h"
 #include "app_util.h"
-#include "bm_l2.h"
+#include "l2.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "device_info.h"
