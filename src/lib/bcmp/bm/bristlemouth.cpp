@@ -1,18 +1,18 @@
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
-#include "messages.h"
-#include "dfu/dfu.h"
 #include "device_info.h"
+#include "dfu/dfu.h"
+#include "messages.h"
 #include "queue.h"
 #include "task.h"
 
-#include "bm_l2.h"
 #include "bm_ports.h"
 
 extern "C" {
 #include "bcmp.h"
 #include "bm_ip.h"
 #include "device.h"
+#include "eth_adin2111.h"
 }
 #include "bcmp_cli.h"
 
@@ -20,7 +20,6 @@ extern "C" {
 #include "task_priorities.h"
 
 #include "bm_config.h"
-#include "eth_adin2111.h"
 
 #ifdef STRESS_TEST_ENABLE
 #include "stress.h"

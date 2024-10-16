@@ -20,7 +20,6 @@
 
 #include "adi_bsp.h"
 #include "bcmp.h"
-#include "bm_l2.h"
 #include "bsp.h"
 #include "eth_adin2111.h"
 #include "task_priorities.h"
