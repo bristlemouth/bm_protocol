@@ -189,7 +189,8 @@ void serialDisable(SerialHandle_t *handle) {
 
     if(handle->txPin) {
       STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
-      LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_INPUT);
+      LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_OUTPUT);
+//      LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
     }
   }
 #endif

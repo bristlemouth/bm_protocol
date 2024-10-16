@@ -18,6 +18,14 @@ bool endTransaction(uint32_t wait_ms = DEFAULT_POST_TRANSACTION_WAIT_MS);
 // Set the baud rate for the LPUART
 void setBaud(uint32_t new_baud_rate);
 
+// Set the even parity for the LPUART
+void setEvenParity(void);
+
+// Set the data width for the LPUART
+void set7bitDatawidth(void);
+
+void enableDataInversion(void);
+
 // Enable the payload UART
 void enable(void);
 

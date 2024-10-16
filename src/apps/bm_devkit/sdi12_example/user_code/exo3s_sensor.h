@@ -48,8 +48,9 @@ class SondeEXO3sSensor {
   private:
     void sdi_break();
     void sdi_mark();
-    void sdi_transmit(char*);
+    void sdi_transmit(const char*);
     char sdi_receive();
+    uint8_t invertData(uint8_t);
     static constexpr uint32_t BAUD_RATE = 1200;
     // incoming SDI12 frames end with CRLF - \r\n
     static constexpr char LINE_TERM = '\n';

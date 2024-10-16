@@ -42,14 +42,15 @@ void setup(void) {
   bristlefin.enableVout();
   // Initializing
   sondeEXO3sSensor.init();
+  vTaskDelay(pdMS_TO_TICKS(5000));
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
+  vTaskDelay(pdMS_TO_TICKS(5000));
   sondeEXO3sSensor.sdi_wake(1000);
-  printf("Testing\n");
-//  Serial.println("Asking for the identity of the probe");
-  result = sondeEXO3sSensor.sdi_cmd("0I!");
+  //  Serial.println("Asking for the identity of the probe");
+  result = sondeEXO3sSensor.sdi_cmd("0!");
 
 
 
@@ -122,29 +123,29 @@ void loop(void) {
 
   // Read a line if it is available
   // Note - PLUART::setUseLineBuffer must be set true in setup to enable lines.
-  if (PLUART::lineAvailable()) {
-    // Shortcut the raw bytes cluster completion so the parsed line will be on a new console line
-    if (readingBytesTimer > -1) {
-      printf("\n");
-      readingBytesTimer = -1;
-    }
-    uint16_t read_len =
-        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
-
-    // Get the RTC if available
-    RTCTimeAndDate_t time_and_date = {};
-    rtcGet(&time_and_date);
-    char rtcTimeBuffer[32];
-    rtcPrint(rtcTimeBuffer, &time_and_date);
-
-    // Print the payload data to a file, to the bm_printf console, and to the printf console.
-    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n",
-               uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
-              rtcTimeBuffer, read_len, payload_buffer);
-    printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
-           rtcTimeBuffer, read_len, payload_buffer);
-
-    ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
-  }
+//  if (PLUART::lineAvailable()) {
+//    // Shortcut the raw bytes cluster completion so the parsed line will be on a new console line
+//    if (readingBytesTimer > -1) {
+//      printf("\n");
+//      readingBytesTimer = -1;
+//    }
+//    uint16_t read_len =
+//        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+//
+//    // Get the RTC if available
+//    RTCTimeAndDate_t time_and_date = {};
+//    rtcGet(&time_and_date);
+//    char rtcTimeBuffer[32];
+//    rtcPrint(rtcTimeBuffer, &time_and_date);
+//
+//    // Print the payload data to a file, to the bm_printf console, and to the printf console.
+//    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n",
+//               uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+//    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+//              rtcTimeBuffer, read_len, payload_buffer);
+//    printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
+//           rtcTimeBuffer, read_len, payload_buffer);
+//
+//    ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
+//  }
 }

@@ -20,6 +20,8 @@
 #include "exo3s_sensor.h"
 #include "bristlefin.h"
 
+#include "stm32_io.h"
+
 
 void SondeEXO3sSensor::init() {
   printf("Sonde Init");
@@ -30,16 +32,19 @@ void SondeEXO3sSensor::init() {
 //  printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
   PLUART::init(USER_TASK_PRIORITY);
-  PLUART::setBaud(BAUD_RATE);
+  PLUART::setBaud(1200);
   PLUART::setUseByteStreamBuffer(false);
   PLUART::setUseLineBuffer(true);
+  PLUART::setEvenParity();
+  PLUART::set7bitDatawidth();
+//  PLUART::enableDataInversion();
   PLUART::setTerminationCharacter(LINE_TERM);
+  PLUART::enableTransactions(Bristlefin::sdi12Tx, Bristlefin::sdi12Rx);
   PLUART::enable();
 }
 
 void SondeEXO3sSensor::sdi_wake(int delay) {
   unsigned long timeStart;
-  bristlefin.sdi12Tx();
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + delay);
   printf("sdi_wake\n");
@@ -48,35 +53,47 @@ void SondeEXO3sSensor::sdi_wake(int delay) {
 
 
 void SondeEXO3sSensor::sdi_break(void) {
+  flush();
   unsigned long timeStart;
-  bristlefin.sdi12Tx();
+  STM32Pin_t *pin = (STM32Pin_t *)(PLUART::uart_handle).txPin->pin;
+  PLUART::disable();
+  LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + breakTimeMin);
+  LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  timeStart = uptimeGetMs();
+  while(uptimeGetMs() < timeStart + 9);
   printf("sdi_break\n");
-//  PLUART::enable();	// re enable Serial
-  flush();
+  LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
+//  init();	// re enable Serial
+  PLUART::enable();
+//  flush();
 }
 
 
-void SondeEXO3sSensor::sdi_transmit(char* ptr) {
-//  int bytesW;
-  printf("sdi_transmit\n");
-  while(*ptr != 0){
-    PLUART::write((uint8_t *)ptr, strlen(ptr));
-    flush();
-    ptr++;
-  }
+void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
+  PLUART::startTransaction();
+  sdi_break();
+  PLUART::write((uint8_t *)ptr, strlen(ptr));
+  PLUART::endTransaction(50);
   printf("sdi_transmit_DONE\n");
 //  delay(delayAfterTransmit);
+}
+
+uint8_t SondeEXO3sSensor::invertData(uint8_t data) {
+  return ~data;  // Bitwise NOT to invert all bits
 }
 
 char SondeEXO3sSensor::sdi_receive(void) {
 
   char payload_buffer[256];
   printf("sdi_receive\n");
-  while (!PLUART::lineAvailable()){
-    vTaskDelay(pdMS_TO_TICKS(5));
-  }
+  vTaskDelay(pdMS_TO_TICKS(10));
+
+//  while (!PLUART::lineAvailable()){
+//    vTaskDelay(pdMS_TO_TICKS(5));
+//    printf("stuck here\n");
+//  }
 
   uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
   printf("Read Line ----- %.*s\n", read_len, payload_buffer);
@@ -90,12 +107,8 @@ char SondeEXO3sSensor::sdi_cmd(const char *cmd) {
 //  char* xptr;
 //  float fvalue[5];
   char result = sdiSuccess;
-
-  strcpy(&txBuffer[0],cmd);
-
-  sdi_break();	// send break
-  sdi_transmit(&txBuffer[0]);
-  result = sdi_receive();
+  sdi_transmit(cmd);
+//  result = sdi_receive();
 
   return result;
 }
