@@ -260,8 +260,8 @@ void set7bitDatawidth(void){
 }
 
 void enableDataInversion(void){
-  LL_LPUART_SetBinaryDataLogic(static_cast<USART_TypeDef *>(uart_handle.device),
-                              LL_LPUART_BINARY_LOGIC_NEGATIVE);
+//  LL_LPUART_SetBinaryDataLogic(static_cast<USART_TypeDef *>(uart_handle.device),
+//                              LL_LPUART_BINARY_LOGIC_NEGATIVE);
   LL_LPUART_SetTXPinLevel(static_cast<USART_TypeDef *>(uart_handle.device),
                        LL_LPUART_TXPIN_LEVEL_INVERTED);
 //  LL_LPUART_SetRXPinLevel(static_cast<USART_TypeDef *>(uart_handle.device),

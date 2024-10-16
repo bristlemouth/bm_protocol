@@ -35,8 +35,8 @@ void SondeEXO3sSensor::init() {
   PLUART::setBaud(1200);
   PLUART::setUseByteStreamBuffer(false);
   PLUART::setUseLineBuffer(true);
-  PLUART::setEvenParity();
-  PLUART::set7bitDatawidth();
+//  PLUART::setEvenParity();
+//  PLUART::set7bitDatawidth();
 //  PLUART::enableDataInversion();
   PLUART::setTerminationCharacter(LINE_TERM);
   PLUART::enableTransactions(Bristlefin::sdi12Tx, Bristlefin::sdi12Rx);
