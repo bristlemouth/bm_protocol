@@ -48,7 +48,6 @@ void SondeEXO3sSensor::sdi_wake(int delay) {
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + delay);
   printf("sdi_wake\n");
-//  PLUART::enable();	// re enable Serial
 }
 
 
@@ -65,9 +64,7 @@ void SondeEXO3sSensor::sdi_break(void) {
   while(uptimeGetMs() < timeStart + 9);
   printf("sdi_break\n");
   LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
-//  init();	// re enable Serial
   PLUART::enable();
-//  flush();
 }
 
 
@@ -77,24 +74,18 @@ void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   PLUART::write((uint8_t *)ptr, strlen(ptr));
   PLUART::endTransaction(50);
   printf("sdi_transmit_DONE\n");
-//  delay(delayAfterTransmit);
 }
 
-uint8_t SondeEXO3sSensor::invertData(uint8_t data) {
-  return ~data;  // Bitwise NOT to invert all bits
-}
+
 
 char SondeEXO3sSensor::sdi_receive(void) {
 
   char payload_buffer[256];
-  printf("sdi_receive\n");
   vTaskDelay(pdMS_TO_TICKS(10));
-
 //  while (!PLUART::lineAvailable()){
 //    vTaskDelay(pdMS_TO_TICKS(5));
 //    printf("stuck here\n");
 //  }
-
   uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
   printf("Read Line ----- %.*s\n", read_len, payload_buffer);
   printf("sdi_receive_DONE\n");
