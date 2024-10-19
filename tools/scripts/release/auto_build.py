@@ -88,7 +88,11 @@ class AutoBuilder:
 
         if config["args"]["bsp"] == "bm_mote_bristleback_v1_0":
             cmd += ["-DCMAKE_APP_TYPE=bristleback"]
-        elif config["args"]["bsp"] == "bm_mote_v1.0":
+        elif (
+            config["args"]["bsp"] == "bm_mote_v1.0"
+            # bringup_mote is not in the bm_devkit folder
+            and not config["args"]["app"] == "bringup_mote"
+        ):
             cmd += ["-DCMAKE_APP_TYPE=BMDK"]
         elif config["args"]["bsp"] == "bm_mote_rs232":
             cmd += ["-DCMAKE_APP_TYPE=rs232_expander"]
