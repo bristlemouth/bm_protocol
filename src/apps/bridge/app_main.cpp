@@ -19,7 +19,7 @@
 #include "app_pub_sub.h"
 #include "bcmp_neighbors.h"
 #include "l2.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
@@ -201,10 +201,10 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 
   if (value) {
     bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_ON,
-           sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE);
+           sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE, BM_COMMON_PUB_SUB_VERSION);
   } else {
     bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_OFF,
-           sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE);
+           sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE, BM_COMMON_PUB_SUB_VERSION);
   }
 
   return false;

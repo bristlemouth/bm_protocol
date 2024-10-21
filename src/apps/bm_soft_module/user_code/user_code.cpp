@@ -2,7 +2,7 @@
 #include "TSYS01.h"
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_soft_data_msg.h"
 #include "bristlefin.h"
 #include "bsp.h"
@@ -143,7 +143,7 @@ void loop(void) {
     memset(cbor_buf, 0, sizeof(cbor_buf));
     size_t encoded_len = 0;
     if (BmSoftDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
-      bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf, encoded_len, 0);
+      bm_pub_wl(bmSoftTopic, bmSoftTopicStrLen, cbor_buf, encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode data message\n");
     }

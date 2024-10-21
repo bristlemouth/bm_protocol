@@ -1,7 +1,7 @@
 #include "bm_network.h"
 #include "FreeRTOS.h"
-#include "bm_pubsub.h"
 #include "bm_serial.h"
+#include "pubsub.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,7 +41,7 @@ bool spotter_tx_data(const void *data, uint16_t data_len, bm_serial_network_type
         reinterpret_cast<bm_serial_network_data_header_t *>(data_buf);
     header->type = type;
     memcpy(header->data, data, data_len);
-    rval = bm_pub(networkTopic, data_buf, msg_len, networkTopicType);
+    rval = bm_pub(networkTopic, data_buf, msg_len, networkTopicType, BM_COMMON_PUB_SUB_VERSION);
   } while (0);
   vPortFree(data_buf);
   return rval;

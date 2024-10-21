@@ -1,7 +1,7 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
 #include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_rbr_data_msg.h"
 #include "bsp.h"
 #include "debug.h"
@@ -61,7 +61,7 @@ void loop(void) {
     memset(cbor_buf, 0, sizeof(cbor_buf));
     size_t encoded_len = 0;
     if (BmRbrDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
-      bm_pub_wl(bmRbrTopic, bmRbrTopicStrLen, cbor_buf, encoded_len, 0);
+      bm_pub_wl(bmRbrTopic, bmRbrTopicStrLen, cbor_buf, encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode data message\n");
     }
