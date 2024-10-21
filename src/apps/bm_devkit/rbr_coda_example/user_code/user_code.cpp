@@ -12,7 +12,7 @@
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"

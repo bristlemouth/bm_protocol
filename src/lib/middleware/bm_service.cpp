@@ -1,6 +1,6 @@
 #include "bm_service.h"
 #include "FreeRTOS.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_service_common.h"
 #include "semphr.h"
 #include "string.h"
@@ -194,7 +194,7 @@ static void _service_request_received_cb(uint64_t node_id, const char *topic,
           memcpy(pub_topic + current->service_strlen, BM_SERVICE_REP_STR,
                  strlen(BM_SERVICE_REP_STR));
           bm_pub_wl(pub_topic, pub_topic_len, reply_data,
-                    reply_len + sizeof(bm_service_reply_data_header_s), 0);
+                    reply_len + sizeof(bm_service_reply_data_header_s), 0, BM_COMMON_PUB_SUB_VERSION);
           vPortFree(pub_topic);
         }
 

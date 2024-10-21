@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "util.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 
 #define USE_TIMESTAMP 1
 #define NO_TIMESTAMP 0
