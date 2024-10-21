@@ -71,4 +71,8 @@ extern SerialHandle_t uart_handle;
 // Buffer length for LPUART1
 #define LPUART1_LINE_BUFF_LEN 2048
 
+// Configuring TX as a GPIO
+void setTxPinOutputLevel(void);
+void resetTxPinOutputLevel(void);
+
 } // namespace PLUART

@@ -4,7 +4,7 @@
 #pragma once
 #include <stdint.h>
 
-#define sizeBuffer 100
+#define sizeBuffer 256
 #define sdiSuccess 0
 #define sdiFail 1
 #define sdiTimeout 2		// timeout condition

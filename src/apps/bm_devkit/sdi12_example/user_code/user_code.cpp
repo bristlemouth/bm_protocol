@@ -40,14 +40,17 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
+  bristlefin.enable3V();
   // Initializing
   sondeEXO3sSensor.init();
+  sondeEXO3sSensor.sdi_wake(1000);
+  result = sondeEXO3sSensor.sdi_cmd("0!");
   vTaskDelay(pdMS_TO_TICKS(5000));
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-  sondeEXO3sSensor.sdi_wake(1000);
+//  sondeEXO3sSensor.sdi_wake(1000);
   //  Serial.println("Asking for the identity of the probe");
   result = sondeEXO3sSensor.sdi_cmd("0I!");
 

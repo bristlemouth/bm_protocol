@@ -112,7 +112,7 @@ static void pluartPostTransactionCb(SerialHandle_t *handle) {
 static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
   configASSERT(serialHandle != NULL);
   SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
-
+  printf("Received byte %c\n", (char)byte);
   if (_useLineBuffer) {
     // This function requires data to be a pointer to a SerialLineBuffer_t
     configASSERT(handle->data != NULL);
@@ -267,6 +267,14 @@ void setBaud(uint32_t new_baud_rate) {
 ////  LL_LPUART_SetRXPinLevel(static_cast<USART_TypeDef *>(uart_handle.device),
 ////                          LL_LPUART_RXPIN_LEVEL_INVERTED);
 //}
+
+// Configuring TX as a GPIO
+void setTxPinOutputLevel(void) {
+  serialSetTxLevel(&uart_handle);
+}
+void resetTxPinOutputLevel(void){
+  serialResetTxLevel(&uart_handle);
+}
 
 void enable(void) { serialEnable(&uart_handle); }
 

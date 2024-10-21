@@ -189,7 +189,7 @@ void serialDisable(SerialHandle_t *handle) {
 
     if(handle->txPin) {
       STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
-      LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_OUTPUT);
+      LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_OUTPUT); //input initially
 //      LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
     }
   }
@@ -198,6 +198,18 @@ void serialDisable(SerialHandle_t *handle) {
   handle->enabled = false;
 }
 
+void serialSetTxLevel(SerialHandle_t *handle){
+  if(handle->txPin) {
+    STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
+    LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  }
+}
+void serialResetTxLevel(SerialHandle_t *handle){
+  if(handle->txPin) {
+    STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
+    LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  }
+}
 
 #ifndef NO_UART
 // Generic interrupt handler for all USART/UART/LPUART peripherals
