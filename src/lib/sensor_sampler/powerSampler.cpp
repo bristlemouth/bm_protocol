@@ -6,6 +6,7 @@
 #include "bm_pubsub.h"
 #include "bsp.h"
 #include "debug.h"
+#include "powerSampler.h"
 #include "ina232.h"
 #include "sensorSampler.h"
 #include "sensors.h"
@@ -98,11 +99,9 @@ static bool powerInit() {
   return rval;
 }
 
-static sensor_t powerSensors = {
-  .initFn = powerInit,
-  .sampleFn = powerSample,
-  .checkFn = NULL
-};
+static sensorNode_t powerSensors = SENSOR_NODE_INIT(powerInit,
+                                                    powerSample,
+                                                    NULL);
 
 void powerSamplerInit(INA::INA232 **sensors) {
   _inaSensors = sensors;

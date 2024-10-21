@@ -80,11 +80,9 @@ static bool baroCheck() {
   return _pressureSensor->checkPROM();
 }
 
-static sensor_t pressureSensor = {
-  .initFn = baroInit,
-  .sampleFn = baroSample,
-  .checkFn = baroCheck
-};
+static sensorNode_t pressureSensor = SENSOR_NODE_INIT(baroInit,
+                                                      baroSample,
+                                                      baroCheck);
 
 
 void pressureSamplerInit(AbstractPressureSensor *sensor) {

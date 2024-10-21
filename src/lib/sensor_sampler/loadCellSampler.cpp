@@ -152,9 +152,9 @@ static bool loadCellCheck() {
   return 1;
 }
 
-static sensor_t loadCellSensor = {.initFn = loadCellInit,
-                                  .sampleFn = loadCellSample,
-                                  .checkFn = loadCellCheck};
+static sensorNode_t loadCellSensor = SENSOR_NODE_INIT(loadCellInit,
+                                                      loadCellSample,
+                                                      loadCellCheck);
 
 void loadCellSamplerInit(NAU7802 *sensor) {
   _loadCell = sensor;

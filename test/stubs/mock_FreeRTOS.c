@@ -18,6 +18,7 @@ DEFINE_FAKE_VALUE_FUNC(TimerHandle_t, xTimerCreate, const char *const, const Tic
 DEFINE_FAKE_VALUE_FUNC(BaseType_t, xTaskCreate, TaskFunction_t, const char *const,
                        const configSTACK_DEPTH_TYPE, void *const, UBaseType_t,
                        TaskHandle_t *const);
+DEFINE_FAKE_VOID_FUNC(vTaskDelete, TaskHandle_t);
 DEFINE_FAKE_VALUE_FUNC(BaseType_t, xTimerGenericCommand, TimerHandle_t, const BaseType_t,
                        const TickType_t, BaseType_t *const, const TickType_t);
 DEFINE_FAKE_VALUE_FUNC(EventGroupHandle_t, xEventGroupCreate);
@@ -27,3 +28,6 @@ DEFINE_FAKE_VALUE_FUNC(BaseType_t, xTaskGenericNotifyWait, UBaseType_t, uint32_t
                        uint32_t *, TickType_t);
 DEFINE_FAKE_VALUE_FUNC(QueueHandle_t, xQueueCreateMutex, const uint8_t);
 DEFINE_FAKE_VALUE_FUNC(BaseType_t, xQueueSemaphoreTake, QueueHandle_t, TickType_t);
+DEFINE_FAKE_VALUE_FUNC(void *, pvTimerGetTimerID, TimerHandle_t);
+DEFINE_FAKE_VALUE_FUNC(BaseType_t, xTimerIsTimerActive, TimerHandle_t);
+DEFINE_FAKE_VALUE_FUNC(TickType_t, xTimerGetPeriod, TimerHandle_t);
