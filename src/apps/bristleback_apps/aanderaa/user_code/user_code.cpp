@@ -5,7 +5,7 @@
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "device_info.h"
@@ -475,7 +475,7 @@ void loop(void) {
     if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
                                 &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
-                encoded_len, 0);
+                encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode Aanderaa data message\n");
     }
@@ -536,7 +536,7 @@ static void spoof_aanderaa() {
     if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
                                 &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
-                encoded_len, 0);
+                encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode Aanderaa data message\n");
     }

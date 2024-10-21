@@ -7,7 +7,7 @@
 #include "bcmp_info.h"
 #include "bcmp_resource_discovery.h"
 #include "bcmp_topology.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
 #include "cobs.h"

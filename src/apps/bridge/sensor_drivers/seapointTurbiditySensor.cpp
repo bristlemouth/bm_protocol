@@ -2,7 +2,7 @@
 #include "app_config.h"
 #include "avgSampler.h"
 #include "bm_network.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_seapoint_turbidity_data_msg.h"
 #include "bridgeLog.h"
 #include "cbor.h"

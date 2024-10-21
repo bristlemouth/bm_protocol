@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "bm_service_request.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 
 #define BM_SERVICE_MAX_SERVICE_STRLEN (BM_TOPIC_MAX_LEN - 4) // 4 is from strlen(BM_SERVICE_REQ_STR)
 
