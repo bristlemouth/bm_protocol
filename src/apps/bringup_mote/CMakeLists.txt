@@ -16,14 +16,12 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/middleware/bm_service.cpp
     ${SRC_DIR}/lib/middleware/services/echo_service.cpp
     ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
     ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.cpp
-    ${SRC_DIR}/lib/middleware/middleware.cpp
 
     ${BCMP_FILES}
     )
@@ -105,10 +103,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/crc/crc16.c

@@ -7,7 +7,7 @@
 
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"

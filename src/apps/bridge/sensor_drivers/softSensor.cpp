@@ -2,7 +2,7 @@
 #include "app_config.h"
 #include "avgSampler.h"
 #include "bm_network.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_soft_data_msg.h"
 #include "bridgeLog.h"
 #include "device_info.h"
