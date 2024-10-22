@@ -44,7 +44,7 @@ void setup(void) {
   // Initializing
   sondeEXO3sSensor.init();
   sondeEXO3sSensor.sdi_wake(1000);
-  result = sondeEXO3sSensor.sdi_cmd("0!");
+//  result = sondeEXO3sSensor.sdi_cmd("0!");
   vTaskDelay(pdMS_TO_TICKS(5000));
 }
 

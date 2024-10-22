@@ -56,6 +56,4 @@ class SondeEXO3sSensor {
     static constexpr char LINE_TERM = '\n';
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     uint32_t _sensorBmLogEnable = 0;
-
-    char _payload_buffer[2048];
 };

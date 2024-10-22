@@ -70,7 +70,7 @@ void SondeEXO3sSensor::sdi_break(void) {
   LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + 9);
-  printf("sdi_break\n");
+//  printf("sdi_break\n");
   LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
   PLUART::enable();
 }
@@ -81,7 +81,7 @@ void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   sdi_break();
   PLUART::write((uint8_t *)ptr, strlen(ptr));
   PLUART::endTransaction(28); // OE disable, was 50, trying 28
-  printf("sdi_transmit_DONE\n");
+//  printf("sdi_transmit_DONE\n");
 }
 
 
@@ -94,22 +94,16 @@ char SondeEXO3sSensor::sdi_receive(void) {
 
   while (!PLUART::lineAvailable() && (uptimeGetMs() < timeStart + 200)){
     vTaskDelay(pdMS_TO_TICKS(5));
-    printf("stuck here\n");
+//    printf("stuck here\n");
   }
   if (PLUART::lineAvailable()){
     uint16_t len = PLUART::readLine(rxBuffer, sizeof(rxBuffer));
-    printf("found line \n");
+//    printf("found line \n");
+    for (int i =0; i < len; i++){
+      rxBuffer[i] = rxBuffer[i] & 0x7F;
+    }
     printf("sdi sonde | tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), len, rxBuffer);
   }
-//  while (PLUART::byteAvailable()) {
-//    uint8_t byte_read = PLUART::readByte();
-//    printf("byte: %c\n", (char)byte_read);
-//  }
-//  uint8_t byte_read = PLUART::readByte();
-//  printf("byte: %c\n", (char)byte_read);
-
-//  printf(PLUART::readByte());
-//  printf("sdi_receive_DONE\n");
   return 0;
 }
 
