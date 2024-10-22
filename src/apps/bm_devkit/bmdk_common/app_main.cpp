@@ -22,16 +22,19 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
+#include "config_cbor_map_service.h"
+#include "debug_bm_service.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_nvm_cli.h"
+#include "debug_pluart_cli.h"
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
-#include "debug_pluart_cli.h"
 #include "debug_w25.h"
+#include "echo_service.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
@@ -48,15 +51,12 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
+#include "sys_info_service.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
 #include "util.h"
 #include "w25.h"
 #include "watchdog.h"
-#include "debug_bm_service.h"
-#include "echo_service.h"
-#include "sys_info_service.h"
-#include "config_cbor_map_service.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -137,13 +137,12 @@ SerialHandle_t usbPcap = {
 };
 
 cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *systemConfigurationPartition = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
-extern "C" void USART3_IRQHandler(void) {
-  serialGenericUartIRQHandler(&usart3);
-}
+extern "C" void USART3_IRQHandler(void) { serialGenericUartIRQHandler(&usart3); }
 
 // Only needed if we want the debug commands too
 // extern MS5803 debugPressure;
@@ -383,6 +382,7 @@ static void defaultTask(void *parameters) {
   debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
+  systemConfigurationPartition = &debug_configuration_system;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
