@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "bm_service_request.h"
@@ -22,7 +23,7 @@ typedef bool (*BmServiceHandler)(size_t service_strlen,
                                     const char * service,
                                     size_t req_data_len,
                                     uint8_t * req_data,
-                                    size_t &buffer_len,
+                                    size_t * buffer_len,
                                     uint8_t * reply_data);
 
 void bm_service_init(void);

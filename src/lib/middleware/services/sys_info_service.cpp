@@ -16,7 +16,7 @@ static Configuration *_sys_config;
 #define SYS_INFO_SERVICE_SUFFIX "/sys_info"
 
 static bool sys_info_service_handler(size_t service_strlen, const char *service,
-                                   size_t req_data_len, uint8_t *req_data, size_t &buffer_len,
+                                   size_t req_data_len, uint8_t *req_data, size_t *buffer_len,
                                    uint8_t *reply_data);
 
 /*!
@@ -59,7 +59,7 @@ bool sys_info_service_request(uint64_t target_node_id, BmServiceReplyCb reply_cb
 }
 
 static bool sys_info_service_handler(size_t service_strlen, const char *service,
-                                   size_t req_data_len, uint8_t *req_data, size_t &buffer_len,
+                                   size_t req_data_len, uint8_t *req_data, size_t *buffer_len,
                                    uint8_t *reply_data) {
   (void)(req_data);
   bool rval = false;
@@ -80,11 +80,11 @@ static bool sys_info_service_handler(size_t service_strlen, const char *service,
     d.sys_config_crc = _sys_config->getCborEncodedConfigurationCrc32();
     size_t encoded_len;
     // Will return CborErrorOutOfMemory if buffer_len is too small
-    if(SysInfoSvcReplyMsg::encode(d, reply_data, buffer_len, &encoded_len) != CborNoError) {
+    if(SysInfoSvcReplyMsg::encode(d, reply_data, *buffer_len, &encoded_len) != CborNoError) {
       printf("Failed to encode sys info service reply\n");
       break;
     }
-    buffer_len = encoded_len; // Pass back the encoded length
+    *buffer_len = encoded_len; // Pass back the encoded length
     rval = true;
   } while (0);
 

@@ -8,8 +8,8 @@
 #include "device.h"
 #include "bm_service_common.h"
 
-static constexpr uint32_t DefaultServiceRequestTimeoutMs = 100;
-static constexpr uint32_t ExpiryTimerPeriodMs = 500;
+#define DefaultServiceRequestTimeoutMs 100
+#define ExpiryTimerPeriodMs 500
 
 typedef struct bm_service_request_node {
     char * service;

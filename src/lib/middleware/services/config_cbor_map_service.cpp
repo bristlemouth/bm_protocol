@@ -13,7 +13,7 @@ cfg::Configuration* _hw_config;
 cfg::Configuration* _usr_config;
 
 static bool config_map_service_handler(size_t service_strlen, const char *service,
-                                   size_t req_data_len, uint8_t *req_data, size_t &buffer_len,
+                                   size_t req_data_len, uint8_t *req_data, size_t *buffer_len,
                                    uint8_t *reply_data);
 
 void config_cbor_map_service_init(cfg::Configuration& hw_cfg, cfg::Configuration& sys_config, cfg::Configuration& user_config) {
@@ -58,7 +58,7 @@ bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition
 }
 
 static bool config_map_service_handler(size_t service_strlen, const char *service,
-                                   size_t req_data_len, uint8_t *req_data, size_t &buffer_len,
+                                   size_t req_data_len, uint8_t *req_data, size_t *buffer_len,
                                    uint8_t *reply_data) {
     (void) service_strlen;
     (void) service;
@@ -93,11 +93,11 @@ static bool config_map_service_handler(size_t service_strlen, const char *servic
         reply.cbor_encoded_map_len = (reply.cbor_data) ? buffer_size : 0;
         reply.success = (reply.cbor_data) ? true : false;
         size_t encoded_len;
-        if(ConfigCborMapSrvReplyMsg::encode(reply, reply_data, buffer_len, &encoded_len)!= CborNoError) {
+        if(ConfigCborMapSrvReplyMsg::encode(reply, reply_data, *buffer_len, &encoded_len)!= CborNoError) {
             printf("Failed to encode config map reply\n");
             break;
         }
-        buffer_len = encoded_len;
+        *buffer_len = encoded_len;
         rval = true;
     } while(0);
     if(cbor_map){

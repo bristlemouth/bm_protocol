@@ -4,25 +4,25 @@
 #include "string.h"
 #include "bm_service_common.h"
 
-static constexpr uint32_t DefaultServiceRequestTimeoutMs = 100;
+#define DefaultServiceRequestTimeoutMs 100
 
-typedef struct bm_service_list_elem {
+typedef struct BmServiceListElem {
     const char * service;
     size_t service_strlen;
     BmServiceHandler service_handler;
-    bm_service_list_elem * next;
-} bm_service_list_elem_t;
+    BmServiceListElem * next;
+} BmServiceListElem;
 
-typedef struct bm_service_context {
-    bm_service_list_elem_t * service_list;
+typedef struct BmServiceContext {
+    BmServiceListElem * service_list;
     BmSemaphore lock;
-} bm_service_context_t;
+} BmServiceContext;
 
-static bm_service_context_t _bm_service_context;
+static BmServiceContext BM_SERVICE_CONTEXT;
 
-static void _service_list_add_service(bm_service_list_elem_t * list_elem);
+static void _service_list_add_service(BmServiceListElem * list_elem);
 static bool _service_list_remove_service(const char * service, size_t service_strlen);
-static bm_service_list_elem_t* _service_create_list_elem(size_t service_strlen, const char * service, BmServiceHandler service_handler);
+static BmServiceListElem* _service_create_list_elem(size_t service_strlen, const char * service, BmServiceHandler service_handler);
 static bool _service_sub_unsub_to_req_topic(size_t service_strlen, const char * service, bool sub);
 static void _service_request_received_cb (uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version);
 
@@ -36,9 +36,9 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
 bool bm_service_register(size_t service_strlen, const char * service, BmServiceHandler service_handler) {
     bool rval = false;
     if (service && service_handler) {
-        if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
+        if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
             do {
-                bm_service_list_elem_t* list_elem =  _service_create_list_elem(service_strlen, service, service_handler);
+                BmServiceListElem* list_elem =  _service_create_list_elem(service_strlen, service, service_handler);
                 if(!list_elem) {
                     break;
                 }
@@ -48,7 +48,7 @@ bool bm_service_register(size_t service_strlen, const char * service, BmServiceH
                 }
                 rval = true;
             } while (0);
-            bm_semaphore_give(_bm_service_context.lock);
+            bm_semaphore_give(BM_SERVICE_CONTEXT.lock);
         }
     }
     return rval;
@@ -63,7 +63,7 @@ bool bm_service_register(size_t service_strlen, const char * service, BmServiceH
 bool bm_service_unregister(size_t service_strlen, const char * service) {
     bool rval = false;
     if (service) {
-        if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
+        if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
             do {
                 if(!_service_sub_unsub_to_req_topic(service_strlen, service, false)) {
                     break;
@@ -73,7 +73,7 @@ bool bm_service_unregister(size_t service_strlen, const char * service) {
                 }
                 rval = true;
             } while(0);
-            bm_semaphore_give(_bm_service_context.lock);
+            bm_semaphore_give(BM_SERVICE_CONTEXT.lock);
         }
     }
     return rval;
@@ -84,15 +84,15 @@ bool bm_service_unregister(size_t service_strlen, const char * service) {
  */
 void bm_service_init(void) {
     bm_service_request_init();
-    _bm_service_context.lock = bm_semaphore_create();
+    BM_SERVICE_CONTEXT.lock = bm_semaphore_create();
 }
 
-static void _service_list_add_service(bm_service_list_elem_t * list_elem) {
+static void _service_list_add_service(BmServiceListElem * list_elem) {
     if (list_elem) {
-        if (_bm_service_context.service_list == NULL) {
-            _bm_service_context.service_list = list_elem;
+        if (BM_SERVICE_CONTEXT.service_list == NULL) {
+            BM_SERVICE_CONTEXT.service_list = list_elem;
         } else {
-            bm_service_list_elem_t * current = _bm_service_context.service_list;
+            BmServiceListElem * current = BM_SERVICE_CONTEXT.service_list;
             while (current->next != NULL) {
                 current = current->next;
             }
@@ -101,8 +101,8 @@ static void _service_list_add_service(bm_service_list_elem_t * list_elem) {
     }
 }
 
-static bm_service_list_elem_t* _service_create_list_elem(size_t service_strlen, const char * service, BmServiceHandler service_handler) {
-    bm_service_list_elem_t * list_elem = (bm_service_list_elem_t*)(bm_malloc(sizeof(bm_service_list_elem_t)));
+static BmServiceListElem* _service_create_list_elem(size_t service_strlen, const char * service, BmServiceHandler service_handler) {
+    BmServiceListElem * list_elem = (BmServiceListElem*)(bm_malloc(sizeof(BmServiceListElem)));
     if (list_elem) {
         list_elem->service = service;
         list_elem->service_strlen = service_strlen;
@@ -143,8 +143,8 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
     (void) type;
     (void) version;
 
-    if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)){
-        bm_service_list_elem_t * current = _bm_service_context.service_list;
+    if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)){
+        BmServiceListElem * current = BM_SERVICE_CONTEXT.service_list;
         while (current != NULL) {
             if (strncmp(current->service, topic, current->service_strlen) == 0) {
                 bm_service_request_data_header_s * request_header = (bm_service_request_data_header_s*) data;
@@ -161,7 +161,7 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
                 uint8_t * reply_data = (uint8_t*)(bm_malloc(MAX_BM_SERVICE_DATA_SIZE));
                 bm_service_reply_data_header_s * reply_header = (bm_service_reply_data_header_s*) reply_data;
                 memset(reply_data,0, MAX_BM_SERVICE_DATA_SIZE);
-                if(current->service_handler(current->service_strlen, current->service, request_header->data_size, request_header->data, reply_len, reply_header->data)){
+                if(current->service_handler(current->service_strlen, current->service, request_header->data_size, request_header->data, &reply_len, reply_header->data)){
                     reply_header->target_node_id = node_id;
                     reply_header->id = request_header->id;
                     reply_header->data_size = reply_len; // On return from the handler, reply_len is now the actual size of the reply data
@@ -183,19 +183,19 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
             }
             current = current->next;
         }
-        bm_semaphore_give(_bm_service_context.lock);
+        bm_semaphore_give(BM_SERVICE_CONTEXT.lock);
     }
 }
 
 static bool _service_list_remove_service(const char * service, size_t service_strlen) {
     bool rval = false;
     if (service) {
-        bm_service_list_elem_t * current = _bm_service_context.service_list;
-        bm_service_list_elem_t * prev = NULL;
+        BmServiceListElem * current = BM_SERVICE_CONTEXT.service_list;
+        BmServiceListElem * prev = NULL;
         while (current != NULL) {
             if (strncmp(current->service, service, service_strlen) == 0) {
                 if (prev == NULL) {
-                    _bm_service_context.service_list = current->next;
+                    BM_SERVICE_CONTEXT.service_list = current->next;
                 } else {
                     prev->next = current->next;
                 }
