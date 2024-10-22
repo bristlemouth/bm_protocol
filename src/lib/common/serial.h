@@ -117,9 +117,6 @@ void startSerial();
 void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len);
 void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len);
 
-void serialSetTxLevel(SerialHandle_t *handle);
-void serialResetTxLevel(SerialHandle_t *handle);
-
 xQueueHandle serialGetTxQueue();
 
 #ifdef TRACE_SERIAL

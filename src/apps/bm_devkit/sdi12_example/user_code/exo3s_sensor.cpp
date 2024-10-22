@@ -59,19 +59,20 @@ void SondeEXO3sSensor::sdi_wake(int delay) {
 void SondeEXO3sSensor::sdi_break(void) {
   flush();
   unsigned long timeStart;
-//  PLUART::configTxPinOutput();
-  STM32Pin_t *pin = (STM32Pin_t *)(PLUART::uart_handle).txPin->pin;
+//  STM32Pin_t *pin = (STM32Pin_t *)(PLUART::uart_handle).txPin->pin;
   PLUART::disable();
-//  PLUART::setTxPinOutputLevel();
-  LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  PLUART::configTxPinOutput();
+  PLUART::setTxPinOutputLevel();
+//  LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + breakTimeMin);
-//  PLUART::resetTxPinOutputLevel();
-  LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  PLUART::resetTxPinOutputLevel();
+//  LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + 9);
 //  printf("sdi_break\n");
-  LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
+  PLUART::configTxPinAlternate();
+//  LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
   PLUART::enable();
 }
 

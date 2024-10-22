@@ -74,5 +74,7 @@ extern SerialHandle_t uart_handle;
 // Configuring TX as a GPIO
 void setTxPinOutputLevel(void);
 void resetTxPinOutputLevel(void);
+void configTxPinOutput(void);
+void configTxPinAlternate(void);
 
 } // namespace PLUART

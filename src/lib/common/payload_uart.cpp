@@ -2,6 +2,7 @@
 #include "bm_printf.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
+#include "stm32_io.h"
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
@@ -270,10 +271,31 @@ void setBaud(uint32_t new_baud_rate) {
 
 // Configuring TX as a GPIO
 void setTxPinOutputLevel(void) {
-  serialSetTxLevel(&uart_handle);
+  if(uart_handle.txPin) {
+    STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
+    LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  }
 }
+
 void resetTxPinOutputLevel(void){
-  serialResetTxLevel(&uart_handle);
+  if(uart_handle.txPin) {
+    STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
+    LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  }
+}
+
+void configTxPinOutput(void){
+  if(uart_handle.txPin) {
+    STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
+    LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_OUTPUT);
+  }
+}
+
+void configTxPinAlternate(void){
+  if(uart_handle.txPin) {
+    STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
+    LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
+  }
 }
 
 void enable(void) { serialEnable(&uart_handle); }
