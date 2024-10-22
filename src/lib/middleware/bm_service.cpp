@@ -36,7 +36,7 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
 bool bm_service_register(size_t service_strlen, const char * service, BmServiceHandler service_handler) {
     bool rval = false;
     if (service && service_handler) {
-        if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DEFAULT_SERVICE_REQUEST_TIMEOUT_MS) == pdPASS)) {
+        if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DEFAULT_SERVICE_REQUEST_TIMEOUT_MS) == BmOK)) {
             do {
                 bm_service_list_elem_t* list_elem =  _service_create_list_elem(service_strlen, service, service_handler);
                 if(!list_elem) {
@@ -63,7 +63,7 @@ bool bm_service_register(size_t service_strlen, const char * service, BmServiceH
 bool bm_service_unregister(size_t service_strlen, const char * service) {
     bool rval = false;
     if (service) {
-        if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DEFAULT_SERVICE_REQUEST_TIMEOUT_MS) == pdPASS)) {
+        if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DEFAULT_SERVICE_REQUEST_TIMEOUT_MS) == BmOK)) {
             do {
                 if(!_service_sub_unsub_to_req_topic(service_strlen, service, false)) {
                     break;
@@ -84,7 +84,7 @@ bool bm_service_unregister(size_t service_strlen, const char * service) {
  */
 void bm_service_init(void) {
     bm_service_request_init();
-    _bm_service_context.lock = xSemaphoreCreateMutex();
+    _bm_service_context.lock = bm_semaphore_create();
 }
 
 static void _service_list_add_service(bm_service_list_elem_t * list_elem) {
@@ -143,7 +143,7 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
     (void) type;
     (void) version;
 
-    if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DEFAULT_SERVICE_REQUEST_TIMEOUT_MS) == pdPASS)){
+    if(bm_semaphore_take(_bm_service_context.lock, bm_ms_to_ticks(DEFAULT_SERVICE_REQUEST_TIMEOUT_MS) == BmOK)){
         bm_service_list_elem_t * current = _bm_service_context.service_list;
         while (current != NULL) {
             if (strncmp(current->service, topic, current->service_strlen) == 0) {
