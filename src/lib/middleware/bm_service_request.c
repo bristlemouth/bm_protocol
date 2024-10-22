@@ -1,24 +1,27 @@
 #include "bm_service_request.h"
 
-#include "bm_os.h"
 #include "timer_callback_handler.h"
 #include "bm_pubsub.h"
 #include <string.h>
+#include "bm_service_common.h"
+
+// extern "C" {
 #include "util.h"
 #include "device.h"
-#include "bm_service_common.h"
+#include "bm_os.h"
+// }
 
 #define DefaultServiceRequestTimeoutMs 100
 #define ExpiryTimerPeriodMs 500
 
-typedef struct bm_service_request_node {
+typedef struct BmServiceRequestNode {
     char * service;
     size_t service_strlen;
     BmServiceReplyCb reply_cb;
     uint32_t timeout_ms;
     uint32_t request_start_ms;
     uint32_t id;
-    bm_service_request_node * next;
+    struct BmServiceRequestNode * next;
 } BmServiceRequestNode;
 
 typedef struct bm_service_request_context {
