@@ -30,7 +30,7 @@ void config_cbor_map_service_init(cfg::Configuration& hw_cfg, cfg::Configuration
   }
 }
 
-bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition_id, bm_service_reply_cb reply_cb, uint32_t timeout_s) { 
+bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition_id, BmServiceReplyCb reply_cb, uint32_t timeout_s) {
   bool rval = false;
   char *target_service_str = static_cast<char *>(pvPortMalloc(BM_SERVICE_MAX_SERVICE_STRLEN));
   configASSERT(target_service_str);

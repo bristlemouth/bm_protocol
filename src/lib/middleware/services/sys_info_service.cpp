@@ -42,7 +42,7 @@ void sys_info_service_init(Configuration &sys_config) {
  * @param[in] timeout_s The timeout in seconds.
  * @return True if the request was sent, false otherwise.
  */
-bool sys_info_service_request(uint64_t target_node_id, bm_service_reply_cb reply_cb,
+bool sys_info_service_request(uint64_t target_node_id, BmServiceReplyCb reply_cb,
                             uint32_t timeout_s) {
   bool rval = false;
   char *target_service_str = static_cast<char *>(pvPortMalloc(BM_SERVICE_MAX_SERVICE_STRLEN));
