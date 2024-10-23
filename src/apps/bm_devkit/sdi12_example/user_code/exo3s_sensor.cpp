@@ -99,6 +99,10 @@ bool SondeEXO3sSensor::sdi_receive(void) {
     for (int i =0; i < len; i++){
       rxBuffer[i] = rxBuffer[i] & 0x7F;
     }
+    rxBuffer[len] = '\0';
+//    for (int i = len; i < sizeof(rxBuffer);i++){
+//      rxBuffer[i] = '\0';
+//    }
     printf("sdi sonde | tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), len, rxBuffer);
     return true;
   }
@@ -125,6 +129,8 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       if(result) {
         printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
       }
+      /* Remove the command from the received str and
+       * save value of slave address */
       break;
     case 1:
       // 0I!
@@ -134,6 +140,8 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       if(result) {
         printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
       }
+      /* Remove the command from the received str and
+       * parse out the Identification strings */
       break;
     case 2:
       // send 2 - 0M!

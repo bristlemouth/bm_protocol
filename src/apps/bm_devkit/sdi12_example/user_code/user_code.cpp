@@ -51,9 +51,10 @@ void setup(void) {
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-//  sondeEXO3sSensor.sdi_cmd("0I!");
-  vTaskDelay(pdMS_TO_TICKS(3000));
+  sondeEXO3sSensor.inquire_cmd();
+  vTaskDelay(pdMS_TO_TICKS(2000));
   sondeEXO3sSensor.identify_cmd();
+  vTaskDelay(pdMS_TO_TICKS(2000));
 
 
   static bool led2State = false;
