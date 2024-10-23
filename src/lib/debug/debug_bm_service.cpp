@@ -27,7 +27,7 @@ static const CLI_Command_Definition_t cmdBmService = {
     "bmsrv:\n"
     " * bmsrv req <service> <data> <timeout s>\n"
     " * bmsrv req sysinfo <node id> <timeout s>\n"
-    " * bmsrv req cfgmap <node id> <1(hw)/2(sys)/3(usr)> <timeout s>\n",
+    " * bmsrv req cfgmap <node id> <1(sys)/2(hw)/3(usr)> <timeout s>\n",
     // Command function
     bmServiceCmd,
     // Number of parameters (variable)

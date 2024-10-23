@@ -42,7 +42,7 @@ bool Configuration::loadAndVerifyNvmConfig(void) {
 
 /*!
  * @brief Get the the entire cbor encoded Configuration CRC.
- * @note This differs from the ConfigPartition_t header.crc32,
+ * @note This differs from the ConfigPartition_t header.crc32, 
  * which is strictly used for partition validation.
  * @return The CRC32 of the entire cbor encoded Configuration.
  */
@@ -284,6 +284,8 @@ uint8_t *Configuration::asCborMap(size_t &buffer_size) {
   CborEncoder encoder;
   CborEncoder map;
   CborError err;
+  CborValue it;
+  CborParser parser;
   bool shouldRetry;
 
   do {
@@ -302,50 +304,81 @@ uint8_t *Configuration::asCborMap(size_t &buffer_size) {
       }
 
       bool internalSuccess = true;
+      tmpBSize = MAX_STR_LEN_BYTES;
+      memset(tmpB, 0, MAX_STR_LEN_BYTES);
+      if (getConfigCbor(key.keyBuffer, key.keyLen, tmpB, tmpBSize) &&
+              cbor_parser_init(tmpB, tmpBSize, 0, &parser, &it) !=
+          CborNoError) {
+        break;
+      }
+      if (!cbor_value_is_valid(&it)) {
+        break;
+      }
+
       switch (key.valueType) {
-      case UINT32:
-        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpU);
+      case UINT32: {
+        uint64_t temp;
+        internalSuccess = (cbor_value_get_uint64(&it, &temp) == CborNoError);
         if (internalSuccess) {
+          tmpU = (uint32_t)temp;
           err = cbor_encode_uint(&map, tmpU);
         }
-        break;
-      case INT32:
-        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpI);
+       }
+      break;
+      case INT32: {
+        int64_t temp;
+        internalSuccess = (cbor_value_get_int64(&it, &temp) == CborNoError);
         if (internalSuccess) {
+          tmpI = (int32_t)temp;
           err = cbor_encode_int(&map, tmpI);
         }
-        break;
-      case FLOAT:
-        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpF);
+      }
+      break;
+      case FLOAT: {
+        internalSuccess = (cbor_value_get_float(&it, &tmpF) == CborNoError);
         if (internalSuccess) {
           err = cbor_encode_float(&map, tmpF);
         }
-        break;
-      case STR:
+      }
+      break;
+      case STR: {
         tmpSSize = MAX_STR_LEN_BYTES;
         memset(tmpS, 0, MAX_STR_LEN_BYTES);
-        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpS, tmpSSize);
-        if (internalSuccess) {
+        do {
+          if (cbor_value_copy_text_string(&it, tmpS, &tmpSSize, NULL) !=
+              CborNoError) {
+            break;
+          }
+          if (tmpSSize >= MAX_CONFIG_BUFFER_SIZE_BYTES) {
+            break;
+          }
+          tmpS[tmpSSize] = '\0';
           err = cbor_encode_text_string(&map, tmpS, tmpSSize);
-        }
-        break;
-      case BYTES:
-        tmpBSize = MAX_STR_LEN_BYTES;
-        memset(tmpB, 0, MAX_STR_LEN_BYTES);
-        internalSuccess = getConfig(key.keyBuffer, key.keyLen, tmpB, tmpBSize);
-        if (internalSuccess) {
-          err = cbor_encode_byte_string(&map, tmpB, tmpBSize);
-        }
-        break;
-      case ARRAY:
-        tmpBSize = MAX_STR_LEN_BYTES;
-        memset(tmpB, 0, MAX_STR_LEN_BYTES);
-        internalSuccess = getConfigCbor(key.keyBuffer, key.keyLen, tmpB, tmpBSize);
-        if (internalSuccess) {
+        } while (0);
+      }
+      break;
+      case BYTES: {
+        tmpSSize = MAX_STR_LEN_BYTES;
+        memset(tmpS, 0, MAX_STR_LEN_BYTES);
+        do {
+          if (cbor_value_copy_byte_string(&it, (uint8_t *)tmpS, &tmpSSize, NULL) !=
+              CborNoError) {
+            break;
+          }
+          if (tmpSSize >= MAX_CONFIG_BUFFER_SIZE_BYTES) {
+            break;
+          }
+          err = cbor_encode_byte_string(&map, (uint8_t *)tmpS, tmpSSize);
+        } while (0);
+      }
+      break;
+      case ARRAY: {
+        if (internalSuccess && map.data.ptr + tmpBSize < map.end) {
             memcpy(map.data.ptr, tmpB, tmpBSize);
             map.data.ptr += tmpBSize;
         }
         break;
+      }
       }
 
       if (!internalSuccess || (err != CborNoError && err != CborErrorOutOfMemory)) {
