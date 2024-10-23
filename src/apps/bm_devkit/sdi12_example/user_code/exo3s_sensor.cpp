@@ -80,7 +80,6 @@ void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   // TX enable
   PLUART::startTransaction();
   sdi_break_mark();
-  printf("TX data: %s\n", ptr);
   PLUART::write((uint8_t *)ptr, strlen(ptr));
   // TX disable
   PLUART::endTransaction(100); // 50,28 ms to release/get some mutex/semaphore????
@@ -111,13 +110,6 @@ bool SondeEXO3sSensor::sdi_receive(void) {
 
 void SondeEXO3sSensor::sdi_cmd(int cmd) {
   char result = sdiSuccess;
-//  const char *cmd;
-//  sdi_transmit(cmd);
-//  result = sdi_receive();
-//  if(result) {
-//    printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
-//  }
-//  return result;
 
   switch (cmd) {
     case 0:
@@ -163,9 +155,9 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       sdi_transmit("0M!");
       result = sdi_receive();
       if(result) {
-        printf("received 0M data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
         delay = abs((rxBuffer[5] - '0') *10 + (rxBuffer[6] - '0'));
-        printf("delay %d\n", delay);
+        printf("wait %d seconds for measurement to complete\n", delay);
       }
       /* 00629
        * Measure command
@@ -178,43 +170,27 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       vTaskDelay(pdMS_TO_TICKS(delay*1000)); //62 seconds delay
       result = sdi_receive();
       if(result) {
-        printf("ack?: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("ack: %.*s\n", sizeof(rxBuffer), rxBuffer);
       }
       vTaskDelay(pdMS_TO_TICKS(1000));
       sdi_transmit("0D0!");
       result = sdi_receive();
       if(result) {
-        printf("received 0D0 data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
       }
       vTaskDelay(pdMS_TO_TICKS(100));
       sdi_transmit("0D1!");
       result = sdi_receive();
       if(result) {
-        printf("received 0D1 data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
       }
       vTaskDelay(pdMS_TO_TICKS(100));
       sdi_transmit("0D2!");
       result = sdi_receive();
       if(result) {
-        printf("received 0D2 data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
       }
-//      sdi_transmit("0M!");
-//      result = sdi_receive();
-//      if(result) {
-//        printf("received 0M data: %.*s\n", sizeof(rxBuffer), rxBuffer);
-//      }
-//      vTaskDelay(pdMS_TO_TICKS(62000)); //62 seconds delay
-//      result = sdi_receive();
-//      if(result) {
-//        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
-//      }
-//      sdi_transmit("0D0!");
-//      result = sdi_receive();
-//      if(result) {
-//        printf("received 0D0 (2) data: %.*s\n", sizeof(rxBuffer), rxBuffer);
-//      }
       break;
-  
   }
 }
 
