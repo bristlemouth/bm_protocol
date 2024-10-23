@@ -21,8 +21,8 @@ static bool config_map_service_handler(size_t service_strlen, const char *servic
   BmConfigPartition config;
   printf("Data received on config map service\n");
   do {
-    ConfigCborMapSrvRequestMsg::Data req;
-    if (ConfigCborMapSrvRequestMsg::decode(req, req_data, req_data_len) != CborNoError) {
+    ConfigCborMapRequestData req;
+    if (config_cbor_map_request_decode(&req, req_data, req_data_len) != CborNoError) {
       printf("Failed to decode config map request\n");
       break;
     }
@@ -40,14 +40,14 @@ static bool config_map_service_handler(size_t service_strlen, const char *servic
     if (config != (BmConfigPartition)0xFF) {
       cbor_map = services_cbor_as_map(&buffer_size, config);
     }
-    ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+    ConfigCborMapReplyData reply = {0, 0, 0, 0, NULL};
     reply.node_id = node_id();
     reply.partition_id = req.partition_id;
     reply.cbor_data = cbor_map;
     reply.cbor_encoded_map_len = (reply.cbor_data) ? buffer_size : 0;
     reply.success = (reply.cbor_data) ? true : false;
     size_t encoded_len;
-    if (ConfigCborMapSrvReplyMsg::encode(reply, reply_data, buffer_len, &encoded_len) !=
+    if (config_cbor_map_reply_encode(&reply, reply_data, buffer_len, &encoded_len) !=
         CborNoError) {
       printf("Failed to encode config map reply\n");
       break;
@@ -80,13 +80,13 @@ bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition
     size_t target_service_strlen =
         snprintf(target_service_str, BM_SERVICE_MAX_SERVICE_STRLEN, "%016" PRIx64 "%s",
                  target_node_id, config_map_suffix);
-    ConfigCborMapSrvRequestMsg::Data req = {partition_id};
+    ConfigCborMapRequestData req = {partition_id};
     static const size_t cbor_buflen =
-        sizeof(ConfigCborMapSrvRequestMsg::Data) + 25; // Arbitrary padding.
+        sizeof(ConfigCborMapRequestData) + 25; // Arbitrary padding.
     uint8_t *cbor_buffer = (uint8_t *)bm_malloc(cbor_buflen);
     if (cbor_buffer) {
       size_t req_data_len;
-      if (ConfigCborMapSrvRequestMsg::encode(req, cbor_buffer, cbor_buflen, &req_data_len) !=
+      if (config_cbor_map_request_encode(&req, cbor_buffer, cbor_buflen, &req_data_len) !=
           CborNoError) {
         printf("Failed to encode config map request\n");
       } else if (target_service_strlen > 0) {

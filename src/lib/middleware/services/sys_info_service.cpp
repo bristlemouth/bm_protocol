@@ -1,15 +1,15 @@
 #include "sys_info_service.h"
+extern "C" {
+#include "bm_os.h"
+#include "cbor_service_helper.h"
+#include "device.h"
+}
 #include "bm_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-extern "C" {
-#include "bm_os.h"
-#include "cbor_service_helper.h"
-#include "device.h"
-}
 
 #define sys_info_service_suffix "/sys_info"
 
@@ -70,15 +70,15 @@ static bool sys_info_service_handler(size_t service_strlen, const char *service,
 #ifndef APP_NAME
 #error "APP_NAME must be defined"
 #endif // APP_NAME
-    SysInfoSvcReplyMsg::Data d;
-    d.app_name = (char *)APP_NAME;
+    SysInfoReplyData d;
+    d.app_name = const_cast<char *>(APP_NAME);
     d.app_name_strlen = strlen(APP_NAME);
     d.git_sha = git_sha();
     d.node_id = node_id();
     d.sys_config_crc = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM);
     size_t encoded_len;
     // Will return CborErrorOutOfMemory if buffer_len is too small
-    if (SysInfoSvcReplyMsg::encode(d, reply_data, buffer_len, &encoded_len) != CborNoError) {
+    if (sys_info_reply_encode(&d, reply_data, buffer_len, &encoded_len) != CborNoError) {
       printf("Failed to encode sys info service reply\n");
       break;
     }

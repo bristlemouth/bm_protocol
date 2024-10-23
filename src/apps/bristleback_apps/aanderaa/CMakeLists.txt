@@ -61,9 +61,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/sensorWatchdog.cpp
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/timer_callback_handler.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.c
+    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.c
+    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.c
     ${SRC_DIR}/lib/bm_common_messages/aanderaa_data_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/sensor_header_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
