@@ -17,7 +17,6 @@
 
 #include "app_pub_sub.h"
 #include "app_util.h"
-#include "pubsub.h"
 #include "bristlefin.h"
 #include "bristlemouth.h"
 #include "bsp.h"
@@ -44,6 +43,7 @@
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "sensorSampler.h"
 #include "sensors.h"
@@ -403,9 +403,8 @@ static void defaultTask(void *parameters) {
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
   echo_service_init();
-  sys_info_service_init(debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  config_cbor_map_service_init();
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
