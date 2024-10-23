@@ -17,7 +17,7 @@
 
 #include "app_pub_sub.h"
 #include "l2.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bristlefin.h"
 #include "bristlemouth.h"
 #include "bsp.h"

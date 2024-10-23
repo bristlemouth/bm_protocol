@@ -3,10 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "bcmp.h"
 #include "bm_printf.h"
+#include "bm_common_pub_sub.h"
 
 #define MAX_FILE_NAME_LEN 64
-#define MAX_STR_LEN(fname_len) (int32_t)(1500 - sizeof(struct ip6_hdr) - sizeof(bm_print_publication_t) - fname_len)
+#define MAX_STR_LEN(fname_len) (int32_t)(max_payload_len - sizeof(bm_print_publication_t) - fname_len)
 static constexpr uint8_t fprintfType = 1;
 static constexpr uint8_t printfType = 1;
 static constexpr uint8_t fappendType = 1;
@@ -72,11 +74,11 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char* file_name,
     }
 
     if (file_name) {
-      if (!bm_pub("spotter/fprintf", printf_pub, printf_pub_len, fprintfType)) {
+      if (!bm_pub("spotter/fprintf", printf_pub, printf_pub_len, fprintfType, BM_COMMON_PUB_SUB_VERSION)) {
         rval = BM_PRINTF_TX_ERR;
       }
     } else {
-      if (!bm_pub("spotter/printf", printf_pub, printf_pub_len, printfType)) {
+      if (!bm_pub("spotter/printf", printf_pub, printf_pub_len, printfType,BM_COMMON_PUB_SUB_VERSION )) {
         rval = BM_PRINTF_TX_ERR;
       }
     }
@@ -117,7 +119,7 @@ bm_printf_err_t bm_file_append(uint64_t target_node_id, const char* file_name, c
   memcpy(file_append_pub->fnameAndData, file_name, fname_len);
   memcpy(&file_append_pub->fnameAndData[fname_len], buff, len);
 
-  bm_pub("fappend", file_append_pub, file_append_pub_len, fappendType);
+  bm_pub("fappend", file_append_pub, file_append_pub_len, fappendType, BM_COMMON_PUB_SUB_VERSION);
 
   vPortFree(file_append_pub);
 

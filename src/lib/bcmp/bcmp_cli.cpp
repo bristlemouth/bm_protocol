@@ -13,7 +13,7 @@
 using namespace cfg;
 
 #include "app_util.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "bm_util.h"
 #include "messages.h"
 extern "C" {

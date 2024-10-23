@@ -7,7 +7,7 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
 #include "lwip/inet.h"
 #include "bm_network.h"
 #include "usart.h"

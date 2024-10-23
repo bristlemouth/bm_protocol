@@ -17,7 +17,6 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
     ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/middleware/bm_service.cpp
     ${SRC_DIR}/lib/middleware/services/echo_service.cpp

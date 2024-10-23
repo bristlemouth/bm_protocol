@@ -13,10 +13,11 @@ extern "C" {
 #include "bm_ip.h"
 #include "device.h"
 #include "eth_adin2111.h"
+#include "middleware.h"
 }
 #include "bcmp_cli.h"
+#include "bm_service.h"
 
-#include "middleware.h"
 #include "task_priorities.h"
 
 #include "bm_config.h"
@@ -92,7 +93,9 @@ void bcl_init(void) {
 
   bcmp_cli_init();
 
-  bm_middleware_init(&netif, BM_MIDDLEWARE_PORT);
+  // TODO: move this init to middle_ware init once services have been ported
+  bm_service_init();
+  bm_middleware_init(BM_MIDDLEWARE_PORT);
 
 #ifdef STRESS_TEST_ENABLE
   stress_test_init(&netif, STRESS_TEST_PORT);
