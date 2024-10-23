@@ -44,16 +44,16 @@ void setup(void) {
   // Initializing
   sondeEXO3sSensor.init();
   sondeEXO3sSensor.sdi_wake(1000);
-//  sondeEXO3sSensor.sdi_cmd("0I!");
-
+  sondeEXO3sSensor.inquire_cmd();
+  sondeEXO3sSensor.identify_cmd();
   vTaskDelay(pdMS_TO_TICKS(5000));
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-  sondeEXO3sSensor.inquire_cmd();
-  vTaskDelay(pdMS_TO_TICKS(2000));
-  sondeEXO3sSensor.identify_cmd();
+//  sondeEXO3sSensor.inquire_cmd();
+//  vTaskDelay(pdMS_TO_TICKS(2000));
+  sondeEXO3sSensor.measure_cmd();
   vTaskDelay(pdMS_TO_TICKS(2000));
 
 

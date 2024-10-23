@@ -53,6 +53,10 @@ class SondeEXO3sSensor {
     bool sdi_receive();
 //    void sdi_cmd(const char*);
     void sdi_cmd(int);
+    void clear_buffer(int);
+    int sdi_version = 0;
+    int m =1;
+    int receive_timeout = 900;
     static constexpr uint32_t BAUD_RATE = 1200;
     static constexpr char LINE_TERM = '\n';
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";

@@ -42,6 +42,7 @@ void SondeEXO3sSensor::init() {
   // endTransactions - sdi12Rx (disable TX by setting OE HIGH)
   PLUART::enableTransactions(Bristlefin::sdi12Tx, Bristlefin::sdi12Rx);
   PLUART::enable();
+  clear_buffer(0);
 }
 
 void SondeEXO3sSensor::sdi_wake(int delay) {
@@ -79,31 +80,29 @@ void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   // TX enable
   PLUART::startTransaction();
   sdi_break_mark();
+  printf("TX data: %s\n", ptr);
   PLUART::write((uint8_t *)ptr, strlen(ptr));
   // TX disable
-  PLUART::endTransaction(28); // 28 ms to release/get some mutex/semaphore????
+  PLUART::endTransaction(100); // 50,28 ms to release/get some mutex/semaphore????
 }
 
 
 
 bool SondeEXO3sSensor::sdi_receive(void) {
   uint64_t timeStart = uptimeGetMs();
-
-  while (!PLUART::lineAvailable() && (uptimeGetMs() < timeStart + 200)){
+//  clear_buffer(0);
+  memset(rxBuffer, 0, sizeof(rxBuffer));
+  while (!PLUART::lineAvailable() && (uptimeGetMs() < timeStart + receive_timeout)){
     vTaskDelay(pdMS_TO_TICKS(5));
 //    printf("stuck here\n");
   }
   if (PLUART::lineAvailable()){
     uint16_t len = PLUART::readLine(rxBuffer, sizeof(rxBuffer));
-//    printf("found line \n");
     for (int i =0; i < len; i++){
       rxBuffer[i] = rxBuffer[i] & 0x7F;
     }
-    rxBuffer[len] = '\0';
-//    for (int i = len; i < sizeof(rxBuffer);i++){
-//      rxBuffer[i] = '\0';
-//    }
-    printf("sdi sonde | tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), len, rxBuffer);
+//    clear_buffer((int)len);
+//    printf("sdi sonde | tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), len, rxBuffer);
     return true;
   }
   return false;
@@ -123,14 +122,14 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
   switch (cmd) {
     case 0:
       //0! or ?!
-      printf("Inquiry command \n");
-      sdi_transmit("0!");
+      printf("Inquire Sensor Address \n");
+      sdi_transmit("?!");
       result = sdi_receive();
+      slaveID = rxBuffer[2] - '0';
       if(result) {
-        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+//        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("Sensor Address: %d\n", slaveID);
       }
-      /* Remove the command from the received str and
-       * save value of slave address */
       break;
     case 1:
       // 0I!
@@ -140,20 +139,79 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       if(result) {
         printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
       }
-      /* Remove the command from the received str and
-       * parse out the Identification strings */
+      /* 013YSIIWQSGEXOSND100
+       * Identification
+       * 0 sdi-12 sensor address
+       * 13 sdi-12 version number
+       * YSIIWQSG vendor identification
+       * EXOSND sensor model
+       * 100 sensor version*/
+//      sdi_version = (rxBuffer[3] << 8 | rxBuffer[4]);
+//      printf("sdi_version: %d\n", sdi_version);
+
       break;
     case 2:
       // send 2 - 0M!
+      // wait 62 seconds
       // send 3 - 0D0!
       // send 4 - 0D1!
       // send 5 - 0D2!
       // send 6 - 0D3!
+      int delay = 10;
       printf("Measurement and Data commands \n");
-//      sdi_transmit("0I!");
+
+      sdi_transmit("0M!");
+      result = sdi_receive();
+      if(result) {
+        printf("received 0M data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        delay = abs((rxBuffer[5] - '0') *10 + (rxBuffer[6] - '0'));
+        printf("delay %d\n", delay);
+      }
+      /* 00629
+       * Measure command
+       * 0 sdi-12 sensor address
+       * 062 time is seconds until data available
+       * 9 number of values to expect
+       * after 62 seconds, 0 will be rxd to indicate measurement is done */
+
+
+      vTaskDelay(pdMS_TO_TICKS(delay*1000)); //62 seconds delay
+      result = sdi_receive();
+      if(result) {
+        printf("ack?: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      }
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      sdi_transmit("0D0!");
+      result = sdi_receive();
+      if(result) {
+        printf("received 0D0 data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      }
+      vTaskDelay(pdMS_TO_TICKS(100));
+      sdi_transmit("0D1!");
+      result = sdi_receive();
+      if(result) {
+        printf("received 0D1 data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      }
+      vTaskDelay(pdMS_TO_TICKS(100));
+      sdi_transmit("0D2!");
+      result = sdi_receive();
+      if(result) {
+        printf("received 0D2 data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      }
+//      sdi_transmit("0M!");
+//      result = sdi_receive();
+//      if(result) {
+//        printf("received 0M data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+//      }
+//      vTaskDelay(pdMS_TO_TICKS(62000)); //62 seconds delay
 //      result = sdi_receive();
 //      if(result) {
 //        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+//      }
+//      sdi_transmit("0D0!");
+//      result = sdi_receive();
+//      if(result) {
+//        printf("received 0D0 (2) data: %.*s\n", sizeof(rxBuffer), rxBuffer);
 //      }
       break;
   
@@ -171,14 +229,15 @@ void SondeEXO3sSensor::identify_cmd(void){
 }
 
 void SondeEXO3sSensor::measure_cmd(void){
-  sdi_cmd(2);
   // send 2 - 0M!
-  // send 3 - 0D0!
-  // send 4 - 0D1!
-  // send 5 - 0D2!
-  // send 6 - 0D3!
+  sdi_cmd(2);
 }
 
+void SondeEXO3sSensor::clear_buffer(int len) {
+  for (int i =len; i < sizeBuffer; i++){
+    rxBuffer[i] = '\0';
+  }
+}
 
 /**
  * @brief Flushes the data from the sensor driver.
