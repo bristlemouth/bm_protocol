@@ -44,18 +44,17 @@ void setup(void) {
   // Initializing
   sondeEXO3sSensor.init();
   sondeEXO3sSensor.sdi_wake(1000);
-//  result = sondeEXO3sSensor.sdi_cmd("0!");
+//  sondeEXO3sSensor.sdi_cmd("0I!");
+
   vTaskDelay(pdMS_TO_TICKS(5000));
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-//  sondeEXO3sSensor.sdi_wake(1000);
-  //  Serial.println("Asking for the identity of the probe");
-  result = sondeEXO3sSensor.sdi_cmd("0I!");
-
-
+//  sondeEXO3sSensor.sdi_cmd("0I!");
   vTaskDelay(pdMS_TO_TICKS(3000));
+  sondeEXO3sSensor.identify_cmd();
+
 
   static bool led2State = false;
   /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.

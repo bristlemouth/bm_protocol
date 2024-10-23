@@ -24,12 +24,14 @@ class SondeEXO3sSensor {
 //        : _parser(",", 256, PARSER_VALUE_TYPE, 2){};
     void init();
     void flush(void);
-    void idle(void (*)());
-    void setDebug(bool);
-    char sdi_cmd(const char*);
     void sdi_wake(int);
     void sdi_sleep(void);
+    void inquire_cmd(void);
+    void identify_cmd(void);
+    void measure_cmd(void);
+    void data_cmd(int);
     static constexpr char SONDE_EXO3S_RAW_LOG[] = "sonde_exo3s_raw.log";
+
 
     // Variables
     char slaveID = 0;
@@ -46,13 +48,12 @@ class SondeEXO3sSensor {
 
 
   private:
-    void sdi_break();
-    void sdi_mark();
+    void sdi_break_mark();
     void sdi_transmit(const char*);
-    char sdi_receive();
-    uint8_t invertData(uint8_t);
+    bool sdi_receive();
+//    void sdi_cmd(const char*);
+    void sdi_cmd(int);
     static constexpr uint32_t BAUD_RATE = 1200;
-    // incoming SDI12 frames end with CRLF - \r\n
     static constexpr char LINE_TERM = '\n';
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     uint32_t _sensorBmLogEnable = 0;

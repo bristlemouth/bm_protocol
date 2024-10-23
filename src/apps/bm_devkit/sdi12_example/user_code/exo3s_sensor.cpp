@@ -19,31 +19,27 @@
 #include "util.h"
 #include "exo3s_sensor.h"
 #include "bristlefin.h"
-
 #include "stm32_io.h"
 
 
 void SondeEXO3sSensor::init() {
-  printf("Sonde Init");
-//  configASSERT(systemConfigurationPartition);
-//  _parser.init();
-//  systemConfigurationPartition->getConfig(SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
-//                                          _sensorBmLogEnable);
-//  printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
-
+  printf("SDI-12 Initialization");
   PLUART::init(USER_TASK_PRIORITY);
-  PLUART::setBaud(1200);
+  PLUART::setBaud(BAUD_RATE);
   PLUART::setUseByteStreamBuffer(false);
   PLUART::setUseLineBuffer(true);
 
   /* Unable to set the parity, data width and tx inversion from this function yet
    * Changing this in the MX_LPUART1_UART_Init() in usart.c
-   * Can set it here after the bug fix, hopefully */
+   * Can set it here after the bug fix, hopefully
 //  PLUART::setEvenParity();
 //  PLUART::set7bitDatawidth();
 //  PLUART::enableDataInversion();
+   */
 
   PLUART::setTerminationCharacter(LINE_TERM);
+  // startTransactions - sdi12Tx (enable TX by setting OE LOW)
+  // endTransactions - sdi12Rx (disable TX by setting OE HIGH)
   PLUART::enableTransactions(Bristlefin::sdi12Tx, Bristlefin::sdi12Rx);
   PLUART::enable();
 }
@@ -56,41 +52,41 @@ void SondeEXO3sSensor::sdi_wake(int delay) {
 }
 
 
-void SondeEXO3sSensor::sdi_break(void) {
+void SondeEXO3sSensor::sdi_break_mark(void) {
   flush();
   unsigned long timeStart;
-//  STM32Pin_t *pin = (STM32Pin_t *)(PLUART::uart_handle).txPin->pin;
   PLUART::disable();
+  //Set TX pin to output
   PLUART::configTxPinOutput();
+  // HIGH at TX pin
   PLUART::setTxPinOutputLevel();
-//  LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  // Break - hold HIGH for 12 ms
   timeStart = uptimeGetMs();
   while(uptimeGetMs() < timeStart + breakTimeMin);
+  // LOW at TX pin
   PLUART::resetTxPinOutputLevel();
-//  LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
+  // Mark - gold LOW for 9 ms
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() < timeStart + 9);
-//  printf("sdi_break\n");
+  while(uptimeGetMs() < timeStart + markTimeMin);
+  // Set TX pin back to TX (alternate) mode
   PLUART::configTxPinAlternate();
-//  LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
+  // Re-enable UART
   PLUART::enable();
 }
 
 
 void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
+  // TX enable
   PLUART::startTransaction();
-  sdi_break();
+  sdi_break_mark();
   PLUART::write((uint8_t *)ptr, strlen(ptr));
-  PLUART::endTransaction(28); // OE disable, was 50, trying 28
-//  printf("sdi_transmit_DONE\n");
+  // TX disable
+  PLUART::endTransaction(28); // 28 ms to release/get some mutex/semaphore????
 }
 
 
 
-char SondeEXO3sSensor::sdi_receive(void) {
-
-//  char payload_buffer[256];
-//  vTaskDelay(pdMS_TO_TICKS(10));
+bool SondeEXO3sSensor::sdi_receive(void) {
   uint64_t timeStart = uptimeGetMs();
 
   while (!PLUART::lineAvailable() && (uptimeGetMs() < timeStart + 200)){
@@ -104,27 +100,77 @@ char SondeEXO3sSensor::sdi_receive(void) {
       rxBuffer[i] = rxBuffer[i] & 0x7F;
     }
     printf("sdi sonde | tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), len, rxBuffer);
+    return true;
   }
-  return 0;
+  return false;
 }
 
-char SondeEXO3sSensor::sdi_cmd(const char *cmd) {
-//  char index,cnt,i;
-//  char* ptr;
-//  char* xptr;
-//  float fvalue[5];
+
+void SondeEXO3sSensor::sdi_cmd(int cmd) {
   char result = sdiSuccess;
-  sdi_transmit(cmd);
-  result = sdi_receive();
+//  const char *cmd;
+//  sdi_transmit(cmd);
+//  result = sdi_receive();
+//  if(result) {
+//    printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+//  }
+//  return result;
 
-  return result;
+  switch (cmd) {
+    case 0:
+      //0! or ?!
+      printf("Inquiry command \n");
+      sdi_transmit("0!");
+      result = sdi_receive();
+      if(result) {
+        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      }
+      break;
+    case 1:
+      // 0I!
+      printf("Identification command \n");
+      sdi_transmit("0I!");
+      result = sdi_receive();
+      if(result) {
+        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      }
+      break;
+    case 2:
+      // send 2 - 0M!
+      // send 3 - 0D0!
+      // send 4 - 0D1!
+      // send 5 - 0D2!
+      // send 6 - 0D3!
+      printf("Measurement and Data commands \n");
+//      sdi_transmit("0I!");
+//      result = sdi_receive();
+//      if(result) {
+//        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+//      }
+      break;
+  
+  }
 }
 
+void SondeEXO3sSensor::inquire_cmd(void){
+ // send 0 - 0! or ?!
+ sdi_cmd(0);
+}
 
-//bool SondeEXO3sSensor::readData(char *buffer) {
-//  buffer = 0;
-//  return false;
-//}
+void SondeEXO3sSensor::identify_cmd(void){
+ // send 1 - 0I!
+ sdi_cmd(1);
+}
+
+void SondeEXO3sSensor::measure_cmd(void){
+  sdi_cmd(2);
+  // send 2 - 0M!
+  // send 3 - 0D0!
+  // send 4 - 0D1!
+  // send 5 - 0D2!
+  // send 6 - 0D3!
+}
+
 
 /**
  * @brief Flushes the data from the sensor driver.
