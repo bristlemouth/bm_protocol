@@ -21,7 +21,11 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
+extern "C" {
 #include "config_cbor_map_service.h"
+#include "echo_service.h"
+#include "sys_info_service.h"
+}
 #include "debug_bm_service.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
@@ -33,7 +37,6 @@
 #include "debug_spotter.h"
 #include "debug_sys.h"
 #include "debug_w25.h"
-#include "echo_service.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
@@ -51,7 +54,6 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
-#include "sys_info_service.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
 #include "w25.h"

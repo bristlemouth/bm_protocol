@@ -1,7 +1,7 @@
 #include "bm_service.h"
 #include "FreeRTOS.h"
-#include "pubsub.h"
 #include "bm_service_common.h"
+#include "pubsub.h"
 #include "semphr.h"
 #include "string.h"
 #include <stdio.h>
@@ -179,8 +179,8 @@ static void _service_request_received_cb(uint64_t node_id, const char *topic,
             (bm_service_reply_data_header_s *)reply_data;
         memset(reply_data, 0, MAX_BM_SERVICE_DATA_SIZE);
         if (current->service_handler(current->service_strlen, current->service,
-                                     request_header->data_size, request_header->data, reply_len,
-                                     reply_header->data)) {
+                                     request_header->data_size, request_header->data,
+                                     &reply_len, reply_header->data)) {
           reply_header->target_node_id = node_id;
           reply_header->id = request_header->id;
           reply_header->data_size =

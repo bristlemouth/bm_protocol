@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "bm_service_request.h"
 #include "pubsub.h"
@@ -18,11 +19,11 @@
  * @param[out] reply_data The reply data buffer to be filled in.
  * @return True if the request was handled, false otherwise.
  */
-typedef bool (*bm_service_handler)(size_t service_strlen, 
-                                    const char * service, 
-                                    size_t req_data_len, 
+typedef bool (*bm_service_handler)(size_t service_strlen,
+                                    const char * service,
+                                    size_t req_data_len,
                                     uint8_t * req_data,
-                                    size_t &buffer_len,
+                                    size_t *buffer_len,
                                     uint8_t * reply_data);
 
 void bm_service_init(void);
