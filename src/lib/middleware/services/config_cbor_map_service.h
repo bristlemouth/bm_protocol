@@ -1,7 +1,10 @@
 #pragma once
 
-#include "bm_service_request.h"
 #include "configuration.h"
+
+extern "C" {
+#include "bm_service_request.h"
+}
 
 constexpr uint32_t CONFIG_CBOR_MAP_PARTITION_ID_SYS = 1;
 constexpr uint32_t CONFIG_CBOR_MAP_PARTITION_ID_HW = 2;

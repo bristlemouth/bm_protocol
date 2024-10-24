@@ -1,7 +1,8 @@
 #include "bm_service_request.h"
 
 #include "timer_callback_handler.h"
-#include "bm_pubsub.h"
+#include "pubsub.h"
+#include <inttypes.h>
 #include <string.h>
 #include "bm_service_common.h"
 
@@ -226,7 +227,7 @@ static bool _service_request_send_request(uint32_t msg_id, const char * service,
     header->id = msg_id;
     header->data_size = data_len;
     memcpy(header->data, data, data_len);
-    rval = bm_pub_wl(request_str, request_str_len, req_data, req_len, 0);
+    rval = bm_pub_wl(request_str, request_str_len, req_data, req_len, 0, BM_COMMON_PUB_SUB_VERSION);
 
     // Free memory
     bm_free(request_str);

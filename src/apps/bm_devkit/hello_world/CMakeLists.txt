@@ -23,7 +23,6 @@ set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
     ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
     ${SRC_DIR}/lib/middleware/bm_service_request.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${BCMP_FILES}
     )
 

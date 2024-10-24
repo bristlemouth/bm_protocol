@@ -1,5 +1,4 @@
 #include "bm_service.h"
-#include "bm_pubsub.h"
 #include "bm_os.h"
 #include "string.h"
 #include "bm_service_common.h"
@@ -172,7 +171,7 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
                     if (pub_topic) {
                         memcpy(pub_topic, current->service, current->service_strlen);
                         memcpy(pub_topic + current->service_strlen, BM_SERVICE_REP_STR, strlen(BM_SERVICE_REP_STR));
-                        bm_pub_wl(pub_topic, pub_topic_len, reply_data, reply_len + sizeof(bm_service_reply_data_header_s), 0);
+                        bm_pub_wl(pub_topic, pub_topic_len, reply_data, reply_len + sizeof(bm_service_reply_data_header_s), 0, BM_COMMON_PUB_SUB_VERSION);
                         bm_free(pub_topic);
                     }
                 }
