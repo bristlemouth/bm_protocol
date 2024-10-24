@@ -396,7 +396,7 @@ static void defaultTask(void *parameters) {
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
-  sensorsInit();
+//  sensorsInit();
   debugBmServiceInit();
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
