@@ -17,7 +17,6 @@
 
 #include "app_pub_sub.h"
 #include "app_util.h"
-#include "pubsub.h"
 #include "bristlefin.h"
 #include "bristlemouth.h"
 #include "bsp.h"
@@ -44,6 +43,7 @@
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "sensorSampler.h"
 #include "sensors.h"
@@ -138,6 +138,7 @@ SerialHandle_t usbPcap = {
 // TODO - make a getter API for these
 cfg::Configuration *userConfigurationPartition = NULL;
 cfg::Configuration *sysConfigurationPartition = NULL;
+cfg::Configuration *hwConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
@@ -384,6 +385,7 @@ static void defaultTask(void *parameters) {
                                        sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
   sysConfigurationPartition = &debug_configuration_system;
+  hwConfigurationPartition = &debug_configuration_hardware;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;
@@ -403,9 +405,8 @@ static void defaultTask(void *parameters) {
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
   echo_service_init();
-  sys_info_service_init(debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  config_cbor_map_service_init();
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif
