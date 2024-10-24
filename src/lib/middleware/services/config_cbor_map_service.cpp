@@ -13,7 +13,7 @@ extern "C" {
 
 static bool config_map_service_handler(size_t service_strlen, const char *service,
                                        size_t req_data_len, uint8_t *req_data,
-                                       size_t &buffer_len, uint8_t *reply_data) {
+                                       size_t *buffer_len, uint8_t *reply_data) {
   (void)service_strlen;
   (void)service;
   bool rval = false;
@@ -47,12 +47,12 @@ static bool config_map_service_handler(size_t service_strlen, const char *servic
     reply.cbor_encoded_map_len = (reply.cbor_data) ? buffer_size : 0;
     reply.success = (reply.cbor_data) ? true : false;
     size_t encoded_len;
-    if (config_cbor_map_reply_encode(&reply, reply_data, buffer_len, &encoded_len) !=
+    if (config_cbor_map_reply_encode(&reply, reply_data, *buffer_len, &encoded_len) !=
         CborNoError) {
       printf("Failed to encode config map reply\n");
       break;
     }
-    buffer_len = encoded_len;
+    *buffer_len = encoded_len;
     rval = true;
   } while (0);
   if (cbor_map) {
