@@ -7,6 +7,7 @@ using namespace cfg;
 
 extern cfg::Configuration *userConfigurationPartition;
 extern cfg::Configuration *sysConfigurationPartition;
+extern cfg::Configuration *hwConfigurationPartition;
 
 const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t *num_stored_keys,
                                                     BmConfigPartition partition) {
@@ -15,6 +16,8 @@ const GenericConfigKey *bcmp_config_get_stored_keys(uint8_t *num_stored_keys,
     cfg = userConfigurationPartition;
   } else if (partition == BM_CFG_PARTITION_SYSTEM) {
     cfg = sysConfigurationPartition;
+  } else if (partition == BM_CFG_PARTITION_HARDWARE) {
+    cfg = hwConfigurationPartition;
   } else {
     printf("Invalid configuration\n");
     return NULL;
@@ -28,6 +31,8 @@ bool bcmp_remove_key(const char *key, size_t key_len, BmConfigPartition partitio
     cfg = userConfigurationPartition;
   } else if (partition == BM_CFG_PARTITION_SYSTEM) {
     cfg = sysConfigurationPartition;
+  } else if (partition == BM_CFG_PARTITION_HARDWARE) {
+    cfg = hwConfigurationPartition;
   } else {
     return false;
   }
@@ -40,7 +45,10 @@ bool bcmp_config_needs_commit(BmConfigPartition partition) {
     return userConfigurationPartition->needsCommit();
   }
   case BM_CFG_PARTITION_SYSTEM: {
-    return userConfigurationPartition->needsCommit();
+    return sysConfigurationPartition->needsCommit();
+  }
+  case BM_CFG_PARTITION_HARDWARE: {
+    return hwConfigurationPartition->needsCommit();
   }
   default: {
     printf("Invalid partition\n");
@@ -59,6 +67,10 @@ bool bcmp_commit_config(BmConfigPartition partition) {
     sysConfigurationPartition->saveConfig(); // Reboot!
     return true;
   }
+  case BM_CFG_PARTITION_HARDWARE: {
+    hwConfigurationPartition->saveConfig(); // Reboot!
+    return true;
+  }
   default:
     printf("Invalid partition\n");
     return false;
@@ -72,6 +84,8 @@ bool bcmp_set_config(const char *key, size_t key_len, uint8_t *value, size_t val
     cfg = userConfigurationPartition;
   } else if (partition == BM_CFG_PARTITION_SYSTEM) {
     cfg = sysConfigurationPartition;
+  } else if (partition == BM_CFG_PARTITION_HARDWARE) {
+    cfg = hwConfigurationPartition;
   } else {
     return false;
   }
@@ -85,6 +99,8 @@ bool bcmp_get_config(const char *key, size_t key_len, uint8_t *value, size_t *va
     cfg = userConfigurationPartition;
   } else if (partition == BM_CFG_PARTITION_SYSTEM) {
     cfg = sysConfigurationPartition;
+  } else if (partition == BM_CFG_PARTITION_HARDWARE) {
+    cfg = hwConfigurationPartition;
   } else {
     return false;
   }
