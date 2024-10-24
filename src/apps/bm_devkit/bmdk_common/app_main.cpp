@@ -138,6 +138,7 @@ SerialHandle_t usbPcap = {
 // TODO - make a getter API for these
 cfg::Configuration *userConfigurationPartition = NULL;
 cfg::Configuration *sysConfigurationPartition = NULL;
+cfg::Configuration *hwConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
@@ -384,6 +385,7 @@ static void defaultTask(void *parameters) {
                                        sys_cfg_sensorsCheckIntervalS);
   userConfigurationPartition = &debug_configuration_user;
   sysConfigurationPartition = &debug_configuration_system;
+  hwConfigurationPartition = &debug_configuration_hardware;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;
