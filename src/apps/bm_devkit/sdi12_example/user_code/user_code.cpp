@@ -19,8 +19,15 @@
 #define LED_PERIOD_MS 1000
 #define BYTES_CLUSTER_MS 50
 
+#define DEFAULT_SAMPLE_COUNT 3
+#define MAX_SAMPLE_COUNT 7
+
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
+
+uint32_t sample_count = DEFAULT_SAMPLE_COUNT;
+EXO3sample samples[MAX_SAMPLE_COUNT] = {};
+uint32_t current_sample_index = 0;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
@@ -34,6 +41,8 @@ static SondeEXO3sSensor sondeEXO3sSensor;
 char result;
 
 void setup(void) {
+  // samples per send
+  userConfigurationPartition->getConfig("sampleCount", strlen("sampleCount"), sample_count);
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
@@ -54,6 +63,17 @@ void loop(void) {
 //  sondeEXO3sSensor.inquire_cmd();
 //  vTaskDelay(pdMS_TO_TICKS(2000));
   sondeEXO3sSensor.measure_cmd();
+  // accumulate list of these samples
+  EXO3sample sens = sondeEXO3sSensor.getLatestSample();
+  samples[current_sample_index] = sens;
+  current_sample_index++;
+  // TODO: Send data to sd card with bm_fprintf
+  if (current_sample_index == sample_count){
+    // TODO: Send data to spotter
+    // TODO: debug prints
+    // TODO:clear samples buffer
+    current_sample_index = 0;
+  }
   vTaskDelay(pdMS_TO_TICKS(2000));
 
 

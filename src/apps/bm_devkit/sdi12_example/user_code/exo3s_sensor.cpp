@@ -21,9 +21,21 @@
 #include "bristlefin.h"
 #include "stm32_io.h"
 
+SondeEXO3sSensor::SondeEXO3sSensor()
+    : d0_parser("+", 256, D0_PARSER_VALUE_TYPES, 5),
+      d1_parser("+", 256, D1_PARSER_VALUE_TYPES, 5),
+      d2_parser("+", 256, D2_PARSER_VALUE_TYPES, 3),
+      _latest_sample{} {
+  // No need to compute CC code yet, as we don't have the serial number
+}
+
 
 void SondeEXO3sSensor::init() {
   printf("SDI-12 Initialization");
+  d0_parser.init();
+  d1_parser.init();
+  d2_parser.init();
+
   PLUART::init(USER_TASK_PRIORITY);
   PLUART::setBaud(BAUD_RATE);
   PLUART::setUseByteStreamBuffer(false);
@@ -45,17 +57,17 @@ void SondeEXO3sSensor::init() {
   clear_buffer(0);
 }
 
-void SondeEXO3sSensor::sdi_wake(int delay) {
-  unsigned long timeStart;
+void SondeEXO3sSensor::sdi_wake(uint32_t delay) {
+  uint32_t timeStart;
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() < timeStart + delay);
+  while(uptimeGetMs() - timeStart < delay);
   printf("sdi_wake\n");
 }
 
 
 void SondeEXO3sSensor::sdi_break_mark(void) {
   flush();
-  unsigned long timeStart;
+  uint32_t timeStart;
   PLUART::disable();
   //Set TX pin to output
   PLUART::configTxPinOutput();
@@ -63,12 +75,12 @@ void SondeEXO3sSensor::sdi_break_mark(void) {
   PLUART::setTxPinOutputLevel();
   // Break - hold HIGH for 12 ms
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() < timeStart + breakTimeMin);
+  while(uptimeGetMs() - timeStart < breakTimeMin);
   // LOW at TX pin
   PLUART::resetTxPinOutputLevel();
-  // Mark - gold LOW for 9 ms
+  // Mark - hold LOW for 9 ms
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() < timeStart + markTimeMin);
+  while(uptimeGetMs() - timeStart < markTimeMin);
   // Set TX pin back to TX (alternate) mode
   PLUART::configTxPinAlternate();
   // Re-enable UART
@@ -91,7 +103,7 @@ bool SondeEXO3sSensor::sdi_receive(void) {
   uint64_t timeStart = uptimeGetMs();
 //  clear_buffer(0);
   memset(rxBuffer, 0, sizeof(rxBuffer));
-  while (!PLUART::lineAvailable() && (uptimeGetMs() < timeStart + receive_timeout)){
+  while (!PLUART::lineAvailable() && (uptimeGetMs() - timeStart < receive_timeout)){
     vTaskDelay(pdMS_TO_TICKS(5));
 //    printf("stuck here\n");
   }
@@ -177,18 +189,58 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       result = sdi_receive();
       if(result) {
         printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+        if (d0_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
+          const Value d0_0 = d0_parser.getValue(1);
+          const Value d0_1 = d0_parser.getValue(2);
+          const Value d0_2 = d0_parser.getValue(3);
+          const Value d0_3 = d0_parser.getValue(4);
+//          printf("parsed D0!\n");
+          printf("temp_sensor:  %.3f C\n", d0_0.data);
+          printf("sp_cond:      %.3f uS/cm\n", d0_1.data);
+          printf("pH:           %.3f\n", d0_2.data);
+          printf("pH:           %.3f mV\n", d0_3.data);
+          _latest_sample.temp_sensor = (float) d0_0.data.double_val;
+          _latest_sample.sp_cond = (float) d0_1.data.double_val;
+          _latest_sample.pH = (float) d0_2.data.double_val;
+          _latest_sample.pH_mV = (float) d0_3.data.double_val;
+        }
       }
       vTaskDelay(pdMS_TO_TICKS(100));
       sdi_transmit("0D1!");
       result = sdi_receive();
       if(result) {
         printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+        if (d1_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
+          const Value d1_0 = d1_parser.getValue(1);
+          const Value d1_1 = d1_parser.getValue(2);
+          const Value d1_2 = d1_parser.getValue(3);
+          const Value d1_3 = d1_parser.getValue(4);
+//          printf("parsed D1!\n");
+          printf("DO:           %.3f Percent Sat\n", d1_0.data);
+          printf("DO:           %.3f mg/L\n", d1_1.data);
+          printf("turbidity:    %.3f NTU\n", d1_2.data);
+          printf("wiper pos:    %.3f V\n", d1_3.data);
+          _latest_sample.dis_oxy = (float) d1_0.data.double_val;
+          _latest_sample.dis_oxy_mg = (float) d1_1.data.double_val;
+          _latest_sample.turbidity = (float) d1_2.data.double_val;
+          _latest_sample.wiper_pos = (float) d1_3.data.double_val;
+        }
       }
       vTaskDelay(pdMS_TO_TICKS(100));
       sdi_transmit("0D2!");
       result = sdi_receive();
       if(result) {
         printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+        if (d2_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
+          const Value d2_0 = d2_parser.getValue(1);
+          const Value d2_1 = d2_parser.getValue(2);
+//          printf("parsed D2!\n");
+          printf("depth:        %.3f m\n", d2_0.data);
+          printf("power supply: %.3f V\n", d2_1.data);
+          _latest_sample.depth = (float)d2_0.data.double_val;
+          _latest_sample.power = (float)d2_1.data.double_val;
+          //TODO
+        }
       }
       break;
   }
