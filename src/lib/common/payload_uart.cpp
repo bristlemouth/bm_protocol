@@ -113,7 +113,6 @@ static void pluartPostTransactionCb(SerialHandle_t *handle) {
 static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
   configASSERT(serialHandle != NULL);
   SerialHandle_t *handle = reinterpret_cast<SerialHandle_t *>(serialHandle);
-//  printf("Received byte %c\n", (char)byte);
   if (_useLineBuffer) {
     // This function requires data to be a pointer to a SerialLineBuffer_t
     configASSERT(handle->data != NULL);
