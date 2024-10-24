@@ -115,7 +115,7 @@ static bool _request_list_add_request(BmServiceRequestNode * node) {
     if (!node) {
         return rval;
     }
-    if(bm_semaphore_take(_bm_service_request_context.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)){
+    if(bm_semaphore_take(_bm_service_request_context.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
         if (_bm_service_request_context.service_request_list == NULL) {
             _bm_service_request_context.service_request_list = node;
         } else {
@@ -182,7 +182,7 @@ static BmServiceRequestNode * _create_node(size_t service_strlen, const char * s
 
 static void _service_request_timer_expiry_cb(void *arg) {
     (void) arg;
-    if(bm_semaphore_take(_bm_service_request_context.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)){
+    if(bm_semaphore_take(_bm_service_request_context.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
         BmServiceRequestNode * current = _bm_service_request_context.service_request_list;
         while(current) {
             if(!time_remaining_ms(current->request_start_ms, current->timeout_ms)) {
@@ -258,7 +258,7 @@ static void _service_request_cb (uint64_t node, const char* topic, uint16_t topi
     (void) node;
     bm_service_reply_data_header_s * header = (bm_service_reply_data_header_s*) data;
     if(header->target_node_id == node_id()){
-        if(bm_semaphore_take(_bm_service_request_context.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
+        if(bm_semaphore_take(_bm_service_request_context.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
             BmServiceRequestNode * node = _service_request_list_get_node_by_id(header->id);
             if(node) {
                 if(node->reply_cb) {

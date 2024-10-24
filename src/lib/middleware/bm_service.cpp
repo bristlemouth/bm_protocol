@@ -35,7 +35,7 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
 bool bm_service_register(size_t service_strlen, const char * service, BmServiceHandler service_handler) {
     bool rval = false;
     if (service && service_handler) {
-        if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
+        if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
             do {
                 BmServiceListElem* list_elem =  _service_create_list_elem(service_strlen, service, service_handler);
                 if(!list_elem) {
@@ -62,7 +62,7 @@ bool bm_service_register(size_t service_strlen, const char * service, BmServiceH
 bool bm_service_unregister(size_t service_strlen, const char * service) {
     bool rval = false;
     if (service) {
-        if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)) {
+        if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
             do {
                 if(!_service_sub_unsub_to_req_topic(service_strlen, service, false)) {
                     break;
@@ -138,11 +138,11 @@ static bool _service_sub_unsub_to_req_topic(size_t service_strlen, const char * 
     return rval;
 }
 
-static void _service_request_received_cb (uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+static void _service_request_received_cb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
     (void) type;
     (void) version;
 
-    if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, bm_ms_to_ticks(DefaultServiceRequestTimeoutMs) == BmOK)){
+    if(bm_semaphore_take(BM_SERVICE_CONTEXT.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
         BmServiceListElem * current = BM_SERVICE_CONTEXT.service_list;
         while (current != NULL) {
             if (strncmp(current->service, topic, current->service_strlen) == 0) {
@@ -159,7 +159,7 @@ static void _service_request_received_cb (uint64_t node_id, const char* topic, u
                 size_t reply_len = MAX_BM_SERVICE_DATA_SIZE - sizeof(bm_service_reply_data_header_s); // Max size of reply data
                 uint8_t * reply_data = (uint8_t*)(bm_malloc(MAX_BM_SERVICE_DATA_SIZE));
                 bm_service_reply_data_header_s * reply_header = (bm_service_reply_data_header_s*) reply_data;
-                memset(reply_data,0, MAX_BM_SERVICE_DATA_SIZE);
+                memset(reply_data, 0, MAX_BM_SERVICE_DATA_SIZE);
                 if(current->service_handler(current->service_strlen, current->service, request_header->data_size, request_header->data, &reply_len, reply_header->data)){
                     reply_header->target_node_id = node_id;
                     reply_header->id = request_header->id;

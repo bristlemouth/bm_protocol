@@ -87,9 +87,6 @@ void bcl_init(void) {
   bm_ip_init();
 
   bcmp_init();
-  //TODO: These items need to be moved into bcmp again once we figure out how
-  //      to get partitions/configurations configurable by the user
-  //bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
 
   bcmp_cli_init();
 
