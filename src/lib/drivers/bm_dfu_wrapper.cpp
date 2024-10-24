@@ -1,12 +1,14 @@
+extern "C" {
 #include "bm_dfu_generic.h"
+}
 #include "bootutil/bootutil_public.h"
 #include "configuration.h"
 #include "flash_map_backend/flash_map_backend.h"
+#include "lpm.h"
 #include "nvmPartition.h"
 #include "reset_reason.h"
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
-#include "lpm.h"
 
 static constexpr char dfu_confirm_config_key[] = "dfu_confirm";
 
@@ -93,10 +95,6 @@ BmErr bm_dfu_host_get_chunk(uint32_t offset, uint8_t *buffer, size_t len, uint32
   return BmOK;
 }
 
-void bm_dfu_core_lpm_peripheral_active(void) {
-  lpmPeripheralActive(LPM_DFU_BRISTLEMOUTH);
-}
+void bm_dfu_core_lpm_peripheral_active(void) { lpmPeripheralActive(LPM_DFU_BRISTLEMOUTH); }
 
-void bm_dfu_core_lpm_peripheral_inactive(void) {
-  lpmPeripheralInactive(LPM_DFU_BRISTLEMOUTH);
-}
+void bm_dfu_core_lpm_peripheral_inactive(void) { lpmPeripheralInactive(LPM_DFU_BRISTLEMOUTH); }
