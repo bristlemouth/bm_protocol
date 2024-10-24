@@ -185,7 +185,7 @@ void serialDisable(SerialHandle_t *handle) {
   if(!HANDLE_IS_USB(handle)) {
     // Disable Uart RX interrupt
     usart_DisableIT_RXNE((USART_TypeDef *)handle->device);
-    
+
 
     if(handle->txPin) {
       STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
@@ -196,6 +196,7 @@ void serialDisable(SerialHandle_t *handle) {
 
   handle->enabled = false;
 }
+
 
 #ifndef NO_UART
 // Generic interrupt handler for all USART/UART/LPUART peripherals
