@@ -18,11 +18,6 @@ add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
 
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_network.cpp
-    ${SRC_DIR}/lib/middleware/bm_service.c
-    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
-    ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
-    ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
-    ${SRC_DIR}/lib/middleware/bm_service_request.c
     ${BCMP_FILES}
     )
 
@@ -268,6 +263,7 @@ set(BM_CORE_LWIP_INCLUDES
     ${SRC_DIR}/lib/lwip
     ${LWIP_INCLUDE_DIRS}
     ${BCMP_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
 )
 set(BM_CORE_FREERTOS_INCLUDES
     ${FREERTOS_INCLUDES}
