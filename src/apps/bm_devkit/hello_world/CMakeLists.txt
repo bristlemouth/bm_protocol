@@ -61,9 +61,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
+    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.c
+    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.c
+    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.c
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
