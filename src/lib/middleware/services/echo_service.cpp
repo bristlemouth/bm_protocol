@@ -1,5 +1,4 @@
 #include "echo_service.h"
-#include "bm_service.h"
 #include "bm_service_common.h"
 #include <inttypes.h>
 #include <stddef.h>
@@ -7,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 extern "C" {
+#include "bm_service.h"
 #include "device.h"
 }
 
