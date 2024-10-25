@@ -1,9 +1,9 @@
 #include "config_cbor_map_service.h"
-#include "bm_service.h"
 #include "config_cbor_map_srv_reply_msg.h"
 #include "config_cbor_map_srv_request_msg.h"
 #include <inttypes.h>
 extern "C" {
+#include "bm_service.h"
 #include "bm_os.h"
 #include "cbor_service_helper.h"
 #include "device.h"
@@ -72,8 +72,7 @@ void config_cbor_map_service_init(void) {
   }
 }
 
-bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition_id,
-                                     bm_service_reply_cb reply_cb, uint32_t timeout_s) {
+bool config_cbor_map_service_request(uint64_t target_node_id, uint32_t partition_id, BmServiceReplyCb reply_cb, uint32_t timeout_s) {
   bool rval = false;
   char *target_service_str = (char *)bm_malloc(BM_SERVICE_MAX_SERVICE_STRLEN);
   if (target_service_str) {
