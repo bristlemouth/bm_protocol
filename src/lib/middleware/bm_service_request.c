@@ -217,13 +217,13 @@ static bool _service_request_send_request(uint32_t msg_id, const char * service,
     memcpy(request_str + service_strlen, BM_SERVICE_REQ_STR, strlen(BM_SERVICE_REQ_STR));
 
     // Create request packet and publish
-    size_t req_len = data_len + sizeof(bm_service_request_data_header_s);
+    size_t req_len = data_len + sizeof(BmServiceRequestDataHeader);
     uint8_t * req_data = (uint8_t*)(bm_malloc(req_len));
     if (!req_data) {
         bm_free(request_str);
         return rval;
     }
-    bm_service_request_data_header_s * header = (bm_service_request_data_header_s*) req_data;
+    BmServiceRequestDataHeader * header = (BmServiceRequestDataHeader*) req_data;
     header->id = msg_id;
     header->data_size = data_len;
     memcpy(header->data, data, data_len);
@@ -256,7 +256,7 @@ static void _service_request_cb (uint64_t node, const char* topic, uint16_t topi
     (void) topic_len;
     (void) data_len;
     (void) node;
-    bm_service_reply_data_header_s * header = (bm_service_reply_data_header_s*) data;
+    BmServiceReplyDataHeader * header = (BmServiceReplyDataHeader*) data;
     if(header->target_node_id == node_id()){
         if(bm_semaphore_take(_bm_service_request_context.lock, DefaultServiceRequestTimeoutMs) == BmOK) {
             BmServiceRequestNode * node = _service_request_list_get_node_by_id(header->id);

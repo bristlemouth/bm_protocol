@@ -14,9 +14,9 @@ extern "C" {
 #include "device.h"
 #include "eth_adin2111.h"
 #include "middleware.h"
+#include "bm_service.h"
 }
 #include "bcmp_cli.h"
-#include "bm_service.h"
 
 #include "task_priorities.h"
 

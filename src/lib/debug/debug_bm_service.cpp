@@ -6,8 +6,6 @@
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
 
-#include "bm_service.h"
-#include "bm_service_request.h"
 #include "config_cbor_map_service.h"
 #include "config_cbor_map_srv_reply_msg.h"
 #include "config_cbor_map_srv_request_msg.h"
@@ -18,7 +16,8 @@
 #include <string.h>
 
 extern "C" {
-  #include "bm_service_request.h"
+#include "bm_service.h"
+#include "bm_service_request.h"
 }
 
 static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,

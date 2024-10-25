@@ -3,8 +3,8 @@ extern "C" {
 #include "bm_os.h"
 #include "cbor_service_helper.h"
 #include "device.h"
-}
 #include "bm_service.h"
+}
 #include "sys_info_svc_reply_msg.h"
 #include <inttypes.h>
 #include <stdint.h>

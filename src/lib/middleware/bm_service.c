@@ -9,7 +9,7 @@ typedef struct BmServiceListElem {
     const char * service;
     size_t service_strlen;
     BmServiceHandler service_handler;
-    BmServiceListElem * next;
+    struct BmServiceListElem * next;
 } BmServiceListElem;
 
 typedef struct BmServiceContext {
@@ -146,8 +146,8 @@ static void _service_request_received_cb(uint64_t node_id, const char* topic, ui
         BmServiceListElem * current = BM_SERVICE_CONTEXT.service_list;
         while (current != NULL) {
             if (strncmp(current->service, topic, current->service_strlen) == 0) {
-                bm_service_request_data_header_s * request_header = (bm_service_request_data_header_s*) data;
-                if(data_len != sizeof(bm_service_request_data_header_s) + request_header->data_size) {
+                BmServiceRequestDataHeader * request_header = (BmServiceRequestDataHeader*) data;
+                if(data_len != sizeof(BmServiceRequestDataHeader) + request_header->data_size) {
                     printf("Request data length does not match header.\n");
                     break;
                 }
@@ -156,9 +156,9 @@ static void _service_request_received_cb(uint64_t node_id, const char* topic, ui
                     break;
                 }
                 // We found the service, make a reply buffer, and call the handler to create a reply.
-                size_t reply_len = MAX_BM_SERVICE_DATA_SIZE - sizeof(bm_service_reply_data_header_s); // Max size of reply data
+                size_t reply_len = MAX_BM_SERVICE_DATA_SIZE - sizeof(BmServiceReplyDataHeader); // Max size of reply data
                 uint8_t * reply_data = (uint8_t*)(bm_malloc(MAX_BM_SERVICE_DATA_SIZE));
-                bm_service_reply_data_header_s * reply_header = (bm_service_reply_data_header_s*) reply_data;
+                BmServiceReplyDataHeader * reply_header = (BmServiceReplyDataHeader*) reply_data;
                 memset(reply_data, 0, MAX_BM_SERVICE_DATA_SIZE);
                 if(current->service_handler(current->service_strlen, current->service, request_header->data_size, request_header->data, &reply_len, reply_header->data)){
                     reply_header->target_node_id = node_id;
@@ -171,7 +171,7 @@ static void _service_request_received_cb(uint64_t node_id, const char* topic, ui
                     if (pub_topic) {
                         memcpy(pub_topic, current->service, current->service_strlen);
                         memcpy(pub_topic + current->service_strlen, BM_SERVICE_REP_STR, strlen(BM_SERVICE_REP_STR));
-                        bm_pub_wl(pub_topic, pub_topic_len, reply_data, reply_len + sizeof(bm_service_reply_data_header_s), 0, BM_COMMON_PUB_SUB_VERSION);
+                        bm_pub_wl(pub_topic, pub_topic_len, reply_data, reply_len + sizeof(BmServiceReplyDataHeader), 0, BM_COMMON_PUB_SUB_VERSION);
                         bm_free(pub_topic);
                     }
                 }

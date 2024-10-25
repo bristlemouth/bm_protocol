@@ -1,9 +1,9 @@
 #include "config_cbor_map_service.h"
-#include "bm_service.h"
 #include "config_cbor_map_srv_reply_msg.h"
 #include "config_cbor_map_srv_request_msg.h"
 #include <inttypes.h>
 extern "C" {
+#include "bm_service.h"
 #include "bm_os.h"
 #include "cbor_service_helper.h"
 #include "device.h"
