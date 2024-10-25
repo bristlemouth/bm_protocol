@@ -5,12 +5,9 @@
 #include "timer_callback_handler.h"
 #include <inttypes.h>
 #include <string.h>
-
-// extern "C" {
 #include "bm_os.h"
 #include "device.h"
 #include "util.h"
-// }
 
 #define DefaultServiceRequestTimeoutMs 100
 #define ExpiryTimerPeriodMs 500
