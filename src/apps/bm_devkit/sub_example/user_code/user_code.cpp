@@ -2,6 +2,8 @@
 #include "pubsub.h"
 #include "uptime.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 
 /*
