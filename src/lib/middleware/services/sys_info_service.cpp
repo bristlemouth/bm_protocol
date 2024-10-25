@@ -3,8 +3,8 @@ extern "C" {
 #include "bm_os.h"
 #include "cbor_service_helper.h"
 #include "device.h"
-}
 #include "bm_service.h"
+}
 #include "sys_info_svc_reply_msg.h"
 #include <inttypes.h>
 #include <stdint.h>
@@ -39,8 +39,8 @@ void sys_info_service_init(void) {
  * @param[in] timeout_s The timeout in seconds.
  * @return True if the request was sent, false otherwise.
  */
-bool sys_info_service_request(uint64_t target_node_id, bm_service_reply_cb reply_cb,
-                              uint32_t timeout_s) {
+bool sys_info_service_request(uint64_t target_node_id, BmServiceReplyCb reply_cb,
+                            uint32_t timeout_s) {
   bool rval = false;
   char *target_service_str = (char *)bm_malloc(BM_SERVICE_MAX_SERVICE_STRLEN);
   if (target_service_str) {

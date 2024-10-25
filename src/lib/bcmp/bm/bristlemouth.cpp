@@ -14,9 +14,9 @@ extern "C" {
 #include "device.h"
 #include "eth_adin2111.h"
 #include "middleware.h"
+#include "bm_service.h"
 }
 #include "bcmp_cli.h"
-#include "bm_service.h"
 
 #include "task_priorities.h"
 
@@ -87,9 +87,6 @@ void bcl_init(void) {
   bm_ip_init();
 
   bcmp_init();
-  //TODO: These items need to be moved into bcmp again once we figure out how
-  //      to get partitions/configurations configurable by the user
-  //bm_dfu_init(bcmp_dfu_tx, dfu_partition, sys_cfg);
 
   bcmp_cli_init();
 

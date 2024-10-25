@@ -1,12 +1,13 @@
 #pragma once
 
+#include "bm_service_request.h"
+#include "pubsub.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "bm_service_request.h"
-#include "pubsub.h"
-
-#define BM_SERVICE_MAX_SERVICE_STRLEN (BM_TOPIC_MAX_LEN - 4) // 4 is from strlen(BM_SERVICE_REQ_STR)
+#define BM_SERVICE_MAX_SERVICE_STRLEN                                                          \
+  (BM_TOPIC_MAX_LEN - 4) // 4 is from strlen(BM_SERVICE_REQ_STR)
 
 /*!
  * @brief Callback function for bm_service
@@ -18,13 +19,11 @@
  * @param[out] reply_data The reply data buffer to be filled in.
  * @return True if the request was handled, false otherwise.
  */
-typedef bool (*bm_service_handler)(size_t service_strlen,
-                                    const char * service,
-                                    size_t req_data_len,
-                                    uint8_t * req_data,
-                                    size_t *buffer_len,
-                                    uint8_t * reply_data);
+typedef bool (*BmServiceHandler)(size_t service_strlen, const char *service,
+                                 size_t req_data_len, uint8_t *req_data, size_t *buffer_len,
+                                 uint8_t *reply_data);
 
 void bm_service_init(void);
-bool bm_service_register(size_t service_strlen, const char * service, bm_service_handler service_handler);
-bool bm_service_unregister(size_t service_strlen, const char * service);
+bool bm_service_register(size_t service_strlen, const char *service,
+                         BmServiceHandler service_handler);
+bool bm_service_unregister(size_t service_strlen, const char *service);
