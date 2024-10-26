@@ -6,9 +6,9 @@
 #include "string.h"
 
 Exo3DataLineParser::Exo3DataLineParser(size_t numValues, const char* header)
-    : OrderedSeparatorLineParser("+-", 256, nullptr, numValues+1, header) {
-  // Allocate and set up `valueTypes` based on `num_values`
-  auto value_types = new ValueType[numValues];
+    : OrderedSeparatorLineParser("+-", 256, nullptr, numValues + 1, header) {
+  // Allocate and set up `valueTypes` based on `num_values`, add one for response identifier header
+  auto value_types = new ValueType[numValues + 1];
   value_types[0] = TYPE_INVALID;  // First value as placeholder if needed
   for (size_t i = 0; i < numValues; ++i) {
     value_types[i+1] = TYPE_DOUBLE;  // Set all subsequent values as TYPE_DOUBLE
