@@ -99,7 +99,7 @@ const Value& LineParser::getValue(uint16_t index) {
   }
 }
 
-bool LineParser::parseValueFromToken(const char *token, size_t index, char foundSeparator='\0') {
+bool LineParser::parseValueFromToken(const char *token, size_t index, char foundSeparator) {
   (void)(foundSeparator);
   char* endptr;
   switch (_values[index].type) {
