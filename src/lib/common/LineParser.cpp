@@ -47,6 +47,7 @@ LineParser::~LineParser() {
 }
 
 bool LineParser::parseLine(const char* line, uint16_t len) {
+  // TODO verify line is less than maxLineLen - 1 (for null character)
   // TODO verify line is 0-terminated.
   if (_values == nullptr) {
     printf("ERR Parser values uninitialized!\n");
