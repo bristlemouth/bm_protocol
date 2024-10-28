@@ -13,9 +13,6 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 # Include BCMP
 add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
-# Include BM Common Messages
-add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
-
 set(BRISTLEMOUTH_FILES
     ${SRC_DIR}/lib/middleware/bm_network.cpp
 
@@ -29,7 +26,6 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}
-    ${BM_COMMON_MESSAGES_INCLUDES}
     )
 
 set(LIB_FILES
@@ -75,9 +71,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
     ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.c
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.c
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.c
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
