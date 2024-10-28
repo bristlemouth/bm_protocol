@@ -238,7 +238,6 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/bcmp/bm
     ${SRC_DIR}/apps/bridge
     ${SRC_DIR}/apps/bridge/sensor_drivers
-    ${SRC_DIR}/lib/bm_common_messages
     ${SRC_DIR}/lib/bcmp/dfu
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/third_party/tinycbor/src
@@ -332,7 +331,7 @@ target_sources(differenceSignal
     ${SRC_DIR}/lib/common/differenceSignal.cpp
 
     # Support files
-    
+
     # Mock
     ${TEST_DIR}/stubs/mock_FreeRTOS.c
 

@@ -6,16 +6,14 @@
 #include "FreeRTOS_CLI.h"
 
 #include "bcmp.h"
-#include "bcmp_cli.h"
 
 #include "configuration.h"
 
 using namespace cfg;
 
 #include "app_util.h"
-#include "pubsub.h"
-#include "bm_util.h"
 #include "messages.h"
+#include "pubsub.h"
 extern "C" {
 #include "messages/config.h"
 #include "messages/heartbeat.h"
