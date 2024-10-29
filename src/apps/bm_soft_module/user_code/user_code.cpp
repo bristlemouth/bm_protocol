@@ -32,7 +32,7 @@ static constexpr char sensor_bm_log_enable[] = "sensorBmLogEnable";
 
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
-extern cfg::Configuration *sysConfigurationPartition;
+extern cfg::Configuration *systemConfigurationPartition;
 
 static TSYS01 soft(&spi1, &BM_CS);
 static uint32_t serial_number = 0;
@@ -49,7 +49,7 @@ static int createBmSoftDataTopic(void);
 static void BmSoftInitalize(void);
 
 static void getConfigs() {
-  if (sysConfigurationPartition->getConfig(soft_cfg_tsys_id, strlen(soft_cfg_tsys_id),
+  if (systemConfigurationPartition->getConfig(soft_cfg_tsys_id, strlen(soft_cfg_tsys_id),
                                            serial_number)) {
     printf("TSYS serial number: %" PRIu32 "\n", serial_number);
   } else {
@@ -59,7 +59,7 @@ static void getConfigs() {
   }
 
   int32_t calTempC = 0;
-  if (sysConfigurationPartition->getConfig(soft_cfg_cal_temp_c, strlen(soft_cfg_cal_temp_c),
+  if (systemConfigurationPartition->getConfig(soft_cfg_cal_temp_c, strlen(soft_cfg_cal_temp_c),
                                            calTempC)) {
     printf("Calibration temperature: %" PRId32 "\n", calTempC);
   } else {
@@ -68,7 +68,7 @@ static void getConfigs() {
     bm_printf(0, "No calibration temperature found");
   }
 
-  if (sysConfigurationPartition->getConfig(soft_cfg_cal_time_epoch,
+  if (systemConfigurationPartition->getConfig(soft_cfg_cal_time_epoch,
                                            strlen(soft_cfg_cal_time_epoch), cal_time_epoch)) {
     printf("Calibration time: %" PRIu32 "\n", cal_time_epoch);
   } else {
@@ -78,7 +78,7 @@ static void getConfigs() {
   }
 
   int32_t calOffsetMilliC = 0;
-  if (sysConfigurationPartition->getConfig(
+  if (systemConfigurationPartition->getConfig(
           soft_cfg_cal_offset_milli_c, strlen(soft_cfg_cal_offset_milli_c), calOffsetMilliC)) {
     printf("Calibration offset (milliDegC): %" PRId32 "\n", calOffsetMilliC);
   } else {
@@ -95,14 +95,14 @@ static void getConfigs() {
     printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay_ms);
   }
 
-  sysConfigurationPartition->getConfig(sensor_bm_log_enable, strlen(sensor_bm_log_enable),
+  systemConfigurationPartition->getConfig(sensor_bm_log_enable, strlen(sensor_bm_log_enable),
                                        sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", sensorBmLogEnable);
 }
 
 void setup(void) {
   configASSERT(userConfigurationPartition);
-  configASSERT(sysConfigurationPartition);
+  configASSERT(systemConfigurationPartition);
   getConfigs();
   BmSoftInitalize();
   bmSoftTopicStrLen = createBmSoftDataTopic();
@@ -190,7 +190,7 @@ static bool BmSoftStartAndValidate(void) {
       printf("SOFT Serial Number: Get SN Failed\n");
       break;
     }
-    if (!sysConfigurationPartition->setConfig("tsysId", strlen("tsysId"), serial_number)) {
+    if (!systemConfigurationPartition->setConfig("tsysId", strlen("tsysId"), serial_number)) {
       printf("SOFT Serial Number: Set SN Failed\n");
       break;
     }
