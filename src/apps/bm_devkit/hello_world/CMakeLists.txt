@@ -252,6 +252,14 @@ set(APP_LIBS
     bmcore
     )
 
+set(APP_DEFINES
+    APP_NAME="${APP_NAME}"
+    CFG_TUSB_MCU=OPT_MCU_STM32U5
+
+    # Add network stress test functions
+    STRESS_TEST_ENABLE
+)
+
 # Include bm_core
 set(BM_CORE_LWIP_INCLUDES
     ${SRC_DIR}/lib/lwip
@@ -264,14 +272,6 @@ set(BM_CORE_FREERTOS_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
     ${SRC_DIR}/lib/common
     ${MEMFAULT_INCLUDES}
-)
-
-set(APP_DEFINES
-    APP_NAME="${APP_NAME}"
-    CFG_TUSB_MCU=OPT_MCU_STM32U5
-
-    # Add network stress test functions
-    STRESS_TEST_ENABLE
 )
 
 include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)

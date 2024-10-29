@@ -5,7 +5,7 @@
 #include "io.h"
 #include "task.h"
 
-#include "eth_adin2111.h"
+#include "adin2111.h"
 #include <stdint.h>
 
 class BridgePowerController {

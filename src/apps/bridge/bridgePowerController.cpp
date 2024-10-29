@@ -2,12 +2,10 @@
 #include "FreeRTOS.h"
 #include "app_pub_sub.h"
 #include "app_util.h"
-extern "C" {
-#include "l2.h"
-}
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "l2.h"
 #include "sensorController.h"
 #include "stm32_rtc.h"
 #include "task.h"

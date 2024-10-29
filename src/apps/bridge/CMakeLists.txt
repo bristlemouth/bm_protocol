@@ -29,6 +29,11 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
+    ${SRC_DIR}/lib/bm_core/include
+    ${SRC_DIR}/lib/bm_core/bm_common_messages
+    ${SRC_DIR}/lib/bm_core/third_party/tinycbor/src
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
     ${BCMP_INCLUDES}
     ${BM_NCP_INCLUDES}
     )
@@ -42,7 +47,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/network_config_logger.cpp
@@ -56,9 +60,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/topology_sampler.cpp
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -73,6 +77,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
+    ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
+    ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
@@ -232,13 +238,13 @@ set(APP_LIBS
     # I hate this, but if bm_serial goes after lwipcore
     # we get some hardfaults on the lwip library and I don't know why😭
     bm_serial
+    bmcore
     lwipcore
     )
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/app_config.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sm_config_crc_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/aanderaaSensor.cpp
@@ -282,6 +288,30 @@ set(APP_DEFINES
     # Add network stress test functions
     STRESS_TEST_ENABLE
     )
+
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BCMP_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
+target_compile_definitions(bmcore PRIVATE ${APP_DEFINES})
+target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
+target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
+target_link_libraries(bmcore PUBLIC lwipcore)
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")
