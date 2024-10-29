@@ -10,7 +10,7 @@ OrderedSeparatorLineParser::OrderedSeparatorLineParser(const char* separator, si
     : LineParser(separator, maxLineLen, valueTypes, numValues, header) { }
 
 bool OrderedSeparatorLineParser::parseValues(char* workStr) {
-  const char* tokenStart = workStr;
+  char* tokenStart = workStr;
   char valueSeparator = '\0';
 
   for (size_t i = 0; i < _numValues; i++) {
