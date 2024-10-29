@@ -1,7 +1,7 @@
 #ifndef __BM_CONFIG_H__
 #define __BM_CONFIG_H__
 
-#include <stdlib.h>
+#include <stdio.h>
 
 #define ADIN_PORT_MASK_1 (1 << ADIN2111_PORT_1)
 #define ADIN_PORT_MASK_2 (1 << ADIN2111_PORT_2)

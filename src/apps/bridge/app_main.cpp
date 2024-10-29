@@ -17,9 +17,7 @@
 
 #include "app_config.h"
 #include "app_pub_sub.h"
-#include "bcmp_neighbors.h"
-#include "l2.h"
-#include "pubsub.h"
+#include "app_util.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
@@ -44,11 +42,13 @@
 #include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
+#include "messages/neighbors.h"
 #include "ncp_uart.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "reportBuilder.h"
 #include "sensorController.h"
@@ -61,7 +61,6 @@
 #include "timer_callback_handler.h"
 #include "topology_sampler.h"
 #include "usb.h"
-#include "app_util.h"
 #include "w25.h"
 #include "watchdog.h"
 #ifdef RAW_PRESSURE_ENABLE
@@ -165,6 +164,11 @@ static bool usb_is_connected() {
 
   return (bool)vusb;
 }
+// TODO - make a getter API for these
+cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *systemConfigurationPartition = NULL;
+cfg::Configuration *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 extern "C" int main(void) {
 
@@ -215,10 +219,12 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 
   if (value) {
     bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_ON,
-           sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE, BM_COMMON_PUB_SUB_VERSION);
+           sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE,
+           BM_COMMON_PUB_SUB_VERSION);
   } else {
     bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_OFF,
-           sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE, BM_COMMON_PUB_SUB_VERSION);
+           sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE,
+           BM_COMMON_PUB_SUB_VERSION);
   }
 
   return false;
@@ -372,6 +378,9 @@ static void defaultTask(void *parameters) {
       debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
   cfg::Configuration debug_configuration_system(
       debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  userConfigurationPartition = &debug_configuration_user;
+  systemConfigurationPartition = &debug_configuration_system;
+  hardwareConfigurationPartition = &debug_configuration_hardware;
   debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
                          &debug_configuration_system);
   debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
@@ -389,9 +398,10 @@ static void defaultTask(void *parameters) {
   }
 
   usbInit(usb_io, usb_is_connected);
+  dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  bcl_init();
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
@@ -415,11 +425,10 @@ static void defaultTask(void *parameters) {
                         &debug_configuration_system);
   debug_ncp_init();
   debugBmServiceInit();
-  sys_info_service_init(debug_configuration_system);
+  sys_info_service_init();
   reportBuilderInit(&debug_configuration_system);
   sensorControllerInit(&bridge_power_controller, &debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  config_cbor_map_service_init();
   IOWrite(&ALARM_OUT, 1);
   IOWrite(&LED_BLUE, LED_OFF);
 

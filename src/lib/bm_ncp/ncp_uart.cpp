@@ -4,10 +4,6 @@
 #include <string.h>
 
 #include "bcmp.h"
-#include "bcmp_info.h"
-#include "bcmp_resource_discovery.h"
-#include "bcmp_topology.h"
-#include "pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
 #include "cobs.h"
@@ -17,9 +13,15 @@
 #include "gpio.h"
 #include "memfault/core/reboot_tracking.h"
 #include "memfault_platform_core.h"
+extern "C" {
+#include "messages/info.h"
+#include "messages/resource_discovery.h"
+#include "messages/topology.h"
+}
 #include "ncp_config.h"
 #include "ncp_dfu.h"
 #include "ncp_uart.h"
+#include "pubsub.h"
 #include "reset_reason.h"
 #include "stm32_rtc.h"
 #include "stm32u5xx_ll_usart.h"
@@ -145,7 +147,7 @@ static void bcmp_resource_table_reply_cb(void *bcmp_resource_table_reply) {
   bm_serial_send_resource_reply(resource_reply->node_id, resource_reply);
 }
 
-static void bm_serial_all_info_cb(networkTopology_t *networkTopology) {
+static void bm_serial_all_info_cb(NetworkTopology *networkTopology) {
   configASSERT(networkTopology);
   uint16_t num_nodes = networkTopology->length;
   NeighborTableEntry *cursor = NULL;
@@ -154,12 +156,12 @@ static void bm_serial_all_info_cb(networkTopology_t *networkTopology) {
        cursor = cursor->nextNode, counter++) {
     uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
     if (current_node_id != getNodeId()) {
-      bcmp_request_info(current_node_id, &multicast_global_addr, bcmp_info_reply_cb, NULL);
+      bcmp_request_info(current_node_id, &multicast_global_addr, bcmp_info_reply_cb);
     }
   }
 }
 
-static void bm_serial_all_resources_cb(networkTopology_t *networkTopology) {
+static void bm_serial_all_resources_cb(NetworkTopology *networkTopology) {
   configASSERT(networkTopology);
   uint16_t num_nodes = networkTopology->length;
   NeighborTableEntry *cursor = NULL;
@@ -168,8 +170,7 @@ static void bm_serial_all_resources_cb(networkTopology_t *networkTopology) {
        cursor = cursor->nextNode, counter++) {
     uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
     if (current_node_id != getNodeId()) {
-      bcmp_resource_discovery::bcmp_resource_discovery_send_request(
-          current_node_id, bcmp_resource_table_reply_cb);
+      bcmp_resource_discovery_send_request(current_node_id, bcmp_resource_table_reply_cb);
     }
   }
 }
@@ -224,7 +225,7 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     }
   } else {
     // send back the info for the node_id
-    bcmp_request_info(node_id, &multicast_global_addr, bcmp_info_reply_cb, NULL);
+    bcmp_request_info(node_id, &multicast_global_addr, bcmp_info_reply_cb);
   }
   return true;
 }
@@ -232,8 +233,7 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
 static bool bcmp_resource_request_cb(uint64_t node_id) {
   if (node_id == getNodeId() || node_id == 0) {
     // send back our resource info!
-    bcmp_resource_table_reply_t *local_resources =
-        bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
+    BcmpResourceTableReply *local_resources = bcmp_resource_discovery_get_local_resources();
     // Sending via serial will make a copy of the resources so we can free them after sending
     bm_serial_send_resource_reply(
         getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
@@ -244,8 +244,7 @@ static bool bcmp_resource_request_cb(uint64_t node_id) {
     }
   } else {
     // send back the resource info for the node_id
-    bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id,
-                                                                  bcmp_resource_table_reply_cb);
+    bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
   }
   return true;
 }
