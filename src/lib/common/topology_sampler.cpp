@@ -10,20 +10,20 @@
 
 #include "app_util.h"
 #include "bcmp.h"
-#include "bcmp_info.h"
-#include "bcmp_neighbors.h"
-#include "bcmp_topology.h"
 #include "bm_common_structs.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "cbor.h"
+#include "cbor_service_helper.h"
 #include "config_cbor_map_service.h"
 #include "config_cbor_map_srv_reply_msg.h"
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
-#include "l2.h"
 #include "messages.h"
+#include "messages/info.h"
+#include "messages/neighbors.h"
+#include "messages/topology.h"
 #include "network_config_logger.h"
 #include "sensorController.h"
 #include "sm_config_crc_list.h"
@@ -32,7 +32,6 @@
 #include "sys_info_svc_reply_msg.h"
 #include "topology_sampler.h"
 #include "util.h"
-#include "cbor_service_helper.h"
 
 #define TOPOLOGY_TIMEOUT_MS 60000
 #define NETWORK_CONFIG_TIMEOUT_MS 1000
@@ -88,7 +87,7 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
-static void topology_sample_cb(networkTopology_t *networkTopology) {
+static void topology_sample_cb(NetworkTopology *networkTopology) {
   uint8_t *cbor_buffer = NULL;
   bm_common_network_info_t *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
