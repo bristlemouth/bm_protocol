@@ -280,8 +280,6 @@ setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
 add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
 target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
 target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
-target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
-target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
 target_link_libraries(bmcore PUBLIC lwipcore)
 
 if (DFU_HOST  STREQUAL 1)
