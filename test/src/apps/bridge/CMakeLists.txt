@@ -3,6 +3,7 @@ add_executable(sm_config_crc_list_tests)
 target_include_directories(sm_config_crc_list_tests
     PRIVATE
     ${TEST_DIR}/header_overrides
+    ${SRC_DIR}/lib/bm_core/include
     ${TEST_DIR}/mocks
     ${TEST_DIR}/third_party/fff
     ${SRC_DIR}/apps/bridge
