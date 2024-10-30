@@ -6,3 +6,4 @@
 
 void setup(void);
 void loop(void);
+void transmit_samples(void);

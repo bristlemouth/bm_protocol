@@ -21,6 +21,8 @@
 
 #define DEFAULT_SAMPLE_COUNT 3
 #define MAX_SAMPLE_COUNT 7
+#define SAMPLE_SIZE sizeof(EXO3sample)
+#define MAX_TX_BUFFER_SIZE (uint16_t)(300)
 
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
@@ -28,17 +30,45 @@ extern cfg::Configuration *userConfigurationPartition;
 uint32_t sample_count = DEFAULT_SAMPLE_COUNT;
 EXO3sample samples[MAX_SAMPLE_COUNT] = {};
 uint32_t current_sample_index = 0;
+uint8_t tx_buffer[MAX_TX_BUFFER_SIZE];  // Buffer for data transmission
+static SondeEXO3sSensor sondeEXO3sSensor;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
-//static u_int32_t baud_rate_config = DEFAULT_BAUD_RATE;
-// line_term_config is only the received string termination character
-//static u_int32_t line_term_config = DEFAULT_LINE_TERM;
 
-// A buffer for our data from the payload uart
-char payload_buffer[2048];
-static SondeEXO3sSensor sondeEXO3sSensor;
-char result;
+
+void transmit_samples(){
+  memset(tx_buffer, 0, sizeof(tx_buffer)); //  Clear the telemetry data buffer.
+  size_t tx_len = SAMPLE_SIZE * sample_count;
+  memcpy(tx_buffer, &samples, tx_len);
+
+  // Get the RTC if available
+  RTCTimeAndDate_t time_and_date = {};
+  rtcGet(&time_and_date);
+  char rtcTimeBuffer[32];
+  rtcPrint(rtcTimeBuffer, &time_and_date);
+
+  // Print hex string of the buffer to the console for debugging.
+  static char tx_hex[MAX_TX_BUFFER_SIZE * 2 + 1];
+  size_t i;
+  for (i = 0; i < tx_len; ++i) {
+    sprintf(&tx_hex[i * 2], "%02X", tx_buffer[i]);
+  }
+  tx_hex[i * 2] = '\0'; // Null-terminate the string
+
+  printf("[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: %s\n", uptimeGetMs(), rtcTimeBuffer, tx_hex);
+  bm_printf(0, "[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: 0x%s", uptimeGetMs(), rtcTimeBuffer, tx_hex);
+
+  // Transmit over Spotter celluar or Iridium SBD fallback.
+  if (spotter_tx_data(tx_buffer, tx_len, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+    printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
+  } else {
+    printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
+  }
+
+  // resetting the buffer
+  memset(samples, 0, sizeof(samples));
+}
 
 void setup(void) {
   // samples per send
@@ -51,27 +81,74 @@ void setup(void) {
   bristlefin.enableVout();
   bristlefin.enable3V();
   // Initializing
+  printf("Initializing \n");
   sondeEXO3sSensor.init();
-  sondeEXO3sSensor.sdi_wake(1000);
+  printf("Waking Sensor \n");
+  sondeEXO3sSensor.sdi_wake();
+  vTaskDelay(pdMS_TO_TICKS(10000));
   sondeEXO3sSensor.inquire_cmd();
+  vTaskDelay(pdMS_TO_TICKS(100));
   sondeEXO3sSensor.identify_cmd();
-  vTaskDelay(pdMS_TO_TICKS(5000));
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-//  sondeEXO3sSensor.inquire_cmd();
-//  vTaskDelay(pdMS_TO_TICKS(2000));
   sondeEXO3sSensor.measure_cmd();
   // accumulate list of these samples
   EXO3sample sens = sondeEXO3sSensor.getLatestSample();
   samples[current_sample_index] = sens;
+
+  // Get the RTC if available
+  RTCTimeAndDate_t time_and_date = {};
+  rtcGet(&time_and_date);
+  char rtcTimeBuffer[32];
+  rtcPrint(rtcTimeBuffer, &time_and_date);
+
+  bm_fprintf(0, "exo3s_sonde_raw.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, data --- "
+                                       "temp_sensor: %.3f C, "
+                                       "sp_cond: %.3f uS/cm, "
+                                       "pH: %.3f, "
+                                       "pH: %.3f mV, "
+                                       "DO: %.3f Percent Sat, "
+                                       "DO: %.3f mg/L, "
+                                       "turbidity: %.3f NTU, "
+                                       "wiper pos: %.3f V, "
+                                       "depth: %.3f m, "
+                                       "power supply: %.3f V"
+                                       "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
+             sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
+  bm_printf(0, "[payload] | tick: %llu, rtc: %s, data --- "
+           "temp_sensor: %.3f C, "
+           "sp_cond: %.3f uS/cm, "
+           "pH: %.3f, "
+           "pH: %.3f mV, "
+           "DO: %.3f Percent Sat, "
+           "DO: %.3f mg/L, "
+           "turbidity: %.3f NTU, "
+           "wiper pos: %.3f V, "
+           "depth: %.3f m, "
+           "power supply: %.3f V"
+           "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
+        sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
+  printf("[exo3-sonde-sdi12] | tick: %llu, rtc: %s, data --- "
+         "temp_sensor: %.3f C, "
+         "sp_cond: %.3f uS/cm, "
+         "pH: %.3f, "
+         "pH: %.3f mV, "
+         "DO: %.3f Percent Sat, "
+         "DO: %.3f mg/L, "
+         "turbidity: %.3f NTU, "
+         "wiper pos: %.3f V, "
+         "depth: %.3f m, "
+         "power supply: %.3f V"
+         "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
+         sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
+
   current_sample_index++;
-  // TODO: Send data to sd card with bm_fprintf
+
   if (current_sample_index == sample_count){
     // TODO: Send data to spotter
-    // TODO: debug prints
-    // TODO:clear samples buffer
+    transmit_samples();
     current_sample_index = 0;
   }
   vTaskDelay(pdMS_TO_TICKS(2000));
@@ -92,8 +169,6 @@ void loop(void) {
     ledLinePulse = -1;
     led2State = false;
   }
-
-  //printf("Testing\n");
 
   /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
   ///   like blinking an LED.

@@ -22,11 +22,10 @@
 #include "stm32_io.h"
 
 SondeEXO3sSensor::SondeEXO3sSensor()
-    : d0_parser("+", 256, D0_PARSER_VALUE_TYPES, 5),
-      d1_parser("+", 256, D1_PARSER_VALUE_TYPES, 5),
-      d2_parser("+", 256, D2_PARSER_VALUE_TYPES, 3),
+    : d0_parser(4, "0D0!0"),
+      d1_parser(4, "0D1!0"),
+      d2_parser(2, "0D2!0"),
       _latest_sample{} {
-  // No need to compute CC code yet, as we don't have the serial number
 }
 
 
@@ -57,10 +56,21 @@ void SondeEXO3sSensor::init() {
   clear_buffer(0);
 }
 
-void SondeEXO3sSensor::sdi_wake(uint32_t delay) {
+void SondeEXO3sSensor::sdi_wake(void) {
   uint32_t timeStart;
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() - timeStart < delay);
+  PLUART::disable();
+  //Set TX pin to output
+  PLUART::configTxPinOutput();
+  // HIGH at TX pin
+  PLUART::setTxPinOutputLevel();
+  // Wake - hold HIGH for 12 ms
+  timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < breakTimeMin);
+  // Set TX pin back to TX (alternate) mode
+  PLUART::configTxPinAlternate();
+  // Re-enable UART
+  PLUART::enable();
   printf("sdi_wake\n");
 }
 
@@ -101,19 +111,15 @@ void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
 
 bool SondeEXO3sSensor::sdi_receive(void) {
   uint64_t timeStart = uptimeGetMs();
-//  clear_buffer(0);
   memset(rxBuffer, 0, sizeof(rxBuffer));
   while (!PLUART::lineAvailable() && (uptimeGetMs() - timeStart < receive_timeout)){
     vTaskDelay(pdMS_TO_TICKS(5));
-//    printf("stuck here\n");
   }
   if (PLUART::lineAvailable()){
     uint16_t len = PLUART::readLine(rxBuffer, sizeof(rxBuffer));
     for (int i =0; i < len; i++){
       rxBuffer[i] = rxBuffer[i] & 0x7F;
     }
-//    clear_buffer((int)len);
-//    printf("sdi sonde | tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), len, rxBuffer);
     return true;
   }
   return false;
@@ -155,12 +161,6 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
 
       break;
     case 2:
-      // send 2 - 0M!
-      // wait 62 seconds
-      // send 3 - 0D0!
-      // send 4 - 0D1!
-      // send 5 - 0D2!
-      // send 6 - 0D3!
       int delay = 10;
       printf("Measurement and Data commands \n");
 
@@ -178,11 +178,10 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
        * 9 number of values to expect
        * after 62 seconds, 0 will be rxd to indicate measurement is done */
 
-
       vTaskDelay(pdMS_TO_TICKS(delay*1000)); //62 seconds delay
       result = sdi_receive();
       if(result) {
-        printf("ack: %.*s\n", sizeof(rxBuffer), rxBuffer);
+        printf("measuring done: %.*s\n", sizeof(rxBuffer), rxBuffer);
       }
       vTaskDelay(pdMS_TO_TICKS(1000));
       sdi_transmit("0D0!");
@@ -237,9 +236,8 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
 //          printf("parsed D2!\n");
           printf("depth:        %.3f m\n", d2_0.data);
           printf("power supply: %.3f V\n", d2_1.data);
-          _latest_sample.depth = (float)d2_0.data.double_val;
-          _latest_sample.power = (float)d2_1.data.double_val;
-          //TODO
+          _latest_sample.depth = (float) d2_0.data.double_val;
+          _latest_sample.power = (float) d2_1.data.double_val;
         }
       }
       break;

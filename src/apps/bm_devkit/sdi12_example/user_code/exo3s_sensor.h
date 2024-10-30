@@ -4,6 +4,7 @@
 #pragma once
 #include <stdint.h>
 #include "OrderedSeparatorLineParser.h"
+#include "Exo3LineParser.h"
 
 #define sizeBuffer 256
 #define sdiSuccess 0
@@ -29,7 +30,6 @@ struct __attribute__((packed)) EXO3sample {
   float wiper_pos;      // volt
   float depth;          // meters
   float power;          // volt
-  // TODO:  fill this out correctly
 };
 
 class SondeEXO3sSensor {
@@ -37,7 +37,7 @@ class SondeEXO3sSensor {
     SondeEXO3sSensor();
     void init();
     void flush(void);
-    void sdi_wake(uint32_t);
+    void sdi_wake(void);
     void sdi_sleep(void);
     void inquire_cmd(void);
     void identify_cmd(void);
@@ -53,7 +53,6 @@ class SondeEXO3sSensor {
     unsigned char txBufferLength = 0;
     unsigned char rxBufferIndex = 0;
     unsigned char rxBufferLength = 0;
-    char txBuffer[sizeBuffer];
     char rxBuffer[sizeBuffer];
     int availTime;		// filled in to give time befor sensor will have a reading milliSecs
     char sensorCount;	// filled in to give the number of sensors that will be read
@@ -76,9 +75,9 @@ class SondeEXO3sSensor {
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     uint32_t _sensorBmLogEnable = 0;
 
-    OrderedSeparatorLineParser d0_parser;
-    OrderedSeparatorLineParser d1_parser;
-    OrderedSeparatorLineParser d2_parser;
+    Exo3DataLineParser d0_parser;
+    Exo3DataLineParser d1_parser;
+    Exo3DataLineParser d2_parser;
     EXO3sample _latest_sample;
 
     // Value types for a EXO3 sonde sensor
@@ -88,8 +87,8 @@ class SondeEXO3sSensor {
         TYPE_INVALID,   // echo of the command and slave address
         TYPE_DOUBLE,    // serial number
         TYPE_DOUBLE,    // sequence number
-        TYPE_DOUBLE,   // datetime string
-        TYPE_DOUBLE    // code space
+        TYPE_DOUBLE,    // datetime string
+        TYPE_DOUBLE     // code space
     };
 
     static constexpr ValueType D1_PARSER_VALUE_TYPES[] = {
