@@ -3,7 +3,7 @@
 #include "FreeRTOS_CLI.h"
 #include "external_flash_partitions.h"
 #include <stdio.h>
-#include "dfu/dfu.h"
+#include "dfu.h"
 
 static BaseType_t dfuCommand( char *writeBuffer,
                                   size_t writeBufferLen,

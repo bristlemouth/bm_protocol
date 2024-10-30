@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "dfu/dfu_message_structs.h"
+#include "dfu_message_structs.h"
 #include <assert.h>
 #include <inttypes.h>
 #include <stdlib.h>
