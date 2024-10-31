@@ -340,6 +340,11 @@ list(APPEND APP_FILES
         ${SRC_DIR}/lib/micropython/micropython_freertos.c
         ${SRC_DIR}/lib/micropython/mphalport.c)
 
+target_compile_options(
+    micropython PRIVATE
+    -Wno-dangling-pointer -Wno-sign-compare
+    )
+
 set_source_files_properties(
     ${SRC_DIR}/lib/micropython/mphalport.c
 

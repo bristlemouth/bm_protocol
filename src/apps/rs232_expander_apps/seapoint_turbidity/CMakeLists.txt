@@ -253,6 +253,14 @@ set(APP_LIBS
     bmcore
     )
 
+set(APP_DEFINES
+    APP_NAME="${APP_NAME}"
+    CFG_TUSB_MCU=OPT_MCU_STM32U5
+
+    # Add network stress test functions
+    STRESS_TEST_ENABLE
+    )
+
 # Include bm_core
 set(BM_CORE_LWIP_INCLUDES
     ${SRC_DIR}/lib/lwip
@@ -271,17 +279,9 @@ include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
 setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
 setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
 add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
-target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
-target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../rs232_expander_apps_common)
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
 target_link_libraries(bmcore PUBLIC lwipcore)
-
-set(APP_DEFINES
-    APP_NAME="${APP_NAME}"
-    CFG_TUSB_MCU=OPT_MCU_STM32U5
-
-    # Add network stress test functions
-    STRESS_TEST_ENABLE
-    )
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")

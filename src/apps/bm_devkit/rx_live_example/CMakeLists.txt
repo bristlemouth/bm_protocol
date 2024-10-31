@@ -48,7 +48,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
@@ -61,7 +60,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
     ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
     ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
@@ -241,7 +239,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/rx_live_sensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/rx_live_sensor.h
@@ -280,6 +277,28 @@ set(APP_DEFINES
     # Add network stress test functions
     STRESS_TEST_ENABLE
     )
+
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BCMP_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
+target_link_libraries(bmcore PUBLIC lwipcore)
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")
