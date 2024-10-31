@@ -29,9 +29,6 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${SRC_DIR}/lib/bm_core/include
-    ${SRC_DIR}/lib/bm_core/bm_common_messages
-    ${SRC_DIR}/lib/bm_core/third_party/tinycbor/src
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
     ${BCMP_INCLUDES}
@@ -308,9 +305,7 @@ setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
 setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
 add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
 target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
-target_compile_definitions(bmcore PRIVATE ${APP_DEFINES})
-target_compile_options(bmcore PRIVATE ${COMPILE_FLAGS})
-target_compile_options(bmcommon PRIVATE ${COMPILE_FLAGS})
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
 target_link_libraries(bmcore PUBLIC lwipcore)
 
 if (DFU_HOST  STREQUAL 1)

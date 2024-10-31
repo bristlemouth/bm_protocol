@@ -1,7 +1,7 @@
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "device_info.h"
-#include "dfu/dfu.h"
+#include "dfu.h"
 #include "messages.h"
 #include "queue.h"
 #include "task.h"
