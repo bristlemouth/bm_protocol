@@ -214,7 +214,7 @@ set(MICROPY_COMPILER_FLAGS
 
 	${BSP_CPU_FLAGS}
 	)
-
+add_compile_options(${COMPILE_FLAGS})
 
 set(APP_NAME ${APP})
 
