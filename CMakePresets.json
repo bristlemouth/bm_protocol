@@ -1,0 +1,82 @@
+{
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 29,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "hello-world",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "cacheVariables": {
+                "CMAKE_APP_TYPE": "BMDK",
+                "APP": "hello_world",
+                "BSP": "bm_mote_v1.0",
+                "USE_BOOTLOADER": "1",
+                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "SIGN_IMAGES": "0"
+            },
+            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+        },
+        {
+            "name": "bridge",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "cacheVariables": {
+                "APP": "bridge",
+                "BSP": "bridge_v1_0",
+                "USE_BOOTLOADER": "1",
+                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "SIGN_IMAGES": "0"
+            },
+            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+        },
+        {
+            "name": "bootloader",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "cacheVariables": {
+                "APP": "bootloader",
+                "BSP": "bootloader",
+                "CMAKE_BUILD_TYPE": "Release",
+                "SIGN_IMAGES": "0"
+            },
+            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+        },
+        {
+            "name": "unit-tests",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Test",
+                "ENABLE_TESTING": "1"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "configurePreset": "hello-world",
+            "name": "hello-world",
+            "jobs": 0
+        },
+        {
+            "configurePreset": "bridge",
+            "name": "bridge",
+            "jobs": 0
+        },
+        {
+            "configurePreset": "bootloader",
+            "name": "bootloader",
+            "jobs": 0
+        },
+        {
+            "configurePreset": "unit-tests",
+            "name": "unit-tests",
+            "jobs": 0
+        }
+    ]
+}
