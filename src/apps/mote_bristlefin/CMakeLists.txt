@@ -36,7 +36,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
@@ -48,7 +47,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/sys/configuration.cpp
@@ -83,6 +82,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/drivers/tca9546a.cpp
+    ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
+    ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/drivers/w25.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
@@ -223,7 +224,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}
@@ -247,6 +247,7 @@ set(APP_INCLUDES
 
 set(APP_LIBS
     lwipcore
+    bmcore
     )
 
 set(APP_DEFINES
@@ -256,6 +257,28 @@ set(APP_DEFINES
     # Add network stress test functions
     STRESS_TEST_ENABLE
     )
+
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BCMP_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
+target_link_libraries(bmcore PUBLIC lwipcore)
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")
@@ -277,6 +300,11 @@ list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
 list(APPEND APP_FILES
         ${SRC_DIR}/lib/micropython/micropython_freertos.c
         ${SRC_DIR}/lib/micropython/mphalport.c)
+
+target_compile_options(
+    micropython PRIVATE
+    -Wno-dangling-pointer -Wno-sign-compare
+    )
 
 set_source_files_properties(
     ${SRC_DIR}/lib/micropython/mphalport.c

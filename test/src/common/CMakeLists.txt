@@ -162,7 +162,6 @@ target_sources(bridge_power_controller_tests
     ${TEST_DIR}/stubs/mock_bm_serial.cpp
     ${TEST_DIR}/stubs/mock_device_info.cpp
     ${TEST_DIR}/stubs/mock_bridgeLog.cpp
-    ${TEST_DIR}/stubs/mock_bm_l2.cpp
     ${TEST_DIR}/stubs/mock_sensorController.cpp
     ${SRC_DIR}/lib/bm_core/test/stubs/l2_stub.c
 

@@ -135,6 +135,12 @@ extern "C" void USART3_IRQHandler(void) {
   serialGenericUartIRQHandler(&usart3);
 }
 
+// TODO - make a getter API for these
+cfg::Configuration *userConfigurationPartition = NULL;
+cfg::Configuration *systemConfigurationPartition = NULL;
+cfg::Configuration *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
+
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
@@ -360,15 +366,18 @@ debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPol
 debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
                                        sys_cfg_sensorsCheckIntervalS);
 
+  userConfigurationPartition = &debug_configuration_user;
+  systemConfigurationPartition = &debug_configuration_system;
+  hardwareConfigurationPartition = &debug_configuration_hardware;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
+  dfu_partition_global = &dfu_partition;
   debugConfigurationInit(&debug_configuration_user,
                          &debug_configuration_hardware,
                          &debug_configuration_system);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user,
-           &debug_configuration_system);
+  bcl_init();
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
@@ -376,9 +385,8 @@ debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsChe
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
   debugBmServiceInit();
-  sys_info_service_init(debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  config_cbor_map_service_init();
   bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
 
