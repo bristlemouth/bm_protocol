@@ -56,5 +56,27 @@
                 "ENABLE_TESTING": "1"
             }
         }
+    ],
+    "buildPresets": [
+        {
+            "configurePreset": "hello-world",
+            "name": "hello-world",
+            "jobs": 0
+        },
+        {
+            "configurePreset": "bridge",
+            "name": "bridge",
+            "jobs": 0
+        },
+        {
+            "configurePreset": "bootloader",
+            "name": "bootloader",
+            "jobs": 0
+        },
+        {
+            "configurePreset": "unit-tests",
+            "name": "unit-tests",
+            "jobs": 0
+        }
     ]
 }
