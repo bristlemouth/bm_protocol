@@ -8,6 +8,7 @@
 #include <string.h>
 #include "debug_adin_raw.h"
 #include "eth_adin2111.h"
+#include "util.h"
 #include "debug.h"
 #include "bm_config.h"
 
@@ -34,7 +35,7 @@ void debugAdinRawInit(void) {
   FreeRTOS_CLIRegisterCommand( &cmdGpio );
 }
 
-int8_t debug_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask) {
+BmErr debug_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint8_t port_mask) {
   (void)device_handle;
 
   printf("ADIN RX <%d> ", port_mask);
@@ -43,7 +44,7 @@ int8_t debug_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, 
   }
   printf("\n");
 
-  return ERR_OK;
+  return BmOK;
 }
 
 static bool _adin_started;
@@ -73,7 +74,7 @@ static BaseType_t adinCommand( char *writeBuffer,
     if (strncmp("init", parameter,parameterStringLength) == 0) {
       if(_adin_started) {
         printf("Adin already initialized\n");
-      } else if(adin2111_hw_init(&_device, debug_l2_rx, NULL, ADIN_PORT_MASK_ALL) == ADI_ETH_SUCCESS) {
+      } else if(adin2111_hw_init(&_device, debug_l2_rx, NULL, ADIN_PORT_MASK_ALL) == BmOK) {
         printf("Adin initialized successfully\n");
         _adin_started = true;
       } else {

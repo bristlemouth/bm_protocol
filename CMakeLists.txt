@@ -77,6 +77,5 @@ else()
     )
 
     set(ENABLE_TESTING ON)
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/lib/bm_core")
     add_subdirectory("test")
 endif()
