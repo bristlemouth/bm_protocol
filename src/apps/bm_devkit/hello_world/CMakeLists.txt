@@ -24,9 +24,13 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${SRC_DIR}/lib/bm_core/include
-    ${SRC_DIR}/lib/bm_core/bm_common_messages
+    ${SRC_DIR}/lib/bm_core/bcmp
+    ${SRC_DIR}/lib/bm_core/common
+    ${SRC_DIR}/lib/bm_core/middleware
+    ${SRC_DIR}/lib/bm_core/network
+    ${SRC_DIR}/lib/bm_core/third_party
     ${SRC_DIR}/lib/bm_core/third_party/tinycbor/src
+    ${SRC_DIR}/lib/bm_core/third_party/crc
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
     ${BCMP_INCLUDES}
