@@ -18,6 +18,7 @@ tools/bin/mpy-cross
 .vscode
 cli-cmake-debug-build/
 *build/
+preset-builds
 
 src/bsp/pluteus_v3.1/*.s
 src/bsp/pluteus_v3.1/*.ld
