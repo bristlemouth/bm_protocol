@@ -31,16 +31,7 @@ static const CLI_Command_Definition_t cmdConfiguration = {
   -1
 };
 
-static Configuration *_user_config;
-static Configuration *_system_config;
-static Configuration *_hardware_config;
-void debugConfigurationInit(Configuration *user_config, Configuration *hardware_config ,Configuration *system_config){
-    configASSERT(user_config);
-    configASSERT(hardware_config);
-    configASSERT(system_config);
-    _user_config = user_config;
-    _system_config = system_config;
-    _hardware_config = hardware_config;
+void debugConfigurationInit(void){
     FreeRTOS_CLIRegisterCommand( &cmdConfiguration );
 }
 
@@ -65,13 +56,13 @@ static BaseType_t configurationCommand( char *writeBuffer,
             printf("ERR Invalid paramters\n");
             break;
         }
-        Configuration *config = NULL;
+        BmConfigPartition partition;
         if (strncmp("usr", partitionStr,partitionStrLen) == 0) {
-            config = _user_config;
+            partition = BM_CFG_PARTITION_USER;
         } else if(strncmp("hw", partitionStr,partitionStrLen) == 0){
-            config = _hardware_config;
+            partition = BM_CFG_PARTITION_HARDWARE;
         } else if(strncmp("sys", partitionStr,partitionStrLen) == 0) {
-            config = _system_config;
+            partition = BM_CFG_PARTITION_SYSTEM;
         } else {
             printf("ERR Invalid paramters\n");
             break;
@@ -118,7 +109,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             if(strncmp("uint",typestr,typeStrLen) == 0){
                 char * ptr;
                 uint32_t value = strtol(valuestr, &ptr, 10);
-                if(config->setConfig(keystr,keyStrLen, value)){
+                if(set_config_uint(partition, keystr,keyStrLen, value)){
                     printf("set %lu\n", value);
                 } else{
                     printf("failed to set %lu\n", value);
@@ -126,7 +117,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             } else if(strncmp("int",typestr, typeStrLen) == 0){
                 char * ptr;
                 int32_t value = strtol(valuestr, &ptr, 10);
-                if(config->setConfig(keystr,keyStrLen, value)){
+                if(set_config_int(partition, keystr,keyStrLen, value)){
                     printf("set %ld\n", value);
                 } else{
                     printf("failed to set %ld\n", value);
@@ -137,19 +128,19 @@ static BaseType_t configurationCommand( char *writeBuffer,
                     printf("ERR Invalid paramters\n");
                     break;
                 }
-                if(config->setConfig(keystr,keyStrLen, value)){
+                if(set_config_float(partition, keystr,keyStrLen, value)){
                     printf("set %f\n", value);
                 } else{
                     printf("failed to set %fd\n", value);
                 }
             } else if(strncmp("str",typestr,typeStrLen ) == 0){
-                if(config->setConfig(keystr,keyStrLen, valuestr,valueStrLen)){
+                if(set_config_string(partition, keystr,keyStrLen, valuestr,valueStrLen)){
                     printf("set %s\n", valuestr);
                 } else{
                     printf("failed to set %sd\n", valuestr);
                 }
             } else if(strncmp("bytestr",typestr, typeStrLen) == 0){
-                if(config->setConfig(keystr,keyStrLen, (uint8_t *)valuestr, strlen(valuestr) + 1)){
+                if(set_config_buffer(partition, keystr,keyStrLen, (uint8_t *)valuestr, strlen(valuestr) + 1)){
                     printf("set %s\n", valuestr);
                 } else{
                     printf("failed to set %sd\n", valuestr);
@@ -179,21 +170,21 @@ static BaseType_t configurationCommand( char *writeBuffer,
             }
             if(strncmp("uint",typestr, typeStrLen) == 0){
                 uint32_t value;
-                if(config->getConfig(keystr,keyStrLen, value)){
+                if(get_config_uint(partition, keystr,keyStrLen, value)){
                     printf("get %lu\n", value);
                 } else{
                     printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("int",typestr, typeStrLen) == 0){
                 int32_t value;
-                if(config->getConfig(keystr,keyStrLen, value)){
+                if(get_config_int(partition, keystr,keyStrLen, value)){
                     printf("get %ld\n", value);
                 } else{
                     printf("failed to get %s\n", keystr);
                 }
             } else if(strncmp("float",typestr, typeStrLen) == 0){
                 float value;
-                if(config->getConfig(keystr,keyStrLen, value)){
+                if(get_config_float(partition, keystr,keyStrLen, value)){
                     printf("get %f\n", value);
                 } else{
                     printf("failed to get %s\n", keystr);
@@ -201,7 +192,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             } else if(strncmp("str",typestr, typeStrLen) == 0){
                 char strbuf[MAX_CONFIG_BUFFER_SIZE_BYTES];
                 size_t strlen = sizeof(strbuf);
-                if(config->getConfig(keystr,keyStrLen, strbuf, strlen)){
+                if(get_config_string(partition, keystr,keyStrLen, strbuf, strlen)){
                     strbuf[strlen] = '\0';
                     printf("get %s\n", strbuf);
                 } else{
@@ -210,7 +201,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
             } else if(strncmp("bytestr",typestr, typeStrLen) == 0){
                 uint8_t bytes[MAX_CONFIG_BUFFER_SIZE_BYTES];
                 size_t bytelen = sizeof(bytes);
-                if(config->getConfig(keystr,keyStrLen, bytes, bytelen)){
+                if(get_config_buffer(partition, keystr,keyStrLen, bytes, bytelen)){
                     printf("get bytes:");
                     for(size_t i = 0; i < bytelen; i++){
                         printf("%02x:", bytes[i]);
@@ -226,7 +217,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
 
         } else if (strncmp("listkeys", parameter, parameterStringLength) == 0) {
             uint8_t num_keys = 0;
-            const ConfigKey_t *keys = config->getStoredKeys(num_keys);
+            const ConfigKey_t *keys = get_stored_keys(partition, num_keys);
             printf("num keys: %u\n", num_keys);
             for(int i = 0; i < num_keys; i++){
                 size_t keybufSize = keys[i].keyLen + 1;
@@ -234,7 +225,7 @@ static BaseType_t configurationCommand( char *writeBuffer,
                 configASSERT(keybuf);
                 memcpy(keybuf, keys[i].keyBuffer, keybufSize);
                 keybuf[keys[i].keyLen] = '\0';
-                printf("%s : %s\n", keybuf, Configuration::dataTypeEnumToStr(keys[i].valueType));
+                printf("%s : %s\n", keybuf, data_type_enum_to_str(keys[i].valueType));
                 vPortFree(keybuf);
             }
         } else if (strncmp("del", parameter, parameterStringLength) == 0) {
@@ -247,13 +238,13 @@ static BaseType_t configurationCommand( char *writeBuffer,
                 printf("ERR Invalid paramters\n");
                 break;
             }
-            if(config->removeKey(keystr, keyStrLen)){
+            if(remove_key(partition, keystr, keyStrLen)){
                 printf("Removed key %s\n",keystr);
             } else {
                 printf("Failed to remove key %s\n",keystr);
             }
         } else if (strncmp("save", parameter, parameterStringLength) == 0) {
-            if(!config->saveConfig()){
+            if(!save_config(partition, true)){
                 printf("Failed to save config.\n");
             }
             // Succesfull "save" will reset the system.

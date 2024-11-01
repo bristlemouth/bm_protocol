@@ -21,6 +21,7 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "cli.h"
+#include "reset_reason.h"
 extern "C" {
 #include "config_cbor_map_service.h"
 #include "echo_service.h"
@@ -138,9 +139,9 @@ SerialHandle_t usbPcap = {
 };
 
 // TODO - make a getter API for these
-cfg::Configuration *userConfigurationPartition = NULL;
-cfg::Configuration *systemConfigurationPartition = NULL;
-cfg::Configuration *hardwareConfigurationPartition = NULL;
+static NvmPartition *userConfigurationPartition = NULL;
+static NvmPartition *systemConfigurationPartition = NULL;
+static NvmPartition *hardwareConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
@@ -300,6 +301,50 @@ static const DebugGpio_t debugGpioPins[] = {
     {"bf_tp8", &BF_TP8, GPIO_IN},
 };
 
+static bool config_read_handler(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
+                                size_t length, uint32_t timeout_ms) {
+  bool ret = false;
+
+  switch (partition) {
+  case BM_CFG_PARTITION_USER:
+    ret = userConfigurationPartition->read(offset, buffer, length, timeout_ms);
+    break;
+  case BM_CFG_PARTITION_SYSTEM:
+    ret = systemConfigurationPartition->read(offset, buffer, length, timeout_ms);
+    break;
+  case BM_CFG_PARTITION_HARDWARE:
+    ret = hardwareConfigurationPartition->read(offset, buffer, length, timeout_ms);
+    break;
+  default:
+    break;
+  }
+
+  return ret;
+}
+
+static bool config_write_handler(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
+                                 size_t length, uint32_t timeout_ms) {
+  bool ret = false;
+
+  switch (partition) {
+  case BM_CFG_PARTITION_USER:
+    ret = userConfigurationPartition->write(offset, buffer, length, timeout_ms);
+    break;
+  case BM_CFG_PARTITION_SYSTEM:
+    ret = systemConfigurationPartition->write(offset, buffer, length, timeout_ms);
+    break;
+  case BM_CFG_PARTITION_HARDWARE:
+    ret = hardwareConfigurationPartition->write(offset, buffer, length, timeout_ms);
+    break;
+  default:
+    break;
+  }
+
+  return ret;
+}
+
+static void config_reset_handler(void) { resetSystem(RESET_REASON_CONFIG); }
+
 /* USER CODE EXECUTED HERE */
 static void user_task(void *parameters);
 
@@ -375,24 +420,19 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(debug_user_partition, ram_user_configuration,
-                                              RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(
-      debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
-                                       sys_cfg_sensorsPollIntervalMs);
-  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
-                                       sys_cfg_sensorsCheckIntervalS);
-  userConfigurationPartition = &debug_configuration_user;
-  systemConfigurationPartition = &debug_configuration_system;
-  hardwareConfigurationPartition = &debug_configuration_hardware;
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
+  config_init(config_read_handler, config_write_handler, config_reset_handler);
+
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), sys_cfg_sensorsCheckIntervalS);
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;
-  debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
-                         &debug_configuration_system);
+  debugConfigurationInit();
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);

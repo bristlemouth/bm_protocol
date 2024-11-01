@@ -196,30 +196,30 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        cfg::ConfigDataTypes_e type;
+        GenericConfigDataTypes type;
         if (strncmp("u", type_str, type_str_str_len) == 0) {
-          type = cfg::ConfigDataTypes_e::UINT32;
+          type = UINT32;
         } else if (strncmp("i", type_str, type_str_str_len) == 0) {
-          type = cfg::ConfigDataTypes_e::INT32;
+          type = INT32;
         } else if (strncmp("f", type_str, type_str_str_len) == 0) {
-          type = cfg::ConfigDataTypes_e::FLOAT;
+          type = FLOAT;
         } else if (strncmp("s", type_str, type_str_str_len) == 0) {
-          type = cfg::ConfigDataTypes_e::STR;
+          type = STR;
         } else if (strncmp("b", type_str, type_str_str_len) == 0) {
-          type = cfg::ConfigDataTypes_e::BYTES;
+          type = BYTES;
         } else {
           printf("Invalid arguments\n");
           break;
         }
         BmErr err;
-        size_t buffer_size = cfg::MAX_STR_LEN_BYTES;
+        size_t buffer_size = MAX_STR_LEN_BYTES;
         uint8_t *cbor_buf = static_cast<uint8_t *>(pvPortMalloc(buffer_size));
         configASSERT(cbor_buf);
-        memset(cbor_buf, 0, cfg::MAX_STR_LEN_BYTES);
+        memset(cbor_buf, 0, MAX_STR_LEN_BYTES);
         CborEncoder encoder;
         cbor_encoder_init(&encoder, cbor_buf, buffer_size, 0);
         switch (type) {
-        case cfg::ConfigDataTypes_e::UINT32: {
+        case UINT32: {
           uint32_t val = strtoul(value_str, NULL, 0);
           if (cbor_encode_uint(&encoder, val) != CborNoError) {
             break;
@@ -232,7 +232,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           }
           break;
         }
-        case cfg::ConfigDataTypes_e::INT32: {
+        case INT32: {
           int32_t val = strtol(value_str, NULL, 0);
           if (cbor_encode_int(&encoder, val) != CborNoError) {
             break;
@@ -245,7 +245,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           }
           break;
         }
-        case cfg::ConfigDataTypes_e::FLOAT: {
+        case FLOAT: {
           float val;
           if (!bStrtof(const_cast<char *>(value_str), &val)) {
             printf("Invalid param\n");
@@ -262,7 +262,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           }
           break;
         }
-        case cfg::ConfigDataTypes_e::STR: {
+        case STR: {
           if (cbor_encode_text_stringz(&encoder, value_str) != CborNoError) {
             break;
           }
@@ -274,7 +274,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           }
           break;
         }
-        case cfg::ConfigDataTypes_e::BYTES: {
+        case BYTES: {
           if (cbor_encode_byte_string(&encoder, reinterpret_cast<const uint8_t *>(value_str),
                                       strlen(value_str)) != CborNoError) {
             break;

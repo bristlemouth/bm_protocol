@@ -9,54 +9,119 @@
 #ifndef CBOR_PARSER_MAX_RECURSIONS
 #error "CBOR_PARSER_MAX_RECURSIONS must be defined!"
 #endif // CBOR_PARSER_MAX_RECURSIONS
-namespace cfg {
+#define RAM_CONFIG_BUFFER_SIZE (10 * 1024)
 
-Configuration::Configuration(NvmPartition& flash_partition, uint8_t *ram_partition, size_t ram_partition_size):_flash_partition(flash_partition), _ram_partition_size(ram_partition_size), _needs_commit(false) {
-    configASSERT(ram_partition);
-    configASSERT(_ram_partition_size >= sizeof(ConfigPartition_t));
-    _ram_partition = reinterpret_cast<ConfigPartition_t*>(ram_partition);
-    if(!loadAndVerifyNvmConfig()) {
-        printf("Unable to load configs from flash.");
-        _ram_partition->header.numKeys = 0;
-        _ram_partition->header.version = CONFIG_VERSION;
-        // TODO: Once we have default configs, load these into flash.
-    } else {
-        printf("Succesfully loaded configs from flash.");
+
+struct ConfigCb {
+    ConfigRead read;
+    ConfigWrite write;
+    ConfigRestart restart;
+};
+struct ConfigInfo {
+    uint8_t ram_buffer[RAM_CONFIG_BUFFER_SIZE];
+    bool needs_commit;
+};
+
+static struct ConfigInfo CONFIGS[BM_CFG_PARTITION_COUNT];
+static struct ConfigCb CB;
+
+static bool find_key_idx(BmConfigPartition partition, const char * key, size_t len, uint8_t &idx) {
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+    bool ret = false;
+
+    for(int i = 0; i < config_partition->header.numKeys; i++){
+        if(strncmp(key, config_partition->keys[i].keyBuffer,len) == 0){
+            idx = i;
+            ret = true;
+            break;
+        }
     }
+
+    return ret;
 }
 
-bool Configuration::loadAndVerifyNvmConfig(void) {
-    bool rval = false;
-    do {
-        if (!_flash_partition.read(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
-            break;
-        }
-        uint32_t partition_crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
-        if (_ram_partition->header.crc32 != partition_crc32) {
-            break;
-        }
-        rval = true;
-    } while(0);
-    return rval;
+static bool prepare_cbor_encoder(BmConfigPartition partition, const char * key, size_t key_len, CborEncoder &encoder, uint8_t &key_idx, bool &keyExists) {
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+
+    if (key) {
+      do {
+          if(key_len > MAX_KEY_LEN_BYTES) {
+              break;
+          }
+          if(config_partition->header.numKeys >= MAX_NUM_KV) {
+              break;
+          }
+          keyExists = find_key_idx(partition, key, key_len, key_idx);
+          if(!keyExists) {
+              key_idx = config_partition->header.numKeys;
+          }
+          if(snprintf(config_partition->keys[key_idx].keyBuffer,sizeof(config_partition->keys[key_idx].keyBuffer),"%s",key) < 0){
+              break;
+          }
+          cbor_encoder_init(&encoder, config_partition->values[key_idx].valueBuffer, sizeof(config_partition->values[key_idx].valueBuffer), 0);
+          ret = true;
+      } while(0);
+    }
+
+    return ret;
 }
 
-bool Configuration::prepareCborParser(const char * key, size_t key_len, CborValue &it, CborParser &parser) {
-    configASSERT(key);
-    bool retval = false;
-    uint8_t keyIdx;
+static bool prepare_cbor_parser(BmConfigPartition partition, const char * key, size_t key_len, CborValue &it, CborParser &parser) {
+    bool ret = false;
+    uint8_t key_idx;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+
+    if (key) {
+      do {
+          if(key_len > MAX_KEY_LEN_BYTES) {
+              break;
+          }
+          if(!find_key_idx(partition, key, key_len, key_idx)){
+              break;
+          }
+          if(cbor_parser_init(config_partition->values[key_idx].valueBuffer, sizeof(config_partition->values[key_idx].valueBuffer), 0, &parser, &it) != CborNoError){
+              break;
+          }
+          ret = true;
+      } while(0);
+    }
+
+    return ret;
+}
+
+static bool load_and_verify_nvm_config(ConfigPartition_t *config_partition, BmConfigPartition partition) {
+    bool ret = false;
+
     do {
-        if(key_len > MAX_KEY_LEN_BYTES) {
+        if (!CB.read(partition, CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(config_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
             break;
         }
-        if(!findKeyIndex(key, key_len, keyIdx)){
+        uint32_t partition_crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&config_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(config_partition->header.crc32)));
+        if (config_partition->header.crc32 != partition_crc32) {
             break;
         }
-        if(cbor_parser_init(_ram_partition->values[keyIdx].valueBuffer, sizeof(_ram_partition->values[keyIdx].valueBuffer), 0, &parser, &it) != CborNoError){
-            break;
-        }
-        retval = true;
+        ret = true;
     } while(0);
-    return retval;
+    return ret;
+}
+
+
+void config_init(ConfigRead read, ConfigWrite write, ConfigRestart restart) {
+    CB.read = read;
+    CB.write = write;
+    CB.restart = restart;
+    for (uint8_t i = 0; i < BM_CFG_PARTITION_COUNT; i++) {
+        ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[i].ram_buffer;
+      if(!load_and_verify_nvm_config(config_partition, (BmConfigPartition)i)) {
+          printf("Unable to load configs from flash.");
+          config_partition->header.numKeys = 0;
+          config_partition->header.version = CONFIG_VERSION;
+          // TODO: Once we have default configs, load these into flash.
+      } else {
+          printf("Succesfully loaded configs from flash.");
+      }
+    }
 }
 
 
@@ -66,27 +131,29 @@ bool Configuration::prepareCborParser(const char * key, size_t key_len, CborValu
 * \param value[out] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::getConfig(const char * key, size_t key_len, uint32_t &value) {
-    configASSERT(key);
-    bool rval = false;
+bool get_config_uint(BmConfigPartition partition, const char * key, size_t key_len, uint32_t &value) {
+    bool ret = false;
 
     CborValue it;
     CborParser parser;
-    do {
-        if(!prepareCborParser(key, key_len, it, parser)){
-            break;
-        }
-        uint64_t temp;
-        if(!cbor_value_is_unsigned_integer(&it)){
-            break;
-        }
-        if(cbor_value_get_uint64(&it,&temp) != CborNoError){
-            break;
-        }
-        value = static_cast<uint32_t>(temp);
-        rval = true;
-    } while(0);
-    return rval;
+
+    if (key) {
+      do {
+          if(!prepare_cbor_parser(partition, key, key_len, it, parser)){
+              break;
+          }
+          uint64_t temp;
+          if(!cbor_value_is_unsigned_integer(&it)){
+              break;
+          }
+          if(cbor_value_get_uint64(&it,&temp) != CborNoError){
+              break;
+          }
+          value = static_cast<uint32_t>(temp);
+          ret = true;
+      } while(0);
+    }
+    return ret;
 }
 
 /*!
@@ -95,14 +162,14 @@ bool Configuration::getConfig(const char * key, size_t key_len, uint32_t &value)
 * \param value[out] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::getConfig(const char * key, size_t key_len, int32_t &value) {
+bool get_config_int(BmConfigPartition partition, const char * key, size_t key_len, int32_t &value) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
 
     CborValue it;
     CborParser parser;
     do {
-        if(!prepareCborParser(key, key_len, it, parser)){
+        if(!prepare_cbor_parser(partition, key, key_len, it, parser)){
             break;
         }
         int64_t temp;
@@ -113,9 +180,9 @@ bool Configuration::getConfig(const char * key, size_t key_len, int32_t &value) 
             break;
         }
         value = static_cast<int32_t>(temp);
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -124,14 +191,14 @@ bool Configuration::getConfig(const char * key, size_t key_len, int32_t &value) 
 * \param value[out] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::getConfig(const char * key, size_t key_len, float &value){
+bool get_config_float(BmConfigPartition partition, const char * key, size_t key_len, float &value) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
 
     CborValue it;
     CborParser parser;
     do {
-        if(!prepareCborParser(key, key_len, it, parser)){
+        if(!prepare_cbor_parser(partition, key, key_len, it, parser)){
             break;
         }
         float temp;
@@ -142,9 +209,9 @@ bool Configuration::getConfig(const char * key, size_t key_len, float &value){
             break;
         }
         value = temp;
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -154,15 +221,15 @@ bool Configuration::getConfig(const char * key, size_t key_len, float &value){
 * \param value_len[in/out] - in: buffer size, out:bytes len
 * \returns - true if success, false otherwise.
 */
-bool Configuration::getConfig(const char * key, size_t key_len, char *value, size_t &value_len) {
+bool get_config_string(BmConfigPartition partition, const char * key, size_t key_len, char *value, size_t &value_len) {
     configASSERT(key);
     configASSERT(value);
-    bool rval = false;
+    bool ret = false;
 
     CborValue it;
     CborParser parser;
     do {
-        if(!prepareCborParser(key,key_len, it, parser)){
+        if(!prepare_cbor_parser(partition, key,key_len, it, parser)){
             break;
         }
         if(!cbor_value_is_text_string(&it)){
@@ -171,9 +238,9 @@ bool Configuration::getConfig(const char * key, size_t key_len, char *value, siz
         if(cbor_value_copy_text_string(&it,value, &value_len, NULL) != CborNoError){
             break;
         }
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -183,15 +250,15 @@ bool Configuration::getConfig(const char * key, size_t key_len, char *value, siz
 * \param value_len[in/out] - in: buffer size, out:bytes len
 * \returns - true if success, false otherwise.
 */
-bool Configuration::getConfig(const char * key, size_t key_len, uint8_t *value, size_t &value_len) {
+bool get_config_buffer(BmConfigPartition partition, const char * key, size_t key_len, uint8_t *value, size_t &value_len) {
     configASSERT(key);
     configASSERT(value);
-    bool rval = false;
+    bool ret = false;
 
     CborValue it;
     CborParser parser;
     do {
-        if(!prepareCborParser(key,key_len, it, parser)){
+        if(!prepare_cbor_parser(partition, key,key_len, it, parser)){
             break;
         }
         if(!cbor_value_is_byte_string(&it)){
@@ -200,9 +267,9 @@ bool Configuration::getConfig(const char * key, size_t key_len, uint8_t *value, 
         if(cbor_value_copy_byte_string(&it,value, &value_len, NULL) != CborNoError){
             break;
         }
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -212,56 +279,35 @@ bool Configuration::getConfig(const char * key, size_t key_len, uint8_t *value, 
 * \param value_len[in/out] -  in: buffer size, out :buffer len
 * \returns - true if success, false otherwise.
 */
-bool Configuration::getConfigCbor(const char * key, size_t key_len, uint8_t *value, size_t &value_len) {
+bool get_config_cbor(BmConfigPartition partition, const char * key, size_t key_len, uint8_t *value, size_t &value_len) {
     configASSERT(key);
     configASSERT(value);
-    bool rval = false;
-
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
     CborValue it;
     CborParser parser;
-    uint8_t keyIdx;
+    uint8_t key_idx;
+
     do {
-        if(!prepareCborParser(key,key_len, it, parser)){
+        if(!prepare_cbor_parser(partition, key,key_len, it, parser)){
             break;
         }
         if(!cbor_value_is_valid(&it)){
             break;
         }
-        if(!findKeyIndex(key, key_len, keyIdx)){
+        if(!find_key_idx(partition, key, key_len, key_idx)){
             break;
         }
-        size_t buffer_size = sizeof(_ram_partition->values[keyIdx].valueBuffer);
+        size_t buffer_size = sizeof(config_partition->values[key_idx].valueBuffer);
         if(value_len < buffer_size || value_len == 0){
             break;
         }
-        memcpy(value, _ram_partition->values[keyIdx].valueBuffer, buffer_size);
+        memcpy(value, config_partition->values[key_idx].valueBuffer, buffer_size);
         value_len = buffer_size;
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
-}
 
-bool Configuration::prepareCborEncoder(const char * key, size_t key_len, CborEncoder &encoder, uint8_t &keyIdx, bool &keyExists) {
-    configASSERT(key);
-    bool rval = false;
-    do {
-        if(key_len > MAX_KEY_LEN_BYTES) {
-            break;
-        }
-        if(_ram_partition->header.numKeys >= MAX_NUM_KV) {
-            break;
-        }
-        keyExists = findKeyIndex(key, key_len, keyIdx);
-        if(!keyExists) {
-            keyIdx = _ram_partition->header.numKeys;
-        }
-        if(snprintf(_ram_partition->keys[keyIdx].keyBuffer,sizeof(_ram_partition->keys[keyIdx].keyBuffer),"%s",key) < 0){
-            break;
-        }
-        cbor_encoder_init(&encoder, _ram_partition->values[keyIdx].valueBuffer, sizeof(_ram_partition->values[keyIdx].valueBuffer), 0);
-        rval = true;
-    } while(0);
-    return rval;
+    return ret;
 }
 
 
@@ -271,28 +317,30 @@ bool Configuration::prepareCborEncoder(const char * key, size_t key_len, CborEnc
 * \param value[in] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::setConfig(const char * key, size_t key_len, uint32_t value) {
+bool set_config_uint(BmConfigPartition partition, const char * key, size_t key_len, uint32_t value) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
     CborEncoder encoder;
-    uint8_t keyIdx;
+    uint8_t key_idx;
     bool keyExists;
+
     do{
-        if(!prepareCborEncoder(key, key_len, encoder, keyIdx, keyExists)){
+        if(!prepare_cbor_encoder(partition, key, key_len, encoder, key_idx, keyExists)){
             break;
         }
         if(cbor_encode_uint(&encoder, value)!= CborNoError) {
             break;
         }
-        _ram_partition->keys[keyIdx].valueType = UINT32;
-        _ram_partition->keys[keyIdx].keyLen = key_len;
+        config_partition->keys[key_idx].valueType = UINT32;
+        config_partition->keys[key_idx].keyLen = key_len;
         if(!keyExists){
-            _ram_partition->header.numKeys++;
+            config_partition->header.numKeys++;
         }
-        _needs_commit = true;
-        rval = true;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -301,28 +349,31 @@ bool Configuration::setConfig(const char * key, size_t key_len, uint32_t value) 
 * \param value[in] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::setConfig(const char * key, size_t key_len, int32_t value) {
+bool set_config_int(BmConfigPartition partition, const char * key, size_t key_len, int32_t value) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
     CborEncoder encoder;
-    uint8_t keyIdx;
+    uint8_t key_idx;
     bool keyExists;
+
     do{
-        if(!prepareCborEncoder(key, key_len, encoder, keyIdx, keyExists)){
+        if(!prepare_cbor_encoder(partition, key, key_len, encoder, key_idx, keyExists)){
             break;
         }
         if(cbor_encode_int(&encoder, value)!= CborNoError) {
             break;
         }
-        _ram_partition->keys[keyIdx].valueType = INT32;
-        _ram_partition->keys[keyIdx].keyLen = key_len;
+        config_partition->keys[key_idx].valueType = INT32;
+        config_partition->keys[key_idx].keyLen = key_len;
         if(!keyExists){
-            _ram_partition->header.numKeys++;
+            config_partition->header.numKeys++;
         }
-        _needs_commit = true;
-        rval = true;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+
+    return ret;
 }
 
 /*!
@@ -331,28 +382,31 @@ bool Configuration::setConfig(const char * key, size_t key_len, int32_t value) {
 * \param value[in] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::setConfig(const char * key, size_t key_len, float value) {
+bool set_config_float(BmConfigPartition partition, const char * key, size_t key_len, float value) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
     CborEncoder encoder;
-    uint8_t keyIdx;
+    uint8_t key_idx;
     bool keyExists;
+
     do {
-        if(!prepareCborEncoder(key, key_len, encoder, keyIdx, keyExists)){
+        if(!prepare_cbor_encoder(partition, key, key_len, encoder, key_idx, keyExists)){
             break;
         }
         if(cbor_encode_float(&encoder, value)!= CborNoError) {
             break;
         }
-        _ram_partition->keys[keyIdx].valueType = FLOAT;
-        _ram_partition->keys[keyIdx].keyLen = key_len;
+        config_partition->keys[key_idx].valueType = FLOAT;
+        config_partition->keys[key_idx].keyLen = key_len;
         if(!keyExists){
-            _ram_partition->header.numKeys++;
+            config_partition->header.numKeys++;
         }
-        _needs_commit = true;
-        rval = true;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+
+    return ret;
 }
 
 /*!
@@ -361,28 +415,30 @@ bool Configuration::setConfig(const char * key, size_t key_len, float value) {
 * \param value[in] - value
 * \returns - true if success, false otherwise.
 */
-bool Configuration::setConfig(const char * key, size_t key_len, const char *value, size_t value_len) {
+bool set_config_string(BmConfigPartition partition, const char * key, size_t key_len, const char *value, size_t value_len) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
     CborEncoder encoder;
-    uint8_t keyIdx;
+    uint8_t key_idx;
     bool keyExists;
+
     do {
-        if(!prepareCborEncoder(key, key_len, encoder, keyIdx, keyExists)){
+        if(!prepare_cbor_encoder(partition, key, key_len, encoder, key_idx, keyExists)){
             break;
         }
         if(cbor_encode_text_string(&encoder, value, value_len)!= CborNoError) {
             break;
         }
-        _ram_partition->keys[keyIdx].valueType = STR;
-        _ram_partition->keys[keyIdx].keyLen = key_len;
+        config_partition->keys[key_idx].valueType = STR;
+        config_partition->keys[key_idx].keyLen = key_len;
         if(!keyExists){
-            _ram_partition->header.numKeys++;
+            config_partition->header.numKeys++;
         }
-        _needs_commit = true;
-        rval = true;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -392,28 +448,31 @@ bool Configuration::setConfig(const char * key, size_t key_len, const char *valu
 * \param value_len[in] - bytes len
 * \returns - true if success, false otherwise.
 */
-bool Configuration::setConfig(const char * key, size_t key_len, const uint8_t *value, size_t value_len) {
+bool set_config_buffer(BmConfigPartition partition, const char * key, size_t key_len, const uint8_t *value, size_t value_len) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
     CborEncoder encoder;
-    uint8_t keyIdx;
+    uint8_t key_idx;
     bool keyExists;
+
     do {
-        if(!prepareCborEncoder(key, key_len, encoder, keyIdx, keyExists)){
+        if(!prepare_cbor_encoder(partition, key, key_len, encoder, key_idx, keyExists)){
             break;
         }
         if(cbor_encode_byte_string(&encoder, value, value_len)!= CborNoError) {
             break;
         }
-        _ram_partition->keys[keyIdx].valueType = BYTES;
-        _ram_partition->keys[keyIdx].keyLen = key_len;
+        config_partition->keys[key_idx].valueType = BYTES;
+        config_partition->keys[key_idx].keyLen = key_len;
         if(!keyExists){
-            _ram_partition->header.numKeys++;
+            config_partition->header.numKeys++;
         }
-        _needs_commit = true;
-        rval = true;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+
+    return ret;
 }
 
 
@@ -424,13 +483,15 @@ bool Configuration::setConfig(const char * key, size_t key_len, const uint8_t *v
 * \param value_len[in] - buffer len
 * \returns - true if success, false otherwise.
 */
-bool Configuration::setConfigCbor(const char * key, size_t key_len, uint8_t *value, size_t value_len) {
+bool set_config_cbor(BmConfigPartition partition, const char * key, size_t key_len, uint8_t *value, size_t value_len) {
     configASSERT(key);
     configASSERT(value);
     CborValue it;
     CborParser parser;
-    uint8_t keyIdx;
-    bool rval = false;
+    uint8_t key_idx;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+
     do {
         if(key_len > MAX_KEY_LEN_BYTES) {
             break;
@@ -444,29 +505,29 @@ bool Configuration::setConfigCbor(const char * key, size_t key_len, uint8_t *val
         if(!cbor_value_is_valid(&it)){
             break;
         }
-        if(!findKeyIndex(key, key_len, keyIdx)){
-            if(_ram_partition->header.numKeys >= MAX_NUM_KV) {
+        if(!find_key_idx(partition, key, key_len, key_idx)){
+            if(config_partition->header.numKeys >= MAX_NUM_KV) {
                 break;
             }
-            keyIdx = _ram_partition->header.numKeys;
-            if(snprintf(_ram_partition->keys[keyIdx].keyBuffer,sizeof(_ram_partition->keys[keyIdx].keyBuffer),"%s",key) < 0){
+            key_idx = config_partition->header.numKeys;
+            if(snprintf(config_partition->keys[key_idx].keyBuffer,sizeof(config_partition->keys[key_idx].keyBuffer),"%s",key) < 0){
                 break;
             }
         }
-        ConfigDataTypes_e type;
-        if(!cborTypeToConfigType(&it,type)) {
+        GenericConfigDataTypes type;
+        if(!cbor_type_to_config(&it,type)) {
             break;
         }
-        _ram_partition->keys[keyIdx].valueType = type;
-        _ram_partition->keys[keyIdx].keyLen = key_len;
-        memcpy(_ram_partition->values[keyIdx].valueBuffer, value, value_len);
-        if(keyIdx == _ram_partition->header.numKeys){
-            _ram_partition->header.numKeys++;
+        config_partition->keys[key_idx].valueType = type;
+        config_partition->keys[key_idx].keyLen = key_len;
+        memcpy(config_partition->values[key_idx].valueBuffer, value, value_len);
+        if(key_idx == config_partition->header.numKeys){
+            config_partition->header.numKeys++;
         }
-        _needs_commit = true;
-        rval = true;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
 /*!
@@ -475,8 +536,8 @@ bool Configuration::setConfigCbor(const char * key, size_t key_len, uint8_t *val
 * \param configType[out] - config type to convert to
 * \returns - true if success, false otherwise.
 */
-bool Configuration::cborTypeToConfigType(const CborValue *value, ConfigDataTypes_e &configType) {
-    bool rval = true;
+bool cbor_type_to_config(const CborValue *value, GenericConfigDataTypes &configType) {
+    bool ret = true;
     do {
         if(cbor_value_is_integer(value)){
             if(cbor_value_is_unsigned_integer(value)){
@@ -499,9 +560,9 @@ bool Configuration::cborTypeToConfigType(const CborValue *value, ConfigDataTypes
             configType = ARRAY;
             break;
         }
-        rval = false;
+        ret = false;
     } while(0);
-    return rval;
+    return ret;
 }
 
 
@@ -510,9 +571,10 @@ bool Configuration::cborTypeToConfigType(const CborValue *value, ConfigDataTypes
 * \param num_stored_key[out] - number of keys stored
 * \returns - map of keys
 */
-const ConfigKey_t* Configuration::getStoredKeys(uint8_t &num_stored_keys){
-    num_stored_keys = _ram_partition->header.numKeys;
-    return _ram_partition->keys;
+const ConfigKey_t* get_stored_keys(BmConfigPartition partition, uint8_t &num_stored_keys){
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+    num_stored_keys = config_partition->header.numKeys;
+    return config_partition->keys;
 }
 
 /*!
@@ -520,38 +582,28 @@ const ConfigKey_t* Configuration::getStoredKeys(uint8_t &num_stored_keys){
 * \param key[in] - null terminated key
 * \returns - true if successful, false otherwise.
 */
-bool Configuration::removeKey(const char * key, size_t key_len) {
+bool remove_key(BmConfigPartition partition, const char * key, size_t key_len) {
     configASSERT(key);
-    bool rval = false;
-    uint8_t keyIdx;
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+    uint8_t key_idx;
+
     do {
-        if(!findKeyIndex(key, key_len,keyIdx)){
+        if(!find_key_idx(partition, key, key_len,key_idx)){
             break;
         }
-        if(_ram_partition->header.numKeys - 1 > keyIdx) { // if there are keys after, we need to move them up.
-            memmove(&_ram_partition->keys[keyIdx],&_ram_partition->keys[keyIdx+1], (_ram_partition->header.numKeys - 1 - keyIdx) * sizeof(ConfigKey_t)); // shift keys
-            memmove(&_ram_partition->values[keyIdx],&_ram_partition->values[keyIdx+1], (_ram_partition->header.numKeys - 1 - keyIdx) * sizeof(ConfigValue_t)); // shift values
+        if(config_partition->header.numKeys - 1 > key_idx) { // if there are keys after, we need to move them up.
+            memmove(&config_partition->keys[key_idx],&config_partition->keys[key_idx+1], (config_partition->header.numKeys - 1 - key_idx) * sizeof(ConfigKey_t)); // shift keys
+            memmove(&config_partition->values[key_idx],&config_partition->values[key_idx+1], (config_partition->header.numKeys - 1 - key_idx) * sizeof(ConfigValue_t)); // shift values
         }
-        _ram_partition->header.numKeys--;
-        _needs_commit = true;
-        rval = true;
+        config_partition->header.numKeys--;
+        CONFIGS[partition].needs_commit = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
 }
 
-bool Configuration::findKeyIndex(const char * key, size_t len, uint8_t &idx) {
-    bool rval = false;
-    for(int i = 0; i < _ram_partition->header.numKeys; i++){
-        if(strncmp(key, _ram_partition->keys[i].keyBuffer,len) == 0){
-            idx = i;
-            rval = true;
-            break;
-        }
-    }
-    return rval;
-}
-
-const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
+const char* data_type_enum_to_str(GenericConfigDataTypes type) {
     switch(type){
         case UINT32:
             return "uint32";
@@ -569,32 +621,35 @@ const char* Configuration::dataTypeEnumToStr(ConfigDataTypes_e type) {
     configASSERT(false); // NOT_REACHED
 }
 
-bool Configuration::saveConfig(bool restart) {
-    bool rval = false;
+bool save_config(BmConfigPartition partition, bool restart) {
+    bool ret = false;
+    ConfigPartition_t *config_partition = (ConfigPartition_t *)CONFIGS[partition].ram_buffer;
+
     do {
-        _ram_partition->header.crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&_ram_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(_ram_partition->header.crc32)));
-        if(!_flash_partition.write(CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(_ram_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
+        config_partition->header.crc32 = crc32_ieee(reinterpret_cast<const uint8_t *>(&config_partition->header.version), (sizeof(ConfigPartition_t)-sizeof(config_partition->header.crc32)));
+        if(!CB.write(partition, CONFIG_START_OFFSET_IN_BYTES, reinterpret_cast<uint8_t *>(config_partition), sizeof(ConfigPartition_t), CONFIG_LOAD_TIMEOUT_MS)){
             break;
         }
         if (restart) {
-            resetSystem(RESET_REASON_CONFIG);
+            CB.restart();
         }
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
+
+    return ret;
 }
 
- bool Configuration::getValueSize(const char * key, size_t key_len, size_t &size) {
+ bool get_value_size(BmConfigPartition partition, const char * key, size_t key_len, size_t &size) {
     configASSERT(key);
-    bool rval = false;
+    bool ret = false;
     CborValue it;
     CborParser parser;
     do {
-        if(!prepareCborParser(key, key_len, it, parser)){
+        if(!prepare_cbor_parser(partition, key, key_len, it, parser)){
             break;
         }
-        ConfigDataTypes_e configType;
-        if(!cborTypeToConfigType(&it, configType)){
+        GenericConfigDataTypes configType;
+        if(!cbor_type_to_config(&it, configType)){
             break;
         }
         switch(configType){
@@ -624,13 +679,12 @@ bool Configuration::saveConfig(bool restart) {
               break;
             }
         }
-        rval = true;
+        ret = true;
     } while(0);
-    return rval;
+    return ret;
  }
 
-bool Configuration::needsCommit(void) {
-    return _needs_commit;
+bool needs_commit(BmConfigPartition partition) {
+    return CONFIGS[partition].needs_commit;
 }
 
-} // namespace cfg
