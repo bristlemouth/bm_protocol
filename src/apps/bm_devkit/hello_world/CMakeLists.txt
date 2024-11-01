@@ -49,7 +49,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/configuration.c
     ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
@@ -267,6 +267,7 @@ set(BM_CORE_FREERTOS_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
     ${SRC_DIR}/lib/common
     ${MEMFAULT_INCLUDES}
+    ${SRC_DIR}/lib/sys
 )
 
 include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)

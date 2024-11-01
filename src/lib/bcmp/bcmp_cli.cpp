@@ -9,8 +9,6 @@
 
 #include "configuration.h"
 
-using namespace cfg;
-
 #include "app_util.h"
 #include "messages.h"
 #include "pubsub.h"
@@ -196,7 +194,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           printf("Invalid arguments\n");
           break;
         }
-        GenericConfigDataTypes type;
+        ConfigDataTypes type;
         if (strncmp("u", type_str, type_str_str_len) == 0) {
           type = UINT32;
         } else if (strncmp("i", type_str, type_str_str_len) == 0) {

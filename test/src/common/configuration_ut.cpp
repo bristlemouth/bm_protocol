@@ -106,7 +106,7 @@ TEST_F(ConfigurationTest, BasicTest)
     config_init(config_read_handler, config_write_handler, config_reset_handler);
 
     uint8_t num_keys;
-    const ConfigKey_t *key_list = NULL;
+    const ConfigKey *key_list = NULL;
     key_list = get_stored_keys(BM_CFG_PARTITION_SYSTEM, num_keys);
     EXPECT_EQ(num_keys,0);
     EXPECT_EQ((key_list != NULL), true);
@@ -251,7 +251,7 @@ TEST_F(ConfigurationTest, cborGetSet){
     uint8_t cborBuffer[MAX_STR_LEN_BYTES];
     config_init(config_read_handler, config_write_handler, config_reset_handler);
     uint8_t num_keys;
-    const ConfigKey_t *key_list = NULL;
+    const ConfigKey *key_list = NULL;
     key_list = get_stored_keys(BM_CFG_PARTITION_SYSTEM, num_keys);
     EXPECT_EQ(num_keys,0);
     EXPECT_EQ((key_list != NULL), true);
@@ -297,7 +297,7 @@ TEST_F(ConfigurationTest, BadCborGetSet){
     memset(cborBuffer, 0xFF, buffer_size);
     config_init(config_read_handler, config_write_handler, config_reset_handler);
     uint8_t num_keys;
-    const ConfigKey_t *key_list = NULL;
+    const ConfigKey *key_list = NULL;
     key_list = get_stored_keys(BM_CFG_PARTITION_SYSTEM, num_keys);
     EXPECT_EQ(num_keys,0);
     EXPECT_EQ((key_list != NULL), true);

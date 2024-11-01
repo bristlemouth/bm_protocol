@@ -20,7 +20,7 @@ target_sources(sm_config_crc_list_tests
     PRIVATE
     ${SRC_DIR}/apps/bridge/sm_config_crc_list.cpp
     ${SRC_DIR}/lib/common/nvmPartition.cpp
-    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/configuration.c
     ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
     ${SRC_DIR}/third_party/tinycbor/src/cborparser.c

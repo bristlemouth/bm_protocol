@@ -12,7 +12,7 @@ static Configuration *_sys_cfg;
 static Configuration *_hw_cfg;
 
 static Configuration *get_partition(bm_common_config_partition_e partition);
-static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey_t *keys, size_t &len);
+static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey *keys, size_t &len);
 
 // These are the callback functions that BCMP req/rep will call when we get a response
 // from the target node.
@@ -129,7 +129,7 @@ bool ncp_cfg_status_request_cb(uint64_t node_id, bm_common_config_partition_e pa
         break;
       }
       uint8_t num_keys;
-      const ConfigKey_t *keys = p->getStoredKeys(num_keys);
+      const ConfigKey *keys = p->getStoredKeys(num_keys);
       size_t buffer_size;
       uint8_t *keyBuf = (num_keys) ? alloc_ncp_key_buffer(num_keys, keys, buffer_size) : NULL;
       if (bm_serial_cfg_status_response(node_id, partition, p->needsCommit(), num_keys,
@@ -207,7 +207,7 @@ static Configuration *get_partition(bm_common_config_partition_e partition) {
 }
 
 /* NOTE: Caller must free allocated buffer */
-static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey_t *keys, size_t &len) {
+static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey *keys, size_t &len) {
   len = 0;
   for (int i = 0; i < num_keys; i++) {
     len += sizeof(bm_common_config_status_key_data_t);

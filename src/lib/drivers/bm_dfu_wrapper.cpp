@@ -13,7 +13,6 @@ extern "C" {
 
 static constexpr char dfu_confirm_config_key[] = "dfu_confirm";
 
-using namespace cfg;
 extern NvmPartition *dfu_partition_global;
 
 BmErr bm_dfu_client_set_confirmed(void) {
@@ -69,7 +68,7 @@ uint32_t bm_dfu_client_flash_area_get_size(const void *flash_area) {
 bool bm_dfu_client_confirm_is_enabled(void) {
   uint32_t val = 1;
   get_config_uint(BM_CFG_PARTITION_SYSTEM, dfu_confirm_config_key,
-                  strlen(dfu_confirm_config_key), val);
+                  strlen(dfu_confirm_config_key), &val);
   return val == 1;
 }
 

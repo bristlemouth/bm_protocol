@@ -426,9 +426,9 @@ static void defaultTask(void *parameters) {
   config_init(config_read_handler, config_write_handler, config_reset_handler);
 
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
-                  strlen("sensorsPollIntervalMs"), sys_cfg_sensorsPollIntervalMs);
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
-                  strlen("sensorsCheckIntervalS"), sys_cfg_sensorsCheckIntervalS);
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;

@@ -94,7 +94,7 @@ target_sources(configuration_tests
     PRIVATE
     # File we're testing
     ${SRC_DIR}/lib/common/nvmPartition.cpp
-    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/configuration.c
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
     ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
