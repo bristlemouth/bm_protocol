@@ -1,4 +1,5 @@
 #include "configuration.h"
+#include "bm_configs_generic.h"
 #include "crc.h"
 #include "reset_reason.h"
 #include <stdio.h>
@@ -10,18 +11,12 @@
 #endif // CBOR_PARSER_MAX_RECURSIONS
 #define RAM_CONFIG_BUFFER_SIZE (10 * 1024)
 
-struct ConfigCb {
-  ConfigRead read;
-  ConfigWrite write;
-  ConfigRestart restart;
-};
 struct ConfigInfo {
   uint8_t ram_buffer[RAM_CONFIG_BUFFER_SIZE];
   bool needs_commit;
 };
 
 static struct ConfigInfo CONFIGS[BM_CFG_PARTITION_COUNT];
-static struct ConfigCb CB;
 
 static bool find_key_idx(BmConfigPartition partition, const char *key, size_t len,
                          uint8_t *idx) {
@@ -100,8 +95,8 @@ static bool load_and_verify_nvm_config(ConfigPartition *config_partition,
   bool ret = false;
 
   do {
-    if (!CB.read(partition, CONFIG_START_OFFSET_IN_BYTES, (uint8_t *)config_partition,
-                 sizeof(ConfigPartition), CONFIG_LOAD_TIMEOUT_MS)) {
+    if (!bm_config_read(partition, CONFIG_START_OFFSET_IN_BYTES, (uint8_t *)config_partition,
+                        sizeof(ConfigPartition), CONFIG_LOAD_TIMEOUT_MS)) {
       break;
     }
     uint32_t partition_crc32 =
@@ -115,10 +110,7 @@ static bool load_and_verify_nvm_config(ConfigPartition *config_partition,
   return ret;
 }
 
-void config_init(ConfigRead read, ConfigWrite write, ConfigRestart restart) {
-  CB.read = read;
-  CB.write = write;
-  CB.restart = restart;
+void config_init(void) {
   for (uint8_t i = 0; i < BM_CFG_PARTITION_COUNT; i++) {
     ConfigPartition *config_partition = (ConfigPartition *)CONFIGS[i].ram_buffer;
     if (!load_and_verify_nvm_config(config_partition, (BmConfigPartition)i)) {
@@ -678,12 +670,12 @@ bool save_config(BmConfigPartition partition, bool restart) {
     config_partition->header.crc32 =
         crc32_ieee((const uint8_t *)&config_partition->header.version,
                    (sizeof(ConfigPartition) - sizeof(config_partition->header.crc32)));
-    if (!CB.write(partition, CONFIG_START_OFFSET_IN_BYTES, (uint8_t *)config_partition,
-                  sizeof(ConfigPartition), CONFIG_LOAD_TIMEOUT_MS)) {
+    if (!bm_config_write(partition, CONFIG_START_OFFSET_IN_BYTES, (uint8_t *)config_partition,
+                         sizeof(ConfigPartition), CONFIG_LOAD_TIMEOUT_MS)) {
       break;
     }
     if (restart) {
-      CB.restart();
+      bm_config_reset();
     }
     ret = true;
   } while (0);

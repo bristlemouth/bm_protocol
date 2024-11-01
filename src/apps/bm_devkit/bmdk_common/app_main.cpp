@@ -139,9 +139,9 @@ SerialHandle_t usbPcap = {
 };
 
 // TODO - make a getter API for these
-static NvmPartition *userConfigurationPartition = NULL;
-static NvmPartition *systemConfigurationPartition = NULL;
-static NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
@@ -301,50 +301,6 @@ static const DebugGpio_t debugGpioPins[] = {
     {"bf_tp8", &BF_TP8, GPIO_IN},
 };
 
-static bool config_read_handler(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
-                                size_t length, uint32_t timeout_ms) {
-  bool ret = false;
-
-  switch (partition) {
-  case BM_CFG_PARTITION_USER:
-    ret = userConfigurationPartition->read(offset, buffer, length, timeout_ms);
-    break;
-  case BM_CFG_PARTITION_SYSTEM:
-    ret = systemConfigurationPartition->read(offset, buffer, length, timeout_ms);
-    break;
-  case BM_CFG_PARTITION_HARDWARE:
-    ret = hardwareConfigurationPartition->read(offset, buffer, length, timeout_ms);
-    break;
-  default:
-    break;
-  }
-
-  return ret;
-}
-
-static bool config_write_handler(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
-                                 size_t length, uint32_t timeout_ms) {
-  bool ret = false;
-
-  switch (partition) {
-  case BM_CFG_PARTITION_USER:
-    ret = userConfigurationPartition->write(offset, buffer, length, timeout_ms);
-    break;
-  case BM_CFG_PARTITION_SYSTEM:
-    ret = systemConfigurationPartition->write(offset, buffer, length, timeout_ms);
-    break;
-  case BM_CFG_PARTITION_HARDWARE:
-    ret = hardwareConfigurationPartition->write(offset, buffer, length, timeout_ms);
-    break;
-  default:
-    break;
-  }
-
-  return ret;
-}
-
-static void config_reset_handler(void) { resetSystem(RESET_REASON_CONFIG); }
-
 /* USER CODE EXECUTED HERE */
 static void user_task(void *parameters);
 
@@ -423,7 +379,7 @@ static void defaultTask(void *parameters) {
   userConfigurationPartition = &debug_user_partition;
   systemConfigurationPartition = &debug_system_partition;
   hardwareConfigurationPartition = &debug_hardware_partition;
-  config_init(config_read_handler, config_write_handler, config_reset_handler);
+  config_init();
 
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
                   strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);

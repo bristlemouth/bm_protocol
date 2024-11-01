@@ -47,13 +47,7 @@ typedef struct {
   ConfigValue values[MAX_NUM_KV];
 } __attribute__((packed, aligned(1))) ConfigPartition;
 
-typedef bool (*ConfigRead)(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
-                           size_t length, uint32_t timeout_ms);
-typedef bool (*ConfigWrite)(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
-                            size_t length, uint32_t timeout_ms);
-typedef void (*ConfigRestart)(void);
-
-void config_init(ConfigRead read, ConfigWrite write, ConfigRestart restart);
+void config_init(void);
 bool get_config_uint(BmConfigPartition partition, const char *key, size_t key_len,
                      uint32_t *value);
 bool get_config_int(BmConfigPartition partition, const char *key, size_t key_len,
