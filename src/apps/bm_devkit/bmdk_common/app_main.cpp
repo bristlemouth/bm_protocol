@@ -379,20 +379,18 @@ static void defaultTask(void *parameters) {
   userConfigurationPartition = &debug_user_partition;
   systemConfigurationPartition = &debug_system_partition;
   hardwareConfigurationPartition = &debug_hardware_partition;
-  config_init();
-
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
-                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
-                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;
-  debugConfigurationInit();
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init();
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
+  debugConfigurationInit();
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};

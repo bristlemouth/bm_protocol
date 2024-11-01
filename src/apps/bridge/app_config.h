@@ -35,7 +35,7 @@ struct power_config_s {
       ticksSamplingEnabled;
 };
 
-power_config_s getPowerConfigs(cfg::Configuration &syscfg);
+power_config_s getPowerConfigs(void);
 
 #ifdef RAW_PRESSURE_ENABLE
 struct raw_pressure_config_s {

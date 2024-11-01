@@ -660,34 +660,33 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
 }
 
 // Task init
-void reportBuilderInit(cfg::Configuration *sys_cfg) {
-  configASSERT(sys_cfg);
+void reportBuilderInit(void) {
   bool save_config = false;
   _ctx._samplesPerReport = DEFAULT_SAMPLES_PER_REPORT;
-  if (!sys_cfg->getConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
                           _ctx._samplesPerReport)) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get samples per report from config, using default %" PRIu32
                    " and saving to config\n",
                    _ctx._samplesPerReport);
-    sys_cfg->setConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
                        _ctx._samplesPerReport);
     save_config = true;
   }
   _ctx._transmitAggregations = DEFAULT_TRANSMIT_AGGREGATIONS;
-  if (!sys_cfg->getConfig(AppConfig::TRANSMIT_AGGREGATIONS,
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TRANSMIT_AGGREGATIONS,
                           strlen(AppConfig::TRANSMIT_AGGREGATIONS),
                           _ctx._transmitAggregations)) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get transmit aggregations from config, using default %" PRIu32
                    " and saving to config\n",
                    _ctx._transmitAggregations);
-    sys_cfg->setConfig(AppConfig::TRANSMIT_AGGREGATIONS,
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TRANSMIT_AGGREGATIONS,
                        strlen(AppConfig::TRANSMIT_AGGREGATIONS), _ctx._transmitAggregations);
     save_config = true;
   }
   if (save_config) {
-    sys_cfg->saveConfig(false);
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
   }
   _ctx._sample_counter = 0;
   _ctx._config_mutex = xSemaphoreCreateMutex();

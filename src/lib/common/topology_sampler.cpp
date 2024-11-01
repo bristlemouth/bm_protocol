@@ -62,8 +62,6 @@ typedef struct node_list {
 } node_list_s;
 
 static BridgePowerController *_bridge_power_controller;
-static cfg::Configuration *_hw_cfg;
-static cfg::Configuration *_sys_cfg;
 static TimerHandle_t topology_timer;
 static bool _sampling_enabled;
 static bool _send_on_boot;
@@ -92,7 +90,7 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
   bm_common_network_info_t *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
-    SMConfigCRCList sm_config_crc_list(_hw_cfg);
+    SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_HARDWARE);
     if (!networkTopology) {
       printf("networkTopology NULL, task must be busy\n");
       break;
@@ -185,7 +183,7 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
                        " Adding it.\n",
                        network_crc32_calc);
         sm_config_crc_list.add(network_crc32_calc);
-        if (!_hw_cfg->saveConfig(false)) {
+        if (!save_config(BM_CFG_PARTITION_HARDWARE, false)) {
           printf("Failed to save crc!\n");
         }
       }
@@ -571,8 +569,6 @@ void topology_sampler_init(BridgePowerController *power_controller, cfg::Configu
   // TODO - add unit tests with mocking timer callbacks
   configASSERT(power_controller);
   _bridge_power_controller = power_controller;
-  _hw_cfg = hw_cfg;
-  _sys_cfg = sys_cfg;
   _sampling_enabled = false;
   _send_on_boot = true;
   int tmr_id = 2;

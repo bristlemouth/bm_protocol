@@ -13,8 +13,6 @@
 #include <math.h>
 #include <string.h>
 
-extern cfg::Configuration *systemConfigurationPartition;
-
 // Preventing typos. These strings are used several times.
 static constexpr char PRESSURE[] = "pressure";
 static constexpr char TEMPERATURE[] = "temperature";
@@ -34,8 +32,8 @@ void RbrSensor::init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_
     }
   }
 
-  systemConfigurationPartition->getConfig(sensor_bm_log_enable, strlen(sensor_bm_log_enable),
-                                          _sensorBmLogEnable);
+  bm_get_config_uint(BM_CFG_PARTITION_SYSTEM, sensor_bm_log_enable,
+                     strlen(sensor_bm_log_enable), _sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
   PLUART::init(USER_TASK_PRIORITY);
@@ -81,7 +79,8 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
     } else if (BmRbrSensorUtil::validSensorDataString(_payload_buffer, read_len)) {
       success = handleDataString(_payload_buffer, read_len, d);
     } else {
-      bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "Invalid line from sensor: %.*s\n", read_len, _payload_buffer);
+      bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "Invalid line from sensor: %.*s\n", read_len,
+                 _payload_buffer);
       bm_printf(0, "Invalid line from sensor: %.*s", read_len, _payload_buffer);
       printf("Invalid line from sensor: %.*s\n", read_len, _payload_buffer);
     }
@@ -116,35 +115,34 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
   // If so, save the new type and reboot.
   if (strnstr(s, PRESSURE, read_len) != NULL && strnstr(s, TEMPERATURE, read_len) != NULL) {
     if (_stored_type != BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE) {
-      systemConfigurationPartition->setConfig(
-          CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
+      set_config_uint(
+          BM_CFG_PARTITION_SYSTEM, CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
           static_cast<uint32_t>(BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE));
-      bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "Detected temp & pressure sensor, saving config\n");
+      bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP,
+                 "Detected temp & pressure sensor, saving config\n");
       bm_printf(0, "Detected temp & pressure sensor, saving config");
       printf("Detected temp & pressure sensor, saving config.\n");
-      systemConfigurationPartition->saveConfig(); // reboot
+      save_config(BM_CFG_PARTITION_SYSTEM, true); // reboot
     }
     _type = BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE;
   } else if (strnstr(s, PRESSURE, read_len) != NULL) {
     if (_stored_type != BmRbrDataMsg::SensorType::PRESSURE) {
-      systemConfigurationPartition->setConfig(
-          CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
-          static_cast<uint32_t>(BmRbrDataMsg::SensorType::PRESSURE));
+      set_config_uint(BM_CFG_PARTITION_SYSTEM, CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
+                      static_cast<uint32_t>(BmRbrDataMsg::SensorType::PRESSURE));
       bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "Detected pressure sensor, saving config\n");
       bm_printf(0, "Detected pressure sensor, saving config");
       printf("Detected pressure sensor, saving config.\n");
-      systemConfigurationPartition->saveConfig(); // reboot
+      save_config(BM_CFG_PARTITION_SYSTEM, true); // reboot
     }
     _type = BmRbrDataMsg::SensorType::PRESSURE;
   } else if (strnstr(s, TEMPERATURE, read_len) != NULL) {
     if (_stored_type != BmRbrDataMsg::SensorType::TEMPERATURE) {
-      systemConfigurationPartition->setConfig(
-          CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
-          static_cast<uint32_t>(BmRbrDataMsg::SensorType::TEMPERATURE));
+      set_config_uint(BM_CFG_PARTITION_SYSTEM, CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
+                      static_cast<uint32_t>(BmRbrDataMsg::SensorType::TEMPERATURE));
       bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "Detected temp sensor, saving config\n");
       bm_printf(0, "Detected temp sensor, saving config");
       printf("Detected temp sensor, saving config.\n");
-      systemConfigurationPartition->saveConfig(); // reboot
+      save_config(BM_CFG_PARTITION_SYSTEM, true); // reboot
     }
     _type = BmRbrDataMsg::SensorType::TEMPERATURE;
   } else {
@@ -161,8 +159,8 @@ bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::D
   char rtcTimeBuffer[32] = {};
   rtcPrint(rtcTimeBuffer, NULL);
   if (_sensorBmLogEnable) {
-    bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-               rtcTimeBuffer, read_len, s);
+    bm_fprintf(0, RBR_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
+               uptimeGetMs(), rtcTimeBuffer, read_len, s);
   }
   bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
             read_len, s);

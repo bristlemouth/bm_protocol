@@ -12,7 +12,6 @@
 
 static constexpr uint32_t BM_SEAPOINT_TURBIDITY_DATA_MSG_MAX_SIZE = 256;
 
-extern cfg::Configuration *systemConfigurationPartition;
 static SeapointTurbiditySensor seapoint_turbidity_sensor;
 static char seapoint_turbidity_topic[BM_TOPIC_MAX_LEN];
 static int seapoint_turbidity_topic_str_len;
@@ -25,7 +24,6 @@ static int createSeapointTurbidityDataTopic(void) {
 }
 
 void setup(void) {
-  configASSERT(systemConfigurationPartition);
   seapoint_turbidity_sensor.init();
   seapoint_turbidity_topic_str_len = createSeapointTurbidityDataTopic();
   IOWrite(&BB_VBUS_EN, 0);
