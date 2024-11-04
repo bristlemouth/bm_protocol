@@ -27,7 +27,7 @@
 void SeapointTurbiditySensor::init() {
   _parser.init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
-                  _sensorBmLogEnable);
+                  &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
   PLUART::init(USER_TASK_PRIORITY);

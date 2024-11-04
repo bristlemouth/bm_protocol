@@ -34,11 +34,11 @@ void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
   get_config_uint(BM_CFG_PARTITION_USER, "plUartBaudRate", strlen("plUartBaudRate"),
-                  baud_rate_config);
+                  &baud_rate_config);
   get_config_uint(BM_CFG_PARTITION_USER, "plUartLineTerm", strlen("plUartLineTerm"),
-                  line_term_config);
+                  &line_term_config);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorBmLogEnable", strlen("sensorBmLogEnable"),
-                  bm_log_enable);
+                  &bm_log_enable);
 
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);

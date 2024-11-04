@@ -385,9 +385,9 @@ static void defaultTask(void *parameters) {
   debugDfuInit(&dfu_partition);
   bcl_init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
-                  strlen("sensorsPollIntervalMs"), sys_cfg_sensorsPollIntervalMs);
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
-                  strlen("sensorsCheckIntervalS"), sys_cfg_sensorsCheckIntervalS);
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
   debugConfigurationInit();
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,

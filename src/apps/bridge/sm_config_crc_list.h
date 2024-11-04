@@ -1,4 +1,4 @@
-#include "abstract_configuration.h"
+#include "configuration.h"
 
 class SMConfigCRCList {
 public:

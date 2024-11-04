@@ -376,9 +376,9 @@ static void defaultTask(void *parameters) {
   bcl_init();
   debugConfigurationInit();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
-                  strlen("sensorsPollIntervalMs"), sys_cfg_sensorsPollIntervalMs);
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
-                  strlen("sensorsCheckIntervalS"), sys_cfg_sensorsCheckIntervalS);
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
@@ -418,7 +418,7 @@ static void defaultTask(void *parameters) {
 #endif
 
 #ifdef RAW_PRESSURE_ENABLE
-  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
+  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs();
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS, raw_pressure_cfg.maxRawReports,
                            raw_pressure_cfg.rawDepthThresholdUbar, &debug_configuration_user,
                            raw_pressure_cfg.rbrCodaReadingPeriodMs);

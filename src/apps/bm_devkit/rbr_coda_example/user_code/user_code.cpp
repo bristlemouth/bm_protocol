@@ -8,22 +8,22 @@
 #include "user_code.h"
 #include "LineParser.h"
 #include "OrderedSeparatorLineParser.h"
+#include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "app_util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -51,9 +51,6 @@ typedef struct {
 
 // Create an instance of the averaging sampler for our data
 static AveragingSampler coda_data;
-
-// app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *userConfigurationPartition;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
@@ -231,8 +228,8 @@ void loop(void) {
     rtcGet(&time_and_date);
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, "rbr_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-               rtcTimeBuffer, read_len, payload_buffer);
+    bm_fprintf(0, "rbr_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
+               uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
     bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
               read_len, payload_buffer);
     printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
@@ -258,7 +255,7 @@ void loop(void) {
     double coda_reading = parser.getValue(1).data.double_val;
     coda_data.addSample(coda_reading);
 
-    printf("count: %u/%d, min: %f, max: %f\n", coda_data.getNumSamples(),
-           MAX_CODA_SAMPLES, coda_data.getMin(), coda_data.getMax());
+    printf("count: %u/%d, min: %f, max: %f\n", coda_data.getNumSamples(), MAX_CODA_SAMPLES,
+           coda_data.getMin(), coda_data.getMax());
   }
 }

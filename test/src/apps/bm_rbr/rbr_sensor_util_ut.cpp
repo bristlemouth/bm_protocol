@@ -1,5 +1,4 @@
 #include "fff.h"
-#include "mock_configuration.h"
 #include "rbr_sensor_util.h"
 #include "gtest/gtest.h"
 #include <string.h>

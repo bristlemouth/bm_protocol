@@ -48,7 +48,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.c
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_adin_raw.c
     ${SRC_DIR}/lib/debug/debug_htu.cpp

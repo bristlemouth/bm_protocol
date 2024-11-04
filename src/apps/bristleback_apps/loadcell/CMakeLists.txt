@@ -54,7 +54,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/sensorWatchdog.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.c
     ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp

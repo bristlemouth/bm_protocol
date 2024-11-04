@@ -35,9 +35,9 @@ static int createBmRbrDataTopic(void);
 void setup(void) {
   uint32_t sensor_type = static_cast<uint32_t>(BmRbrDataMsg::SensorType_t::UNKNOWN);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, RbrSensor::CFG_RBR_TYPE,
-                  strlen(RbrSensor::CFG_RBR_TYPE), sensor_type);
+                  strlen(RbrSensor::CFG_RBR_TYPE), &sensor_type);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, CFG_FTL_RECOVERY_MS, strlen(CFG_FTL_RECOVERY_MS),
-                  ftl_recovery_ms);
+                  &ftl_recovery_ms);
   rbr_sensor.init(static_cast<BmRbrDataMsg::SensorType_t>(sensor_type), PROBE_TIME_PERIOD_MS);
   SensorWatchdog::SensorWatchdogAdd(BM_RBR_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmRbrWatchdogHandler, NO_MAX_TRIGGER,

@@ -106,7 +106,7 @@ void SMConfigCRCList::decode() {
   do {
     uint8_t cbor_buffer[MAX_BUFFER_SIZE];
     size_t cbor_buffer_size = MAX_BUFFER_SIZE;
-    if (!get_config_cbor(_cfg, KEY, KEY_LEN, cbor_buffer, cbor_buffer_size)) {
+    if (!get_config_cbor(_cfg, KEY, KEY_LEN, cbor_buffer, &cbor_buffer_size)) {
       should_clear = true;
       break;
     }

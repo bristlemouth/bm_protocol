@@ -43,5 +43,5 @@ struct raw_pressure_config_s {
   float rawDepthThresholdUbar;
 };
 
-raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg);
+raw_pressure_config_s getRawPressureConfigs(void);
 #endif // RAW_PRESSURE_ENABLE

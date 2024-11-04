@@ -189,7 +189,7 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
       }
 
       bm_common_config_crc_t config_crc = {
-          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
+          .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
@@ -564,8 +564,7 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
   return err == CborNoError;
 }
 
-void topology_sampler_init(BridgePowerController *power_controller, cfg::Configuration *hw_cfg,
-                           cfg::Configuration *sys_cfg) {
+void topology_sampler_init(BridgePowerController *power_controller) {
   // TODO - add unit tests with mocking timer callbacks
   configASSERT(power_controller);
   _bridge_power_controller = power_controller;
@@ -764,7 +763,7 @@ void bm_topology_last_network_info_cb(void) {
     do {
 
       bm_common_config_crc_t config_crc = {
-          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
+          .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 

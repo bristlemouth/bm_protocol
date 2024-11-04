@@ -46,7 +46,7 @@ static void BmSoftInitalize(void);
 
 static void getConfigs() {
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, soft_cfg_tsys_id, strlen(soft_cfg_tsys_id),
-                      serial_number)) {
+                      &serial_number)) {
     printf("TSYS serial number: %" PRIu32 "\n", serial_number);
   } else {
     printf("No TSYS serial number found\n");
@@ -56,7 +56,7 @@ static void getConfigs() {
 
   int32_t calTempC = 0;
   if (get_config_int(BM_CFG_PARTITION_SYSTEM, soft_cfg_cal_temp_c, strlen(soft_cfg_cal_temp_c),
-                     calTempC)) {
+                     &calTempC)) {
     printf("Calibration temperature: %" PRId32 "\n", calTempC);
   } else {
     printf("No calibration temperature found\n");
@@ -65,7 +65,7 @@ static void getConfigs() {
   }
 
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, soft_cfg_cal_time_epoch,
-                      strlen(soft_cfg_cal_time_epoch), cal_time_epoch)) {
+                      strlen(soft_cfg_cal_time_epoch), &cal_time_epoch)) {
     printf("Calibration time: %" PRIu32 "\n", cal_time_epoch);
   } else {
     printf("No calibration time found\n");
@@ -75,7 +75,7 @@ static void getConfigs() {
 
   int32_t calOffsetMilliC = 0;
   if (get_config_int(BM_CFG_PARTITION_SYSTEM, soft_cfg_cal_offset_milli_c,
-                     strlen(soft_cfg_cal_offset_milli_c), calOffsetMilliC)) {
+                     strlen(soft_cfg_cal_offset_milli_c), &calOffsetMilliC)) {
     printf("Calibration offset (milliDegC): %" PRId32 "\n", calOffsetMilliC);
   } else {
     printf("No calibration offset (milliDegC) found\n");
@@ -85,14 +85,14 @@ static void getConfigs() {
   calibrationOffsetDegC = static_cast<float>(calOffsetMilliC) * 1e-3f;
 
   if (get_config_uint(BM_CFG_PARTITION_USER, soft_cfg_reading_period_ms,
-                      strlen(soft_cfg_reading_period_ms), soft_delay_ms)) {
+                      strlen(soft_cfg_reading_period_ms), &soft_delay_ms)) {
     printf("SOFT Delay: %" PRIu32 "ms\n", soft_delay_ms);
   } else {
     printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay_ms);
   }
 
   get_config_uint(BM_CFG_PARTITION_SYSTEM, sensor_bm_log_enable, strlen(sensor_bm_log_enable),
-                  sensorBmLogEnable);
+                  &sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", sensorBmLogEnable);
 }
 

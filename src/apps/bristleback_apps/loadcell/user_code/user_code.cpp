@@ -38,14 +38,14 @@ void setup(void) {
   };
   if (!get_config_float(BM_CFG_PARTITION_SYSTEM, "loadCellCalibrationFactor",
                         strlen("loadCellCalibrationFactor"),
-                        load_cell_cfg.calibration_factor)) {
+                        &load_cell_cfg.calibration_factor)) {
     set_config_float(BM_CFG_PARTITION_SYSTEM, "loadCellCalibrationFactor",
                      strlen("loadCellCalibrationFactor"), load_cell_cfg.calibration_factor);
   }
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, "loadCellZeroOffset",
-                       strlen("loadCellZeroOffset"), load_cell_cfg.zero_offset)) {
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, "loadCellZeroOffset", strlen("loadCellZeroOffset"),
-                    load_cell_cfg.zero_offset);
+  if (!get_config_int(BM_CFG_PARTITION_SYSTEM, "loadCellZeroOffset",
+                      strlen("loadCellZeroOffset"), &load_cell_cfg.zero_offset)) {
+    set_config_int(BM_CFG_PARTITION_SYSTEM, "loadCellZeroOffset", strlen("loadCellZeroOffset"),
+                   load_cell_cfg.zero_offset);
   }
   // Adds the load cell as a sensor for periodic sampling.
   loadCellSamplerInit(&load_cell, load_cell_cfg);

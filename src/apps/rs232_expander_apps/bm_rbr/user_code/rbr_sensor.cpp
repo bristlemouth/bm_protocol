@@ -32,8 +32,8 @@ void RbrSensor::init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_
     }
   }
 
-  bm_get_config_uint(BM_CFG_PARTITION_SYSTEM, sensor_bm_log_enable,
-                     strlen(sensor_bm_log_enable), _sensorBmLogEnable);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, sensor_bm_log_enable, strlen(sensor_bm_log_enable),
+                  &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
   PLUART::init(USER_TASK_PRIORITY);

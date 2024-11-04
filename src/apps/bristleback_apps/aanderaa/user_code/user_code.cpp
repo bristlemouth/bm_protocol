@@ -225,19 +225,19 @@ void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
   get_config_float(BM_CFG_PARTITION_SYSTEM, s_current_agg_period_min,
-                   strlen(s_current_agg_period_min), current_agg_period_min);
+                   strlen(s_current_agg_period_min), &current_agg_period_min);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, s_n_skip_readings, strlen(s_n_skip_readings),
-                  n_skip_readings);
+                  &n_skip_readings);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, s_reading_interval_ms, strlen(s_reading_interval_ms),
-                  reading_interval_ms);
+                  &reading_interval_ms);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, s_payload_wd_to_s, strlen(s_payload_wd_to_s),
-                  payload_wd_to_s);
+                  &payload_wd_to_s);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, s_pl_uart_baud_rate, strlen(s_pl_uart_baud_rate),
-                  baud_rate);
+                  &baud_rate);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, s_mfg_tx_test_enable, strlen(s_mfg_tx_test_enable),
-                  mfg_tx_test_enable);
+                  &mfg_tx_test_enable);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, s_sensor_bm_log_enable,
-                  strlen(s_sensor_bm_log_enable), sensorBmLogEnable);
+                  strlen(s_sensor_bm_log_enable), &sensorBmLogEnable);
 
   max_readings_in_agg =
       (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
