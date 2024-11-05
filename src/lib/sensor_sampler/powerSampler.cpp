@@ -2,7 +2,7 @@
   Power sensor(s) sampling functions
 */
 
-#include "bm_printf.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"

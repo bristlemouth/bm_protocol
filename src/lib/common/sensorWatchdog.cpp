@@ -1,5 +1,5 @@
 #include "sensorWatchdog.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "semphr.h"
 #include "timer_callback_handler.h"
 #include "uptime.h"

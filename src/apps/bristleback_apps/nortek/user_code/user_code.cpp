@@ -5,10 +5,9 @@
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "lwip/inet.h"
-#include "bm_network.h"
 #include "usart.h"
 #include "payload_uart.h"
 #include "sensors.h"
@@ -476,7 +475,7 @@ void loop(void) {
       }
 
       rtcPrint(rtcTimeBuffer, NULL);
-      if(spotter_tx_data(tx_data, sizeof(sensorStatAgg_t) * NUM_SENSORS, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)){
+      if(spotter_tx_data(tx_data, sizeof(sensorStatAgg_t) * NUM_SENSORS, BmNetworkTypeCellularIriFallback)){
         printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
       }
       else {

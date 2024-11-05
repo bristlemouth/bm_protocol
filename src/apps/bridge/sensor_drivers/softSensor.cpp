@@ -1,7 +1,7 @@
 #include "softSensor.h"
 #include "app_config.h"
 #include "avgSampler.h"
-#include "bm_network.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "bm_soft_data_msg.h"
 #include "bridgeLog.h"

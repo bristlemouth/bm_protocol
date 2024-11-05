@@ -3,8 +3,7 @@
 */
 
 #include "loadCellSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
@@ -109,7 +108,7 @@ static bool loadCellSample() {
     sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f", mean_force,
             max_force, min_force);
 
-    spotter_tx_data(data_string, 100, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK);
+    spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
 
     // printf(data_string);
 

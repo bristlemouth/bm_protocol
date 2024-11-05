@@ -13,8 +13,6 @@
 #include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -25,6 +23,7 @@
 #include "pubsub.h"
 #include "sensorSampler.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -156,7 +155,7 @@ void loop(void) {
              N_STAT_ELEM_BYTES);
     }
     //
-    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BmNetworkTypeCellularIriFallback)) {
       printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
              rtcTimeBuffer);
     } else {

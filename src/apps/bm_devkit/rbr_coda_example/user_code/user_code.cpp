@@ -11,8 +11,6 @@
 #include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -20,6 +18,7 @@
 #include "payload_uart.h"
 #include "pubsub.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -144,7 +143,7 @@ void loop(void) {
     codaData_t tx_coda = {
         .sample_count = n_samples, .min = min, .max = max, .mean = mean, .stdev = stdev};
     memcpy(tx_data, (uint8_t *)(&tx_coda), CODA_DATA_SIZE);
-    if (spotter_tx_data(tx_data, CODA_DATA_SIZE, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+    if (spotter_tx_data(tx_data, CODA_DATA_SIZE, BmNetworkTypeCellularIriFallback)) {
       printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
              rtcTimeBuffer);
     } else {

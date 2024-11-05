@@ -1,7 +1,7 @@
 #include "rbr_sensor.h"
 #include "FreeRTOS.h"
 #include "OrderedSeparatorLineParser.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "configuration.h"
 #include "payload_uart.h"
 #include "rbr_sensor_util.h"

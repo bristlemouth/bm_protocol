@@ -3,7 +3,7 @@
 */
 #include "pressureSampler.h"
 #include "abstract_pressure_sensor.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"

@@ -1,7 +1,6 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
 #include "app_util.h"
-#include "bm_printf.h"
 #include "bm_rbr_data_msg.h"
 #include "bsp.h"
 #include "debug.h"
@@ -9,6 +8,7 @@
 #include "pubsub.h"
 #include "rbr_sensor.h"
 #include "sensorWatchdog.h"
+#include "spotter.h"
 #include "uptime.h"
 
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";

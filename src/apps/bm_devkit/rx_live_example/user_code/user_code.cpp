@@ -1,6 +1,4 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
@@ -9,6 +7,7 @@
 #include "payload_uart.h"
 #include "rx_live_sensor.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -98,7 +97,7 @@ void report_detections() {
   printf("[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: %s\n",
          uptimeGetMs(), rtcTimeBuffer, tx_hex);
   // Transmit over Spotter celluar or Iridium SBD fallback.
-  if (spotter_tx_data(tx_buffer, tx_len, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+  if (spotter_tx_data(tx_buffer, tx_len, BmNetworkTypeCellularIriFallback)) {
     printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
            rtcTimeBuffer);
   } else {
