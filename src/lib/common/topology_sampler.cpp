@@ -62,8 +62,6 @@ typedef struct node_list {
 } node_list_s;
 
 static BridgePowerController *_bridge_power_controller;
-static cfg::Configuration *_hw_cfg;
-static cfg::Configuration *_sys_cfg;
 static TimerHandle_t topology_timer;
 static bool _sampling_enabled;
 static bool _send_on_boot;
@@ -89,10 +87,10 @@ static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_con
 
 static void topology_sample_cb(NetworkTopology *networkTopology) {
   uint8_t *cbor_buffer = NULL;
-  bm_common_network_info_t *network_info = NULL;
+  BmNetworkInfo *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
-    SMConfigCRCList sm_config_crc_list(_hw_cfg);
+    SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_HARDWARE);
     if (!networkTopology) {
       printf("networkTopology NULL, task must be busy\n");
       break;
@@ -185,17 +183,17 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
                        " Adding it.\n",
                        network_crc32_calc);
         sm_config_crc_list.add(network_crc32_calc);
-        if (!_hw_cfg->saveConfig(false)) {
+        if (!save_config(BM_CFG_PARTITION_HARDWARE, false)) {
           printf("Failed to save crc!\n");
         }
       }
 
-      bm_common_config_crc_t config_crc = {
-          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
+      BmConfigCrc config_crc = {
+          .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
-      bm_common_fw_version_t fw_info = {
+      BmFwVersion fw_info = {
           .major = 0,
           .minor = 0,
           .revision = 0,
@@ -566,13 +564,10 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
   return err == CborNoError;
 }
 
-void topology_sampler_init(BridgePowerController *power_controller, cfg::Configuration *hw_cfg,
-                           cfg::Configuration *sys_cfg) {
+void topology_sampler_init(BridgePowerController *power_controller) {
   // TODO - add unit tests with mocking timer callbacks
   configASSERT(power_controller);
   _bridge_power_controller = power_controller;
-  _hw_cfg = hw_cfg;
-  _sys_cfg = sys_cfg;
   _sampling_enabled = false;
   _send_on_boot = true;
   int tmr_id = 2;
@@ -767,12 +762,12 @@ void bm_topology_last_network_info_cb(void) {
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
     do {
 
-      bm_common_config_crc_t config_crc = {
-          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
+      BmConfigCrc config_crc = {
+          .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
-      bm_common_fw_version_t fw_info = {
+      BmFwVersion fw_info = {
           .major = 0,
           .minor = 0,
           .revision = 0,

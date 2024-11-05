@@ -1,3 +1,4 @@
+#include "messages.h"
 extern "C" {
 #include "bm_dfu_generic.h"
 }
@@ -12,8 +13,6 @@ extern "C" {
 
 static constexpr char dfu_confirm_config_key[] = "dfu_confirm";
 
-using namespace cfg;
-extern cfg::Configuration *systemConfigurationPartition;
 extern NvmPartition *dfu_partition_global;
 
 BmErr bm_dfu_client_set_confirmed(void) {
@@ -68,21 +67,16 @@ uint32_t bm_dfu_client_flash_area_get_size(const void *flash_area) {
 
 bool bm_dfu_client_confirm_is_enabled(void) {
   uint32_t val = 1;
-  if (!systemConfigurationPartition) {
-    return false;
-  }
-  systemConfigurationPartition->getConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
-                                       val);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, dfu_confirm_config_key,
+                  strlen(dfu_confirm_config_key), &val);
   return val == 1;
 }
 
 void bm_dfu_client_confirm_enable(bool en) {
   uint32_t val = en;
-  if (systemConfigurationPartition) {
-    systemConfigurationPartition->setConfig(dfu_confirm_config_key, strlen(dfu_confirm_config_key),
-                                         val);
-    systemConfigurationPartition->saveConfig(true);
-  }
+  set_config_uint(BM_CFG_PARTITION_SYSTEM, dfu_confirm_config_key,
+                  strlen(dfu_confirm_config_key), val);
+  save_config(BM_CFG_PARTITION_SYSTEM, true);
 }
 
 BmErr bm_dfu_host_get_chunk(uint32_t offset, uint8_t *buffer, size_t len, uint32_t timeout_ms) {

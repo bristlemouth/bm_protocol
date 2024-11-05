@@ -10,11 +10,11 @@
  */
 
 #include "user_code.h"
+#include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -22,12 +22,12 @@
 #include "lwip/inet.h"
 #include "powerSampler.h"
 #include "pressureSampler.h"
+#include "pubsub.h"
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "app_util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -90,8 +90,8 @@ void setup() {
   hum_stats.initBuffer(MAX_SENSOR_SAMPLES);
   pressure_stats.initBuffer(MAX_SENSOR_SAMPLES);
   rtcGet(&statsStartRtc);
-  userConfigurationPartition->getConfig("sensorAggPeriodMin", strlen("sensorAggPeriodMin"),
-                                        sensor_agg_period_min);
+  get_config_float(BM_CFG_PARTITION_USER, "sensorAggPeriodMin", strlen("sensorAggPeriodMin"),
+                   &sensor_agg_period_min);
 }
 
 void loop(void) {

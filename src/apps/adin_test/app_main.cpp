@@ -144,9 +144,9 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
-cfg::Configuration *userConfigurationPartition = NULL;
-cfg::Configuration *systemConfigurationPartition = NULL;
-cfg::Configuration *hardwareConfigurationPartition = NULL;
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
 
 #ifndef BSP_MOTE_V1_0
@@ -351,23 +351,16 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(debug_user_partition, ram_user_configuration,
-                                              RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(
-      debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
-                         &debug_configuration_system);
-  systemConfigurationPartition = &debug_configuration_system;
-  userConfigurationPartition = &debug_configuration_user;
-  hardwareConfigurationPartition = &debug_configuration_hardware;
   dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init();
+  debugConfigurationInit();
 
 #ifdef BSP_BRIDGE_V1_0
   printf("Enabling 24V!\n");
