@@ -1,5 +1,6 @@
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
+#include "configuration.h"
 #include "device_info.h"
 #include "dfu.h"
 #include "messages.h"
@@ -11,10 +12,10 @@
 extern "C" {
 #include "bcmp.h"
 #include "bm_ip.h"
+#include "bm_service.h"
 #include "device.h"
 #include "eth_adin2111.h"
 #include "middleware.h"
-#include "bm_service.h"
 }
 #include "bcmp_cli.h"
 
@@ -39,6 +40,7 @@ void bm_link_change_cb(uint8_t port, bool state) {
 }
 
 void bcl_init(void) {
+  config_init();
   //TODO: This should all be moved to user code
   uint8_t major, minor, patch;
   getFWVersion(&major, &minor, &patch);

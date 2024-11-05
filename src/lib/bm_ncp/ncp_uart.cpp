@@ -276,8 +276,7 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
 }
 
 void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
-             BridgePowerController *power_controller, cfg::Configuration *usr_cfg,
-             cfg::Configuration *sys_cfg, cfg::Configuration *hw_cfg) {
+             BridgePowerController *power_controller) {
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
 
@@ -301,7 +300,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   configASSERT(dfu_partition);
   configASSERT(power_controller);
   ncp_dfu_init(dfu_partition, power_controller);
-  ncp_cfg_init(usr_cfg, sys_cfg, hw_cfg);
+  ncp_cfg_init();
   ncp_processor_queue_handle =
       xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
   configASSERT(ncp_processor_queue_handle);

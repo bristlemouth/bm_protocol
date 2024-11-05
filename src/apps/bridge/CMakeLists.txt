@@ -58,7 +58,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
@@ -104,12 +103,6 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborpretty.c
     )
 
 set(LIB_INCLUDES
@@ -307,6 +300,7 @@ add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
 target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
 target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
 target_link_libraries(bmcore PUBLIC lwipcore)
+target_link_libraries(bm_serial PUBLIC bmcore)
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")

@@ -1,23 +1,23 @@
 #include "user_code.h"
 #include "OrderedKVPLineParser.h"
 #include "aanderaa_data_msg.h"
+#include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
 #include "bm_network.h"
 #include "bm_printf.h"
-#include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "device_info.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "sensorWatchdog.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "app_util.h"
 
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 static constexpr char AANDERAA_WATCHDOG_ID[] = "Aanderaa";
@@ -109,9 +109,6 @@ static AveragingSampler current_data[NUM_PARAMS_TO_AGG];
 static char *stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
 static RTCTimeAndDate_t statsEndRtc =
     {}; // Timestamp that tracks the end of aggregation periods.
-
-// app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *systemConfigurationPartition;
 
 /*
  * Setup a LineParser to turn the ASCII serial data from the Aanderaa into numbers
@@ -221,21 +218,20 @@ static int createAanderaaDataTopic(void) {
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
-  configASSERT(systemConfigurationPartition);
-  systemConfigurationPartition->getConfig(
-      s_current_agg_period_min, strlen(s_current_agg_period_min), current_agg_period_min);
-  systemConfigurationPartition->getConfig(s_n_skip_readings, strlen(s_n_skip_readings),
-                                          n_skip_readings);
-  systemConfigurationPartition->getConfig(s_reading_interval_ms, strlen(s_reading_interval_ms),
-                                          reading_interval_ms);
-  systemConfigurationPartition->getConfig(s_payload_wd_to_s, strlen(s_payload_wd_to_s),
-                                          payload_wd_to_s);
-  systemConfigurationPartition->getConfig(s_pl_uart_baud_rate, strlen(s_pl_uart_baud_rate),
-                                          baud_rate);
-  systemConfigurationPartition->getConfig(s_mfg_tx_test_enable, strlen(s_mfg_tx_test_enable),
-                                          mfg_tx_test_enable);
-  systemConfigurationPartition->getConfig(s_sensor_bm_log_enable,
-                                          strlen(s_sensor_bm_log_enable), sensorBmLogEnable);
+  get_config_float(BM_CFG_PARTITION_SYSTEM, s_current_agg_period_min,
+                   strlen(s_current_agg_period_min), &current_agg_period_min);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_n_skip_readings, strlen(s_n_skip_readings),
+                  &n_skip_readings);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_reading_interval_ms, strlen(s_reading_interval_ms),
+                  &reading_interval_ms);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_payload_wd_to_s, strlen(s_payload_wd_to_s),
+                  &payload_wd_to_s);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_pl_uart_baud_rate, strlen(s_pl_uart_baud_rate),
+                  &baud_rate);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_mfg_tx_test_enable, strlen(s_mfg_tx_test_enable),
+                  &mfg_tx_test_enable);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_sensor_bm_log_enable,
+                  strlen(s_sensor_bm_log_enable), &sensorBmLogEnable);
 
   max_readings_in_agg =
       (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
@@ -372,7 +368,7 @@ void loop(void) {
 #ifdef FAKE_AANDERAA
   (void)readings_skipped;
   spoof_aanderaa();
-#else // FAKE_AANDERAA
+#else  // FAKE_AANDERAA
 
   // Manufacturing TX test mode
   if (mfg_tx_test_enable) {
@@ -391,8 +387,8 @@ void loop(void) {
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
     if (sensorBmLogEnable) {
-      bm_fprintf(0, AANDERAA_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-                 rtcTimeBuffer, read_len, payload_buffer);
+      bm_fprintf(0, AANDERAA_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
+                 uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
     }
     bm_printf(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
