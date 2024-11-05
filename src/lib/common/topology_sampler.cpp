@@ -87,7 +87,7 @@ static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_con
 
 static void topology_sample_cb(NetworkTopology *networkTopology) {
   uint8_t *cbor_buffer = NULL;
-  bm_common_network_info_t *network_info = NULL;
+  BmNetworkInfo *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
     SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_HARDWARE);
@@ -188,12 +188,12 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
         }
       }
 
-      bm_common_config_crc_t config_crc = {
+      BmConfigCrc config_crc = {
           .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
-      bm_common_fw_version_t fw_info = {
+      BmFwVersion fw_info = {
           .major = 0,
           .minor = 0,
           .revision = 0,
@@ -762,12 +762,12 @@ void bm_topology_last_network_info_cb(void) {
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
     do {
 
-      bm_common_config_crc_t config_crc = {
+      BmConfigCrc config_crc = {
           .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
-      bm_common_fw_version_t fw_info = {
+      BmFwVersion fw_info = {
           .major = 0,
           .minor = 0,
           .revision = 0,

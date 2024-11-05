@@ -5,6 +5,7 @@ target_include_directories(sm_config_crc_list_tests
     ${TEST_DIR}/header_overrides
     ${SRC_DIR}/lib/bm_core/bcmp
     ${SRC_DIR}/lib/bm_core/network
+    ${SRC_DIR}/lib/bm_core/common
     ${TEST_DIR}/mocks
     ${TEST_DIR}/third_party/fff
     ${SRC_DIR}/apps/bridge

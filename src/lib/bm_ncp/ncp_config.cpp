@@ -160,17 +160,17 @@ void ncp_cfg_init(void) {}
 static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey *keys, size_t &len) {
   len = 0;
   for (int i = 0; i < num_keys; i++) {
-    len += sizeof(bm_common_config_status_key_data_t);
+    len += sizeof(BmConfigStatusKeyData);
     len += keys[i].keyLen;
   }
   uint8_t *buf = reinterpret_cast<uint8_t *>(pvPortMalloc(len));
   configASSERT(buf);
-  bm_common_config_status_key_data_t *key_data =
-      reinterpret_cast<bm_common_config_status_key_data_t *>(buf);
+  BmConfigStatusKeyData *key_data =
+      reinterpret_cast<BmConfigStatusKeyData *>(buf);
   for (int i = 0; i < num_keys; i++) {
     key_data->key_length = keys[i].keyLen;
     memcpy(key_data->key, keys[i].keyBuffer, keys[i].keyLen);
-    key_data += sizeof(bm_common_config_status_key_data_t);
+    key_data += sizeof(BmConfigStatusKeyData);
     key_data += keys[i].keyLen;
   }
   return buf;
@@ -179,7 +179,7 @@ static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey *keys, si
 BmErr _cfg_get_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
-    bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
     if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length,
                             msg->data) != BM_SERIAL_OK) {
       printf("Failed to send get cfg response\n");
@@ -194,7 +194,7 @@ BmErr _cfg_get_bcmp_cb(uint8_t *payload) {
 BmErr _cfg_set_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
-    bm_common_config_value_t *msg = reinterpret_cast<bm_common_config_value_t *>(payload);
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
     if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length,
                             msg->data) != BM_SERIAL_OK) {
       printf("Failed to send set cfg response\n");
@@ -209,8 +209,8 @@ BmErr _cfg_set_bcmp_cb(uint8_t *payload) {
 BmErr _cfg_status_request_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
-    bm_common_config_status_response_t *msg =
-        reinterpret_cast<bm_common_config_status_response_t *>(payload);
+    BmConfigStatusResponse *msg =
+        reinterpret_cast<BmConfigStatusResponse *>(payload);
     if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition,
                                       msg->committed, msg->num_keys,
                                       msg->keyData) != BM_SERIAL_OK) {
@@ -227,8 +227,8 @@ BmErr _cfg_status_request_bcmp_cb(uint8_t *payload) {
 BmErr _cfg_key_del_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
-    bm_common_config_delete_key_response_t *msg =
-        reinterpret_cast<bm_common_config_delete_key_response_t *>(payload);
+    BmConfigDeleteKeyResponse *msg =
+        reinterpret_cast<BmConfigDeleteKeyResponse *>(payload);
     if (bm_serial_cfg_delete_response(msg->header.source_node_id, msg->partition,
                                       msg->key_length, msg->key,
                                       msg->success) != BM_SERIAL_OK) {
