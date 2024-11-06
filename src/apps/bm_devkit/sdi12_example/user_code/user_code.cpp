@@ -135,20 +135,19 @@ void loop(void) {
            "power supply: %.3f V"
            "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
         sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
-  // print to console
+  // print to console,
+  // max console output size is 128, therefore will split the below into 2 printf statements
   printf("[exo3-sonde-sdi12] | tick: %llu, rtc: %s, data --- "
          "temp_sensor: %.3f C, "
          "sp_cond: %.3f uS/cm, "
-         "pH: %.3f, "
-         "pH: %.3f mV, "
+         "pH: %.3f, \n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH);
+  printf("pH: %.3f mV, "
          "DO: %.3f Percent Sat, "
          "DO: %.3f mg/L, "
          "turbidity: %.3f NTU, "
          "wiper pos: %.3f V, "
          "depth: %.3f m, "
-         "power supply: %.3f V"
-         "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
-         sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
+         "power supply: %.3f V\n", sens.pH_mV, sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power);
 
   current_sample_index++;
   if (current_sample_index == sample_count){

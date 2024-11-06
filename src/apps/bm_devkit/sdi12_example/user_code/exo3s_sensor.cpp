@@ -161,7 +161,7 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
     case 2:
       int delay = 10;
       printf("Measurement and Data commands \n");
-
+      vTaskDelay(pdMS_TO_TICKS(100));
       sdi_transmit("0M!");
       result = sdi_receive();
       if(result) {
