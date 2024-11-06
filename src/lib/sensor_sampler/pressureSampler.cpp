@@ -46,9 +46,9 @@ static bool baroSample() {
     rtcPrint(rtcTimeBuffer, &time_and_date);
     printf("pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f\n", uptimeGetMs(),
            rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
-    bm_fprintf(0, "pressure.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, temp: %f, pressure: %f\n",
+    spotter_log(0, "pressure.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, temp: %f, pressure: %f\n",
                uptimeGetMs(), rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
-    bm_printf(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(),
+    spotter_log_console(0, "pressure | tick: %llu, rtc: %s, temp: %f, pressure: %f", uptimeGetMs(),
               rtcTimeBuffer, _pressureData.temperature, _pressureData.pressure);
 
     taskENTER_CRITICAL();

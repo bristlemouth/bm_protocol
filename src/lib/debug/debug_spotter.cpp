@@ -65,9 +65,9 @@ static BaseType_t cmd_spotter_fn(char *writeBuffer, size_t writeBufferLen,
       }
       size_t dataLen = strnlen(dataStr, 128);
       BmErr res;
-      res = bm_printf(0, "%.*s", dataLen, dataStr);
+      res = spotter_log_console(0, "%.*s", dataLen, dataStr);
       if (res != BmOK) {
-        printf("bm_printf err: %d\n", res);
+        printf("spotter_log_console err: %d\n", res);
       }
     } else if (strncmp("fprintf", command, command_str_len) == 0) {
       const char *filename = FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
@@ -90,10 +90,10 @@ static BaseType_t cmd_spotter_fn(char *writeBuffer, size_t writeBufferLen,
       }
       size_t dataLen = strnlen(dataStr, 128);
       BmErr res;
-      res = bm_fprintf(0, just_filename, USE_TIMESTAMP, "%.*s\n", dataLen + 1,
+      res = spotter_log(0, just_filename, USE_TIMESTAMP, "%.*s\n", dataLen + 1,
                        dataStr); // add one for the \n
       if (res != BmOK) {
-        printf("bm_fprintf err: %d\n", res);
+        printf("spotter_log err: %d\n", res);
       }
       vPortFree(just_filename);
       just_filename = NULL;

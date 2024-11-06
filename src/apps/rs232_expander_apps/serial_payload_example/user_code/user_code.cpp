@@ -58,10 +58,10 @@ void loop(void) {
     char rtcTimeBuffer[32];
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
-    // Print the payload data to a file, to the bm_printf console, and to the printf console.
-    bm_fprintf(0, "payload_data.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
+    // Print the payload data to a file, to the spotter_log_console console, and to the printf console.
+    spotter_log(0, "payload_data.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+    spotter_log_console(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
     printf("[payload] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
            rtcTimeBuffer, read_len, payload_buffer);

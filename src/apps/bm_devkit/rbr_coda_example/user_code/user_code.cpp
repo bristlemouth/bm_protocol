@@ -128,11 +128,11 @@ void loop(void) {
     char rtcTimeBuffer[32];
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
-    bm_fprintf(0, "payload_data_agg.log", USE_TIMESTAMP,
+    spotter_log(0, "payload_data_agg.log", USE_TIMESTAMP,
                "tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, "
                "std: %.4f\n",
                uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
-    bm_printf(0,
+    spotter_log_console(0,
               "[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, "
               "mean: %.4f, std: %.4f",
               uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
@@ -227,9 +227,9 @@ void loop(void) {
     rtcGet(&time_and_date);
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, "rbr_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
+    spotter_log(0, "rbr_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
+    spotter_log_console(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
               read_len, payload_buffer);
     printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
            read_len, payload_buffer);

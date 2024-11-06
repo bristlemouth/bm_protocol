@@ -72,8 +72,8 @@ void loop(void) {
 
 static bool BmRbrWatchdogHandler(void *arg) {
   (void)arg;
-  bm_fprintf(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
-  bm_printf(0, "DEBUG - attempting FTL recovery");
+  spotter_log(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
+  spotter_log_console(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
   IOWrite(&BB_PL_BUCK_EN, 1);
   vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
