@@ -56,7 +56,9 @@ void transmit_samples(){
   }
   tx_hex[i * 2] = '\0'; // Null-terminate the string
 
+  // print to console
   printf("[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: %s\n", uptimeGetMs(), rtcTimeBuffer, tx_hex);
+  // print to spotter console
   bm_printf(0, "[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: 0x%s", uptimeGetMs(), rtcTimeBuffer, tx_hex);
 
   // Transmit over Spotter celluar or Iridium SBD fallback.
@@ -81,18 +83,19 @@ void setup(void) {
   bristlefin.enableVout();
   bristlefin.enable3V();
   // Initializing
-  printf("Initializing \n");
   sondeEXO3sSensor.init();
-  printf("Waking Sensor \n");
+  // Waking up sensor
   sondeEXO3sSensor.sdi_wake();
   vTaskDelay(pdMS_TO_TICKS(10000));
+  // Inquire Sensor address
   sondeEXO3sSensor.inquire_cmd();
   vTaskDelay(pdMS_TO_TICKS(100));
+  // Inquire Identification
   sondeEXO3sSensor.identify_cmd();
 }
 
 void loop(void) {
-  /* USER LOOP CODE GOES HERE */
+  // get sensor readings
   sondeEXO3sSensor.measure_cmd();
   // accumulate list of these samples
   EXO3sample sens = sondeEXO3sSensor.getLatestSample();
@@ -104,6 +107,7 @@ void loop(void) {
   char rtcTimeBuffer[32];
   rtcPrint(rtcTimeBuffer, &time_and_date);
 
+  // log values in the sd card
   bm_fprintf(0, "exo3s_sonde_raw.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, data --- "
                                        "temp_sensor: %.3f C, "
                                        "sp_cond: %.3f uS/cm, "
@@ -117,6 +121,7 @@ void loop(void) {
                                        "power supply: %.3f V"
                                        "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
              sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
+  // print to spotter console
   bm_printf(0, "[payload] | tick: %llu, rtc: %s, data --- "
            "temp_sensor: %.3f C, "
            "sp_cond: %.3f uS/cm, "
@@ -130,6 +135,7 @@ void loop(void) {
            "power supply: %.3f V"
            "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
         sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
+  // print to console
   printf("[exo3-sonde-sdi12] | tick: %llu, rtc: %s, data --- "
          "temp_sensor: %.3f C, "
          "sp_cond: %.3f uS/cm, "
@@ -145,14 +151,11 @@ void loop(void) {
          sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
 
   current_sample_index++;
-
   if (current_sample_index == sample_count){
-    // TODO: Send data to spotter
     transmit_samples();
     current_sample_index = 0;
   }
   vTaskDelay(pdMS_TO_TICKS(2000));
-
 
   static bool led2State = false;
   /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.
@@ -191,58 +194,4 @@ void loop(void) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
-
-  // Read a cluster of bytes if available
-  // -- A timer is used to try to keep clusters of bytes (say from lines) in the same output.
-  static int64_t readingBytesTimer = -1;
-  // Note - PLUART::setUseByteStreamBuffer must be set true in setup to enable bytes.
-  if (readingBytesTimer == -1 && PLUART::byteAvailable()) {
-    // Get the RTC if available
-    RTCTimeAndDate_t time_and_date = {};
-    rtcGet(&time_and_date);
-    char rtcTimeBuffer[32];
-    rtcPrint(rtcTimeBuffer, &time_and_date);
-    printf("[payload-bytes] | tick: %llu, rtc: %s, bytes:", uptimeGetMs(),
-           rtcTimeBuffer);
-    // not very readable, but it's a compact trick to overload our timer variable with a -1 flag
-    readingBytesTimer = (int64_t)((u_int32_t)uptimeGetMs());
-  }
-  while (PLUART::byteAvailable()) {
-    readingBytesTimer = (int64_t)((u_int32_t)uptimeGetMs());
-    uint8_t byte_read = PLUART::readByte();
-    printf("%02X ", byte_read);
-  }
-  if (readingBytesTimer > -1 &&
-      (u_int32_t)uptimeGetMs() - (u_int32_t)readingBytesTimer >= BYTES_CLUSTER_MS) {
-    printf("\n");
-    readingBytesTimer = -1;
-  }
-
-  // Read a line if it is available
-  // Note - PLUART::setUseLineBuffer must be set true in setup to enable lines.
-//  if (PLUART::lineAvailable()) {
-//    // Shortcut the raw bytes cluster completion so the parsed line will be on a new console line
-//    if (readingBytesTimer > -1) {
-//      printf("\n");
-//      readingBytesTimer = -1;
-//    }
-//    uint16_t read_len =
-//        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
-//
-//    // Get the RTC if available
-//    RTCTimeAndDate_t time_and_date = {};
-//    rtcGet(&time_and_date);
-//    char rtcTimeBuffer[32];
-//    rtcPrint(rtcTimeBuffer, &time_and_date);
-//
-//    // Print the payload data to a file, to the bm_printf console, and to the printf console.
-//    bm_fprintf(0, "payload_data.log", "tick: %llu, rtc: %s, line: %.*s\n",
-//               uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-//    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
-//              rtcTimeBuffer, read_len, payload_buffer);
-//    printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
-//           rtcTimeBuffer, read_len, payload_buffer);
-//
-//    ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
-//  }
 }

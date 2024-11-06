@@ -53,7 +53,6 @@ void SondeEXO3sSensor::init() {
   // endTransactions - sdi12Rx (disable TX by setting OE HIGH)
   PLUART::enableTransactions(Bristlefin::sdi12Tx, Bristlefin::sdi12Rx);
   PLUART::enable();
-  clear_buffer(0);
 }
 
 void SondeEXO3sSensor::sdi_wake(void) {
@@ -137,27 +136,26 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       result = sdi_receive();
       slaveID = rxBuffer[2] - '0';
       if(result) {
-//        printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
         printf("Sensor Address: %d\n", slaveID);
       }
       break;
     case 1:
-      // 0I!
       printf("Identification command \n");
       sdi_transmit("0I!");
       result = sdi_receive();
       if(result) {
         printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
       }
-      /* 013YSIIWQSGEXOSND100
-       * Identification
+      /* Response --- 013YSIIWQSGEXOSND100
        * 0 sdi-12 sensor address
        * 13 sdi-12 version number
        * YSIIWQSG vendor identification
        * EXOSND sensor model
        * 100 sensor version*/
-//      sdi_version = (rxBuffer[3] << 8 | rxBuffer[4]);
-//      printf("sdi_version: %d\n", sdi_version);
+      printf("SDI-12 Version Number --- %.*s\n", static_cast<int>(2), &rxBuffer[4]);
+      printf("Vendor Identification --- %.*s\n", static_cast<int>(8), &rxBuffer[6]);
+      printf("Sensor Model:         --- %.*s\n", static_cast<int>(6), &rxBuffer[14]);
+      printf("Sensor Version:       --- %.*s\n", static_cast<int>(3), &rxBuffer[20]);
 
       break;
     case 2:
@@ -168,6 +166,7 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       result = sdi_receive();
       if(result) {
         printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+        // get time it takes for the measurement to be done
         delay = abs((rxBuffer[5] - '0') *10 + (rxBuffer[6] - '0'));
         printf("wait %d seconds for measurement to complete\n", delay);
       }
@@ -193,7 +192,6 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
           const Value d0_1 = d0_parser.getValue(2);
           const Value d0_2 = d0_parser.getValue(3);
           const Value d0_3 = d0_parser.getValue(4);
-//          printf("parsed D0!\n");
           printf("temp_sensor:  %.3f C\n", d0_0.data);
           printf("sp_cond:      %.3f uS/cm\n", d0_1.data);
           printf("pH:           %.3f\n", d0_2.data);
@@ -214,7 +212,6 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
           const Value d1_1 = d1_parser.getValue(2);
           const Value d1_2 = d1_parser.getValue(3);
           const Value d1_3 = d1_parser.getValue(4);
-//          printf("parsed D1!\n");
           printf("DO:           %.3f Percent Sat\n", d1_0.data);
           printf("DO:           %.3f mg/L\n", d1_1.data);
           printf("turbidity:    %.3f NTU\n", d1_2.data);
@@ -233,7 +230,6 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
         if (d2_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
           const Value d2_0 = d2_parser.getValue(1);
           const Value d2_1 = d2_parser.getValue(2);
-//          printf("parsed D2!\n");
           printf("depth:        %.3f m\n", d2_0.data);
           printf("power supply: %.3f V\n", d2_1.data);
           _latest_sample.depth = (float) d2_0.data.double_val;
@@ -259,11 +255,6 @@ void SondeEXO3sSensor::measure_cmd(void){
   sdi_cmd(2);
 }
 
-void SondeEXO3sSensor::clear_buffer(int len) {
-  for (int i =len; i < sizeBuffer; i++){
-    rxBuffer[i] = '\0';
-  }
-}
 
 /**
  * @brief Flushes the data from the sensor driver.

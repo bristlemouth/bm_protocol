@@ -38,23 +38,14 @@ class SondeEXO3sSensor {
     void init();
     void flush(void);
     void sdi_wake(void);
-    void sdi_sleep(void);
     void inquire_cmd(void);
     void identify_cmd(void);
     void measure_cmd(void);
-    void data_cmd(int);
-    static constexpr char SONDE_EXO3S_RAW_LOG[] = "sonde_exo3s_raw.log";
     EXO3sample getLatestSample() const { return _latest_sample; }
-
 
     // Variables
     char slaveID = 0;
-    unsigned char txBufferIndex = 0;
-    unsigned char txBufferLength = 0;
-    unsigned char rxBufferIndex = 0;
-    unsigned char rxBufferLength = 0;
     char rxBuffer[sizeBuffer];
-    int availTime;		// filled in to give time befor sensor will have a reading milliSecs
     char sensorCount;	// filled in to give the number of sensors that will be read
     char sensorsRead;	// number of sensors actually returned with each Dn command
     float sensorReadings[12];
@@ -64,16 +55,11 @@ class SondeEXO3sSensor {
     void sdi_break_mark();
     void sdi_transmit(const char*);
     bool sdi_receive();
-//    void sdi_cmd(const char*);
     void sdi_cmd(int);
-    void clear_buffer(int);
     int sdi_version = 0;
-    int m =1;
     uint32_t receive_timeout = 900;
     static constexpr uint32_t BAUD_RATE = 1200;
     static constexpr char LINE_TERM = '\n';
-    static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
-    uint32_t _sensorBmLogEnable = 0;
 
     Exo3DataLineParser d0_parser;
     Exo3DataLineParser d1_parser;
