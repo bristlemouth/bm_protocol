@@ -36,17 +36,11 @@ void SondeEXO3sSensor::init() {
   d2_parser.init();
 
   PLUART::init(USER_TASK_PRIORITY);
+  PLUART::setEvenParity(); // data width is 7 bits + 1 parity bit = 8 bits
+  PLUART::enableDataInversion();
   PLUART::setBaud(BAUD_RATE);
   PLUART::setUseByteStreamBuffer(false);
   PLUART::setUseLineBuffer(true);
-
-  /* Unable to set the parity, data width and tx inversion from this function yet
-   * Changing this in the MX_LPUART1_UART_Init() in usart.c
-   * Can set it here after the bug fix, hopefully
-//  PLUART::setEvenParity();
-//  PLUART::set7bitDatawidth();
-//  PLUART::enableDataInversion();
-   */
 
   PLUART::setTerminationCharacter(LINE_TERM);
   // startTransactions - sdi12Tx (enable TX by setting OE LOW)
