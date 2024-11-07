@@ -13,8 +13,6 @@ extern "C" {
 
 // Maximum frame size for the ADIN2111
 #define ETH_MAX_FRAME_SIZE (MAX_FRAME_SIZE)
-
-#define ADIN2111_PORT_MASK 0x03
 #define QUEUE_NUM_ENTRIES 8
 
 typedef struct {

@@ -43,7 +43,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
-    ${SRC_DIR}/lib/common/stress.c
+    # ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
@@ -65,11 +65,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
@@ -251,7 +246,7 @@ set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
 
     # Add network stress test functions
-    STRESS_TEST_ENABLE
+    # STRESS_TEST_ENABLE
 )
 
 # Include bm_core
@@ -260,6 +255,11 @@ set(BM_CORE_LWIP_INCLUDES
     ${LWIP_INCLUDE_DIRS}
     ${BCMP_INCLUDES}
     ${BRISTLEMOUTH_INCLUDES}
+
+    # This is only needed to get cmsis_compiler.h
+    # accessible to the adin driver's adi_hal_port_specific.h
+    # for some interrupt enabling and disabling functions
+    ${BSP_INCLUDES}
 )
 set(BM_CORE_FREERTOS_INCLUDES
     ${FREERTOS_INCLUDES}

@@ -8,13 +8,15 @@
 #include "task.h"
 
 #include "bm_ports.h"
+#include "bsp.h"
 
 extern "C" {
 #include "bcmp.h"
+#include "bm_adin2111.h"
 #include "bm_ip.h"
 #include "bm_service.h"
 #include "device.h"
-#include "eth_adin2111.h"
+#include "l2.h"
 #include "middleware.h"
 }
 #include "bcmp_cli.h"
@@ -27,17 +29,7 @@ extern "C" {
 #include "stress.h"
 #endif
 
-struct netif netif;
-
-// Callback function in case of link changes.
-// Will notify relevant subsystems of link change event
-void bm_link_change_cb(uint8_t port, bool state) {
-  printf("bm port%u %s\n", port, state ? "up" : "down");
-
-  // Let BCMP know a link has changed!
-  // (Useful for heartbeats/discovery)
-  bcmp_link_change(port, state);
-}
+static void adin_power_callback(bool on) { IOWrite(&ADIN_PWR, on); }
 
 void bcl_init(void) {
   config_init();
@@ -61,35 +53,16 @@ void bcl_init(void) {
   printf("Starting up BCL\n");
   device_init(device);
 
-  // TODO: this is specific configuration to the netif driver.
-  // this should be placed elsewhere based on the users chosen 10BASE-T1L
-  // chipset selection
-  static adin2111_DeviceStruct_t adin_device;
-  static const BmNetDevCfg bm_netdev_config[] = {
-      {
-          &adin_device,
-          ADIN_PORT_MASK_ALL,
-          ADIN2111_PORT_NUM,
-          adin2111_hw_init,
-          adin2111_power_cb,
-          adin2111_tx,
-      },
-      {
-          NULL,
-          0,
-          0,
-          NULL,
-          NULL,
-          NULL,
-      },
-  };
+  NetworkDevice network_device = adin2111_network_device();
+  network_device.callbacks->power = adin_power_callback;
+  BmErr err = adin2111_init();
+  if (err != BmOK) {
+    printf("ADIN2111 init error %d\n", err);
+  }
 
-  bm_l2_init(bm_link_change_cb, bm_netdev_config, array_size(bm_netdev_config));
-
+  bm_l2_init(network_device);
   bm_ip_init();
-
-  bcmp_init();
-
+  bcmp_init(network_device);
   bcmp_cli_init();
 
   // TODO: move this init to middle_ware init once services have been ported
