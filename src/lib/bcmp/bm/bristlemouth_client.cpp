@@ -1,3 +1,5 @@
+#include "bristlemouth_client.h"
+
 // Includes for FreeRTOS
 #include "FreeRTOS.h"
 #include "configuration.h"
@@ -7,23 +9,17 @@
 #include "queue.h"
 #include "task.h"
 
+#include "bcmp_cli.h"
+#include "bm_config.h"
 #include "bm_ports.h"
 #include "bsp.h"
-
-extern "C" {
-#include "bcmp.h"
-#include "bm_adin2111.h"
-#include "bm_ip.h"
-#include "bm_service.h"
-#include "device.h"
-#include "l2.h"
-#include "middleware.h"
-}
-#include "bcmp_cli.h"
-
 #include "task_priorities.h"
 
-#include "bm_config.h"
+extern "C" {
+#include "bm_ip.h"
+#include "bristlemouth.h"
+#include "device.h"
+}
 
 #ifdef STRESS_TEST_ENABLE
 #include "stress.h"
@@ -53,25 +49,17 @@ void bcl_init(void) {
   printf("Starting up BCL\n");
   device_init(device);
 
-  NetworkDevice network_device = adin2111_network_device();
-  network_device.callbacks->power = adin_power_callback;
-  BmErr err = adin2111_init();
-  if (err != BmOK) {
-    printf("ADIN2111 init error %d\n", err);
-  }
-
-  bm_l2_init(network_device);
-  bm_ip_init();
-  bcmp_init(network_device);
-  bcmp_cli_init();
-
-  // TODO: move this init to middle_ware init once services have been ported
-  bm_service_init();
-  bm_middleware_init(BM_MIDDLEWARE_PORT);
+  BmErr err = bristlemouth_init(adin_power_callback);
+  if (err == BmOK) {
+    bcmp_cli_init();
 
 #ifdef STRESS_TEST_ENABLE
-  stress_test_init(&netif, STRESS_TEST_PORT);
+    stress_test_init(&netif, STRESS_TEST_PORT);
 #endif
+
+  } else {
+    printf("Failed to initialize bristlemouth\n");
+  }
 }
 
 /*!
