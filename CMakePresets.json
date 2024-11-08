@@ -102,6 +102,13 @@
             }
         },
         {
+            "name": "loadcell-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "loadcell"
+            }
+        },
+        {
             "name": "mote-bristlefin",
             "inherits": "default",
             "cacheVariables": {
@@ -124,10 +131,24 @@
             }
         },
         {
+            "name": "rbr-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "bm_rbr"
+            }
+        },
+        {
             "name": "rbr-coda-example",
             "inherits": "hello-world",
             "cacheVariables": {
                 "APP": "rbr_coda_example"
+            }
+        },
+        {
+            "name": "seapoint-turbidity-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "seapoint_turbidity"
             }
         },
         {
@@ -143,6 +164,14 @@
             "cacheVariables": {
                 "BSP": "bm_mote_bristleback_v1_0",
                 "CMAKE_APP_TYPE": "bristleback"
+            }
+        },
+        {
+            "name": "soft",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bm_soft_module",
+                "BSP": "bm_mote_spi_v1_0"
             }
         }
     ],
@@ -198,6 +227,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "loadcell-bristleback",
+            "name": "loadcell-bristleback",
+            "jobs": 8
+        },
+        {
             "configurePreset": "mote-bristlefin",
             "name": "mote-bristlefin",
             "jobs": 8
@@ -213,8 +247,18 @@
             "jobs": 8
         },
         {
+            "configurePreset": "rbr-bristleback",
+            "name": "rbr-bristleback",
+            "jobs": 8
+        },
+        {
             "configurePreset": "rbr-coda-example",
             "name": "rbr-coda-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "seapoint-turbidity-bristleback",
+            "name": "seapoint-turbidity-bristleback",
             "jobs": 8
         },
         {
@@ -225,6 +269,11 @@
         {
             "configurePreset": "serial-payload-example-bristleback",
             "name": "serial-payload-example-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "soft",
+            "name": "soft",
             "jobs": 8
         }
     ]
