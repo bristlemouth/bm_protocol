@@ -61,11 +61,6 @@ set(LIB_FILES
 
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
     ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
     ${SRC_DIR}/lib/drivers/pca9535.c
@@ -243,6 +238,7 @@ set(BM_CORE_LWIP_INCLUDES
     ${LWIP_INCLUDE_DIRS}
     ${BCMP_INCLUDES}
     ${BRISTLEMOUTH_INCLUDES}
+    ${BSP_INCLUDES}
 )
 set(BM_CORE_FREERTOS_INCLUDES
     ${FREERTOS_INCLUDES}

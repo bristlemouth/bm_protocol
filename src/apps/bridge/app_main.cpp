@@ -21,7 +21,7 @@
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
 #include "config_cbor_map_service.h"

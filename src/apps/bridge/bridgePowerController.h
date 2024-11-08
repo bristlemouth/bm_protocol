@@ -34,7 +34,6 @@ public:
 private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
-  bool getAdinDevice();
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
   void stateLogPrintTarget(const char *state, uint32_t target);

@@ -119,13 +119,7 @@ void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     IOWrite(&_BusPowerPin, on);
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     if (notifyL2) {
-      if (_adin_handle) {
-        bm_l2_netif_set_power(_adin_handle, on);
-      } else {
-        if (getAdinDevice()) {
-          bm_l2_netif_set_power(_adin_handle, on);
-        }
-      }
+      bm_l2_netif_set_power(on);
     }
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge bus power: %d\n",
                    static_cast<int>(on));
@@ -308,22 +302,6 @@ void BridgePowerController::powerControllerRun(void *arg) {
   while (true) {
     reinterpret_cast<BridgePowerController *>(arg)->_update();
   }
-}
-
-bool BridgePowerController::getAdinDevice() {
-  bool rval = false;
-  for (uint32_t device = 0; device < bm_l2_get_num_devices(); device++) {
-    adin2111_DeviceHandle_t adin_handle;
-    uint32_t start_port_idx;
-    if (bm_l2_get_device_handle(device, reinterpret_cast<void **>(&adin_handle),
-                                &start_port_idx) &&
-        (adin_handle != NULL)) {
-      _adin_handle = adin_handle;
-      rval = true;
-      break;
-    }
-  }
-  return rval;
 }
 
 void BridgePowerController::checkAndUpdateTimebase() {
