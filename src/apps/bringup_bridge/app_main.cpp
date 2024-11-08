@@ -18,7 +18,7 @@
 #include "task.h"
 
 #include "l2.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bootloader_helper.h"
 #include "bsp.h"
 #include "cli.h"

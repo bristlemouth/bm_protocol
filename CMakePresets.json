@@ -7,45 +7,89 @@
     },
     "configurePresets": [
         {
-            "name": "hello-world",
+            "name": "default",
+            "hidden": true,
             "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "USE_BOOTLOADER": "1",
+                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "SIGN_IMAGES": "0"
+            },
+            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+        },
+        {
+            "name": "hello-world",
+            "inherits": "default",
             "cacheVariables": {
                 "CMAKE_APP_TYPE": "BMDK",
                 "APP": "hello_world",
-                "BSP": "bm_mote_v1.0",
-                "USE_BOOTLOADER": "1",
-                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
-                "CMAKE_BUILD_TYPE": "Debug",
-                "SIGN_IMAGES": "0"
-            },
-            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "rbr-coda-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "rbr_coda_example"
+            }
+        },
+        {
+            "name": "serial-payload-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_payload_example"
+            }
+        },
+        {
+            "name": "devkit-monitor",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "devkit_monitor"
+            }
         },
         {
             "name": "bridge",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "inherits": "default",
             "cacheVariables": {
                 "APP": "bridge",
-                "BSP": "bridge_v1_0",
-                "USE_BOOTLOADER": "1",
-                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
-                "CMAKE_BUILD_TYPE": "Debug",
-                "SIGN_IMAGES": "0"
-            },
-            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+                "BSP": "bridge_v1_0"
+            }
+        },
+        {
+            "name": "bringup-bridge",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bringup_bridge",
+                "BSP": "bridge_v1_0"
+                }
+        },
+        {
+            "name": "bringup-mote",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bringup_mote",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "mote-bristlefin",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "mote_bristlefin",
+                "BSP": "bm_mote_v1.0"
+            }
         },
         {
             "name": "bootloader",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "inherits": "default",
             "cacheVariables": {
                 "APP": "bootloader",
                 "BSP": "bootloader",
                 "CMAKE_BUILD_TYPE": "Release",
-                "SIGN_IMAGES": "0"
-            },
-            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+                "USE_BOOTLOADER": "0"
+            }
         },
         {
             "name": "unit-tests",
@@ -61,22 +105,52 @@
         {
             "configurePreset": "hello-world",
             "name": "hello-world",
-            "jobs": 0
+            "jobs": 8
+        },
+        {
+            "configurePreset": "rbr-coda-example",
+            "name": "rbr-coda-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example",
+            "name": "serial-payload-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "devkit-monitor",
+            "name": "devkit-monitor",
+            "jobs": 8
         },
         {
             "configurePreset": "bridge",
             "name": "bridge",
-            "jobs": 0
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bringup-bridge",
+            "name": "bringup-bridge",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bringup-mote",
+            "name": "bringup-mote",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "mote-bristlefin",
+            "name": "mote-bristlefin",
+            "jobs": 8
         },
         {
             "configurePreset": "bootloader",
             "name": "bootloader",
-            "jobs": 0
+            "jobs": 8
         },
         {
             "configurePreset": "unit-tests",
             "name": "unit-tests",
-            "jobs": 0
+            "jobs": 8
         }
     ]
 }
