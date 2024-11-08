@@ -99,6 +99,29 @@
                 "CMAKE_BUILD_TYPE": "Test",
                 "ENABLE_TESTING": "1"
             }
+        },
+        {
+            "name": "serial-payload-example-bristleback",
+            "inherits": "serial-payload-example",
+            "cacheVariables": {
+                "BSP": "bm_mote_bristleback_v1_0",
+                "CMAKE_APP_TYPE": "bristleback"
+            }
+        },
+        {
+            "name": "aanderaa-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "aanderaa",
+                "CMAKE_AANDERAA_TYPE": "4830"
+            }
+        },
+        {
+            "name": "nortek-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "nortek"
+            }
         }
     ],
     "buildPresets": [
@@ -150,6 +173,21 @@
         {
             "configurePreset": "unit-tests",
             "name": "unit-tests",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example-bristleback",
+            "name": "serial-payload-example-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "aanderaa-bristleback",
+            "name": "aanderaa-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "nortek-bristleback",
+            "name": "nortek-bristleback",
             "jobs": 8
         }
     ]
