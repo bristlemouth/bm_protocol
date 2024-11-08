@@ -47,6 +47,14 @@
             }
         },
         {
+            "name": "adin-test",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "adin_test",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
             "name": "bridge",
             "inherits": "default",
             "cacheVariables": {
@@ -87,11 +95,25 @@
             }
         },
         {
+            "name": "loadcell",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "bm_loadcell"
+            }
+        },
+        {
             "name": "mote-bristlefin",
             "inherits": "default",
             "cacheVariables": {
                 "APP": "mote_bristlefin",
                 "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "nortek",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "nortek"
             }
         },
         {
@@ -141,6 +163,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "adin-test",
+            "name": "adin-test",
+            "jobs": 8
+        },
+        {
             "configurePreset": "bridge",
             "name": "bridge",
             "jobs": 8
@@ -166,8 +193,18 @@
             "jobs": 8
         },
         {
+            "configurePreset": "loadcell",
+            "name": "loadcell",
+            "jobs": 8
+        },
+        {
             "configurePreset": "mote-bristlefin",
             "name": "mote-bristlefin",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "nortek",
+            "name": "nortek",
             "jobs": 8
         },
         {
