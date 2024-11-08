@@ -21,7 +21,6 @@
 #include "adi_bsp.h"
 #include "bcmp.h"
 #include "bsp.h"
-#include "eth_adin2111.h"
 #include "task_priorities.h"
 
 #include "gpio.h"

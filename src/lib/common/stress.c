@@ -7,7 +7,9 @@
 // FreeRTOS+CLI includes.
 #include "FreeRTOS_CLI.h"
 
-#include "eth_adin2111.h"
+#include "bm_adin2111.h"
+#include "bm_ip.h"
+#include "l2.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "lwip/pbuf.h"
@@ -29,9 +31,9 @@
 #define STRESS_QUEUE_LEN 32
 
 typedef struct {
-  struct netif *netif;
+  NetworkDevice network_device;
   struct udp_pcb *pcb;
-  uint16_t port;
+  uint16_t udp_port;
   TaskHandle_t task;
   xQueueHandle evt_queue;
   TimerHandle_t tx_timer;
@@ -112,20 +114,19 @@ static BaseType_t cmd_stress_fn(char *writeBuffer, size_t writeBufferLen,
 }
 
 /*!
-  Process received CLI commands from iridium. Split them up, if multiple,
-  and send to CLI processor.
-  \param[in] *netif - lwip network interface
-  \param[in] port - UDP port to use for stress test
+  Initialize stress test module
+  \param[in] network_device - network device to use for stress test
+  \param[in] udp_port - UDP port to use for stress test
   \return None
 */
-void stress_test_init(struct netif *netif, uint16_t port) {
-  configASSERT(netif);
-  configASSERT(port != 0);
+void stress_test_init(NetworkDevice network_device, uint16_t udp_port) {
+  configASSERT(udp_port != 0);
 
   BaseType_t rval;
 
-  _ctx.netif = netif;
-  _ctx.port = port;
+  _ctx.network_device = network_device;
+  _ctx.udp_port = udp_port;
+  _ctx.network_device = network_device;
 
   _ctx.evt_queue = xQueueCreate(STRESS_QUEUE_LEN, sizeof(stress_test_queue_item_t));
   configASSERT(_ctx.evt_queue);
@@ -145,8 +146,7 @@ void stress_test_init(struct netif *netif, uint16_t port) {
   \return 0 if OK nonzero otherwise (see udp_send for error codes)
 */
 int32_t stress_test_tx(struct pbuf *pbuf) {
-  return safe_udp_sendto_if(_ctx.pcb, pbuf, (const ip_addr_t *)&multicast_global_addr,
-                            _ctx.port, _ctx.netif);
+  return bm_udp_tx_perform(_ctx.pcb, pbuf, 0, &multicast_global_addr, _ctx.udp_port);
 }
 
 /*!
@@ -211,16 +211,10 @@ static void stress_tx() {
   pbuf_free(pbuf);
 }
 
-// Callback function to print adin port stats
-void _print_adin_port_stats(adin2111_DeviceHandle_t device_handle, adin2111_Port_e port,
-                            adin_port_stats_t *stats, void *args) {
-  configASSERT(device_handle);
+static void print_adin_port_stats(uint8_t port, Adin2111PortStats *stats) {
   configASSERT(stats);
 
-  // Get the overall system port as an argument, since port is just the adin port
-  uint32_t sys_port = (uint32_t)args;
-  (void)port;
-  printf("PORT %" PRIu32 "\n", sys_port);
+  printf("PORT %" PRIu8 "\n", port);
   printf("MSE_VAL:            %u\n", stats->mse_link_quality.mseVal);
   printf("Link Quality:       ");
   switch (stats->mse_link_quality.linkQuality) {
@@ -238,16 +232,16 @@ void _print_adin_port_stats(adin2111_DeviceHandle_t device_handle, adin2111_Port
   }
   printf("SQI:                %u\n", stats->mse_link_quality.sqi);
 
-  printf("RX ERR CNT:         %u\n", stats->frame_check_rx_err_cnt);
+  printf("RX ERR CNT:         %u\n", stats->frame_check_rx_error_count);
 
-  printf("LEN_ERR_CNT:        %u\n", stats->frame_check_err_counters.LEN_ERR_CNT);
-  printf("ALGN_ERR_CNT:       %u\n", stats->frame_check_err_counters.ALGN_ERR_CNT);
-  printf("SYMB_ERR_CNT:       %u\n", stats->frame_check_err_counters.SYMB_ERR_CNT);
-  printf("OSZ_CNT:            %u\n", stats->frame_check_err_counters.OSZ_CNT);
-  printf("USZ_CNT:            %u\n", stats->frame_check_err_counters.USZ_CNT);
-  printf("ODD_CNT:            %u\n", stats->frame_check_err_counters.ODD_CNT);
-  printf("ODD_PRE_CNT:        %u\n", stats->frame_check_err_counters.ODD_PRE_CNT);
-  printf("FALSE_CARRIER_CNT:  %u\n", stats->frame_check_err_counters.FALSE_CARRIER_CNT);
+  printf("LEN_ERR_CNT:        %u\n", stats->frame_check_error_counters.LEN_ERR_CNT);
+  printf("ALGN_ERR_CNT:       %u\n", stats->frame_check_error_counters.ALGN_ERR_CNT);
+  printf("SYMB_ERR_CNT:       %u\n", stats->frame_check_error_counters.SYMB_ERR_CNT);
+  printf("OSZ_CNT:            %u\n", stats->frame_check_error_counters.OSZ_CNT);
+  printf("USZ_CNT:            %u\n", stats->frame_check_error_counters.USZ_CNT);
+  printf("ODD_CNT:            %u\n", stats->frame_check_error_counters.ODD_CNT);
+  printf("ODD_PRE_CNT:        %u\n", stats->frame_check_error_counters.ODD_PRE_CNT);
+  printf("FALSE_CARRIER_CNT:  %u\n", stats->frame_check_error_counters.FALSE_CARRIER_CNT);
 }
 
 // Print out the stress test statistics
@@ -261,26 +255,17 @@ void stress_print_stats() {
   _ctx.last_bytes_received = _ctx.total_bytes_received;
   _ctx.last_bytes_ticks = xTaskGetTickCount();
 
-  //TODO this will have to be updated when more devices are supported
-  for (uint32_t device = 0; device < bm_l2_get_num_devices(); device++) {
-    adin2111_DeviceHandle_t adin_handle;
-    uint32_t start_port_idx;
-    if (!bm_l2_get_device_handle(device, (void **)&adin_handle, &start_port_idx) ||
-        (adin_handle != NULL)) {
-
-      // Not an ADIN interface, skip it
-      continue;
-    }
-
-    // Request both ports (if they're enabled)
-    // The info will be printed on the callback funcion (if it is called)
-    if (bm_l2_get_port_state(start_port_idx)) {
-      adin2111_get_port_stats(adin_handle, ADIN2111_PORT_1, _print_adin_port_stats,
-                              (void *)(start_port_idx));
-    }
-    if (bm_l2_get_port_state(start_port_idx + 1)) {
-      adin2111_get_port_stats(adin_handle, ADIN2111_PORT_2, _print_adin_port_stats,
-                              (void *)(start_port_idx + 1));
+  // Request both ports (if they're enabled)
+  const uint8_t num_ports = _ctx.network_device.trait->num_ports();
+  Adin2111PortStats stats;
+  for (uint8_t port = 0; port < num_ports; port++) {
+    if (bm_l2_get_port_state(port)) {
+      BmErr err = _ctx.network_device.trait->port_stats(_ctx.network_device.self, port, &stats);
+      if (err == BmOK) {
+        print_adin_port_stats(port, &stats);
+      } else {
+        printf("Error getting port stats for port %" PRIu8 "\n", port);
+      }
     }
   }
 }
@@ -350,7 +335,7 @@ static void stress_test_task(void *parameters) {
   (void)parameters;
 
   _ctx.pcb = udp_new_ip_type(IPADDR_TYPE_V6);
-  udp_bind(_ctx.pcb, IP_ANY_TYPE, _ctx.port);
+  udp_bind(_ctx.pcb, IP_ANY_TYPE, _ctx.udp_port);
   udp_recv(_ctx.pcb, stress_test_rx_cb, NULL);
 
   _ctx.tx_timer = xTimerCreate("tx_timer", pdMS_TO_TICKS(TX_TIMER_MS * 2), pdTRUE,

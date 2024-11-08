@@ -43,7 +43,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
     ${SRC_DIR}/lib/common/serial_console_u5.cpp
-    # ${SRC_DIR}/lib/common/stress.c
+    ${SRC_DIR}/lib/common/stress.c
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
@@ -246,7 +246,7 @@ set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
 
     # Add network stress test functions
-    # STRESS_TEST_ENABLE
+    STRESS_TEST_ENABLE
 )
 
 # Include bm_core
