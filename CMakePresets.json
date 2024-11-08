@@ -7,6 +7,15 @@
     },
     "configurePresets": [
         {
+            "name": "unit-tests",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Test",
+                "ENABLE_TESTING": "1"
+            }
+        },
+        {
             "name": "default",
             "hidden": true,
             "generator": "Unix Makefiles",
@@ -20,33 +29,21 @@
             "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
         },
         {
-            "name": "hello-world",
+            "name": "bootloader",
             "inherits": "default",
             "cacheVariables": {
-                "CMAKE_APP_TYPE": "BMDK",
-                "APP": "hello_world",
-                "BSP": "bm_mote_v1.0"
+                "APP": "bootloader",
+                "BSP": "bootloader",
+                "CMAKE_BUILD_TYPE": "Release",
+                "USE_BOOTLOADER": "0"
             }
         },
         {
-            "name": "rbr-coda-example",
-            "inherits": "hello-world",
+            "name": "aanderaa-bristleback",
+            "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
-                "APP": "rbr_coda_example"
-            }
-        },
-        {
-            "name": "serial-payload-example",
-            "inherits": "hello-world",
-            "cacheVariables": {
-                "APP": "serial_payload_example"
-            }
-        },
-        {
-            "name": "devkit-monitor",
-            "inherits": "hello-world",
-            "cacheVariables": {
-                "APP": "devkit_monitor"
+                "APP": "aanderaa",
+                "CMAKE_AANDERAA_TYPE": "4830"
             }
         },
         {
@@ -74,6 +71,22 @@
             }
         },
         {
+            "name": "devkit-monitor",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "devkit_monitor"
+            }
+        },
+        {
+            "name": "hello-world",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_APP_TYPE": "BMDK",
+                "APP": "hello_world",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
             "name": "mote-bristlefin",
             "inherits": "default",
             "cacheVariables": {
@@ -82,22 +95,24 @@
             }
         },
         {
-            "name": "bootloader",
-            "inherits": "default",
+            "name": "nortek-bristleback",
+            "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
-                "APP": "bootloader",
-                "BSP": "bootloader",
-                "CMAKE_BUILD_TYPE": "Release",
-                "USE_BOOTLOADER": "0"
+                "APP": "nortek"
             }
         },
         {
-            "name": "unit-tests",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
+            "name": "rbr-coda-example",
+            "inherits": "hello-world",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Test",
-                "ENABLE_TESTING": "1"
+                "APP": "rbr_coda_example"
+            }
+        },
+        {
+            "name": "serial-payload-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_payload_example"
             }
         },
         {
@@ -107,42 +122,22 @@
                 "BSP": "bm_mote_bristleback_v1_0",
                 "CMAKE_APP_TYPE": "bristleback"
             }
-        },
-        {
-            "name": "aanderaa-bristleback",
-            "inherits": "serial-payload-example-bristleback",
-            "cacheVariables": {
-                "APP": "aanderaa",
-                "CMAKE_AANDERAA_TYPE": "4830"
-            }
-        },
-        {
-            "name": "nortek-bristleback",
-            "inherits": "serial-payload-example-bristleback",
-            "cacheVariables": {
-                "APP": "nortek"
-            }
         }
     ],
     "buildPresets": [
         {
-            "configurePreset": "hello-world",
-            "name": "hello-world",
+            "configurePreset": "unit-tests",
+            "name": "unit-tests",
             "jobs": 8
         },
         {
-            "configurePreset": "rbr-coda-example",
-            "name": "rbr-coda-example",
+            "configurePreset": "bootloader",
+            "name": "bootloader",
             "jobs": 8
         },
         {
-            "configurePreset": "serial-payload-example",
-            "name": "serial-payload-example",
-            "jobs": 8
-        },
-        {
-            "configurePreset": "devkit-monitor",
-            "name": "devkit-monitor",
+            "configurePreset": "aanderaa-bristleback",
+            "name": "aanderaa-bristleback",
             "jobs": 8
         },
         {
@@ -161,33 +156,38 @@
             "jobs": 8
         },
         {
+            "configurePreset": "devkit-monitor",
+            "name": "devkit-monitor",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "hello-world",
+            "name": "hello-world",
+            "jobs": 8
+        },
+        {
             "configurePreset": "mote-bristlefin",
             "name": "mote-bristlefin",
             "jobs": 8
         },
         {
-            "configurePreset": "bootloader",
-            "name": "bootloader",
+            "configurePreset": "nortek-bristleback",
+            "name": "nortek-bristleback",
             "jobs": 8
         },
         {
-            "configurePreset": "unit-tests",
-            "name": "unit-tests",
+            "configurePreset": "rbr-coda-example",
+            "name": "rbr-coda-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example",
+            "name": "serial-payload-example",
             "jobs": 8
         },
         {
             "configurePreset": "serial-payload-example-bristleback",
             "name": "serial-payload-example-bristleback",
-            "jobs": 8
-        },
-        {
-            "configurePreset": "aanderaa-bristleback",
-            "name": "aanderaa-bristleback",
-            "jobs": 8
-        },
-        {
-            "configurePreset": "nortek-bristleback",
-            "name": "nortek-bristleback",
             "jobs": 8
         }
     ]
