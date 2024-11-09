@@ -26,7 +26,7 @@ BridgePowerController::BridgePowerController(
       _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
       _subsampleIntervalStartS(0), _alignmentS(alignmentS),
       _ticksSamplingEnabled(ticksSamplingEnabled), _timebaseSet(false), _initDone(false),
-      _subsamplingEnabled(subsamplingEnabled), _configError(false), _adin_handle(NULL) {
+      _subsamplingEnabled(subsamplingEnabled), _configError(false) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S || _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
     _configError = true;

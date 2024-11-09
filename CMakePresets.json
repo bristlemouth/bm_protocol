@@ -47,6 +47,14 @@
             }
         },
         {
+            "name": "aanderaa-rs232",
+            "inherits": "aanderaa-bristleback",
+            "cacheVariables": {
+                "BSP": "bm_mote_rs232",
+                "CMAKE_APP_TYPE": "rs232_expander"
+            }
+        },
+        {
             "name": "adin-test",
             "inherits": "default",
             "cacheVariables": {
@@ -145,6 +153,13 @@
             }
         },
         {
+            "name": "rbr-rs232",
+            "inherits": "serial-payload-example-rs232",
+            "cacheVariables": {
+                "APP": "bm_rbr"
+            }
+        },
+        {
             "name": "seapoint-turbidity-bristleback",
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
@@ -164,6 +179,14 @@
             "cacheVariables": {
                 "BSP": "bm_mote_bristleback_v1_0",
                 "CMAKE_APP_TYPE": "bristleback"
+            }
+        },
+        {
+            "name": "serial-payload-example-rs232",
+            "inherits": "serial-payload-example",
+            "cacheVariables": {
+                "BSP": "bm_mote_rs232",
+                "CMAKE_APP_TYPE": "rs232_expander"
             }
         },
         {
@@ -189,6 +212,11 @@
         {
             "configurePreset": "aanderaa-bristleback",
             "name": "aanderaa-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "aanderaa-rs232",
+            "name": "aanderaa-rs232",
             "jobs": 8
         },
         {
@@ -257,6 +285,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "rbr-rs232",
+            "name": "rbr-rs232",
+            "jobs": 8
+        },
+        {
             "configurePreset": "seapoint-turbidity-bristleback",
             "name": "seapoint-turbidity-bristleback",
             "jobs": 8
@@ -269,6 +302,11 @@
         {
             "configurePreset": "serial-payload-example-bristleback",
             "name": "serial-payload-example-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example-rs232",
+            "name": "serial-payload-example-rs232",
             "jobs": 8
         },
         {
