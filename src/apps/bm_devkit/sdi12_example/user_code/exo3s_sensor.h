@@ -19,6 +19,12 @@
 #define characterDelay 2	// maximum time to wait for the next character before a fault flagged
 #define delayAfterTransmit 2	// a short delay put in after the last character is sent to allow for switching
 
+// The EXO3s these sensors
+// 1. pH sensor
+// 2. Wiped Condensation/Temperature
+// 3. Turbidity
+// 4. Optical Dissolved Oxygen
+// 5. Central Wiper
 struct __attribute__((packed)) EXO3sample {
   float temp_sensor;    // Celcius
   float sp_cond;        // uS/cm
@@ -69,6 +75,7 @@ class SondeEXO3sSensor {
     // Value types for a EXO3 sonde sensor
     // Example: 0+24.288+7.08+6.74+0.69\r\n
     // Set string values we don't care about to TYPE_INVALID to save memory.
+    // Response of 0D0! is collected and saved to these variables
     static constexpr ValueType D0_PARSER_VALUE_TYPES[] = {
         TYPE_INVALID,   // echo of the command and slave address
         TYPE_DOUBLE,    // serial number
@@ -77,6 +84,7 @@ class SondeEXO3sSensor {
         TYPE_DOUBLE     // code space
     };
 
+    // Response of 0D1! is collected and saved to these variables
     static constexpr ValueType D1_PARSER_VALUE_TYPES[] = {
         TYPE_INVALID,   // echo of the command and slave address
         TYPE_DOUBLE,    // serial number
@@ -85,6 +93,7 @@ class SondeEXO3sSensor {
         TYPE_DOUBLE    // code space
     };
 
+    // Response of 0D2! is collected and saved to these variables
     static constexpr ValueType D2_PARSER_VALUE_TYPES[] = {
         TYPE_INVALID,   // echo of the command and slave address
         TYPE_DOUBLE,    // serial number

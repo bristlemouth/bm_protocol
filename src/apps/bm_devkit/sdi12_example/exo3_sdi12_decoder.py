@@ -1,7 +1,7 @@
 from bitstring import BitStream
 import struct
 
-# Test sensor-data payloads representing different detection scenarios in hex format.
+# Test sensor-data payloads in hex format.
 payload = "de672c10f5da00ac0218d12dc645e96b7ccaf3e2ef0ef2e48813d2dbfc83c0b741d7a3b84048e1e24033339dc1e17acf4266660e416666564148e19a3fe3a59b3e85eb4141f2d2b7415c8fba4048e1e240295c9dc1e17acf4266660e411f8553419a99993fe3a59b3e85eb414160e5b741cdccb44048e1e240d7a39cc1c375cf4266660e4185eb594148e19a3ff6289c3e85eb4141"
 
 # Description of the detection structure to unpack from the payload.
@@ -125,4 +125,4 @@ if __name__ == '__main__':
         for key in detection_data:
             print(f"\t{key}: {detection_data[key]}")
 
-    print("---------------------------------\n")
+        print("---------------------------------\n")
