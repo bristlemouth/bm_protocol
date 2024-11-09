@@ -126,7 +126,6 @@ void stress_test_init(NetworkDevice network_device, uint16_t udp_port) {
 
   _ctx.network_device = network_device;
   _ctx.udp_port = udp_port;
-  _ctx.network_device = network_device;
 
   _ctx.evt_queue = xQueueCreate(STRESS_QUEUE_LEN, sizeof(stress_test_queue_item_t));
   configASSERT(_ctx.evt_queue);
