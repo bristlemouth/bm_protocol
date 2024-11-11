@@ -7,7 +7,6 @@ set(BCMP_FILES
     ${BCMP_DIR}/bcmp_cli.cpp
 
     # Core bristlemouth
-    ${BCMP_DIR}/bm/bm_printf.cpp
     ${BCMP_DIR}/bm/bristlemouth.cpp
 
     PARENT_SCOPE)

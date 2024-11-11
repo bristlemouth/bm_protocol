@@ -1,8 +1,6 @@
 #include "user_code.h"
 #include "TSYS01.h"
 #include "app_util.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bm_soft_data_msg.h"
 #include "bristlefin.h"
 #include "bsp.h"
@@ -12,6 +10,7 @@
 #include "lwip/inet.h"
 #include "pubsub.h"
 #include "sensorWatchdog.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -50,8 +49,8 @@ static void getConfigs() {
     printf("TSYS serial number: %" PRIu32 "\n", serial_number);
   } else {
     printf("No TSYS serial number found\n");
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No TSYS serial number found\n");
-    bm_printf(0, "No TSYS serial number found");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "No TSYS serial number found\n");
+    spotter_log_console(0, "No TSYS serial number found");
   }
 
   int32_t calTempC = 0;
@@ -60,8 +59,8 @@ static void getConfigs() {
     printf("Calibration temperature: %" PRId32 "\n", calTempC);
   } else {
     printf("No calibration temperature found\n");
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No calibration temperature found\n");
-    bm_printf(0, "No calibration temperature found");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "No calibration temperature found\n");
+    spotter_log_console(0, "No calibration temperature found");
   }
 
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, soft_cfg_cal_time_epoch,
@@ -69,8 +68,8 @@ static void getConfigs() {
     printf("Calibration time: %" PRIu32 "\n", cal_time_epoch);
   } else {
     printf("No calibration time found\n");
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No calibration time found\n");
-    bm_printf(0, "No calibration time found");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "No calibration time found\n");
+    spotter_log_console(0, "No calibration time found");
   }
 
   int32_t calOffsetMilliC = 0;
@@ -79,8 +78,8 @@ static void getConfigs() {
     printf("Calibration offset (milliDegC): %" PRId32 "\n", calOffsetMilliC);
   } else {
     printf("No calibration offset (milliDegC) found\n");
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "No calibration offset (milliDegC) found\n");
-    bm_printf(0, "No calibration offset (milliDegC) found");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "No calibration offset (milliDegC) found\n");
+    spotter_log_console(0, "No calibration offset (milliDegC) found");
   }
   calibrationOffsetDegC = static_cast<float>(calOffsetMilliC) * 1e-3f;
 
@@ -120,10 +119,10 @@ void loop(void) {
     SensorWatchdog::SensorWatchdogPet(SOFTMODULE_WATCHDOG_ID);
 
     printf("soft | tick: %llu, rtc: %s, temp: %f\n", uptimeGetMs(), rtcTimeBuffer, temperature);
-    bm_printf(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
+    spotter_log_console(0, "soft | tick: %llu, rtc: %s, temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
     if (sensorBmLogEnable) {
-      bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s, temp: %f\n",
+      spotter_log(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s, temp: %f\n",
                  uptimeGetMs(), rtcTimeBuffer, temperature);
     }
     static BmSoftDataMsg::Data d;
@@ -146,26 +145,26 @@ void loop(void) {
   }
   case TSYS01::TSYS01_RESULT_COMMS: {
     printf("soft | tick: %llu, rtc: %s, COMMS ERROR\n", uptimeGetMs(), rtcTimeBuffer);
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s,  COMMS ERROR\n",
+    spotter_log(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s,  COMMS ERROR\n",
                uptimeGetMs(), rtcTimeBuffer);
-    bm_printf(0, "soft | tick: %llu, rtc: %s,  COMMS ERROR", uptimeGetMs(), rtcTimeBuffer);
+    spotter_log_console(0, "soft | tick: %llu, rtc: %s,  COMMS ERROR", uptimeGetMs(), rtcTimeBuffer);
     break;
   }
   case TSYS01::TSYS01_RESULT_INVALID: {
     printf("soft | tick: %llu, rtc: %s, INVALID temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
            temperature);
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s, INVALID temp: %f\n",
+    spotter_log(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s, INVALID temp: %f\n",
                uptimeGetMs(), rtcTimeBuffer, temperature);
-    bm_printf(0, "soft | tick: %llu, rtc: %s, INVALID temp: %f", uptimeGetMs(), rtcTimeBuffer,
+    spotter_log_console(0, "soft | tick: %llu, rtc: %s, INVALID temp: %f", uptimeGetMs(), rtcTimeBuffer,
               temperature);
     BmSoftStartAndValidate();
     break;
   }
   default: {
     printf("soft | tick: %llu, rtc: %s, UNKNOWN ERROR\n", uptimeGetMs(), rtcTimeBuffer);
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR\n",
+    spotter_log(0, soft_log, USE_TIMESTAMP, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR\n",
                uptimeGetMs(), rtcTimeBuffer);
-    bm_printf(0, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR", uptimeGetMs(), rtcTimeBuffer);
+    spotter_log_console(0, "soft | tick: %llu, rtc: %s,  UNKNOWN ERROR", uptimeGetMs(), rtcTimeBuffer);
     break;
   }
   }
@@ -198,12 +197,12 @@ static bool BmSoftWatchdogHandler(void *arg) {
   (void)arg;
   printf("Resetting BM soft\n");
   if (BmSoftStartAndValidate()) {
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | Watchdog: Reset Bm Soft\n");
-    bm_printf(0, "soft | Watchdog: Reset Bm Soft");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "soft | Watchdog: Reset Bm Soft\n");
+    spotter_log_console(0, "soft | Watchdog: Reset Bm Soft");
     printf("soft | Watchdog: Reset Bm Soft\n");
   } else {
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "soft | Watchdog: Failed to reset Bm Soft\n");
-    bm_printf(0, "soft | Watchdog: Failed to reset Bm Soft");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "soft | Watchdog: Failed to reset Bm Soft\n");
+    spotter_log_console(0, "soft | Watchdog: Failed to reset Bm Soft");
     printf("soft | Watchdog: Failed to reset Bm Soft\n");
   }
   return true;
@@ -221,15 +220,15 @@ static void BmSoftInitalize(void) {
   while (!BmSoftStartAndValidate()) {
     if (!failed_init) {
       printf("Failed to start BM soft\n");
-      bm_fprintf(0, soft_log, USE_TIMESTAMP, "Failed to start BM soft\n");
-      bm_printf(0, "Failed to start BM soft");
+      spotter_log(0, soft_log, USE_TIMESTAMP, "Failed to start BM soft\n");
+      spotter_log_console(0, "Failed to start BM soft");
       failed_init = true;
     }
     vTaskDelay(pdMS_TO_TICKS(BM_SOFT_PERIODIC_INIT_DELAY_MS));
   }
   if (failed_init) {
     printf("Successfully recovered & started BM soft\n");
-    bm_fprintf(0, soft_log, USE_TIMESTAMP, "Successfully recovered & started BM soft\n");
-    bm_printf(0, "Successfully recovered & started BM soft");
+    spotter_log(0, soft_log, USE_TIMESTAMP, "Successfully recovered & started BM soft\n");
+    spotter_log_console(0, "Successfully recovered & started BM soft");
   }
 }
