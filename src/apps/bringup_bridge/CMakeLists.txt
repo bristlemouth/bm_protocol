@@ -13,8 +13,6 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
-
     ${BCMP_FILES}
     )
 
@@ -81,7 +79,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc32.c

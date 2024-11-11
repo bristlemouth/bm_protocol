@@ -1,7 +1,7 @@
 #include "seapointTurbiditySensor.h"
 #include "app_config.h"
 #include "avgSampler.h"
-#include "bm_network.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "bm_seapoint_turbidity_data_msg.h"
 #include "bridgeLog.h"

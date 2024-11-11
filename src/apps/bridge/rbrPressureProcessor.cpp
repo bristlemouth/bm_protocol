@@ -1,7 +1,7 @@
 #include "rbrPressureProcessor.h"
 #include "FreeRTOS.h"
 #include "app_pub_sub.h"
-#include "bm_network.h"
+#include "spotter.h"
 #include "bm_rbr_pressure_difference_signal_msg.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"

@@ -1,5 +1,5 @@
 #include "sensorWatchdog.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "semphr.h"
 #include "timer_callback_handler.h"
 #include "uptime.h"
@@ -103,7 +103,7 @@ static void _sensorWatchdogHandler(void *arg) {
   configASSERT(arg);
   sensor_watchdog_t *curr = reinterpret_cast<sensor_watchdog_t *>(arg);
   if (curr->_logHandle) {
-    bm_fprintf(0, curr->_logHandle, USE_TIMESTAMP, "[%s] | tick: %" PRIu64 " SensorWatchdog Expired!\n",
+    spotter_log(0, curr->_logHandle, USE_TIMESTAMP, "[%s] | tick: %" PRIu64 " SensorWatchdog Expired!\n",
                curr->_id, uptimeGetMs());
   }
   printf("[%s] | tick: %" PRIu64 " SensorWatchdog Expired!\n", curr->_id, uptimeGetMs());
@@ -117,7 +117,7 @@ static void _sensorWatchdogHandler(void *arg) {
     } else {
       configASSERT(xTimerStop(curr->_timerHandle, 0) == pdTRUE);
       if (curr->_logHandle) {
-        bm_fprintf(0, curr->_logHandle, USE_TIMESTAMP,
+        spotter_log(0, curr->_logHandle, USE_TIMESTAMP,
                    "[%s] | tick: %" PRIu64 " SensorWatchdog max trigger: %" PRIu32
                    " reached!\n",
                    curr->_id, uptimeGetMs(), curr->_max_triggers);

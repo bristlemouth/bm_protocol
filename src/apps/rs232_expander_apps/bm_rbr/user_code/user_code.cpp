@@ -1,7 +1,6 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
 #include "app_util.h"
-#include "bm_printf.h"
 #include "bm_rbr_data_msg.h"
 #include "bsp.h"
 #include "debug.h"
@@ -9,6 +8,7 @@
 #include "pubsub.h"
 #include "rbr_sensor.h"
 #include "sensorWatchdog.h"
+#include "spotter.h"
 #include "uptime.h"
 
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
@@ -72,8 +72,8 @@ void loop(void) {
 
 static bool BmRbrWatchdogHandler(void *arg) {
   (void)arg;
-  bm_fprintf(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
-  bm_printf(0, "DEBUG - attempting FTL recovery");
+  spotter_log(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
+  spotter_log_console(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
   IOWrite(&DISCHARGE_ON, 1);
   IOWrite(&PL_BUCK_EN, 1);

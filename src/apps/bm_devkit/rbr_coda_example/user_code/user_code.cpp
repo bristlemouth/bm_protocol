@@ -11,8 +11,6 @@
 #include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -20,6 +18,7 @@
 #include "payload_uart.h"
 #include "pubsub.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -129,11 +128,11 @@ void loop(void) {
     char rtcTimeBuffer[32];
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
-    bm_fprintf(0, "payload_data_agg.log", USE_TIMESTAMP,
+    spotter_log(0, "payload_data_agg.log", USE_TIMESTAMP,
                "tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, mean: %.4f, "
                "std: %.4f\n",
                uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
-    bm_printf(0,
+    spotter_log_console(0,
               "[rbr-agg] | tick: %llu, rtc: %s, n: %u, min: %.4f, max: %.4f, "
               "mean: %.4f, std: %.4f",
               uptimeGetMs(), rtcTimeBuffer, n_samples, min, max, mean, stdev);
@@ -144,7 +143,7 @@ void loop(void) {
     codaData_t tx_coda = {
         .sample_count = n_samples, .min = min, .max = max, .mean = mean, .stdev = stdev};
     memcpy(tx_data, (uint8_t *)(&tx_coda), CODA_DATA_SIZE);
-    if (spotter_tx_data(tx_data, CODA_DATA_SIZE, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+    if (spotter_tx_data(tx_data, CODA_DATA_SIZE, BmNetworkTypeCellularIriFallback)) {
       printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
              rtcTimeBuffer);
     } else {
@@ -228,9 +227,9 @@ void loop(void) {
     rtcGet(&time_and_date);
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, "rbr_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
+    spotter_log(0, "rbr_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
+    spotter_log_console(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
               read_len, payload_buffer);
     printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
            read_len, payload_buffer);

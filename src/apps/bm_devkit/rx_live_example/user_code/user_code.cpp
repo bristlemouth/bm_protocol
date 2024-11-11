@@ -1,6 +1,4 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
 #include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
@@ -9,6 +7,7 @@
 #include "payload_uart.h"
 #include "rx_live_sensor.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -93,12 +92,12 @@ void report_detections() {
     sprintf(&tx_hex[i * 2], "%02X", tx_buffer[i]);
   }
   tx_hex[i * 2] = '\0'; // Null-terminate the string
-  bm_printf(0, "[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: 0x%s",
+  spotter_log_console(0, "[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: 0x%s",
             uptimeGetMs(), rtcTimeBuffer, tx_hex);
   printf("[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: %s\n",
          uptimeGetMs(), rtcTimeBuffer, tx_hex);
   // Transmit over Spotter celluar or Iridium SBD fallback.
-  if (spotter_tx_data(tx_buffer, tx_len, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+  if (spotter_tx_data(tx_buffer, tx_len, BmNetworkTypeCellularIriFallback)) {
     printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
            rtcTimeBuffer);
   } else {
@@ -228,9 +227,9 @@ void loop() {
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
     // Print the payload data to a Spotter SD file, to the Spotter console, and to the printf console.
-    bm_fprintf(0, "rx_live_raw.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
+    spotter_log(0, "rx_live_raw.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+    spotter_log_console(0, "[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
     printf("[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
            read_len, payload_buffer);
@@ -239,9 +238,9 @@ void loop() {
     RxLiveStatusCode rx_code = rx_live.run((const uint8_t *)payload_buffer, read_len);
     // If we receive a return code that indicates an interesting state change or error, log it for testing and debugging.
     if (rx_code > RX_CODE_INFO) {
-      bm_fprintf(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
+      spotter_log(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
                  uptimeGetMs(), rtcTimeBuffer, rx_code);
-      bm_printf(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
+      spotter_log_console(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
                 rtcTimeBuffer, rx_code);
       printf("[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d\n", uptimeGetMs(),
              rtcTimeBuffer, rx_code);
@@ -269,9 +268,9 @@ void loop() {
       char rtcTimeBuffer[32];
       rtcPrint(rtcTimeBuffer, &time_and_date);
       // Log the state transition or error to Spotter SD card and USB console.
-      bm_fprintf(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
+      spotter_log(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
                  uptimeGetMs(), rtcTimeBuffer, rx_code);
-      bm_printf(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
+      spotter_log_console(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
                 rtcTimeBuffer, rx_code);
       printf("[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d\n", uptimeGetMs(),
              rtcTimeBuffer, rx_code);

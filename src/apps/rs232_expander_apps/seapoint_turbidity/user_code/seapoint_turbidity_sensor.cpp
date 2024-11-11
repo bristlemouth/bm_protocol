@@ -1,10 +1,10 @@
 #include "seapoint_turbidity_sensor.h"
 #include "FreeRTOS.h"
 #include "app_util.h"
-#include "bm_printf.h"
 #include "configuration.h"
 #include "payload_uart.h"
 #include "serial.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -66,11 +66,11 @@ bool SeapointTurbiditySensor::getData(BmSeapointTurbidityDataMsg::Data &d) {
     rtcPrint(rtc_time_str, NULL);
 
     if (_sensorBmLogEnable) {
-      bm_fprintf(0, SEAPOINT_TURBIDITY_RAW_LOG, USE_TIMESTAMP,
+      spotter_log(0, SEAPOINT_TURBIDITY_RAW_LOG, USE_TIMESTAMP,
                  "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
                  read_len, _payload_buffer);
     }
-    bm_printf(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+    spotter_log_console(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtc_time_str, read_len, _payload_buffer);
     printf("turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
            read_len, _payload_buffer);

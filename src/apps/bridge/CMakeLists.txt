@@ -17,8 +17,6 @@ add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 add_subdirectory(${SRC_DIR}/lib/bm_ncp bm_ncp)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
-
     ${BCMP_FILES}
     ${BM_NCP_FILES}
     )

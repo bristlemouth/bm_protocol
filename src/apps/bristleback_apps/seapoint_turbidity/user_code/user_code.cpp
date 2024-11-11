@@ -1,7 +1,7 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
 #include "bm_seapoint_turbidity_data_msg.h"
-#include "bm_printf.h"
+#include "spotter.h"
 #include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
