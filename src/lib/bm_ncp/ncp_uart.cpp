@@ -16,7 +16,7 @@
 extern "C" {
 #include "messages/info.h"
 #include "messages/resource_discovery.h"
-#include "messages/topology.h"
+#include "topology.h"
 }
 #include "ncp_config.h"
 #include "ncp_dfu.h"

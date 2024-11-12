@@ -20,7 +20,7 @@ extern "C" {
 #include "messages/ping.h"
 #include "messages/resource_discovery.h"
 #include "messages/time.h"
-#include "messages/topology.h"
+#include "topology.h"
 }
 #include "util.h"
 

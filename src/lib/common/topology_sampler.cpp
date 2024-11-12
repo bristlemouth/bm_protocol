@@ -23,7 +23,7 @@
 #include "messages.h"
 #include "messages/info.h"
 #include "messages/neighbors.h"
-#include "messages/topology.h"
+#include "topology.h"
 #include "network_config_logger.h"
 #include "sensorController.h"
 #include "sm_config_crc_list.h"
