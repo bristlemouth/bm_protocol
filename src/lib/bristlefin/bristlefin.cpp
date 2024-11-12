@@ -76,11 +76,11 @@ void Bristlefin::disableVout() {
 }
 
 void Bristlefin::sdi12Tx(){
-  IOWrite(&BF_SDI12_OE, 0); // reset to enable TX of data
+  IOWrite(&BF_SDI12_OE, 0); // reset to enable TX of data, disable Rx
 }
 
 void Bristlefin::sdi12Rx(){
-  IOWrite(&BF_SDI12_OE, 1); // set to disable TX and enable RX of data?
+  IOWrite(&BF_SDI12_OE, 1); // set to disable TX and enable RX of data
 }
 
 void Bristlefin::enable3V() {
@@ -93,6 +93,7 @@ void Bristlefin::disable3V() {
   IOWrite(&BF_IMU_RST, 0); // https://github.com/wavespotter/bristlemouth/issues/422 - Drive IMU RST low to avoid consuming xtra power.
   saved_mux_current_channel_ = getMuxChannel();
   setMuxChannel(TCA::CH_NONE); // Lowest power state for I2C mux
+  IOWrite(&BF_3V3_EN, 0); // 1 enables, 0 disables. Needed for I2C and I/O control.
 }
 
 void Bristlefin::setLed(uint8_t led_num, led_state_e led_state) {

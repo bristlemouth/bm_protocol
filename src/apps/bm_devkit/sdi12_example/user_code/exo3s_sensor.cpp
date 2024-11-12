@@ -21,6 +21,12 @@
 #include "bristlefin.h"
 #include "stm32_io.h"
 
+enum {
+  SDI_ADDRESS_INQUIRY_CMD,
+  SDI_INDENTIFICATION_CMD,
+  SDI_START_MEASUREMENT_CMD,
+};
+
 SondeEXO3sSensor::SondeEXO3sSensor()
     : d0_parser(4, "0D0!0"),
       d1_parser(4, "0D1!0"),
@@ -30,7 +36,7 @@ SondeEXO3sSensor::SondeEXO3sSensor()
 
 
 void SondeEXO3sSensor::init() {
-  printf("SDI-12 Initialization");
+  printf("SDI-12 Initialization\n");
   d0_parser.init();
   d1_parser.init();
   d2_parser.init();
@@ -59,14 +65,13 @@ void SondeEXO3sSensor::sdi_wake(void) {
   PLUART::setTxPinOutputLevel();
   // Wake - hold HIGH for 12 ms
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() - timeStart < breakTimeMin);
+  while(uptimeGetMs() - timeStart < breakTimeMs);
   // Set TX pin back to TX (alternate) mode
   PLUART::configTxPinAlternate();
   // Re-enable UART
   PLUART::enable();
   printf("sdi_wake\n");
 }
-
 
 void SondeEXO3sSensor::sdi_break_mark(void) {
   flush();
@@ -78,18 +83,17 @@ void SondeEXO3sSensor::sdi_break_mark(void) {
   PLUART::setTxPinOutputLevel();
   // Break - hold HIGH for 12 ms
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() - timeStart < breakTimeMin);
+  while(uptimeGetMs() - timeStart < breakTimeMs);
   // LOW at TX pin
   PLUART::resetTxPinOutputLevel();
   // Mark - hold LOW for 9 ms
   timeStart = uptimeGetMs();
-  while(uptimeGetMs() - timeStart < markTimeMin);
+  while(uptimeGetMs() - timeStart < markTimeMs);
   // Set TX pin back to TX (alternate) mode
   PLUART::configTxPinAlternate();
   // Re-enable UART
   PLUART::enable();
 }
-
 
 void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   // TX enable
@@ -99,8 +103,6 @@ void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   // TX disable
   PLUART::endTransaction(100); // 50,28 ms to release/get some mutex/semaphore????
 }
-
-
 
 bool SondeEXO3sSensor::sdi_receive(void) {
   uint64_t timeStart = uptimeGetMs();
@@ -118,12 +120,11 @@ bool SondeEXO3sSensor::sdi_receive(void) {
   return false;
 }
 
-
 void SondeEXO3sSensor::sdi_cmd(int cmd) {
-  char result = sdiSuccess;
+  bool result = false;
 
   switch (cmd) {
-    case 0:
+    case SDI_ADDRESS_INQUIRY_CMD:
       //0! or ?!
       printf("Inquire Sensor Address \n");
       sdi_transmit("?!");
@@ -133,7 +134,8 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
         printf("Sensor Address: %d\n", slaveID);
       }
       break;
-    case 1:
+
+    case SDI_INDENTIFICATION_CMD:
       printf("Identification command \n");
       sdi_transmit("0I!");
       result = sdi_receive();
@@ -150,9 +152,9 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
       printf("Vendor Identification --- %.*s\n", static_cast<int>(8), &rxBuffer[6]);
       printf("Sensor Model:         --- %.*s\n", static_cast<int>(6), &rxBuffer[14]);
       printf("Sensor Version:       --- %.*s\n", static_cast<int>(3), &rxBuffer[20]);
-
       break;
-    case 2:
+
+    case SDI_START_MEASUREMENT_CMD:
       int delay = 10;
       printf("Measurement and Data commands \n");
       vTaskDelay(pdMS_TO_TICKS(100));
@@ -170,7 +172,6 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
        * 062 time is seconds until data available
        * 9 number of values to expect
        * after 62 seconds, 0 will be rxd to indicate measurement is done */
-
       vTaskDelay(pdMS_TO_TICKS(delay*1000)); //62 seconds delay
       result = sdi_receive();
       if(result) {
@@ -236,17 +237,17 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
 
 void SondeEXO3sSensor::inquire_cmd(void){
  // send 0 - 0! or ?!
- sdi_cmd(0);
+ sdi_cmd(SDI_ADDRESS_INQUIRY_CMD);
 }
 
 void SondeEXO3sSensor::identify_cmd(void){
  // send 1 - 0I!
- sdi_cmd(1);
+ sdi_cmd(SDI_INDENTIFICATION_CMD);
 }
 
 void SondeEXO3sSensor::measure_cmd(void){
   // send 2 - 0M!
-  sdi_cmd(2);
+  sdi_cmd(SDI_START_MEASUREMENT_CMD);
 }
 
 

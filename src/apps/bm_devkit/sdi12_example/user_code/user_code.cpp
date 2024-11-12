@@ -35,7 +35,7 @@ static SondeEXO3sSensor sondeEXO3sSensor;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
-
+static void transmit_samples(void);
 
 void transmit_samples(){
   memset(tx_buffer, 0, sizeof(tx_buffer)); //  Clear the telemetry data buffer.
@@ -57,7 +57,7 @@ void transmit_samples(){
   tx_hex[i * 2] = '\0'; // Null-terminate the string
 
   // print to console
-  printf("[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: %s\n", uptimeGetMs(), rtcTimeBuffer, tx_hex);
+//  printf("[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: %s\n", uptimeGetMs(), rtcTimeBuffer, tx_hex);
   // print to spotter console
   bm_printf(0, "[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: 0x%s", uptimeGetMs(), rtcTimeBuffer, tx_hex);
 
@@ -79,8 +79,9 @@ void setup(void) {
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
   vTaskDelay(pdMS_TO_TICKS(5));
-  // enable Vout, 12V by default.
+  // enable Vout, 5V, 12V by default.
   bristlefin.enableVout();
+  bristlefin.enable5V();
   bristlefin.enable3V();
   // Initializing
   sondeEXO3sSensor.init();
@@ -154,7 +155,7 @@ void loop(void) {
     transmit_samples();
     current_sample_index = 0;
   }
-  vTaskDelay(pdMS_TO_TICKS(2000));
+//  vTaskDelay(pdMS_TO_TICKS(2000));
 
   static bool led2State = false;
   /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.

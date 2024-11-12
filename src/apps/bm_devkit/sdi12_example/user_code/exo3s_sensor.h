@@ -7,17 +7,15 @@
 #include "Exo3LineParser.h"
 
 #define sizeBuffer 256
-#define sdiSuccess 0
-#define sdiFail 1
-#define sdiTimeout 2		// timeout condition
-#define sdiParityError 3 	// parity error in reply
-#define sdiReplyError 4		//
-#define breakTimeMin 15		// spec is 12 but a bit extra does no harm
-#define markTimeMin 9		// actually 8.33 but I am not OCD
-#define maxSensorResponseTime 15	// time after the command is sent
-#define maxTotalResponseTime 900	// time for the longest response which could be expectd
-#define characterDelay 2	// maximum time to wait for the next character before a fault flagged
-#define delayAfterTransmit 2	// a short delay put in after the last character is sent to allow for switching
+#define breakTimeMs 15		// spec is 12 ms
+#define markTimeMs 9		// spec is 8.33 ms
+
+/* Not used now but maybe in the future improvements
+ * #define maxSensorResponseTime 15	// time after the command is sent
+ * #define maxTotalResponseTime 900	// time for the longest response which could be expectd
+ * #define characterDelay 2	// maximum time to wait for the next character before a fault flagged
+ * #define delayAfterTransmit 2	// a short delay put in after the last character is sent to allow for switching
+ */
 
 // The EXO3s these sensors
 // 1. pH sensor

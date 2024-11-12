@@ -2,7 +2,7 @@ from bitstring import BitStream
 import struct
 
 # Test sensor-data payloads in hex format.
-payload = "de672c10f5da00ac0218d12dc645e96b7ccaf3e2ef0ef2e48813d2dbfc83c0b741d7a3b84048e1e24033339dc1e17acf4266660e416666564148e19a3fe3a59b3e85eb4141f2d2b7415c8fba4048e1e240295c9dc1e17acf4266660e411f8553419a99993fe3a59b3e85eb414160e5b741cdccb44048e1e240d7a39cc1c375cf4266660e4185eb594148e19a3ff6289c3e85eb4141"
+payload = "de00000000bb9ba012215ed80006d40000caf3e2ef0ef2e48b51b585e00c02a8410000a03fae47e940cdccf4c1f628d54200001841cdcc204114aea73f48e1ba3e85eb4141a01aa8415c8fa23f52b8e640b81ed3c11f05d5420ad71741b81e214148e19a3f48e1ba3e85eb41413333a8415c8fa23f52b8e640295cd1c13d0ad5420ad717419a99214148e19a3f48e1ba3e85eb4141"
 
 # Description of the detection structure to unpack from the payload.
 # Each tuple contains a type and a field name.
@@ -123,6 +123,6 @@ if __name__ == '__main__':
         # Print the unpacked detection data.
         print(f"- Detection data:")
         for key in detection_data:
-            print(f"\t{key}: {detection_data[key]}")
+            print(f"\t{key}: {float(detection_data[key]):.3f}")
 
         print("---------------------------------\n")

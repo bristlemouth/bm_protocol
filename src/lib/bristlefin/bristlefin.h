@@ -46,7 +46,7 @@ public:
   void enable3V();
   void disable3V();
 
-  // sdi
+  // functions to switch between SDI12 Tx and Rx
   static void sdi12Tx();
   static void sdi12Rx();
 
