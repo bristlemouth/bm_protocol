@@ -161,17 +161,17 @@ static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey *keys, si
   len = 0;
   for (int i = 0; i < num_keys; i++) {
     len += sizeof(BmConfigStatusKeyData);
-    len += keys[i].keyLen;
+    len += keys[i].key_len;
   }
   uint8_t *buf = reinterpret_cast<uint8_t *>(pvPortMalloc(len));
   configASSERT(buf);
   BmConfigStatusKeyData *key_data =
       reinterpret_cast<BmConfigStatusKeyData *>(buf);
   for (int i = 0; i < num_keys; i++) {
-    key_data->key_length = keys[i].keyLen;
-    memcpy(key_data->key, keys[i].keyBuffer, keys[i].keyLen);
+    key_data->key_length = keys[i].key_len;
+    memcpy(key_data->key, keys[i].key_buf, keys[i].key_len);
     key_data += sizeof(BmConfigStatusKeyData);
-    key_data += keys[i].keyLen;
+    key_data += keys[i].key_len;
   }
   return buf;
 }

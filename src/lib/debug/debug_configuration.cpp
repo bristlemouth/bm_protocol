@@ -195,12 +195,12 @@ static BaseType_t configurationCommand(char *writeBuffer, size_t writeBufferLen,
       const ConfigKey *keys = get_stored_keys(partition, &num_keys);
       printf("num keys: %u\n", num_keys);
       for (int i = 0; i < num_keys; i++) {
-        size_t keybufSize = keys[i].keyLen + 1;
+        size_t keybufSize = keys[i].key_len + 1;
         char *keybuf = (char *)pvPortMalloc(keybufSize);
         configASSERT(keybuf);
-        memcpy(keybuf, keys[i].keyBuffer, keybufSize);
-        keybuf[keys[i].keyLen] = '\0';
-        printf("%s : %s\n", keybuf, data_type_enum_to_str(keys[i].valueType));
+        memcpy(keybuf, keys[i].key_buf, keybufSize);
+        keybuf[keys[i].key_len] = '\0';
+        printf("%s : %s\n", keybuf, data_type_enum_to_str(keys[i].value_type));
         vPortFree(keybuf);
       }
     } else if (strncmp("del", parameter, parameterStringLength) == 0) {
