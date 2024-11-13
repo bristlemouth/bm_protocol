@@ -56,8 +56,6 @@ void transmit_samples(){
   }
   tx_hex[i * 2] = '\0'; // Null-terminate the string
 
-  // print to console
-//  printf("[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: %s\n", uptimeGetMs(), rtcTimeBuffer, tx_hex);
   // print to spotter console
   bm_printf(0, "[exo3-sonde-sdi12] buffer to send | tick: %llu, rtc: %s, buff: 0x%s", uptimeGetMs(), rtcTimeBuffer, tx_hex);
 
@@ -75,6 +73,11 @@ void transmit_samples(){
 void setup(void) {
   // samples per send
   userConfigurationPartition->getConfig("sampleCount", strlen("sampleCount"), sample_count);
+  if (sample_count * SAMPLE_SIZE > MAX_TX_BUFFER_SIZE) {
+    printf("sampleCount value is larger than max buffer size: %d, limiting sampleCount to: %d", MAX_TX_BUFFER_SIZE, MAX_TX_BUFFER_SIZE / SAMPLE_SIZE);
+    sample_count = MAX_TX_BUFFER_SIZE / SAMPLE_SIZE;
+  }
+
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
   // ensure Vbus stable before enable Vout with a 5ms delay.
@@ -123,7 +126,7 @@ void loop(void) {
                                        "\n", uptimeGetMs(), rtcTimeBuffer, sens.temp_sensor, sens.sp_cond, sens.pH, sens.pH_mV,
              sens.dis_oxy, sens.dis_oxy_mg, sens.turbidity, sens.wiper_pos, sens.depth, sens.power) ;
   // print to spotter console
-  bm_printf(0, "[payload] | tick: %llu, rtc: %s, data --- "
+  bm_printf(0, "[exo3-sonde-sdi12] | tick: %llu, rtc: %s, data --- "
            "temp_sensor: %.3f C, "
            "sp_cond: %.3f uS/cm, "
            "pH: %.3f, "
@@ -155,7 +158,6 @@ void loop(void) {
     transmit_samples();
     current_sample_index = 0;
   }
-//  vTaskDelay(pdMS_TO_TICKS(2000));
 
   static bool led2State = false;
   /// This checks for a trigger set by ledLinePulse when data is received from the payload UART.
