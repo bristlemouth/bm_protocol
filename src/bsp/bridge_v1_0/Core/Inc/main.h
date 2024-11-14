@@ -74,14 +74,14 @@ void SystemPower_Config_ext(void);
 /* Private defines -----------------------------------------------------------*/
 #define ADIN_RST_Pin LL_GPIO_PIN_13
 #define ADIN_RST_GPIO_Port GPIOC
-#define VUSB_DETECT_Pin LL_GPIO_PIN_0
-#define VUSB_DETECT_GPIO_Port GPIOH
+#define LED_G_Pin LL_GPIO_PIN_0
+#define LED_G_GPIO_Port GPIOH
 #define ADIN_PWR_Pin LL_GPIO_PIN_1
 #define ADIN_PWR_GPIO_Port GPIOH
 #define TP10_Pin LL_GPIO_PIN_0
 #define TP10_GPIO_Port GPIOA
-#define LED_G_Pin LL_GPIO_PIN_1
-#define LED_G_GPIO_Port GPIOA
+#define VUSB_DETECT_Pin LL_GPIO_PIN_1
+#define VUSB_DETECT_GPIO_Port GPIOA
 #define BOOST_EN_Pin LL_GPIO_PIN_2
 #define BOOST_EN_GPIO_Port GPIOA
 #define VBUS_SW_EN_Pin LL_GPIO_PIN_3
