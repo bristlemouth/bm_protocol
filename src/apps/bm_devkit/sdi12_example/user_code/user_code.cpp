@@ -71,12 +71,12 @@ void transmit_samples(){
 }
 
 void setup(void) {
+  // samples per send
+  userConfigurationPartition->getConfig("sampleCount", strlen("sampleCount"), sample_count);
   if (sample_count * SAMPLE_SIZE > MAX_TX_BUFFER_SIZE) {
     printf("sampleCount value is larger than max buffer size: %d, limiting sampleCount to: %d", MAX_TX_BUFFER_SIZE, MAX_TX_BUFFER_SIZE / SAMPLE_SIZE);
     sample_count = MAX_TX_BUFFER_SIZE / SAMPLE_SIZE;
   }
-  // samples per send
-  userConfigurationPartition->getConfig("sampleCount", strlen("sampleCount"), sample_count);
 
   // Enable the input to the Vout power supply.
   bristlefin.enableVbus();
