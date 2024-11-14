@@ -57,7 +57,6 @@ extern SPIInterface_t spi3;
 extern I2CInterface_t i2c1;
 
 uint32_t adcGetSampleMv(uint32_t channel);
-bool usb_is_connected();
 
 typedef struct adin_pins_s {
 	SPIInterface_t *spiInterface;

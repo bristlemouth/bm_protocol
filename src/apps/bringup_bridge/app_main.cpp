@@ -160,6 +160,14 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
   &debugIna1,
 };
 
+static bool usb_is_connected() {
+  uint8_t vusb = 0;
+
+  IORead(&VUSB_DETECT, &vusb);
+
+  return (bool)vusb;
+}
+
 extern "C" int main(void) {
 
   // Before doing anything, check if we should enter ROM bootloader
