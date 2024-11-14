@@ -381,10 +381,9 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   uint32_t hw_version = 0;
-  if (!debug_configuration_hardware.getConfig(
-          AppConfig::HARDWARE_VERSION, strlen(AppConfig::HARDWARE_VERSION), hw_version)) {
-    //TODO: next commit place some logic in here to activate serial terminal
-  }
+  debug_configuration_hardware.getConfig(AppConfig::HARDWARE_VERSION,
+                                         strlen(AppConfig::HARDWARE_VERSION), hw_version);
+
   if (hw_version >= 7) {
     usb_io = &VUSB_DETECT;
   }
