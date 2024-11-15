@@ -59,8 +59,8 @@ void MX_GPIO_Init(void)
   LL_GPIO_ResetOutputPin(ADIN_PWR_GPIO_Port, ADIN_PWR_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOA, TP10_Pin|LED_G_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin
-                          |FLASH_CS_Pin|ADIN_CS_Pin);
+  LL_GPIO_ResetOutputPin(GPIOA, TP10_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin|FLASH_CS_Pin
+                          |ADIN_CS_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(LED_R_GPIO_Port, LED_R_Pin);
@@ -74,7 +74,7 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(ADIN_RST_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = VUSB_DETECT_Pin|BOOT_Pin;
+  GPIO_InitStruct.Pin = LED_G_Pin|BOOT_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOH, &GPIO_InitStruct);
@@ -88,8 +88,8 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(ADIN_PWR_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = TP10_Pin|LED_G_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin
-                          |FLASH_CS_Pin|ADIN_CS_Pin;
+  GPIO_InitStruct.Pin = TP10_Pin|BOOST_EN_Pin|VBUS_SW_EN_Pin|FLASH_CS_Pin
+                          |ADIN_CS_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -120,10 +120,20 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
 
   /**/
+  LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTA, LL_EXTI_EXTI_LINE1);
+
+  /**/
   LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTB, LL_EXTI_EXTI_LINE0);
 
   /**/
   LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTB, LL_EXTI_EXTI_LINE8);
+
+  /**/
+  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_1;
+  EXTI_InitStruct.LineCommand = ENABLE;
+  EXTI_InitStruct.Mode = LL_EXTI_MODE_IT;
+  EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_RISING_FALLING;
+  LL_EXTI_Init(&EXTI_InitStruct);
 
   /**/
   EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_0;
@@ -140,10 +150,16 @@ void MX_GPIO_Init(void)
   LL_EXTI_Init(&EXTI_InitStruct);
 
   /**/
+  LL_GPIO_SetPinPull(VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, LL_GPIO_PULL_NO);
+
+  /**/
   LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
 
   /**/
   LL_GPIO_SetPinPull(ADIN_INT_GPIO_Port, ADIN_INT_Pin, LL_GPIO_PULL_NO);
+
+  /**/
+  LL_GPIO_SetPinMode(VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, LL_GPIO_MODE_INPUT);
 
   /**/
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
@@ -154,6 +170,8 @@ void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   NVIC_SetPriority(EXTI0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
   NVIC_EnableIRQ(EXTI0_IRQn);
+  NVIC_SetPriority(EXTI1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
+  NVIC_EnableIRQ(EXTI1_IRQn);
   NVIC_SetPriority(EXTI8_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
   NVIC_EnableIRQ(EXTI8_IRQn);
 

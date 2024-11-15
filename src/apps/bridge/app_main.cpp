@@ -156,6 +156,15 @@ SerialHandle_t usbPcap = {
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
+static IOPinHandle_t *usb_io = &LED_G;
+
+static bool usb_is_connected() {
+  uint8_t vusb = 0;
+
+  IORead(usb_io, &vusb);
+
+  return (bool)vusb;
+}
 
 extern "C" int main(void) {
 
@@ -339,8 +348,6 @@ static void defaultTask(void *parameters) {
 
   bspInit();
 
-  usbInit(&VUSB_DETECT, usb_is_connected);
-
   debugSysInit();
   debugMemfaultInit(&usbCLI);
   // uncomment for the `update sec`, `update clr`, `update confirm` commands
@@ -373,6 +380,15 @@ static void defaultTask(void *parameters) {
                                        sys_cfg_sensorsCheckIntervalS);
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
+  uint32_t hw_version = 0;
+  debug_configuration_hardware.getConfig(AppConfig::HARDWARE_VERSION,
+                                         strlen(AppConfig::HARDWARE_VERSION), hw_version);
+
+  if (hw_version >= 7) {
+    usb_io = &VUSB_DETECT;
+  }
+
+  usbInit(usb_io, usb_is_connected);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
@@ -419,11 +435,9 @@ static void defaultTask(void *parameters) {
 
 #ifdef RAW_PRESSURE_ENABLE
   raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
-  rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS,
-                            raw_pressure_cfg.maxRawReports,
-                            raw_pressure_cfg.rawDepthThresholdUbar,
-                            &debug_configuration_user,
-                            raw_pressure_cfg.rbrCodaReadingPeriodMs);
+  rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS, raw_pressure_cfg.maxRawReports,
+                           raw_pressure_cfg.rawDepthThresholdUbar, &debug_configuration_user,
+                           raw_pressure_cfg.rbrCodaReadingPeriodMs);
 #endif // RAW_PRESSURE_ENABLE
 
   // // Re-enable low power mode
