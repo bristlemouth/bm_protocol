@@ -82,6 +82,7 @@ void SystemPower_Config_ext(void);
 #define TP10_GPIO_Port GPIOA
 #define VUSB_DETECT_Pin LL_GPIO_PIN_1
 #define VUSB_DETECT_GPIO_Port GPIOA
+#define VUSB_DETECT_EXTI_IRQn EXTI1_IRQn
 #define BOOST_EN_Pin LL_GPIO_PIN_2
 #define BOOST_EN_GPIO_Port GPIOA
 #define VBUS_SW_EN_Pin LL_GPIO_PIN_3
