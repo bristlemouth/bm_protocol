@@ -91,15 +91,15 @@ static bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t nod
                              uint8_t version) {
   printf("Pub data on topic \"%.*s\" from %016" PRIx64 " Type: %u, Version: %u\n", topic_len,
          topic, node_id, type, version);
-  return bm_pub_wl(topic, topic_len, payload, len, type, version);
+  return bm_pub_wl(topic, topic_len, payload, len, type, version) == BmOK;
 }
 
 static bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
-  return bm_sub_wl(topic, topic_len, ncp_uart_pub_cb);
+  return bm_sub_wl(topic, topic_len, ncp_uart_pub_cb) == BmOK;
 }
 
 static bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
-  return bm_unsub_wl(topic, topic_len, ncp_uart_pub_cb);
+  return bm_unsub_wl(topic, topic_len, ncp_uart_pub_cb) == BmOK;
 }
 
 static bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {
