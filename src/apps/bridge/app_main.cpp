@@ -378,23 +378,24 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   uint32_t hw_version = 0;
-  debug_configuration_hardware.getConfig(AppConfig::HARDWARE_VERSION,
-                                         strlen(AppConfig::HARDWARE_VERSION), hw_version);
+
+  dfu_partition_global = &dfu_partition;
+  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
+  debugDfuInit(&dfu_partition);
+  bcl_init();
+  get_config_uint(BM_CFG_PARTITION_HARDWARE, AppConfig::HARDWARE_VERSION,
+                  strlen(AppConfig::HARDWARE_VERSION), &hw_version);
+  debugConfigurationInit();
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
 
   if (hw_version >= 7) {
     usb_io = &VUSB_DETECT;
   }
 
   usbInit(usb_io, usb_is_connected);
-  dfu_partition_global = &dfu_partition;
-  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
-  debugDfuInit(&dfu_partition);
-  bcl_init();
-  debugConfigurationInit();
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
-                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
-                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
