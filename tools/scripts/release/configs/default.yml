@@ -74,6 +74,15 @@
     build_type: Debug
   sign: false
 
+- name: bringup_bridge_debug
+  description: Bringup Bridge - Debug
+  type: build_fw
+  args:
+    app: bringup_bridge
+    bsp: bridge_v1_0
+    build_type: Debug
+  sign: false
+
 - name: bm_rbr_release
   description: BM RBR - Release
   type: build_fw
