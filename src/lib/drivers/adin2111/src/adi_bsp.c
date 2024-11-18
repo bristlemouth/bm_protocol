@@ -7,27 +7,19 @@
 #include "task.h"
 
 #include "adi_bsp.h"
+#include "app_util.h"
 #include "bsp.h"
 #include "gpioISR.h"
 #include "io.h"
+#include "l2.h"
 #include "protected_spi.h"
 #include "task_priorities.h"
-#include "app_util.h"
 
 #define RESET_DELAY (1)
 #define AFTER_RESET_DELAY (100)
 
-static adi_cb_t gpfIntCallback = NULL;
-static void *gpIntCBParam = NULL;
-
 static adi_cb_t gpfSpiCallback = NULL;
 static void *gpSpiCBParam = NULL;
-
-static adi_irq_evt_t _irq_evt_cb = NULL;
-
-static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value,
-                                           void *args);
-
 extern adin_pins_t adin_pins;
 
 //
@@ -41,36 +33,6 @@ static void adi_bsp_spi_callback() {
   }
 }
 
-//
-// IRQ callback (called from eth_adin2111 event task)
-//
-void adi_bsp_irq_callback() {
-  if (gpfIntCallback) {
-    (*gpfIntCallback)(gpIntCBParam, 0, NULL);
-  } else {
-    /* No GPIO Callback function assigned */
-  }
-}
-
-//
-// ADIN GPIO ISR callback (All calls must be ISR safe!)
-//
-static bool adin_bsp_gpio_callback_fromISR(const void *pinHandle, uint8_t value,
-                                           void *args) {
-
-  (void)args;
-  (void)pinHandle;
-  (void)value;
-
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-  if (_irq_evt_cb) {
-    _irq_evt_cb(&xHigherPriorityTaskWoken);
-  }
-
-  return xHigherPriorityTaskWoken;
-}
-
 void adi_bsp_hw_reset() {
 
   IOWrite(adin_pins.reset, 0);
@@ -80,8 +42,8 @@ void adi_bsp_hw_reset() {
 }
 
 /* SPI transceive wrapper */
-uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx,
-                                    uint32_t nBytes, bool useDma) {
+uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nBytes,
+                                    bool useDma) {
 
   SPIResponse_t status = SPI_OK;
 
@@ -98,14 +60,12 @@ uint32_t adi_bsp_spi_write_and_read(uint8_t *pBufferTx, uint8_t *pBufferRx,
     uint32_t bytesRemaining = nBytes - idx;
     uint32_t subNbytes = MIN(bytesRemaining, 1023);
     if (useDma) {
-      status = spiTxRxNonblocking(
-          adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx],
-          &pBufferRx[idx],
-          100); // TODO: Figure out timeout value. Set to 100 for now?
+      status = spiTxRxNonblocking(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx],
+                                  &pBufferRx[idx],
+                                  100); // TODO: Figure out timeout value. Set to 100 for now?
     } else {
       status =
-          spiTxRx(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx],
-                  &pBufferRx[idx],
+          spiTxRx(adin_pins.spiInterface, NULL, subNbytes, &pBufferTx[idx], &pBufferRx[idx],
                   100); // TODO: Figure out timeout value. Set to 100 for now?
     }
     if (status != SPI_OK) {
@@ -136,25 +96,18 @@ uint32_t adi_bsp_init(void) {
 
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for SPI TX
    completion */
-uint32_t adi_bsp_spi_register_callback(adi_cb_t const *pfCallback,
-                                       void *const pCBParam) {
+uint32_t adi_bsp_spi_register_callback(L2IntCb const *pfCallback, void *const pCBParam) {
   /* TODO: When we switch to DMA, we need to register the callback */
 
-  gpfSpiCallback = (adi_cb_t)pfCallback;
+  gpfSpiCallback = (L2IntCb)pfCallback;
   gpSpiCBParam = pCBParam;
   return 0;
 }
 
 /* ADIN driver will call this (through the adi_hal layer)  to set up a callback for DATA_RDY
    interrupts */
-uint32_t adi_bsp_register_irq_callback(adi_cb_t const *intCallback,
-                                       void *hDevice) {
-  IORegisterCallback(adin_pins.interrupt, adin_bsp_gpio_callback_fromISR, NULL);
-  gpfIntCallback = (adi_cb_t)intCallback;
-  gpIntCBParam = hDevice;
+uint32_t adi_bsp_register_irq_callback(L2IntCb const *intCallback, void *hDevice) {
+  IORegisterCallback(adin_pins.interrupt, bm_l2_handle_device_interrupt, NULL);
+  bm_l2_register_interrupt_callback(intCallback, hDevice);
   return 0;
-}
-
-void adi_bsp_register_irq_evt(adi_irq_evt_t irq_evt_cb) {
-  _irq_evt_cb = irq_evt_cb;
 }

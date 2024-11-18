@@ -25,7 +25,19 @@ extern "C" {
 #include "stress.h"
 #endif
 
-static void adin_power_callback(bool on) { IOWrite(&ADIN_PWR, on); }
+#define RESET_DELAY (1)
+#define AFTER_RESET_DELAY (100)
+
+static void adin_power_callback(bool on) {
+  IOWrite(&ADIN_PWR, on);
+  if (on) {
+    IOWrite(&ADIN_CS, 1);
+    IOWrite(&ADIN_RST, 0);
+    vTaskDelay(pdMS_TO_TICKS(RESET_DELAY));
+    IOWrite(&ADIN_RST, 1);
+    vTaskDelay(pdMS_TO_TICKS(AFTER_RESET_DELAY));
+  }
+}
 
 void bcl_init(void) {
   config_init();
