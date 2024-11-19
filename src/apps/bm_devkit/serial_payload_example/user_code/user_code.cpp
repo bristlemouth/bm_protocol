@@ -21,6 +21,9 @@
 #define BYTES_CLUSTER_MS 50 // used for console printing convenience
 #define DEFAULT_UART_MODE MODE_RS232
 
+#define SDI12_BREAK_MS 15		// spec is 12 ms
+#define SDI12_MARK_MS 9		// spec is 8.33 ms
+
 // app_main passes a handle to the user config partition in NVM.
 extern cfg::Configuration *userConfigurationPartition;
 
@@ -33,9 +36,53 @@ static u_int32_t uart_mode_config = DEFAULT_UART_MODE;
 // A buffer for our data from the payload uart
 char payload_buffer[2048];
 
+void sdi_wake(void) {
+  PLUART::disable();
+  //Set TX pin to output
+  PLUART::configTxPinOutput();
+  // HIGH at TX pin
+  PLUART::setTxPinOutputLevel();
+  // Wake - hold HIGH for 12 ms
+  const uint32_t timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < SDI12_BREAK_MS){};
+  // Set TX pin back to TX (alternate) mode
+  PLUART::configTxPinAlternate();
+  // Re-enable UART
+  PLUART::enable();
+}
+
+void sdi_break_mark(void) {
+  // Set the OE on the transceiver
+  Bristlefin::sdi12Tx();
+
+  // Send the break sequence
+  PLUART::reset();
+  uint32_t timeStart;
+  PLUART::disable();
+  //Set TX pin to output
+  PLUART::configTxPinOutput();
+  // HIGH at TX pin
+  PLUART::setTxPinOutputLevel();
+  // Break - hold HIGH for 12 ms
+  timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < SDI12_BREAK_MS){};
+
+  // Send the mark sequence
+  // LOW at TX pin
+  PLUART::resetTxPinOutputLevel();
+  // Mark - hold LOW for 9 ms
+  timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < SDI12_MARK_MS){};
+  // Set TX pin back to TX (alternate) mode
+  PLUART::configTxPinAlternate();
+  // Re-enable UART
+  PLUART::enable();
+}
+
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
+  // TODO - need to add and disambiguate Rx vs Tx line term configs, thanks SDI-12!(!)
   userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
                                         baud_rate_config);
   userConfigurationPartition->getConfig("plUartLineTerm", strlen("plUartLineTerm"),
@@ -48,8 +95,19 @@ void setup(void) {
   }
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
-  // Baud set per expected baud rate of the sensor.
-  PLUART::setBaud(baud_rate_config);
+  // SDI12 overrides baud rate setting, as protocol specs only 1200 baud.
+  // Also sets
+  if (uart_mode_config == MODE_SDI12) {
+    PLUART::setEvenParity(); // data width is 7 bits + 1 parity bit = 8 bits
+    PLUART::enableDataInversion(); // SDI12 transceiver inverts levels
+    PLUART::setBaud(1200); // SDI12 specifices 1200 baud rate
+  } else {
+    // for all other serial modes, use configurable baud rate,
+    //and default 8 bits, no parity, non-inverted.
+    // Baud set per expected baud rate of the sensor.
+    PLUART::setBaud(baud_rate_config);
+  }
+
   // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
   // Enable parsing lines and passing to user app.
@@ -58,12 +116,19 @@ void setup(void) {
   PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter((char)line_term_config);
+
+  // Setup PLUART transactions as needed per serial type
   if (uart_mode_config == MODE_RS485_HD) {
     printf("Enabling RS485 Half-Duplex.\n");
     bristlefin.setRS485HalfDuplex();  // Set the RS485 transceiver to Half-Duplex.
     // Set up PLUART transactions for proper RS485 enable Tx / enable Rx
     PLUART::enableTransactions(Bristlefin::setRS485Tx, Bristlefin::setRS485Rx);
+  } else if (uart_mode_config == MODE_SDI12) {
+    printf("Enabling SDI-12 serial.\n");
+    // Set up PLUART transactions for proper SDI12 enable Tx / enable Rx
+    PLUART::enableTransactions(sdi_break_mark, Bristlefin::sdi12Rx);
   }
+
   // Turn on the UART.
   PLUART::enable();
   // Enable the input to the Vout power supply.
@@ -72,8 +137,10 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
-// enable 5V out.
+// enable 5V and 3.3V rails on the BF.
   bristlefin.enable5V();
+  bristlefin.enable3V();
+  sdi_wake();
 }
 
 void loop(void) {
