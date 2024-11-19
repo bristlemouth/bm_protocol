@@ -64,7 +64,8 @@ static BaseType_t plUartCliCommand( char *writeBuffer,
         break;
       }
       // TODO - make the termination configurable.
-      const char* termination = {"\r\n"};
+      // const char* termination = {"\r\n"};
+      const char* termination = {"!"}; // TODO - SDI12 requires '!' as transmit termination.
       // Use start and end transaction guards, have no effect if transactions not being used.
       PLUART::startTransaction();
       PLUART::write((uint8_t*)argDataStr, strlen(argDataStr));
