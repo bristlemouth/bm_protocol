@@ -18,7 +18,6 @@
 #include "lwip/udp.h"
 #include "netif/ethernet.h"
 
-#include "adi_bsp.h"
 #include "bcmp.h"
 #include "bsp.h"
 #include "task_priorities.h"
