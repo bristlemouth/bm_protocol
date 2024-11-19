@@ -18,6 +18,10 @@ bool endTransaction(uint32_t wait_ms = DEFAULT_POST_TRANSACTION_WAIT_MS);
 // Set the baud rate for the LPUART
 void setBaud(uint32_t new_baud_rate);
 
+// Set the even parity for the LPUART
+void setEvenParity(void);
+// Invert TX pin data
+void enableDataInversion(void);
 // Enable the payload UART
 void enable(void);
 
@@ -62,5 +66,11 @@ extern SerialHandle_t uart_handle;
 
 // Buffer length for LPUART1
 #define LPUART1_LINE_BUFF_LEN 2048
+
+// Configuring TX and TX GPIO
+void setTxPinOutputLevel(void);
+void resetTxPinOutputLevel(void);
+void configTxPinOutput(void);
+void configTxPinAlternate(void);
 
 } // namespace PLUART

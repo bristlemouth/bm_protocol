@@ -348,3 +348,40 @@ add_test(
   COMMAND
     differenceSignal
   )
+
+#
+# LineParsers tests
+#
+add_executable(lineParsers)
+target_include_directories(lineParsers
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${TEST_DIR}/third_party/fff
+)
+target_sources(lineParsers
+    PRIVATE
+    # File we're testing
+    ${SRC_DIR}/lib/common/LineParser.cpp
+    ${SRC_DIR}/lib/common/OrderedSeparatorLineParser.cpp
+    ${SRC_DIR}/lib/common/Exo3LineParser.cpp
+
+    # Support files
+
+    # Mock
+    ${TEST_DIR}/stubs/mock_FreeRTOS.c
+
+    # Unit test wrapper for test
+    lineParsers_ut.cpp
+)
+
+target_link_libraries(lineParsers gtest gmock gtest_main)
+
+add_test(
+    NAME
+    lineParsers
+    COMMAND
+    lineParsers
+)
