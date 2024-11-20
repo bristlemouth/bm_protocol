@@ -43,6 +43,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/gpioISR.c
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
+    ${SRC_DIR}/lib/common/nvmPartition.cpp
     ${SRC_DIR}/lib/common/pcap.c
     ${SRC_DIR}/lib/common/reset_reason.c
     ${SRC_DIR}/lib/common/serial.c
@@ -60,7 +61,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_htu.cpp
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
+    ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/debug/debug_memfault.c
+    ${SRC_DIR}/lib/sys/ram_partitions.c
     # ${SRC_DIR}/lib/debug/debug_mic.cpp
     ${SRC_DIR}/lib/debug/debug_i2c.c
     ${SRC_DIR}/lib/debug/debug_ina232.cpp
