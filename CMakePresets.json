@@ -181,6 +181,13 @@
             }
         },
         {
+            "name": "serial-bridge",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_bridge"
+            }
+        },
+        {
             "name": "serial-payload-example",
             "inherits": "hello-world",
             "cacheVariables": {
@@ -323,6 +330,11 @@
         {
             "configurePreset": "seapoint-turbidity-bristleback",
             "name": "seapoint-turbidity-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-bridge",
+            "name": "serial-bridge",
             "jobs": 8
         },
         {
