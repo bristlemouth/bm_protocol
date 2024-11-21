@@ -254,11 +254,6 @@ set(BM_CORE_LWIP_INCLUDES
     ${LWIP_INCLUDE_DIRS}
     ${BCMP_INCLUDES}
     ${BRISTLEMOUTH_INCLUDES}
-
-    # This is only needed to get cmsis_compiler.h
-    # accessible to the adin driver's adi_hal_port_specific.h
-    # for some interrupt enabling and disabling functions
-    ${BSP_INCLUDES}
 )
 set(BM_CORE_FREERTOS_INCLUDES
     ${FREERTOS_INCLUDES}
