@@ -551,7 +551,7 @@ static void add_egress_port(uint8_t *buff, uint8_t port) {
 
       // Do 1's complement again
       udp_hdr->chksum ^= 0xFFFF;
-    } else if (header->ip6_hdr._nexth == IpProtoBcmp) {
+    } else if (header->ip6_hdr._nexth == ip_proto_bcmp) {
       // fix checksum for BCMP
     }
   }

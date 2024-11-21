@@ -15,6 +15,5 @@ set(BCMP_FILES
 set(BCMP_INCLUDES
     ${BCMP_DIR}
     ${BCMP_DIR}/bm
-    ${BCMP_DIR}/dfu
     PARENT_SCOPE
     )

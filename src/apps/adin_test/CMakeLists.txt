@@ -59,7 +59,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bm_service.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
 
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
     ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c

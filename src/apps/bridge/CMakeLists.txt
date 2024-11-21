@@ -73,7 +73,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
     ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
     ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
     ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c

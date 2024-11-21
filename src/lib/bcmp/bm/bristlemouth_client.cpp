@@ -10,9 +10,9 @@
 #include "task.h"
 
 #include "bcmp_cli.h"
-#include "bm_config.h"
 #include "bm_ports.h"
 #include "bsp.h"
+#include "l2.h"
 #include "task_priorities.h"
 
 extern "C" {
@@ -28,6 +28,15 @@ extern "C" {
 #define RESET_DELAY (1)
 #define AFTER_RESET_DELAY (100)
 
+extern adin_pins_t adin_pins;
+
+static bool network_device_interrupt(const void *pinHandle, uint8_t value, void *args) {
+  (void)pinHandle;
+  (void)value;
+  (void)args;
+  return bm_l2_handle_device_interrupt() == BmOK;
+}
+
 static void adin_power_callback(bool on) {
   IOWrite(&ADIN_PWR, on);
   if (on) {
@@ -40,6 +49,7 @@ static void adin_power_callback(bool on) {
 }
 
 void bcl_init(void) {
+  IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
   config_init();
   //TODO: This should all be moved to user code
   uint8_t major, minor, patch;
