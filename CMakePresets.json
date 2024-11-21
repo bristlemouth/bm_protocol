@@ -139,6 +139,13 @@
             }
         },
         {
+            "name": "pub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "pub_example"
+            }
+        },
+        {
             "name": "rbr-bristleback",
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
@@ -195,6 +202,13 @@
             "cacheVariables": {
                 "APP": "bm_soft_module",
                 "BSP": "bm_mote_spi_v1_0"
+            }
+        },
+        {
+            "name": "sub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sub_example"
             }
         }
     ],
@@ -275,6 +289,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "pub-example",
+            "name": "pub-example",
+            "jobs": 8
+        },
+        {
             "configurePreset": "rbr-bristleback",
             "name": "rbr-bristleback",
             "jobs": 8
@@ -312,6 +331,11 @@
         {
             "configurePreset": "soft",
             "name": "soft",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sub-example",
+            "name": "sub-example",
             "jobs": 8
         }
     ]
