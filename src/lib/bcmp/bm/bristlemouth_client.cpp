@@ -76,7 +76,7 @@ void bcl_init(void) {
     bcmp_cli_init();
 
 #ifdef STRESS_TEST_ENABLE
-    stress_test_init(adin2111_network_device(), STRESS_TEST_PORT);
+    stress_test_init(bristlemouth_network_device(), STRESS_TEST_PORT);
 #endif
 
   } else {
