@@ -9,6 +9,16 @@ static HAL_Callback_t ADIN2111_MAC_SPI_CALLBACK = NULL;
 static void *ADIN2111_MAC_SPI_CALLBACK_PARAM = NULL;
 extern adin_pins_t adin_pins;
 
+uint32_t HAL_EnterCriticalSection(void) {
+  __disable_irq();
+  return 0;
+}
+
+uint32_t HAL_ExitCriticalSection(void) {
+  __enable_irq();
+  return 0;
+}
+
 uint32_t HAL_DisableIrq(void) {
   NVIC_DisableIRQ(ADIN_INT_EXTI_IRQn);
   return ADI_HAL_SUCCESS;
