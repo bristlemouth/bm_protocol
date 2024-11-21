@@ -30,4 +30,5 @@ bm_printf_err_t bm_fprintf(uint64_t target_node_id, const char *file_name, uint8
             ? BM_PRINTF_OK
             : BM_PRINTF_MISC_ERR;
   va_end(args);
+  return err;
 }

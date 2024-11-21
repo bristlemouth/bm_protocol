@@ -7,47 +7,6 @@
     },
     "configurePresets": [
         {
-            "name": "hello-world",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
-            "cacheVariables": {
-                "CMAKE_APP_TYPE": "BMDK",
-                "APP": "hello_world",
-                "BSP": "bm_mote_v1.0",
-                "USE_BOOTLOADER": "1",
-                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
-                "CMAKE_BUILD_TYPE": "Debug",
-                "SIGN_IMAGES": "0"
-            },
-            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
-        },
-        {
-            "name": "bridge",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
-            "cacheVariables": {
-                "APP": "bridge",
-                "BSP": "bridge_v1_0",
-                "USE_BOOTLOADER": "1",
-                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
-                "CMAKE_BUILD_TYPE": "Debug",
-                "SIGN_IMAGES": "0"
-            },
-            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
-        },
-        {
-            "name": "bootloader",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
-            "cacheVariables": {
-                "APP": "bootloader",
-                "BSP": "bootloader",
-                "CMAKE_BUILD_TYPE": "Release",
-                "SIGN_IMAGES": "0"
-            },
-            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
-        },
-        {
             "name": "unit-tests",
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/preset-builds/${presetName}",
@@ -55,28 +14,353 @@
                 "CMAKE_BUILD_TYPE": "Test",
                 "ENABLE_TESTING": "1"
             }
+        },
+        {
+            "name": "default",
+            "hidden": true,
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "USE_BOOTLOADER": "1",
+                "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "SIGN_IMAGES": "0"
+            },
+            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake"
+        },
+        {
+            "name": "bootloader",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bootloader",
+                "BSP": "bootloader",
+                "CMAKE_BUILD_TYPE": "Release",
+                "USE_BOOTLOADER": "0"
+            }
+        },
+        {
+            "name": "aanderaa-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "aanderaa",
+                "CMAKE_AANDERAA_TYPE": "4830"
+            }
+        },
+        {
+            "name": "aanderaa-rs232",
+            "inherits": "aanderaa-bristleback",
+            "cacheVariables": {
+                "BSP": "bm_mote_rs232",
+                "CMAKE_APP_TYPE": "rs232_expander"
+            }
+        },
+        {
+            "name": "adin-test",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "adin_test",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "bridge",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bridge",
+                "BSP": "bridge_v1_0"
+            }
+        },
+        {
+            "name": "bringup-bridge",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bringup_bridge",
+                "BSP": "bridge_v1_0"
+                }
+        },
+        {
+            "name": "bringup-mote",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bringup_mote",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "devkit-monitor",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "devkit_monitor"
+            }
+        },
+        {
+            "name": "hello-world",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_APP_TYPE": "BMDK",
+                "APP": "hello_world",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "loadcell",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "bm_loadcell"
+            }
+        },
+        {
+            "name": "loadcell-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "loadcell"
+            }
+        },
+        {
+            "name": "mote-bristlefin",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "mote_bristlefin",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "nortek",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "nortek"
+            }
+        },
+        {
+            "name": "nortek-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "nortek"
+            }
+        },
+        {
+            "name": "pub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "pub_example"
+            }
+        },
+        {
+            "name": "rbr-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "bm_rbr"
+            }
+        },
+        {
+            "name": "rbr-coda-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "rbr_coda_example"
+            }
+        },
+        {
+            "name": "rbr-rs232",
+            "inherits": "serial-payload-example-rs232",
+            "cacheVariables": {
+                "APP": "bm_rbr"
+            }
+        },
+        {
+            "name": "rx-live-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "rx_live_example"
+            }
+        },
+        {
+            "name": "seapoint-turbidity-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "seapoint_turbidity"
+            }
+        },
+        {
+            "name": "serial-bridge",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_bridge"
+            }
+        },
+        {
+            "name": "serial-payload-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_payload_example"
+            }
+        },
+        {
+            "name": "serial-payload-example-bristleback",
+            "inherits": "serial-payload-example",
+            "cacheVariables": {
+                "BSP": "bm_mote_bristleback_v1_0",
+                "CMAKE_APP_TYPE": "bristleback"
+            }
+        },
+        {
+            "name": "serial-payload-example-rs232",
+            "inherits": "serial-payload-example",
+            "cacheVariables": {
+                "BSP": "bm_mote_rs232",
+                "CMAKE_APP_TYPE": "rs232_expander"
+            }
+        },
+        {
+            "name": "soft",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "bm_soft_module",
+                "BSP": "bm_mote_spi_v1_0"
+            }
+        },
+        {
+            "name": "sub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sub_example"
+            }
         }
     ],
     "buildPresets": [
         {
-            "configurePreset": "hello-world",
-            "name": "hello-world",
-            "jobs": 0
-        },
-        {
-            "configurePreset": "bridge",
-            "name": "bridge",
-            "jobs": 0
+            "configurePreset": "unit-tests",
+            "name": "unit-tests",
+            "jobs": 8
         },
         {
             "configurePreset": "bootloader",
             "name": "bootloader",
-            "jobs": 0
+            "jobs": 8
         },
         {
-            "configurePreset": "unit-tests",
-            "name": "unit-tests",
-            "jobs": 0
+            "configurePreset": "aanderaa-bristleback",
+            "name": "aanderaa-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "aanderaa-rs232",
+            "name": "aanderaa-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "adin-test",
+            "name": "adin-test",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bridge",
+            "name": "bridge",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bringup-bridge",
+            "name": "bringup-bridge",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bringup-mote",
+            "name": "bringup-mote",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "devkit-monitor",
+            "name": "devkit-monitor",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "hello-world",
+            "name": "hello-world",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "loadcell",
+            "name": "loadcell",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "loadcell-bristleback",
+            "name": "loadcell-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "mote-bristlefin",
+            "name": "mote-bristlefin",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "nortek",
+            "name": "nortek",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "nortek-bristleback",
+            "name": "nortek-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "pub-example",
+            "name": "pub-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "rbr-bristleback",
+            "name": "rbr-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "rbr-coda-example",
+            "name": "rbr-coda-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "rbr-rs232",
+            "name": "rbr-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "rx-live-example",
+            "name": "rx-live-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "seapoint-turbidity-bristleback",
+            "name": "seapoint-turbidity-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-bridge",
+            "name": "serial-bridge",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example",
+            "name": "serial-payload-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example-bristleback",
+            "name": "serial-payload-example-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-payload-example-rs232",
+            "name": "serial-payload-example-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "soft",
+            "name": "soft",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sub-example",
+            "name": "sub-example",
+            "jobs": 8
         }
     ]
 }

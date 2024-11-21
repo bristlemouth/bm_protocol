@@ -13,9 +13,6 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 # Include BCMP
 add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
 
-# Include BM Common Messages
-add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
-
 set(BRISTLEMOUTH_FILES
     ${BCMP_FILES}
     )
@@ -27,7 +24,6 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
     ${BCMP_INCLUDES}
-    ${BM_COMMON_MESSAGES_INCLUDES}
     )
 
 set(LIB_FILES
@@ -51,9 +47,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
@@ -69,13 +63,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bm_service.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
@@ -83,6 +71,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
+    ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
+    ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
@@ -258,6 +248,7 @@ set(APP_INCLUDES
 
 set(APP_LIBS
     lwipcore
+    bmcore
     )
 
 set(APP_DEFINES

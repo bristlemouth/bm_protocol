@@ -21,7 +21,7 @@
 #include "bme280driver.h"
 #include "bootloader_helper.h"
 #include "bristlefin.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
 #include "debug.h"

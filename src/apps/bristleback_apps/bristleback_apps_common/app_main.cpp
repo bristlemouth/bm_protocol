@@ -17,7 +17,7 @@
 
 #include "app_pub_sub.h"
 #include "app_util.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
 #include "config_cbor_map_service.h"
