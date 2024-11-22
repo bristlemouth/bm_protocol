@@ -85,7 +85,7 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/lib/drivers
     ${SRC_DIR}/lib/bridge
-    ${SRC_DIR}/lib/bcmp/bm
+    ${SRC_DIR}/lib/bm_integration
     ${SRC_DIR}/apps/bridge
     ${SRC_DIR}/apps/bridge/sensor_drivers
     ${SRC_DIR}/lib/bm_core/bcmp

@@ -11,11 +11,11 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
-add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
+add_subdirectory(${SRC_DIR}/lib/bm_integration bcmp)
 
 set(BRISTLEMOUTH_FILES
 
-    ${BCMP_FILES}
+    ${BM_INTEGRATION_FILES}
     )
 
 set(BRISTLEMOUTH_INCLUDES
@@ -28,7 +28,7 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/bm_core/third_party/tinycbor/src
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
     ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
-    ${BCMP_INCLUDES}
+    ${BM_INTEGRATION_INCLUDES}
     )
 
 set(LIB_FILES
@@ -109,7 +109,7 @@ set(LIB_FILES
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bm_integration
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
@@ -262,7 +262,7 @@ set(APP_DEFINES
 set(BM_CORE_LWIP_INCLUDES
     ${SRC_DIR}/lib/lwip
     ${LWIP_INCLUDE_DIRS}
-    ${BCMP_INCLUDES}
+    ${BM_INTEGRATION_INCLUDES}
     ${BRISTLEMOUTH_INCLUDES}
 )
 set(BM_CORE_FREERTOS_INCLUDES
