@@ -19,7 +19,7 @@
             "name": "default",
             "hidden": true,
             "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/build/${presetName}",
+            "binaryDir": "${sourceDir}/preset-builds/${presetName}",
             "cacheVariables": {
                 "USE_BOOTLOADER": "1",
                 "BOOTLOADER_PATH": "${sourceDir}/preset-builds/bootloader/src/bootloader-bootloader.elf",
