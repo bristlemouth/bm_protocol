@@ -15,6 +15,7 @@
 #include "iwdg.h"
 #include "usart.h"
 #include "usb_otg.h"
+#include "tim.h"
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;
@@ -66,8 +67,8 @@ void bspInit() {
   IOWrite(&ADIN_PWR, 1);
 
   // Turn LEDS on by default
-  IOWrite(&LED_BLUE, 0);
-  IOWrite(&LED_RED, 0);
+  // IOWrite(&LED_BLUE, 0);
+  // IOWrite(&LED_RED, 0);
   IOWrite(&LED_GREEN, 0);
 
   // Turn off the BUCK by default (it's enabled when low)
@@ -93,4 +94,8 @@ void mxInit(void) {
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_IWDG_Init();
+  MX_TIM2_Init();
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2); // TODO - make start/stop wrappers for this in this file
+  MX_TIM3_Init();
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3); // TODO - make start/stop wrappers for this in this file
 }

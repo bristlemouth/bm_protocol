@@ -24,8 +24,10 @@
 #include "icache.h"
 #include "iwdg.h"
 #include "usart.h"
+#include "memorymap.h"
 #include "rtc.h"
 #include "spi.h"
+#include "tim.h"
 #include "usb_otg.h"
 #include "gpio.h"
 
@@ -75,6 +77,7 @@ __weak
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -111,6 +114,8 @@ int main(void)
   MX_RTC_Init();
   MX_USART3_UART_Init();
   MX_ADC1_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -212,6 +217,8 @@ static void SystemPower_Config(void)
   {
     Error_Handler();
   }
+/* USER CODE BEGIN PWR */
+/* USER CODE END PWR */
 }
 
 /* USER CODE BEGIN 4 */
