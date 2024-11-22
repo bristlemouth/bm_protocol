@@ -11,7 +11,7 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
-add_subdirectory(${SRC_DIR}/lib/bm_integration bcmp)
+add_subdirectory(${SRC_DIR}/l:qib/bm_integration bcmp)
 
 set(BRISTLEMOUTH_FILES
     ${BM_INTEGRATION_FILES}

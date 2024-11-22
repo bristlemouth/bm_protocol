@@ -1,25 +1,15 @@
 #include "bristlemouth_client.h"
-
-// Includes for FreeRTOS
-#include "FreeRTOS.h"
-#include "configuration.h"
-#include "device_info.h"
-#include "dfu.h"
-#include "messages.h"
-#include "queue.h"
-#include "task.h"
-
 #include "bcmp_cli.h"
 #include "bm_ports.h"
+#include "bristlemouth.h"
 #include "bsp.h"
+#include "device_info.h"
 #include "l2.h"
 #include "pcap.h"
 #include "task_priorities.h"
 
 extern "C" {
 #include "bm_ip.h"
-#include "bristlemouth.h"
-#include "device.h"
 }
 
 #ifdef STRESS_TEST_ENABLE
@@ -50,9 +40,6 @@ static void adin_power_callback(bool on) {
 }
 
 void bcl_init(void) {
-  IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
-  config_init();
-  //TODO: This should all be moved to user code
   uint8_t major, minor, patch;
   getFWVersion(&major, &minor, &patch);
   DeviceCfg device = {
@@ -70,9 +57,9 @@ void bcl_init(void) {
   };
 
   printf("Starting up BCL\n");
-  device_init(device);
+  IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
 
-  BmErr err = bristlemouth_init(adin_power_callback);
+  BmErr err = bristlemouth_init(adin_power_callback, device);
   if (err == BmOK) {
     NetworkDevice network_device = bristlemouth_network_device();
     network_device.callbacks->debug_packet_dump = pcapTxPacket;
