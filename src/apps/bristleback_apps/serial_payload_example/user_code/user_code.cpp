@@ -11,9 +11,10 @@
 #include "uptime.h"
 #include "usart.h"
 #include "util.h"
+#include "tim.h"
 
 #define LED_ON_TIME_MS 75
-#define LED_PERIOD_MS 5000
+#define LED_PERIOD_MS 500
 #define DEFAULT_BAUD_RATE 9600
 #define DEFAULT_LINE_TERM 10 // newline, '\n', 0x0A
 #define BYTES_CLUSTER_MS 50  // used for console printing convenience
@@ -33,6 +34,8 @@ char payload_buffer[2048];
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
+
+// TIM_HandleTypeDef htim2;
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
@@ -64,12 +67,48 @@ void setup(void) {
   IOWrite(&BB_PL_BUCK_EN, 0);
 
   // turn off LEDs
-  IOWrite(&LED_BLUE, 0);
+  // IOWrite(&LED_BLUE, 0);
   IOWrite(&LED_GREEN, 0);
-  IOWrite(&LED_RED, 0);
+  // IOWrite(&LED_RED, 0);
 }
 
+int32_t CH1_DC = 0;
+int32_t CH2_DC = 1200;
+bool ch1_up = true;
+bool ch2_up = true;
 void loop(void) {
+  while (1)
+  { // TODO wrap a duty cycle set function in bsp.cpp
+    if (ch1_up) {
+      TIM2->CCR2 = CH1_DC;
+      CH1_DC += 3;
+      if (CH1_DC > 8000) ch1_up = false;
+    }
+    else {
+      TIM2->CCR2 = CH1_DC;
+      CH1_DC -= 9;
+      if (CH1_DC <= 10) ch1_up = true;
+    }
+    if (ch2_up) {
+      TIM3->CCR3 = CH2_DC;
+      CH2_DC += 7;
+      if (CH2_DC > 8000) ch2_up = false;
+    }
+    else {
+      TIM3->CCR3 = CH2_DC;
+      CH2_DC -= 3;
+      if (CH2_DC <= 10) ch2_up = true;
+    }
+
+    // if (CH2_DC < 2500) {
+    //   TIM2->CCR2 = CH2_DC;
+    //   CH2_DC += 100;
+    // } else {
+    //   TIM2->CCR2 = CH2_DC;
+    //   CH2_DC -= 100;
+    // }
+    vTaskDelay(1);
+  }
   /* USER LOOP CODE GOES HERE */
   // Read a cluster of Rx bytes if available
   // -- A timer is used to try to keep clusters of bytes (say from lines) in the same output.
@@ -126,12 +165,12 @@ void loop(void) {
   static bool led2State = false;
   /// Flash the LED blue if we received Rx data
   if (!led2State && ledLinePulse > -1) {
-    IOWrite(&LED_BLUE, 1);
+    IOWrite(&LED_GREEN, 1);
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
   else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_BLUE, 0);
+    IOWrite(&LED_GREEN, 0);
     ledLinePulse = -1;
     led2State = false;
   }
@@ -142,14 +181,14 @@ void loop(void) {
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
   if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    IOWrite(&LED_GREEN, 1);
+    IOWrite(&LED_RED, 1);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_GREEN, 0);
+    IOWrite(&LED_RED, 0);
     led1State = false;
   }
 }
