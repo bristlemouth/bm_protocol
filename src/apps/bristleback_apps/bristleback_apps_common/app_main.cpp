@@ -259,13 +259,20 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic, uint16_t topic
 // TODO - move this to some debug file
 // Defines lost if GPIOs for Debug CLI
 static const DebugGpio_t debugGpioPins[] = {
-    {"adin_cs", &ADIN_CS, GPIO_OUT},       {"adin_int", &ADIN_INT, GPIO_IN},
-    {"adin_pwr", &ADIN_PWR, GPIO_OUT},     {"adin_rst", &ADIN_RST, GPIO_OUT},
-    {"bb_3v3_en", &BB_3V3_EN, GPIO_OUT},   {"gpio1", &GPIO1, GPIO_OUT},
-    {"led_green", &LED_GREEN, GPIO_OUT},   {"led_blue", &LED_BLUE, GPIO_OUT},
-    {"led_red", &LED_RED, GPIO_OUT},       {"bb_pl_buck_en", &BB_PL_BUCK_EN, GPIO_OUT},
-    {"bb_vbus_en", &BB_VBUS_EN, GPIO_OUT}, {"flash_cs", &FLASH_CS, GPIO_OUT},
-    {"boot_led", &BOOT_LED, GPIO_IN},      {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+    {"adin_cs", &ADIN_CS, GPIO_OUT},
+    {"adin_int", &ADIN_INT, GPIO_IN},
+    {"adin_pwr", &ADIN_PWR, GPIO_OUT},
+    {"adin_rst", &ADIN_RST, GPIO_OUT},
+    {"bb_3v3_en", &BB_3V3_EN, GPIO_OUT},
+    {"gpio1", &GPIO1, GPIO_OUT},
+    {"led_green", &LED_GREEN, GPIO_OUT},
+    // {"led_blue", &LED_BLUE, GPIO_OUT},
+    {"led_red", &LED_RED, GPIO_OUT},
+    {"bb_pl_buck_en", &BB_PL_BUCK_EN, GPIO_OUT},
+    {"bb_vbus_en", &BB_VBUS_EN, GPIO_OUT},
+    {"flash_cs", &FLASH_CS, GPIO_OUT},
+    {"boot_led", &BOOT_LED, GPIO_IN},
+    {"vusb_detect", &VUSB_DETECT, GPIO_IN},
 };
 
 /* USER CODE EXECUTED HERE */
@@ -380,7 +387,7 @@ static void defaultTask(void *parameters) {
 
   // Turn of the bristleback leds
   IOWrite(&LED_GREEN, BB_LED_OFF);
-  IOWrite(&LED_BLUE, BB_LED_OFF);
+  // IOWrite(&LED_BLUE, BB_LED_OFF);
   IOWrite(&LED_RED, BB_LED_OFF);
   IOWrite(&BB_3V3_EN,
           1);                 // 1 enables, 0 disables. Needed for I2C and I/O control.

@@ -15,6 +15,7 @@
 #include "iwdg.h"
 #include "usart.h"
 #include "usb_otg.h"
+#include "tim.h"
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;
@@ -43,6 +44,8 @@ void HAL_Delay(uint32_t Delay) {
   }
 }
 
+extern TIM_HandleTypeDef htim2;
+
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi3;
 SPIInterface_t spi2 = PROTECTED_SPI("SPI2", hspi2, MX_SPI2_Init, LPM_SPI2);
@@ -58,6 +61,8 @@ void bspInit() {
   osStarted = true;
   HAL_SuspendTick();
 
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+
   spiInit(&spi2);
   spiInit(&spi3);
   i2cInit(&i2c1);
@@ -66,7 +71,7 @@ void bspInit() {
   IOWrite(&ADIN_PWR, 1);
 
   // Turn LEDS on by default
-  IOWrite(&LED_BLUE, 0);
+  // IOWrite(&LED_BLUE, 0);
   IOWrite(&LED_RED, 0);
   IOWrite(&LED_GREEN, 0);
 
@@ -93,4 +98,5 @@ void mxInit(void) {
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_IWDG_Init();
+  MX_TIM2_Init();
 }

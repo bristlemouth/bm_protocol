@@ -64,7 +64,7 @@ void setup(void) {
   IOWrite(&BB_PL_BUCK_EN, 0);
 
   // turn off LEDs
-  IOWrite(&LED_BLUE, 0);
+  // IOWrite(&LED_BLUE, 0);
   IOWrite(&LED_GREEN, 0);
   IOWrite(&LED_RED, 0);
 }
@@ -126,12 +126,12 @@ void loop(void) {
   static bool led2State = false;
   /// Flash the LED blue if we received Rx data
   if (!led2State && ledLinePulse > -1) {
-    IOWrite(&LED_BLUE, 1);
+    // IOWrite(&LED_BLUE, 1);
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
   else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_BLUE, 0);
+    // IOWrite(&LED_BLUE, 0);
     ledLinePulse = -1;
     led2State = false;
   }
@@ -142,14 +142,16 @@ void loop(void) {
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
   if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
-    IOWrite(&LED_GREEN, 1);
+    // IOWrite(&LED_GREEN, 1);
+    // IOWrite(&LED_RED, 0);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
-    IOWrite(&LED_GREEN, 0);
+    // IOWrite(&LED_GREEN, 0);
+    // IOWrite(&LED_RED, 1);
     led1State = false;
   }
 }
