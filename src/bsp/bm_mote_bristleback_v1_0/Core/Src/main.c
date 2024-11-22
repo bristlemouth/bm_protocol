@@ -24,8 +24,10 @@
 #include "icache.h"
 #include "iwdg.h"
 #include "usart.h"
+#include "memorymap.h"
 #include "rtc.h"
 #include "spi.h"
+#include "tim.h"
 #include "usb_otg.h"
 #include "gpio.h"
 
@@ -112,6 +114,7 @@ int main(void)
   MX_RTC_Init();
   MX_USART3_UART_Init();
   MX_ADC1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
