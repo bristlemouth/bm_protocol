@@ -125,6 +125,7 @@ void SystemPower_Config_ext(void);
 #define ADIN_INT_Pin LL_GPIO_PIN_8
 #define ADIN_INT_GPIO_Port GPIOB
 #define ADIN_INT_EXTI_IRQn EXTI8_IRQn
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
