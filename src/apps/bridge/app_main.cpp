@@ -40,6 +40,7 @@
 #include "debug_spotter.h"
 #include "debug_sys.h"
 #include "debug_w25.h"
+#include "device_info.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
@@ -387,6 +388,8 @@ static void defaultTask(void *parameters) {
   if (hw_version >= 7) {
     usb_io = &VUSB_DETECT;
   }
+
+  setHwVersion(hw_version);
 
   usbInit(usb_io, usb_is_connected);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
