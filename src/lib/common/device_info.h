@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-const versionInfo_t *getVersionInfo();
+const versionInfo_t *getVersionInfo(void);
 const versionInfo_t *findVersionInfo(uint32_t addr, uint32_t len);
 
 bool fwIsEng(const versionInfo_t *info);
