@@ -246,7 +246,7 @@ void write(uint8_t *buffer, size_t len) {
 void setBaud(uint32_t new_baud_rate) {
   LL_LPUART_SetBaudRate(static_cast<USART_TypeDef *>(uart_handle.device),
                         LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
-                        LL_LPUART_PRESCALER_DIV64, new_baud_rate);
+                        LL_LPUART_PRESCALER_DIV8, new_baud_rate);
 }
 
 void setEvenParity(void){
