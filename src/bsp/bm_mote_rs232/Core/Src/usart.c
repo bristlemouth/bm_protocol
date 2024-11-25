@@ -41,7 +41,7 @@ void MX_LPUART1_UART_Init(void)
   /** Initializes the peripherals clock
   */
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_LPUART1;
-  PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_PCLK3;
+  PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_HSI;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -70,7 +70,7 @@ void MX_LPUART1_UART_Init(void)
   /* USER CODE BEGIN LPUART1_Init 1 */
 
   /* USER CODE END LPUART1_Init 1 */
-  LPUART_InitStruct.PrescalerValue = LL_LPUART_PRESCALER_DIV64;
+  LPUART_InitStruct.PrescalerValue = LL_LPUART_PRESCALER_DIV8;
   LPUART_InitStruct.BaudRate = 209700;
   LPUART_InitStruct.DataWidth = LL_LPUART_DATAWIDTH_8B;
   LPUART_InitStruct.StopBits = LL_LPUART_STOPBITS_1;
@@ -84,6 +84,12 @@ void MX_LPUART1_UART_Init(void)
   LL_LPUART_Enable(LPUART1);
   /* USER CODE BEGIN LPUART1_Init 2 */
 
+  // Enable LPUART autonomous operation in STOP mode.
+  __HAL_RCC_LPUART1_CLKAM_ENABLE();
+  LL_LPUART_EnableInStopMode(LPUART1);
+  // Enable HSI clock in stop mode.
+  LL_RCC_HSI_EnableInStopMode();
+  
   /* USER CODE END LPUART1_Init 2 */
 
 }
