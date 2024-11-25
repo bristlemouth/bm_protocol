@@ -20,7 +20,7 @@ static uint8_t hwVersion = 0;
 
   \return pointer to version info for this particular firmware
 */
-const versionInfo_t *getVersionInfo() { return &versionNote.info; }
+const versionInfo_t *getVersionInfo(void) { return &versionNote.info; }
 
 /*!
   Find version info in memory (searching the bootloader image, for example)
@@ -89,7 +89,7 @@ void getFWVersion(uint8_t *major, uint8_t *minor, uint8_t *revision) {
 
   \return pointer to UID string
 */
-const char *getUIDStr() {
+const char *getUIDStr(void) {
   static bool uidStrGenerated = false;
   if (!uidStrGenerated) {
     snprintf(uidStr, sizeof(uidStr), "%08" PRIx32 "%08" PRIx32 "%08" PRIx32 "", UID[2], UID[1],
@@ -105,7 +105,7 @@ const char *getUIDStr() {
 
   \return pointer to UID
 */
-const uint32_t *getUID() { return UID; }
+const uint32_t *getUID(void) { return UID; }
 
 uint32_t getGitSHA() { return versionNote.info.gitSHA; }
 
@@ -114,7 +114,7 @@ uint32_t getGitSHA() { return versionNote.info.gitSHA; }
 
   \return pointer to firmare version string
 */
-const char *getFWVersionStr() {
+const char *getFWVersionStr(void) {
   static bool versionStrGenerated = false;
   if (!versionStrGenerated) {
     if (fwIsEng(getVersionInfo())) {
@@ -166,7 +166,7 @@ void getMacAddr(uint8_t *buff, size_t len) {
   buff[5] = (node_id >> 0) & 0xFF;
 }
 
-uint64_t getNodeId() {
+uint64_t getNodeId(void) {
   static uint64_t *node_id;
 
   // Only compute the hash the first time this function gets called
@@ -184,7 +184,7 @@ uint64_t getNodeId() {
 
   \return pointer to node id string
 */
-const char *getNodeIdStr() {
+const char *getNodeIdStr(void) {
   static bool nodeidStrGenerated = false;
   if (!nodeidStrGenerated) {
     snprintf(nodeidStr, sizeof(nodeidStr), "%016" PRIx64 "", getNodeId());
