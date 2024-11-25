@@ -115,12 +115,16 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       }
     } else if (strncmp("ping", command, command_str_len) == 0) {
       const char *node_id_str;
+      const char *ping_message;
       BaseType_t node_id_str_len = 0;
+      BaseType_t ping_message_length = 0;
       node_id_str = FreeRTOS_CLIGetParameter(commandString, 2, &node_id_str_len);
       if (node_id_str_len > 0) {
         uint64_t node_id = strtoull(node_id_str, NULL, 16);
-        uint8_t payload[32] = {0};
-        if (bcmp_send_ping_request(node_id, &multicast_global_addr, payload, 32) != BmOK) {
+        ping_message = FreeRTOS_CLIGetParameter(commandString, 3, &ping_message_length);
+        if (bcmp_send_ping_request(node_id, &multicast_global_addr,
+                                   (const uint8_t *)ping_message,
+                                   ping_message_length) != BmOK) {
           printf("Error sending ping\n");
         }
       } else {
