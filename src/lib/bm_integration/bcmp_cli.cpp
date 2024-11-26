@@ -504,7 +504,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       memcpy(data, dataStr, dataStrLen);
       data[dataStrLen] = 0;
 
-      bm_pub(topic, data, dataStrLen, type, version);
+      if (bm_pub(topic, data, dataStrLen, type, version) == BmOK) {
+        printf("Successfully published message to topic: %s of %d bytes\n", topic, dataStrLen);
+      } else {
+        printf("Could not publish message to topic: %s\n", topic);
+      }
       vPortFree(topic);
       vPortFree(data);
     } else {
