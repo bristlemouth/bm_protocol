@@ -34,3 +34,4 @@ dependencies:
       - pytest
       - python-dotenv
       - regex
+      - bitstring==4.2

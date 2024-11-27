@@ -160,6 +160,15 @@ NvmPartition *userConfigurationPartition = NULL;
 NvmPartition *systemConfigurationPartition = NULL;
 NvmPartition *hardwareConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
+static IOPinHandle_t *usb_io = &LED_G;
+
+static bool usb_is_connected() {
+  uint8_t vusb = 0;
+
+  IORead(usb_io, &vusb);
+
+  return (bool)vusb;
+}
 
 extern "C" int main(void) {
 
@@ -345,8 +354,6 @@ static void defaultTask(void *parameters) {
 
   bspInit();
 
-  usbInit(&VUSB_DETECT, usb_is_connected);
-
   debugSysInit();
   debugMemfaultInit(&usbCLI);
   // uncomment for the `update sec`, `update clr`, `update confirm` commands
@@ -374,6 +381,16 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init();
+
+  uint32_t hw_version = 0;
+  get_config_uint(BM_CFG_PARTITION_HARDWARE, AppConfig::HARDWARE_VERSION,
+                  strlen(AppConfig::HARDWARE_VERSION), &hw_version);
+
+  if (hw_version >= 7) {
+    usb_io = &VUSB_DETECT;
+  }
+
+  usbInit(usb_io, usb_is_connected);
   debugConfigurationInit();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
                   strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
@@ -418,7 +435,10 @@ static void defaultTask(void *parameters) {
 #endif
 
 #ifdef RAW_PRESSURE_ENABLE
-  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs();
+  < < < < < < < HEAD raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs();
+=======
+  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
+>>>>>>> origin/develop
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS, raw_pressure_cfg.maxRawReports,
                            raw_pressure_cfg.rawDepthThresholdUbar, &debug_configuration_user,
                            raw_pressure_cfg.rbrCodaReadingPeriodMs);
