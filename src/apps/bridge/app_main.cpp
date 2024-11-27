@@ -435,12 +435,9 @@ static void defaultTask(void *parameters) {
 #endif
 
 #ifdef RAW_PRESSURE_ENABLE
-  < < < < < < < HEAD raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs();
-=======
-  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
->>>>>>> origin/develop
+  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs();
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS, raw_pressure_cfg.maxRawReports,
-                           raw_pressure_cfg.rawDepthThresholdUbar, &debug_configuration_user,
+                           raw_pressure_cfg.rawDepthThresholdUbar,
                            raw_pressure_cfg.rbrCodaReadingPeriodMs);
 #endif // RAW_PRESSURE_ENABLE
 

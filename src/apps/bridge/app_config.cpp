@@ -147,9 +147,9 @@ raw_pressure_config_s getRawPressureConfigs(void) {
     save = true;
   }
   cfg.rawDepthThresholdUbar = RbrPressureProcessor::DEFAULT_RAW_DEPTH_THRESHOLD_UBAR;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR,
-                       strlen(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR),
-                       &cfg.rawDepthThresholdUbar)) {
+  if (!get_config_float(BM_CFG_PARTITION_SYSTEM, AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR,
+                        strlen(AppConfig::RBR_RAW_DEPTH_THRESHOLD_UBAR),
+                        &cfg.rawDepthThresholdUbar)) {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get rbr pressure differential threshold from config, using "
                    "default value and writing "
