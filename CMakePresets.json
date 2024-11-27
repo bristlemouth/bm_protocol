@@ -71,6 +71,13 @@
             }
         },
         {
+            "name": "bridge-raw-pressure",
+            "inherits": "bridge",
+            "cacheVariables": {
+                "RAW_PRESSURE_ENABLE": "1"
+            }
+        },
+        {
             "name": "bringup-bridge",
             "inherits": "default",
             "cacheVariables": {
@@ -255,6 +262,11 @@
         {
             "configurePreset": "bridge",
             "name": "bridge",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bridge-raw-pressure",
+            "name": "bridge-raw-pressure",
             "jobs": 8
         },
         {
