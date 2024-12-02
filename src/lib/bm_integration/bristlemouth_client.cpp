@@ -13,6 +13,7 @@
 #include "bm_ports.h"
 #include "bsp.h"
 #include "l2.h"
+#include "pcap.h"
 #include "task_priorities.h"
 
 extern "C" {
@@ -73,10 +74,12 @@ void bcl_init(void) {
 
   BmErr err = bristlemouth_init(adin_power_callback);
   if (err == BmOK) {
+    NetworkDevice network_device = bristlemouth_network_device();
+    network_device.callbacks->debug_packet_dump = pcapTxPacket;
     bcmp_cli_init();
 
 #ifdef STRESS_TEST_ENABLE
-    stress_test_init(bristlemouth_network_device(), STRESS_TEST_PORT);
+    stress_test_init(network_device, STRESS_TEST_PORT);
 #endif
 
   } else {

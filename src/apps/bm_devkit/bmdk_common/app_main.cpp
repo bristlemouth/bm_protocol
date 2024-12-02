@@ -351,7 +351,6 @@ static void defaultTask(void *parameters) {
   pcapInit(&usbPcap);
 
   startCLI();
-  // pcapInit(&usbPcap);
 
   gpioISRStartTask();
 
