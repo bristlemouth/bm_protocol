@@ -4,7 +4,6 @@
 #include "bristlemouth.h"
 #include "bsp.h"
 #include "device_info.h"
-#include "l2.h"
 #include "pcap.h"
 #include "task_priorities.h"
 
@@ -25,7 +24,7 @@ static bool network_device_interrupt(const void *pinHandle, uint8_t value, void 
   (void)pinHandle;
   (void)value;
   (void)args;
-  return bm_l2_handle_device_interrupt() == BmOK;
+  return bristlemouth_handle_network_device_interrupt() == BmOK;
 }
 
 static void adin_power_callback(bool on) {
