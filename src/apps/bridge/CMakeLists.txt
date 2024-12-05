@@ -280,7 +280,7 @@ set(BM_CORE_LWIP_INCLUDES
 )
 set(BM_CORE_FREERTOS_INCLUDES
     ${FREERTOS_INCLUDES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${SRC_DIR}/lib/common
     ${MEMFAULT_INCLUDES}
 )
@@ -289,7 +289,7 @@ include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
 setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
 setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
 add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
-target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
 target_link_libraries(bmcore PUBLIC lwipcore)
 target_link_libraries(bm_serial PUBLIC bmcore)
