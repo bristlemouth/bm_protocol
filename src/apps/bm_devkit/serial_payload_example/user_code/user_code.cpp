@@ -221,6 +221,7 @@ void loop(void) {
         PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
     //SDI-12 data has 7 bits datawidth. Incoming bytes need to be bitwise ANDed with 0x7F
+    //TODO - interpret the 8th bit for parity check
     if (uart_mode_config == MODE_SDI12) {
       for (size_t i = 0; i < sizeof(payload_buffer); ++i) {
         payload_buffer[i] &= 0x7F;
