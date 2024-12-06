@@ -9,6 +9,7 @@ target_include_directories(sm_config_crc_list_tests
     ${TEST_DIR}/mocks
     ${TEST_DIR}/third_party/fff
     ${SRC_DIR}/apps/bridge
+    ${SRC_DIR}/lib/bm_core/test/mocks
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/lib/sys
