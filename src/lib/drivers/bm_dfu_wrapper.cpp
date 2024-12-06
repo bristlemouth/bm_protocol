@@ -3,7 +3,6 @@ extern "C" {
 #include "bm_dfu_generic.h"
 }
 #include "bootutil/bootutil_public.h"
-#include "configuration.h"
 #include "flash_map_backend/flash_map_backend.h"
 #include "lpm.h"
 #include "nvmPartition.h"
@@ -63,20 +62,6 @@ BmErr bm_dfu_client_flash_area_erase(const void *flash_area, uint32_t off, uint3
 
 uint32_t bm_dfu_client_flash_area_get_size(const void *flash_area) {
   return flash_area_get_size((const struct flash_area *)flash_area);
-}
-
-bool bm_dfu_client_confirm_is_enabled(void) {
-  uint32_t val = 1;
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, dfu_confirm_config_key,
-                  strlen(dfu_confirm_config_key), &val);
-  return val == 1;
-}
-
-void bm_dfu_client_confirm_enable(bool en) {
-  uint32_t val = en;
-  set_config_uint(BM_CFG_PARTITION_SYSTEM, dfu_confirm_config_key,
-                  strlen(dfu_confirm_config_key), val);
-  save_config(BM_CFG_PARTITION_SYSTEM, true);
 }
 
 BmErr bm_dfu_host_get_chunk(uint32_t offset, uint8_t *buffer, size_t len, uint32_t timeout_ms) {
