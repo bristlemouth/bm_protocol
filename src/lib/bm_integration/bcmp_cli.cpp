@@ -224,73 +224,45 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         case UINT32: {
           uint32_t val = strtoul(value_str, NULL, 0);
           if (cbor_encode_uint(&encoder, val) != CborNoError) {
-            break;
-          }
-          if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, &err, NULL)) {
-            printf("Failed to send message config set\n");
-          } else {
-            printf("Succesfully sent config set msg\n");
+            printf("Failed to encode uint message...");
           }
           break;
         }
         case INT32: {
           int32_t val = strtol(value_str, NULL, 0);
           if (cbor_encode_int(&encoder, val) != CborNoError) {
-            break;
-          }
-          if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, &err, NULL)) {
-            printf("Failed to send message config get\n");
-          } else {
-            printf("Succesfully sent config get msg\n");
+            printf("Failed to encode int message...");
           }
           break;
         }
         case FLOAT: {
-          float val;
-          if (!bStrtof(const_cast<char *>(value_str), &val)) {
-            printf("Invalid param\n");
-            break;
-          }
+          float val = strtof(const_cast<char *>(value_str), NULL);
           if (cbor_encode_float(&encoder, val) != CborNoError) {
-            break;
-          }
-          if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, &err, NULL)) {
-            printf("Failed to send message config get\n");
-          } else {
-            printf("Succesfully sent config get msg\n");
+            printf("Failed to encode float message...");
           }
           break;
         }
         case STR: {
           if (cbor_encode_text_stringz(&encoder, value_str) != CborNoError) {
-            break;
-          }
-          if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, &err, NULL)) {
-            printf("Failed to send message config get\n");
-          } else {
-            printf("Succesfully sent config get msg\n");
+            printf("Failed to encode string message...");
           }
           break;
         }
         case BYTES: {
           if (cbor_encode_byte_string(&encoder, reinterpret_cast<const uint8_t *>(value_str),
                                       strlen(value_str)) != CborNoError) {
-            break;
-          }
-          if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                               cbor_buf, &err, NULL)) {
-            printf("Failed to send message config get\n");
-          } else {
-            printf("Succesfully sent config get msg\n");
+            printf("Failed to encode byte message...");
           }
           break;
         }
         default:
           break;
+        }
+        if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
+                             cbor_buf, &err, NULL)) {
+          printf("Failed to send message config set\n");
+        } else {
+          printf("Succesfully sent config set msg\n");
         }
         vPortFree(cbor_buf);
       } else if (strncmp("commit", cmd_id_str, cmd_id_str_len) == 0) {
@@ -318,7 +290,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         if (!bcmp_config_commit(node_id, partition, &err)) {
           printf("Failed to send config commit\n");
         } else {
-          printf("Succesfull config commit send\n");
+          printf("Succesfully config commit send\n");
         }
       } else if (strncmp("status", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
