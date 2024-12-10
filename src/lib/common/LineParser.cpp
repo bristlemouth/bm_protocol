@@ -4,7 +4,7 @@
 
 #include "LineParser.h"
 #include "string.h"
-#include "util.h"
+#include "app_util.h"
 #include <cstdlib>
 
 LineParser::LineParser(const char* separator, size_t maxLineLen, const ValueType* valueTypes, size_t numValues,

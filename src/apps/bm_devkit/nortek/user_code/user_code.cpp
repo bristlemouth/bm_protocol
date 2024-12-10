@@ -1,15 +1,14 @@
 #include "debug.h"
-#include "util.h"
+#include "app_util.h"
 #include "user_code.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "lwip/inet.h"
-#include "bm_network.h"
 #include "usart.h"
 #include "payload_uart.h"
 #include "sensors.h"
@@ -258,10 +257,10 @@ void setup(void) {
 
   //Print Headers into log file. will happen every time the mote power cycles, but that's fine.
   //This doesn't seem to be working. For some reason not being written.
-  bm_fprintf(0,"nortek_averages.log", USE_TIMESTAMP,
+  spotter_log(0,"nortek_averages.log", USE_TIMESTAMP,
           "HEADERS,uptime,rtcTimeBuffer,v_b1_x_mean,v_b1_x_stdev,v_b2_y_mean,v_b2_y_stdev,v_b3_z_mean,v_b3_z_stdev,heading_mean,heading_stdev,pitch_mean,pitch_stdev,roll_mean,roll_stdev,pressure_mean,pressure_stdev,temperature_mean,temperature_stdev,speed_mean,speed_stdev,direction_mean,direction_stdev"
       );
-  bm_fprintf(0,"nortek.log", USE_TIMESTAMP,
+  spotter_log(0,"nortek.log", USE_TIMESTAMP,
           "HEADERS,uptime,rtcTimeBuffer,month,day,year,hour,minute,second,error_code,status_code,v_b1_x,v_b2_y,v_b3_z,amp_b1_x,amp_b2_y,amp_b3_z,batt_v,sound_speed,heading,pitch,roll,pressure,temperature,an_in_1,an_in_2,speed,direction"
       );
 }
@@ -312,8 +311,8 @@ void loop(void) {
     uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
     rtcPrint(rtcTimeBuffer, NULL);
-    bm_fprintf(0, "nortek_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[nortek] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    spotter_log(0, "nortek_raw.log", USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+    spotter_log_console(0, "[nortek] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
     printf("[nortek] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
 
     if (parser.parseLine(payload_buffer, read_len)) {
@@ -340,11 +339,11 @@ void loop(void) {
         "DATA, %" PRIu64 ", %s, %u, %u, %u, %u, %u, %u, %u, %u, %.4f, %.4f, %.4f, %u, %u, %u, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %u, %u, %.4f, %.4f\n",
         this_uptime, rtcTimeBuffer,nortekData.month, nortekData.day, nortekData.year, nortekData.hour, nortekData.minute, nortekData.second, nortekData.error_code, nortekData.status_code, nortekData.v_b1_x, nortekData.v_b2_y, nortekData.v_b3_z, nortekData.amp_b1_x, nortekData.amp_b2_y, nortekData.amp_b3_z, nortekData.batt_v, nortekData.sound_speed, nortekData.heading, nortekData.pitch, nortekData.roll, nortekData.pressure, nortekData.temperature, nortekData.an_in_1, nortekData.an_in_2, nortekData.speed, nortekData.direction
       );
-      bm_printf(0,
+      spotter_log_console(0,
         "DATA, %" PRIu64 ", %s, %u, %u, %u, %u, %u, %u, %u, %u, %.4f, %.4f, %.4f, %u, %u, %u, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %u, %u, %.4f, %.4f\n",
         this_uptime, rtcTimeBuffer,nortekData.month, nortekData.day, nortekData.year, nortekData.hour, nortekData.minute, nortekData.second, nortekData.error_code, nortekData.status_code, nortekData.v_b1_x, nortekData.v_b2_y, nortekData.v_b3_z, nortekData.amp_b1_x, nortekData.amp_b2_y, nortekData.amp_b3_z, nortekData.batt_v, nortekData.sound_speed, nortekData.heading, nortekData.pitch, nortekData.roll, nortekData.pressure, nortekData.temperature, nortekData.an_in_1, nortekData.an_in_2, nortekData.speed, nortekData.direction
       );
-      bm_fprintf(0,"nortek.log", USE_TIMESTAMP,
+      spotter_log(0,"nortek.log", USE_TIMESTAMP,
         "DATA, %" PRIu64 ", %s, %u, %u, %u, %u, %u, %u, %u, %u, %.4f, %.4f, %.4f, %u, %u, %u, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %u, %u, %.4f, %.4f\n",
         uptimeGetMs(), rtcTimeBuffer,nortekData.month, nortekData.day, nortekData.year, nortekData.hour, nortekData.minute, nortekData.second, nortekData.error_code, nortekData.status_code, nortekData.v_b1_x, nortekData.v_b2_y, nortekData.v_b3_z, nortekData.amp_b1_x, nortekData.amp_b2_y, nortekData.amp_b3_z, nortekData.batt_v, nortekData.sound_speed, nortekData.heading, nortekData.pitch, nortekData.roll, nortekData.pressure, nortekData.temperature, nortekData.an_in_1, nortekData.an_in_2, nortekData.speed, nortekData.direction
       );
@@ -399,16 +398,16 @@ void loop(void) {
           v_b1_x_stdev,v_b2_y_stdev,v_b3_z_stdev,heading_stdev,pitch_stdev,roll_stdev,pressure_stdev,temperature_stdev,speed_stdev,direction_stdev
       );
 
-      bm_printf(0,
+      spotter_log_console(0,
           "MEANS |  v_x %.4f, v_y %.4f, v_z %.4f, heading %.4f, pitch %.4f, roll %.4f, pressure %.4f, temperature %.4f, speed %.4f, direction %.4f\n\n",
           v_b1_x_mean,v_b2_y_mean,v_b3_z_mean,heading_mean,pitch_mean,roll_mean,pressure_mean,temperature_mean,speed_mean,direction_mean
       );
-      bm_printf(0,
+      spotter_log_console(0,
           "STDEVS |  v_x %.4f, v_y %.4f, v_z %.4f, heading %.4f, pitch %.4f, roll %.4f, pressure %.4f, temperature %.4f, speed %.4f, direction %.4f\n\n",
           v_b1_x_stdev,v_b2_y_stdev,v_b3_z_stdev,heading_stdev,pitch_stdev,roll_stdev,pressure_stdev,temperature_stdev,speed_stdev,direction_stdev
       );
 
-      bm_fprintf(0,"nortek_averages.log", USE_TIMESTAMP,
+      spotter_log(0,"nortek_averages.log", USE_TIMESTAMP,
           "DATA, %llu, %s,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
           uptimeGetMs(), rtcTimeBuffer, v_b1_x_mean, v_b1_x_stdev, v_b2_y_mean, v_b2_y_stdev, v_b3_z_mean, v_b3_z_stdev, heading_mean, heading_stdev, pitch_mean, pitch_stdev, roll_mean, roll_stdev, pressure_mean, pressure_stdev, temperature_mean, temperature_stdev, speed_mean, speed_stdev, direction_mean, direction_stdev
       );
@@ -481,7 +480,7 @@ void loop(void) {
       }
 
       rtcPrint(rtcTimeBuffer, NULL);
-      if(spotter_tx_data(tx_data, sizeof(sensorStatAgg_t) * NUM_SENSORS, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)){
+      if(spotter_tx_data(tx_data, sizeof(sensorStatAgg_t) * NUM_SENSORS, BmNetworkTypeCellularIriFallback)){
         printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
       }
       else {

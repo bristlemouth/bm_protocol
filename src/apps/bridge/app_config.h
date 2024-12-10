@@ -36,7 +36,7 @@ struct power_config_s {
       ticksSamplingEnabled;
 };
 
-power_config_s getPowerConfigs(cfg::Configuration &syscfg);
+power_config_s getPowerConfigs(void);
 
 #ifdef RAW_PRESSURE_ENABLE
 struct raw_pressure_config_s {
@@ -44,5 +44,5 @@ struct raw_pressure_config_s {
   float rawDepthThresholdUbar;
 };
 
-raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg);
+raw_pressure_config_s getRawPressureConfigs(void);
 #endif // RAW_PRESSURE_ENABLE

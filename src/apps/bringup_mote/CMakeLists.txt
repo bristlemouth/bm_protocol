@@ -10,22 +10,10 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
-add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
-
-# Include BM Common Messages
-add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
+add_subdirectory(${SRC_DIR}/lib/bm_integration bcmp)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
-    ${SRC_DIR}/lib/middleware/bm_service.cpp
-    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
-    ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
-    ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
-    ${SRC_DIR}/lib/middleware/bm_service_request.cpp
-    ${SRC_DIR}/lib/middleware/middleware.cpp
-
-    ${BCMP_FILES}
+    ${BM_INTEGRATION_FILES}
     )
 
 set(BRISTLEMOUTH_INCLUDES
@@ -34,8 +22,7 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${BCMP_INCLUDES}
-    ${BM_COMMON_MESSAGES_INCLUDES}
+    ${BM_INTEGRATION_INCLUDES}
     )
 
 set(LIB_FILES
@@ -57,13 +44,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
     ${SRC_DIR}/lib/bristlefin/bristlefin.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_adin_raw.c
     ${SRC_DIR}/lib/debug/debug_htu.cpp
@@ -84,13 +67,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_nvm_cli.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
@@ -105,10 +82,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
     ${SRC_DIR}/lib/lwip/lwip_support.c
     ${SRC_DIR}/lib/memfault/memfault_platform_core_u5.c
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
     ${SRC_DIR}/lib/bm_serial/bm_serial.c
-    ${SRC_DIR}/lib/middleware/middleware.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
     ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/crc/crc16.c
@@ -127,7 +101,7 @@ set(LIB_FILES
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bm_integration
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
@@ -244,7 +218,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${LIB_FILES}
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}
@@ -267,6 +240,7 @@ set(APP_INCLUDES
 
 set(APP_LIBS
     lwipcore
+    bmcore
     PARENT_SCOPE)
 
 set(APP_DEFINES
@@ -274,6 +248,28 @@ set(APP_DEFINES
     CFG_TUSB_MCU=OPT_MCU_STM32U5
     NO_NETWORK
     )
+
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BM_INTEGRATION_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
+target_link_libraries(bmcore PUBLIC lwipcore)
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)

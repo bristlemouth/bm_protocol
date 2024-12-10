@@ -5,7 +5,7 @@
 
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
-#include "util.h"
+#include "app_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "mbedtls_base64/base64.h"

@@ -11,25 +11,13 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
-add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
+add_subdirectory(${SRC_DIR}/lib/bm_integration bcmp)
 
 # Include BM_NCP files
 add_subdirectory(${SRC_DIR}/lib/bm_ncp bm_ncp)
 
-# Include BM Common Messages
-add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
-
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
-    ${SRC_DIR}/lib/middleware/middleware.cpp
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
-    ${SRC_DIR}/lib/middleware/bm_service.cpp
-    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
-    ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
-    ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
-    ${SRC_DIR}/lib/middleware/bm_service_request.cpp
-
-    ${BCMP_FILES}
+    ${BM_INTEGRATION_FILES}
     ${BM_NCP_FILES}
     )
 
@@ -39,9 +27,10 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${BCMP_INCLUDES}
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
+    ${BM_INTEGRATION_INCLUDES}
     ${BM_NCP_INCLUDES}
-    ${BM_COMMON_MESSAGES_INCLUDES}
     )
 
 set(LIB_FILES
@@ -53,7 +42,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/network_config_logger.cpp
@@ -67,17 +55,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/topology_sampler.cpp
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/aanderaa_data_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sensor_header_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/bm_soft_data_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/bm_rbr_data_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/bm_seapoint_turbidity_data_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -92,13 +71,9 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bridge_power_controller.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
+    ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
+    ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/pca9535.c
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
@@ -120,16 +95,10 @@ set(LIB_FILES
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborpretty.c
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bm_integration
     ${SRC_DIR}/lib/bridge
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
@@ -251,13 +220,13 @@ set(APP_LIBS
     # I hate this, but if bm_serial goes after lwipcore
     # we get some hardfaults on the lwip library and I don't know why😭
     bm_serial
+    bmcore
     lwipcore
     )
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/app_config.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sm_config_crc_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/aanderaaSensor.cpp
@@ -302,6 +271,29 @@ set(APP_DEFINES
     STRESS_TEST_ENABLE
     )
 
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BM_INTEGRATION_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
+target_link_libraries(bmcore PUBLIC lwipcore)
+target_link_libraries(bm_serial PUBLIC bmcore)
+
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")
 message(STATUS "DFU HOST AND CLIENT")
@@ -318,7 +310,6 @@ endif()
 if (RAW_PRESSURE_ENABLE STREQUAL 1)
 list(APPEND APP_FILES  ${CMAKE_CURRENT_SOURCE_DIR}/rbrPressureProcessor.cpp)
 list(APPEND APP_FILES  ${SRC_DIR}/lib/common/differenceSignal.cpp)
-list(APPEND APP_FILES  ${SRC_DIR}/lib/bm_common_messages/bm_rbr_pressure_difference_signal_msg.cpp)
 list(APPEND APP_DEFINES "RAW_PRESSURE_ENABLE")
 endif()
 
@@ -333,6 +324,11 @@ list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
 list(APPEND APP_FILES
         ${SRC_DIR}/lib/micropython/micropython_freertos.c
         ${SRC_DIR}/lib/micropython/mphalport.c)
+
+target_compile_options(
+    micropython PRIVATE
+    -Wno-dangling-pointer -Wno-sign-compare
+    )
 
 set_source_files_properties(
     ${SRC_DIR}/lib/micropython/mphalport.c

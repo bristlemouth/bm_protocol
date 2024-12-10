@@ -11,22 +11,10 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
-add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
-
-# Include BM Common Messages
-add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
+add_subdirectory(${SRC_DIR}/lib/bm_integration bcmp)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
-    ${SRC_DIR}/lib/middleware/bm_service.cpp
-    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
-    ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
-    ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
-    ${SRC_DIR}/lib/middleware/bm_service_request.cpp
-    ${SRC_DIR}/lib/middleware/middleware.cpp
-
-    ${BCMP_FILES}
+    ${BM_INTEGRATION_FILES}
     )
 
 set(BRISTLEMOUTH_INCLUDES
@@ -35,8 +23,7 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${BCMP_INCLUDES}
-    ${BM_COMMON_MESSAGES_INCLUDES}
+    ${BM_INTEGRATION_INCLUDES}
     )
 
 set(LIB_FILES
@@ -47,7 +34,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
@@ -59,12 +45,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -78,13 +59,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bm_service.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
@@ -114,7 +89,7 @@ set(LIB_FILES
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bm_integration
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
@@ -226,7 +201,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bm_config.c
     ${MCUBOOT_FILES}
     ${FREERTOS_FILES}
     ${LIB_FILES}

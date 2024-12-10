@@ -4,8 +4,6 @@
 #include "event_groups.h"
 #include "io.h"
 #include "task.h"
-
-#include "eth_adin2111.h"
 #include <stdint.h>
 
 class BridgePowerController {
@@ -34,7 +32,6 @@ public:
 private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
-  bool getAdinDevice();
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
   void stateLogPrintTarget(const char *state, uint32_t target);
@@ -83,7 +80,6 @@ private:
   bool _initDone;
   bool _subsamplingEnabled;
   bool _configError;
-  adin2111_DeviceHandle_t _adin_handle;
   EventGroupHandle_t _busPowerEventGroup;
   TaskHandle_t _task_handle;
 };

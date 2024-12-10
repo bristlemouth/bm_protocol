@@ -28,9 +28,9 @@
 [submodule "src/third_party/micropython-lib"]
 	path = src/third_party/micropython-lib
 	url = https://github.com/micropython/micropython-lib.git
-[submodule "src/lib/bm_common_messages"]
-	path = src/lib/bm_common_messages
-	url = https://github.com/bristlemouth/bm_common_messages.git
 [submodule "src/third_party/BME280_driver"]
 	path = src/third_party/BME280_driver
 	url = https://github.com/sofarocean/BME280_driver.git
+[submodule "src/lib/bm_core"]
+	path = src/lib/bm_core
+	url = https://github.com/bristlemouth/bm_core.git

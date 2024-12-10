@@ -15,44 +15,44 @@
 #include "task_priorities.h"
 
 #include "app_pub_sub.h"
-#include "bm_l2.h"
-#include "bm_pubsub.h"
-#include "bristlemouth.h"
+#include "app_util.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
+#include "config_cbor_map_service.h"
+#include "debug_bm_service.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_nvm_cli.h"
+#include "debug_pluart_cli.h"
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
-#include "debug_pluart_cli.h"
 #include "debug_w25.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "l2.h"
 #include "memfault_platform_core.h"
 #include "nvmPartition.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "sensorSampler.h"
+#include "sensorWatchdog.h"
 #include "sensors.h"
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
+#include "sys_info_service.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
-#include "util.h"
 #include "w25.h"
 #include "watchdog.h"
-#include "debug_bm_service.h"
-#include "sys_info_service.h"
-#include "sensorWatchdog.h"
-#include "config_cbor_map_service.h"
 /* USER FILE INCLUDES */
 #include "user_code.h"
 /* USER FILE INCLUDES END */
@@ -107,8 +107,10 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
-cfg::Configuration *userConfigurationPartition = NULL;
-cfg::Configuration *systemConfigurationPartition = NULL;
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
@@ -143,13 +145,12 @@ extern "C" int main(void) {
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
 
-  BaseType_t rval =
-      xTaskCreate(defaultTask, "Default",
-                  // TODO - verify stack size
-                  128 * 4, NULL,
-                  // Start with very high priority during boot then downgrade
-                  // once done initializing everything
-                  2, NULL);
+  BaseType_t rval = xTaskCreate(defaultTask, "Default",
+                                // TODO - verify stack size
+                                128 * 4, NULL,
+                                // Start with very high priority during boot then downgrade
+                                // once done initializing everything
+                                2, NULL);
   configASSERT(rval == pdTRUE);
 
   // Start FreeRTOS scheduler
@@ -174,9 +175,9 @@ bool start_stress(const void *pinHandle, uint8_t value, void *args) {
   return false;
 }
 
-void handle_bm_subscriptions(uint64_t node_id, const char *topic,
-                             uint16_t topic_len, const uint8_t *data,
-                             uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_bm_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
+                             const uint8_t *data, uint16_t data_len, uint8_t type,
+                             uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_UTC_TOPIC, topic, topic_len) == 0) {
     if (type == APP_PUB_SUB_UTC_TYPE && version == APP_PUB_SUB_UTC_VERSION) {
@@ -196,9 +197,8 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
-               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
-               rtc_time.second, rtc_time.ms);
+        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year, rtc_time.month,
+               rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.ms);
       } else {
         printf("\n Failed to set RTC.\n");
       }
@@ -214,24 +214,18 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic,
 // TODO - move this to some debug file
 // Defines list if GPIOs for Debug CLI
 static const DebugGpio_t debugGpioPins[] = {
-    {"adin_cs", &ADIN_CS, GPIO_OUT},
-    {"adin_int", &ADIN_INT, GPIO_IN},
-    {"adin_pwr", &ADIN_PWR, GPIO_OUT},
-    {"adin_rst", &ADIN_RST, GPIO_OUT},
-    {"pl_buck_en", &PL_BUCK_EN, GPIO_OUT},
-    {"vbus_en", &VBUS_EN, GPIO_OUT},
-    {"flash_cs", &FLASH_CS, GPIO_OUT},
-    {"boot_led", &BOOT_LED, GPIO_IN},
-    {"vusb_detect", &VUSB_DETECT, GPIO_IN},
-    {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
+    {"adin_cs", &ADIN_CS, GPIO_OUT},        {"adin_int", &ADIN_INT, GPIO_IN},
+    {"adin_pwr", &ADIN_PWR, GPIO_OUT},      {"adin_rst", &ADIN_RST, GPIO_OUT},
+    {"pl_buck_en", &PL_BUCK_EN, GPIO_OUT},  {"vbus_en", &VBUS_EN, GPIO_OUT},
+    {"flash_cs", &FLASH_CS, GPIO_OUT},      {"boot_led", &BOOT_LED, GPIO_IN},
+    {"vusb_detect", &VUSB_DETECT, GPIO_IN}, {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
 };
 
 /* USER CODE EXECUTED HERE */
 static void user_task(void *parameters);
 
 void user_code_start() {
-  BaseType_t rval =
-      xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
+  BaseType_t rval = xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
   configASSERT(rval == pdPASS);
 }
 
@@ -281,7 +275,6 @@ static void defaultTask(void *parameters) {
   pcapInit(&usbPcap);
 
   startCLI();
-  // pcapInit(&usbPcap);
 
   gpioISRStartTask();
 
@@ -302,43 +295,30 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(
-      debug_user_partition, ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration,
-      RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(debug_system_partition,
-                                                ram_system_configuration,
-                                                RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debug_configuration_system.getConfig("sensorsPollIntervalMs",
-                                       strlen("sensorsPollIntervalMs"),
-                                       sys_cfg_sensorsPollIntervalMs);
-  debug_configuration_system.getConfig("sensorsCheckIntervalS",
-                                       strlen("sensorsCheckIntervalS"),
-                                       sys_cfg_sensorsCheckIntervalS);
-  userConfigurationPartition = &debug_configuration_user;
-  systemConfigurationPartition = &debug_configuration_system;
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user,
-                         &debug_configuration_hardware,
-                         &debug_configuration_system);
+  dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user,
-           &debug_configuration_system);
+  bcl_init();
+  debugConfigurationInit();
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
 
-  sensorConfig_t sensorConfig = {
-      .sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
-      .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
+  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
   debugBmServiceInit();
-  sys_info_service_init(debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  config_cbor_map_service_init();
   SensorWatchdog::SensorWatchdogInit();
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 

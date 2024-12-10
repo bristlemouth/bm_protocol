@@ -8,22 +8,22 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "app_util.h"
 #include "bcmp.h"
-#include "bcmp_info.h"
-#include "bcmp_messages.h"
-#include "bcmp_neighbors.h"
-#include "bcmp_topology.h"
 #include "bm_common_structs.h"
-#include "bm_l2.h"
 #include "bm_serial.h"
-#include "bm_util.h"
 #include "bridgeLog.h"
 #include "cbor.h"
+#include "cbor_service_helper.h"
 #include "config_cbor_map_service.h"
 #include "config_cbor_map_srv_reply_msg.h"
 #include "config_cbor_map_srv_request_msg.h"
 #include "crc.h"
 #include "device_info.h"
+#include "messages.h"
+#include "messages/info.h"
+#include "messages/neighbors.h"
+#include "topology.h"
 #include "network_config_logger.h"
 #include "sensorController.h"
 #include "sm_config_crc_list.h"
@@ -62,8 +62,6 @@ typedef struct node_list {
 } node_list_s;
 
 static BridgePowerController *_bridge_power_controller;
-static cfg::Configuration *_hw_cfg;
-static cfg::Configuration *_sys_cfg;
 static TimerHandle_t topology_timer;
 static bool _sampling_enabled;
 static bool _send_on_boot;
@@ -78,21 +76,21 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                      const char *service, size_t reply_len,
                                      uint8_t *reply_data);
-static bool encode_sys_info(CborEncoder &array_encoder, SysInfoSvcReplyMsg::Data &sys_info);
+static bool encode_sys_info(CborEncoder &array_encoder, SysInfoReplyData &sys_info);
 static bool encode_cbor_configuration(CborEncoder &array_encoder,
-                                      ConfigCborMapSrvReplyMsg::Data &cbor_map_reply);
+                                      ConfigCborMapReplyData &cbor_map_reply);
 static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bufsize);
 
 static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t app_name_len);
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
-static void topology_sample_cb(networkTopology_t *networkTopology) {
+static void topology_sample_cb(NetworkTopology *networkTopology) {
   uint8_t *cbor_buffer = NULL;
-  bm_common_network_info_t *network_info = NULL;
+  BmNetworkInfo *network_info = NULL;
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
   do {
-    SMConfigCRCList sm_config_crc_list(_hw_cfg);
+    SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_HARDWARE);
     if (!networkTopology) {
       printf("networkTopology NULL, task must be busy\n");
       break;
@@ -113,7 +111,7 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
     memset(_node_list.nodes, 0, sizeof(_node_list.nodes));
     memset(_node_list.sensor_type, 0, sizeof(_node_list.sensor_type));
 
-    neighborTableEntry_t *cursor = NULL;
+    NeighborTableEntry *cursor = NULL;
     uint16_t counter;
     xQueueReset(_sys_info_queue);
     xQueueReset(_config_cbor_map_queue);
@@ -138,8 +136,8 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
 
     // Create the network info cbor array and calculate the crc32
     size_t cbor_bufsize =
-        _node_list.num_nodes * (sizeof(SysInfoSvcReplyMsg::Data) +
-                                sizeof(ConfigCborMapSrvReplyMsg::Data) + NODE_CONFIG_PADDING);
+        _node_list.num_nodes *
+        (sizeof(SysInfoReplyData) + sizeof(ConfigCborMapReplyData) + NODE_CONFIG_PADDING);
     cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
     configASSERT(cbor_buffer);
     memset(cbor_buffer, 0, cbor_bufsize);
@@ -185,17 +183,17 @@ static void topology_sample_cb(networkTopology_t *networkTopology) {
                        " Adding it.\n",
                        network_crc32_calc);
         sm_config_crc_list.add(network_crc32_calc);
-        if (!_hw_cfg->saveConfig(false)) {
+        if (!save_config(BM_CFG_PARTITION_HARDWARE, false)) {
           printf("Failed to save crc!\n");
         }
       }
 
-      bm_common_config_crc_t config_crc = {
-          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
-          .crc32 = _sys_cfg->getCborEncodedConfigurationCrc32(),
+      BmConfigCrc config_crc = {
+          .partition = BM_CFG_PARTITION_SYSTEM,
+          .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
-      bm_common_fw_version_t fw_info = {
+      BmFwVersion fw_info = {
           .major = 0,
           .minor = 0,
           .revision = 0,
@@ -272,14 +270,14 @@ static void topology_timer_handler(TimerHandle_t tmr) {
 static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                               const char *service, size_t reply_len, uint8_t *reply_data) {
   bool rval = false;
-  SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  SysInfoReplyData reply = {0, 0, 0, 0, NULL};
   printf("Service: %.*s\n", service_strlen, service);
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
     if (ack) {
       // Memory is allocated in the decode function, if we fail to decode, we need to free it.
       // Otherwise, we'll free it in the topology sampler task.
-      if (SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+      if (sys_info_reply_decode(&reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode sys info reply\n");
         break;
       }
@@ -318,14 +316,14 @@ static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_s
                                      const char *service, size_t reply_len,
                                      uint8_t *reply_data) {
   bool rval = false;
-  ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  ConfigCborMapReplyData reply = {0, 0, 0, 0, NULL};
   printf("Service: %.*s\n", service_strlen, service);
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
     if (ack) {
       // Memory is allocated in the decode function, if we fail to decode, we need to free it.
       // Otherwise, we'll free it in the topology sampler task.
-      if (ConfigCborMapSrvReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+      if (config_cbor_map_reply_decode(&reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode cbor map reply\n");
         break;
       }
@@ -386,8 +384,8 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
     }
     // Handle & count each reply coming back.
     uint32_t node_crc_rx_count = 0;
-    SysInfoSvcReplyMsg::Data info_reply = {0, 0, 0, 0, NULL};
-    ConfigCborMapSrvReplyMsg::Data cbor_map_reply = {0, 0, 0, 0, NULL};
+    SysInfoReplyData info_reply = {0, 0, 0, 0, NULL};
+    ConfigCborMapReplyData cbor_map_reply = {0, 0, 0, 0, NULL};
     while (node_crc_rx_count < _node_list.num_nodes) {
       // For each node, create a sub-array.
       CborEncoder sub_array_encoder;
@@ -493,7 +491,7 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
  * @param[in] sys_info The sys info to encode.
  * @return True if the sys info was encoded, false otherwise.
  */
-static bool encode_sys_info(CborEncoder &array_encoder, SysInfoSvcReplyMsg::Data &sys_info) {
+static bool encode_sys_info(CborEncoder &array_encoder, SysInfoReplyData &sys_info) {
   CborError err = CborNoError;
   do {
     // node id
@@ -535,7 +533,7 @@ static bool encode_sys_info(CborEncoder &array_encoder, SysInfoSvcReplyMsg::Data
  * @return True if the cbor map reply was encoded, false otherwise.
  */
 static bool encode_cbor_configuration(CborEncoder &array_encoder,
-                                      ConfigCborMapSrvReplyMsg::Data &cbor_map_reply) {
+                                      ConfigCborMapReplyData &cbor_map_reply) {
   CborParser parser;
   CborValue map;
   CborError err;
@@ -566,13 +564,10 @@ static bool encode_cbor_configuration(CborEncoder &array_encoder,
   return err == CborNoError;
 }
 
-void topology_sampler_init(BridgePowerController *power_controller, cfg::Configuration *hw_cfg,
-                           cfg::Configuration *sys_cfg) {
+void topology_sampler_init(BridgePowerController *power_controller) {
   // TODO - add unit tests with mocking timer callbacks
   configASSERT(power_controller);
   _bridge_power_controller = power_controller;
-  _hw_cfg = hw_cfg;
-  _sys_cfg = sys_cfg;
   _sampling_enabled = false;
   _send_on_boot = true;
   int tmr_id = 2;
@@ -581,11 +576,10 @@ void topology_sampler_init(BridgePowerController *power_controller, cfg::Configu
   topology_timer = xTimerCreate("Topology timer", (TOPOLOGY_TIMEOUT_MS / portTICK_RATE_MS),
                                 pdTRUE, (void *)&tmr_id, topology_timer_handler);
   configASSERT(topology_timer);
-  _sys_info_queue =
-      xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(SysInfoSvcReplyMsg::Data));
+  _sys_info_queue = xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(SysInfoReplyData));
   configASSERT(_sys_info_queue);
   _config_cbor_map_queue =
-      xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(ConfigCborMapSrvReplyMsg::Data));
+      xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(ConfigCborMapReplyData));
   configASSERT(_config_cbor_map_queue);
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
@@ -768,12 +762,12 @@ void bm_topology_last_network_info_cb(void) {
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
     do {
 
-      bm_common_config_crc_t config_crc = {
-          .partition = BM_COMMON_CFG_PARTITION_SYSTEM,
-          .crc32 = _sys_cfg->getCborEncodedConfigurationCrc32(),
+      BmConfigCrc config_crc = {
+          .partition = BM_CFG_PARTITION_SYSTEM,
+          .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
       };
 
-      bm_common_fw_version_t fw_info = {
+      BmFwVersion fw_info = {
           .major = 0,
           .minor = 0,
           .revision = 0,

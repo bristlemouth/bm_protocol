@@ -6,16 +6,14 @@
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
 
-#include "bm_service.h"
 #include "bm_service_request.h"
+#include "config_cbor_map_service.h"
+#include "config_cbor_map_srv_reply_msg.h"
 #include "sys_info_service.h"
+#include "sys_info_svc_reply_msg.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sys_info_svc_reply_msg.h"
-#include "config_cbor_map_service.h"
-#include "config_cbor_map_srv_reply_msg.h"
-#include "config_cbor_map_srv_request_msg.h"
 
 static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
                                const char *commandString);
@@ -27,7 +25,7 @@ static const CLI_Command_Definition_t cmdBmService = {
     "bmsrv:\n"
     " * bmsrv req <service> <data> <timeout s>\n"
     " * bmsrv req sysinfo <node id> <timeout s>\n"
-    " * bmsrv req cfgmap <node id> <1(hw)/2(sys)/3(usr)> <timeout s>\n",
+    " * bmsrv req cfgmap <node id> <1(sys)/2(hw)/3(usr)> <timeout s>\n",
     // Command function
     bmServiceCmd,
     // Number of parameters (variable)
@@ -54,14 +52,14 @@ static bool reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, const cha
   return true;
 }
 
-static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, const char *service,
-                         size_t reply_len, uint8_t *reply_data) {
+static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
+                              const char *service, size_t reply_len, uint8_t *reply_data) {
   bool rval = false;
   printf("Msg id: %" PRIu32 "\n", msg_id);
-  SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  SysInfoReplyData reply = {0, 0, 0, 0, NULL};
   do {
     if (ack) {
-      if(SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+      if (sys_info_reply_decode(&reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode sys info reply\n");
         break;
       }
@@ -75,21 +73,21 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, 
       printf("NACK\n");
     }
     rval = true;
-  } while(0);
-  if(reply.app_name) {
+  } while (0);
+  if (reply.app_name) {
     vPortFree(reply.app_name);
   }
   return rval;
 }
 
-static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen, const char *service,
-                         size_t reply_len, uint8_t *reply_data) {
+static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen,
+                                const char *service, size_t reply_len, uint8_t *reply_data) {
   bool rval = false;
   printf("Msg id: %" PRIu32 "\n", msg_id);
-  ConfigCborMapSrvReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  ConfigCborMapReplyData reply = {0, 0, 0, 0, NULL};
   do {
     if (ack) {
-      if(ConfigCborMapSrvReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+      if (config_cbor_map_reply_decode(&reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode sys info reply\n");
         break;
       }
@@ -99,14 +97,14 @@ static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen
       printf(" * Partition: %" PRIu32 "\n", reply.partition_id);
       printf(" * Success: %d\n", reply.success);
       printf(" * CBOR encoded map len: %" PRIu32 "\n", reply.cbor_encoded_map_len);
-      if(reply.success) {
-        for(uint32_t i = 0; i<reply.cbor_encoded_map_len; i++) {
-          if(!reply.cbor_data) {
+      if (reply.success) {
+        for (uint32_t i = 0; i < reply.cbor_encoded_map_len; i++) {
+          if (!reply.cbor_data) {
             printf("NULL map\n");
             break;
           }
           printf("%02x ", reply.cbor_data[i]);
-          if(i%16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
+          if (i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
             printf("\n");
           }
         }
@@ -116,8 +114,8 @@ static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen
       printf("NACK\n");
     }
     rval = true;
-  } while(0);
-  if(reply.cbor_data) {
+  } while (0);
+  if (reply.cbor_data) {
     vPortFree(reply.cbor_data);
   }
   return rval;
@@ -176,7 +174,7 @@ static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
           printf("ERR\n");
         }
         break;
-      }  else if (strncmp("cfgmap", serviceStr, serviceStrLen) == 0) {
+      } else if (strncmp("cfgmap", serviceStr, serviceStrLen) == 0) {
         BaseType_t nodeStrLen;
         const char *nodeStr = FreeRTOS_CLIGetParameter(commandString,
                                                        3, // Get the third parameter (node id)
@@ -188,9 +186,10 @@ static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
         uint64_t nodeId = strtoull(nodeStr, NULL, 16);
 
         BaseType_t partitionStrLen;
-        const char *partitionStr = FreeRTOS_CLIGetParameter(commandString,
-                                                       4, // Get the third parameter (node id)
-                                                       &partitionStrLen);
+        const char *partitionStr =
+            FreeRTOS_CLIGetParameter(commandString,
+                                     4, // Get the third parameter (node id)
+                                     &partitionStrLen);
         if (partitionStr == NULL) {
           printf("ERR Invalid paramters\n");
           break;
@@ -207,7 +206,8 @@ static BaseType_t bmServiceCmd(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         uint32_t timeout_s = strtoul(timeoutStr, NULL, 10);
-        if (config_cbor_map_service_request(nodeId, partitionId, config_map_callback, timeout_s)) {
+        if (config_cbor_map_service_request(nodeId, partitionId, config_map_callback,
+                                            timeout_s)) {
           printf("OK\n");
         } else {
           printf("ERR\n");

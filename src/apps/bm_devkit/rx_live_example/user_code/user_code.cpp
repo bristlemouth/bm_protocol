@@ -1,16 +1,14 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "rx_live_sensor.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
-#include "rx_live_sensor.h"
 #include "uptime.h"
 #include "usart.h"
 #include "util.h"
@@ -35,19 +33,17 @@
 // Sample for 3 minutes, then report all tag detections and Status Lines
 #define DEFAULT_SAMPLE_DUR_S 180
 
-// app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *userConfigurationPartition;
-
 // The serial number of our Rx-Live receiver, loaded from user config partition.
 uint32_t rx_live_serial_number = 0;
-static RxLiveSensor rx_live;  // Class instance for our Rx-Live.
-uint32_t rx_live_sts_count = 0;  // Counter for status updates received in the session
-uint32_t unique_tag_ids = 0;  // Number of unique tag IDs we've seen this session
-TagID tag_detections[MAX_TAGS] = {};  // Array to store unique Tag IDs + detection counts
-uint8_t tx_buffer[MAX_TX_BUFFER_SIZE];  // Buffer for data transmission
-uint32_t sample_duration_s = DEFAULT_SAMPLE_DUR_S;  // Sample duration loaded from user config if set
+static RxLiveSensor rx_live;           // Class instance for our Rx-Live.
+uint32_t rx_live_sts_count = 0;        // Counter for status updates received in the session
+uint32_t unique_tag_ids = 0;           // Number of unique tag IDs we've seen this session
+TagID tag_detections[MAX_TAGS] = {};   // Array to store unique Tag IDs + detection counts
+uint8_t tx_buffer[MAX_TX_BUFFER_SIZE]; // Buffer for data transmission
+uint32_t sample_duration_s =
+    DEFAULT_SAMPLE_DUR_S; // Sample duration loaded from user config if set
 uint32_t sample_duration_ms = sample_duration_s * 1000;
-uint32_t _sample_timer_ms = 0;  // Timer variable to trigger a report
+uint32_t _sample_timer_ms = 0; // Timer variable to trigger a report
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
@@ -71,8 +67,11 @@ static u_int32_t line_term_config = DEFAULT_LINE_TERM;
  */
 void report_detections() {
   memset(tx_buffer, 0, sizeof(tx_buffer)); //  Clear the telemetry data buffer.
-  memcpy(tx_buffer, &rx_live_sts_count, sizeof(rx_live_sts_count));  // Copy rx_live_sts_count into the first 4 bytes of tx_buffer.
-  size_t tx_len = sizeof(rx_live_sts_count);  // Keep track of the total number of valid bytes in the buffer.
+  memcpy(
+      tx_buffer, &rx_live_sts_count,
+      sizeof(rx_live_sts_count)); // Copy rx_live_sts_count into the first 4 bytes of tx_buffer.
+  size_t tx_len =
+      sizeof(rx_live_sts_count); // Keep track of the total number of valid bytes in the buffer.
   // Copy all tag_detections into the buffer.
   for (size_t i = 0; i < unique_tag_ids; ++i) {
     memcpy(tx_buffer + tx_len, &tag_detections[i], sizeof(TagID));
@@ -92,13 +91,17 @@ void report_detections() {
     sprintf(&tx_hex[i * 2], "%02X", tx_buffer[i]);
   }
   tx_hex[i * 2] = '\0'; // Null-terminate the string
-  bm_printf(0, "[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: 0x%s", uptimeGetMs(), rtcTimeBuffer, tx_hex);
-  printf("[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: %s\n", uptimeGetMs(), rtcTimeBuffer, tx_hex);
+  spotter_log_console(0, "[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: 0x%s",
+            uptimeGetMs(), rtcTimeBuffer, tx_hex);
+  printf("[rx-live-agg] detection buffer to send | tick: %llu, rtc: %s, buff: %s\n",
+         uptimeGetMs(), rtcTimeBuffer, tx_hex);
   // Transmit over Spotter celluar or Iridium SBD fallback.
-  if (spotter_tx_data(tx_buffer, tx_len, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
-    printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
+  if (spotter_tx_data(tx_buffer, tx_len, BmNetworkTypeCellularIriFallback)) {
+    printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
+           rtcTimeBuffer);
   } else {
-    printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(), rtcTimeBuffer);
+    printf("%llut - %s | Failed to send Spotter transmit data request\n", uptimeGetMs(),
+           rtcTimeBuffer);
   }
   // Reset the counts and the tag detections array for the next collection period.
   rx_live_sts_count = 0;
@@ -127,8 +130,9 @@ void tally_detection(const TagID &latest_detection) {
         tag_detections[i].detection_count++;
       } else {
         // Print an error for debugging
-        printf("Error: Detection count for tag serial no %u has reached its maximum value (%u).\n",
-               tag_detections[i].tag_serial_no, UINT16_MAX);
+        printf(
+            "Error: Detection count for tag serial no %u has reached its maximum value (%u).\n",
+            tag_detections[i].tag_serial_no, UINT16_MAX);
       }
       found = true;
       break;
@@ -150,16 +154,13 @@ void tally_detection(const TagID &latest_detection) {
   // Nicely print the whole list of tag detections to the console
   printf("Current Tag Detections:\n");
   printf("---------------------------------------------------------\n");
-  printf("| %-5s | %-10s | %-6s | %-8s | %-5s | %-10s |\n",
-         "Index", "Serial No", "Char", "Freq", "Chan", "Detections");
+  printf("| %-5s | %-10s | %-6s | %-8s | %-5s | %-10s |\n", "Index", "Serial No", "Char",
+         "Freq", "Chan", "Detections");
   printf("---------------------------------------------------------\n");
   for (uint32_t i = 0; i < unique_tag_ids; ++i) {
-    printf("| %-5u | %-10u | %-6c | %-8u | %-5u | %-10u |\n",
-           i,
-           tag_detections[i].tag_serial_no,
-           tag_detections[i].code_char,
-           tag_detections[i].code_freq,
-           tag_detections[i].code_channel,
+    printf("| %-5u | %-10u | %-6c | %-8u | %-5u | %-10u |\n", i,
+           tag_detections[i].tag_serial_no, tag_detections[i].code_char,
+           tag_detections[i].code_freq, tag_detections[i].code_channel,
            tag_detections[i].detection_count);
   }
   printf("---------------------------------------------------------\n");
@@ -168,44 +169,47 @@ void tally_detection(const TagID &latest_detection) {
 void setup() {
   /* USER ONE-TIME SETUP CODE GOES HERE */
 
-  // Retrieve config values from the user partition of Non-Volatile Memory.
-  configASSERT(userConfigurationPartition);
   // Baud rate for the payload UART interface
-  userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"), baud_rate_config);
+  get_config_uint(BM_CFG_PARTITION_USER, "plUartBaudRate", strlen("plUartBaudRate"),
+                  &baud_rate_config);
   // Line termination character for the payload UART interface
-  userConfigurationPartition->getConfig("plUartLineTerm", strlen("plUartLineTerm"), line_term_config);
+  get_config_uint(BM_CFG_PARTITION_USER, "plUartLineTerm", strlen("plUartLineTerm"),
+                  &line_term_config);
   // The serial number of the connected Rx-LIVE receiver.
-  userConfigurationPartition->getConfig("rxLiveSerial", strlen("rxLiveSerial"), rx_live_serial_number);
+  get_config_uint(BM_CFG_PARTITION_USER, "rxLiveSerial", strlen("rxLiveSerial"),
+                  &rx_live_serial_number);
   // The sample duration in seconds, at which we'll report all tag detection and Status Line counts
-  userConfigurationPartition->getConfig("sampleDurS", strlen("sampleDurS"), sample_duration_s);
+  get_config_uint(BM_CFG_PARTITION_USER, "sampleDurS", strlen("sampleDurS"),
+                  &sample_duration_s);
 
   sample_duration_ms = sample_duration_s * 1000;
   _sample_timer_ms = uptimeGetMs();
 
   // Setup the UART – the on-board serial driver that talks to the RS485 transceiver.
-  bristlefin.setRS485HalfDuplex();              // Set the RS485 transceiver to Half-Duplex.
-  PLUART::init(USER_TASK_PRIORITY);   // Initialize the UART FreeRTOS task.
-  PLUART::setBaud(baud_rate_config);            // Baud set per expected baud rate of the sensor.
+  bristlefin.setRS485HalfDuplex();   // Set the RS485 transceiver to Half-Duplex.
+  PLUART::init(USER_TASK_PRIORITY);  // Initialize the UART FreeRTOS task.
+  PLUART::setBaud(baud_rate_config); // Baud set per expected baud rate of the sensor.
   // Setup PLUART transactions for proper RS485 enable Tx / enable Rx
   PLUART::enableTransactions(Bristlefin::setRS485Tx, Bristlefin::setRS485Rx);
-  PLUART::setUseLineBuffer(true);         // Enable PLUART line parsing
+  PLUART::setUseLineBuffer(true); // Enable PLUART line parsing
   /// Warning: PLUART only stores a single line at a time. If your attached payload sends lines
   /// faster than the app reads them, they will be overwritten and data will be lost.
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter((char)line_term_config);
-  PLUART::enable();                             // Turn on the UART.
+  PLUART::enable(); // Turn on the UART.
 
   // Turn on the Rx-Live sensor power
-  bristlefin.enableVbus();                      // Enable the input to the Vout power supply.
-  vTaskDelay(pdMS_TO_TICKS(5));                 // ensure Vbus stable before enable Vout with a 5ms delay.
-  bristlefin.enableVout();                      // enable Vout to turn on the Rx-Live, 12V by default.
+  bristlefin.enableVbus();      // Enable the input to the Vout power supply.
+  vTaskDelay(pdMS_TO_TICKS(5)); // ensure Vbus stable before enable Vout with a 5ms delay.
+  bristlefin.enableVout();      // enable Vout to turn on the Rx-Live, 12V by default.
   // setup the RX-Live interface
   rx_live.init(rx_live_serial_number);
   // Must send an RTMNOW command to enable data output in Profile 0
   //  see section 2.6.1.2.1: 'Profile O will not commence until an RTMNOW or RTM485 command has been issued.'
   rx_live.sendCommand(RX_LIVE_RTMNOW);
   vTaskDelay(pdMS_TO_TICKS(150));
-  printf("tx_buffer %u bytes, can store %u tags.\n", MAX_TAGS * RX_LIVE_DETECTION_SIZE, MAX_TAGS);
+  printf("tx_buffer %u bytes, can store %u tags.\n", MAX_TAGS * RX_LIVE_DETECTION_SIZE,
+         MAX_TAGS);
 }
 
 void loop() {
@@ -222,20 +226,20 @@ void loop() {
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
     // Print the payload data to a Spotter SD file, to the Spotter console, and to the printf console.
-    bm_fprintf(0, "rx_live_raw.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
+    spotter_log(0, "rx_live_raw.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+    spotter_log_console(0, "[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
               rtcTimeBuffer, read_len, payload_buffer);
-    printf("[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
-           rtcTimeBuffer, read_len, payload_buffer);
+    printf("[rx-live-raw] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+           read_len, payload_buffer);
 
     // pass the line into the Rx-LIVE state machine and parser.
-    RxLiveStatusCode rx_code = rx_live.run((const uint8_t*)payload_buffer, read_len);
+    RxLiveStatusCode rx_code = rx_live.run((const uint8_t *)payload_buffer, read_len);
     // If we receive a return code that indicates an interesting state change or error, log it for testing and debugging.
     if (rx_code > RX_CODE_INFO) {
-      bm_fprintf(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
-           uptimeGetMs(), rtcTimeBuffer, rx_code);
-      bm_printf(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
+      spotter_log(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
+                 uptimeGetMs(), rtcTimeBuffer, rx_code);
+      spotter_log_console(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
                 rtcTimeBuffer, rx_code);
       printf("[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d\n", uptimeGetMs(),
              rtcTimeBuffer, rx_code);
@@ -252,7 +256,7 @@ void loop() {
       printf("[rx-live-state] :: %lu STS polls received in session.\n", rx_live_sts_count);
     }
     ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
-  } else { // No new UART Rx line available.
+  } else {                        // No new UART Rx line available.
     // Run RxLive state machine without Rx data to service the state machine timers
     RxLiveStatusCode rx_code = rx_live.run(nullptr, 0);
     // An interesting state change or an error
@@ -263,9 +267,9 @@ void loop() {
       char rtcTimeBuffer[32];
       rtcPrint(rtcTimeBuffer, &time_and_date);
       // Log the state transition or error to Spotter SD card and USB console.
-      bm_fprintf(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
-           uptimeGetMs(), rtcTimeBuffer, rx_code);
-      bm_printf(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
+      spotter_log(0, "rx_live_state.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, rx_code: %d\n",
+                 uptimeGetMs(), rtcTimeBuffer, rx_code);
+      spotter_log_console(0, "[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d", uptimeGetMs(),
                 rtcTimeBuffer, rx_code);
       printf("[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d\n", uptimeGetMs(),
              rtcTimeBuffer, rx_code);
@@ -288,8 +292,7 @@ void loop() {
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
-  else if (led2State &&
-           ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
+  else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     bristlefin.setLed(2, Bristlefin::LED_OFF);
     ledLinePulse = -1;
     led2State = false;
@@ -303,16 +306,14 @@ void loop() {
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!led1State &&
-      ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State &&
-           ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
