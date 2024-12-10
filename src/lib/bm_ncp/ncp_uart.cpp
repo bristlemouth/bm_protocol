@@ -209,7 +209,7 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     getFWVersion(&dev_info->info.ver_major, &dev_info->info.ver_minor, &dev_info->info.ver_rev);
 
     // TODO - get actual hardware version
-    dev_info->info.ver_hw = 0;
+    dev_info->info.ver_hw = getHwVersion();
 
     dev_info->ver_str_len = ver_str_len;
     dev_info->dev_name_len = dev_name_len;
@@ -246,6 +246,11 @@ static bool bcmp_resource_request_cb(uint64_t node_id) {
     // send back the resource info for the node_id
     bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
   }
+  return true;
+}
+
+static bool node_id_request_cb(void) {
+  bm_serial_send_node_id_reply(getNodeId());
   return true;
 }
 
@@ -339,6 +344,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.bcmp_info_response_fn = NULL;
   bm_serial_callbacks.bcmp_resource_request_fn = bcmp_resource_request_cb;
   bm_serial_callbacks.bcmp_resource_response_fn = NULL;
+  bm_serial_callbacks.node_id_request_fn = node_id_request_cb;
+  bm_serial_callbacks.node_id_reply_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
