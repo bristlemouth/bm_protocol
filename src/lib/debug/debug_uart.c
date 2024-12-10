@@ -352,7 +352,7 @@ static BaseType_t debugSerialCommand(char *writeBuffer,
       } else if (strncmp(handle_string, "lpuart", handle_string_len) == 0){
         LL_LPUART_SetBaudRate((USART_TypeDef *)handle->device,
                         LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
-                        LL_LPUART_PRESCALER_DIV64, new_baud);
+                        LL_LPUART_PRESCALER_DIV8, new_baud);
 #endif
       } else if (strncmp(handle_string, "usart2", handle_string_len) == 0) {
         // TODO - verify prescaler and oversampling
