@@ -1,10 +1,11 @@
 #include "ncp_dfu.h"
 #include "FreeRTOS.h"
-#include "dfu.h"
+#include "app_util.h"
 #include "bm_serial.h"
 #include "bootutil/bootutil_public.h"
 #include "bootutil/image.h"
 #include "device_info.h"
+#include "dfu.h"
 #include "external_flash_partitions.h"
 #include "flash_map_backend/flash_map_backend.h"
 #include "lpm.h"
@@ -12,7 +13,6 @@
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <stdio.h>
 
 typedef struct __attribute__((__packed__)) {
@@ -127,7 +127,7 @@ static BmDfuErr _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
         .gitSHA = dfu_start->gitSHA,
     };
     if (!bm_dfu_initiate_update(info, dfu_start->node_id, _update_success_cb,
-                                NODE_UPDATE_TIMEOUT_MS)) {
+                                NODE_UPDATE_TIMEOUT_MS, true)) {
       break;
     }
     rval = BmDfuErrNone;
