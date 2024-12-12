@@ -181,10 +181,10 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_get(node_id, partition, key_str_str_len, key_str, &err, NULL)) {
-          printf("Failed to send message config get\n");
+        if (bcmp_config_get(node_id, partition, key_str_str_len, key_str, &err, NULL)) {
+          printf("Successfully sent config get msg\n");
         } else {
-          printf("Succesfully sent config get msg\n");
+          printf("Failed to send config get msg\n");
         }
       } else if (strncmp("set", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
@@ -276,11 +276,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         default:
           break;
         }
-        if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                             cbor_buf, &err, NULL)) {
-          printf("Failed to send message config set\n");
+        if (bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size, cbor_buf,
+                            &err, NULL)) {
+          printf("Successfully sent config set msg\n");
         } else {
-          printf("Succesfully sent config set msg\n");
+          printf("Failed to send config set msg\n");
         }
         vPortFree(cbor_buf);
       } else if (strncmp("commit", cmd_id_str, cmd_id_str_len) == 0) {
@@ -305,10 +305,10 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_commit(node_id, partition, &err)) {
-          printf("Failed to send config commit\n");
+        if (bcmp_config_commit(node_id, partition, &err)) {
+          printf("Successfully sent config commit msg\n");
         } else {
-          printf("Succesfully config commit send\n");
+          printf("Failed to send config commit\n");
         }
       } else if (strncmp("status", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
@@ -332,10 +332,10 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_status_request(node_id, partition, &err, NULL)) {
-          printf("Failed to send status request \n");
+        if (bcmp_config_status_request(node_id, partition, &err, NULL)) {
+          printf("Successfully sent status request msg\n");
         } else {
-          printf("Successful status request send\n");
+          printf("Failed to send status request msg\n");
         }
       } else if (strncmp("del", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
@@ -362,9 +362,9 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         if (bcmp_config_del_key(node_id, partition, key_str_str_len, key_str, NULL)) {
-          printf("Successfully sent del key request\n");
+          printf("Successfully sent del key request msg\n");
         } else {
-          printf("Failed to send del key request\n");
+          printf("Failed to send del key request msg\n");
         }
       } else {
         printf("Invalid arguments\n");
