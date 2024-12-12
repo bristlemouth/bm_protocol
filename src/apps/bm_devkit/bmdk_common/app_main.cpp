@@ -10,9 +10,9 @@
 #include "usart.h"
 #include "usb_otg.h"
 
-// Includes for FreeRTOS
-#include "FreeRTOS.h"
-#include "task.h"
+#include "bm_config.h"
+#include "bm_os.h"
+#include "spotter.h"
 #include "task_priorities.h"
 
 #include "app_pub_sub.h"
@@ -70,6 +70,7 @@ extern "C" {
 
 #define LED_ON (0)
 #define LED_OFF (1)
+#define bmdk_log_filename "bmdk.log"
 
 #include <stdio.h>
 #include <string.h>
@@ -181,18 +182,11 @@ extern "C" int main(void) {
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
 
-  BaseType_t rval = xTaskCreate(
-      defaultTask, "Default",
-      128 * 4, // TODO - verify stack size
-      NULL,
-      2, // Start with very high priority during boot then downgrade once done initializing everything
-      NULL);
-  configASSERT(rval == pdTRUE);
+  BmErr err = bm_task_create(defaultTask, "Default", 128 * 4, NULL, 2, NULL);
+  configASSERT(err == BmOK);
+  bm_start_scheduler();
 
-  // Start FreeRTOS scheduler
-  vTaskStartScheduler();
-
-  /* We should never get here as control is now taken by the scheduler */
+  /* Normally we don't get here because control is taken by the scheduler */
 
   while (1) {
   };
@@ -305,8 +299,13 @@ static const DebugGpio_t debugGpioPins[] = {
 static void user_task(void *parameters);
 
 void user_code_start() {
-  BaseType_t rval = xTaskCreate(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
-  configASSERT(rval == pdPASS);
+  BmErr err = bm_task_create(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
+  if (err != BmOK) {
+    static const char *err_str = "Failed to create user task\n";
+    bm_debug(err_str);
+    spotter_log(0, bmdk_log_filename, USE_TIMESTAMP, err_str);
+    spotter_log_console(0, err_str);
+  }
 }
 
 static void user_task(void *parameters) {
@@ -316,13 +315,13 @@ static void user_task(void *parameters) {
 
   for (;;) {
     loop();
+
     /*
-      DO NOT REMOVE
-      This vTaskDelay delay is REQUIRED for the FreeRTOS task scheduler
+      This delay is required for the scheduler
       to allow for lower priority tasks to be serviced.
-      Keep this delay in the range of 10 to 100 ms.
+      Should typically stay in the 10 to 100 ms range.
     */
-    vTaskDelay(pdMS_TO_TICKS(10));
+    bm_delay(10);
   }
 }
 /* USER CODE EXECUTED HERE END */
@@ -412,6 +411,6 @@ static void defaultTask(void *parameters) {
 
   while (1) {
     /* Do nothing */
-    vTaskDelay(1000);
+    bm_delay(1000);
   }
 }
