@@ -3,8 +3,8 @@
 */
 
 #include "abstract_htu_sensor.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "sensorSampler.h"
@@ -13,6 +13,7 @@
 #include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include "bm_printf.h"
 
 static AbstractHtu *_htu;
 static float _latestHumidity = 0.0;
@@ -56,9 +57,9 @@ static bool htuSample() {
     rtcPrint(rtcTimeBuffer, &time_and_date);
     printf("hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(), rtcTimeBuffer,
            _humTempData.humidity, _humTempData.temperature);
-    bm_fprintf(0, "hum_temp.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(),
+    spotter_log(0, "hum_temp.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, hum: %f, temp: %f\n", uptimeGetMs(),
                rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
-    bm_printf(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(),
+    spotter_log_console(0, "hum_temp | tick: %llu, rtc: %s, hum: %f, temp: %f", uptimeGetMs(),
               rtcTimeBuffer, _humTempData.humidity, _humTempData.temperature);
 
     taskENTER_CRITICAL();

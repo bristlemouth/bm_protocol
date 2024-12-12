@@ -1,15 +1,15 @@
 #include "bridgePowerController.h"
 #include "FreeRTOS.h"
 #include "app_pub_sub.h"
-#include "bm_l2.h"
+#include "app_util.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "l2.h"
 #include "sensorController.h"
 #include "stm32_rtc.h"
 #include "task.h"
 #include "task_priorities.h"
-#include "util.h"
 #include <cinttypes>
 #include <stdio.h>
 #ifdef RAW_PRESSURE_ENABLE
@@ -26,7 +26,7 @@ BridgePowerController::BridgePowerController(
       _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
       _subsampleIntervalStartS(0), _alignmentS(alignmentS),
       _ticksSamplingEnabled(ticksSamplingEnabled), _timebaseSet(false), _initDone(false),
-      _subsamplingEnabled(subsamplingEnabled), _configError(false), _adin_handle(NULL) {
+      _subsamplingEnabled(subsamplingEnabled), _configError(false) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S || _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
     _configError = true;
@@ -119,13 +119,7 @@ void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     IOWrite(&_BusPowerPin, on);
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     if (notifyL2) {
-      if (_adin_handle) {
-        bm_l2_netif_set_power(_adin_handle, on);
-      } else {
-        if (getAdinDevice()) {
-          bm_l2_netif_set_power(_adin_handle, on);
-        }
-      }
+      bm_l2_netif_set_power(on);
     }
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge bus power: %d\n",
                    static_cast<int>(on));
@@ -308,23 +302,6 @@ void BridgePowerController::powerControllerRun(void *arg) {
   while (true) {
     reinterpret_cast<BridgePowerController *>(arg)->_update();
   }
-}
-
-bool BridgePowerController::getAdinDevice() {
-  bool rval = false;
-  for (uint32_t port = 0; port < bm_l2_get_num_ports(); port++) {
-    adin2111_DeviceHandle_t adin_handle;
-    bm_netdev_type_t dev_type = BM_NETDEV_TYPE_NONE;
-    uint32_t start_port_idx;
-    if (bm_l2_get_device_handle(port, reinterpret_cast<void **>(&adin_handle), &dev_type,
-                                &start_port_idx) &&
-        (dev_type == BM_NETDEV_TYPE_ADIN2111)) {
-      _adin_handle = adin_handle;
-      rval = true;
-      break;
-    }
-  }
-  return rval;
 }
 
 void BridgePowerController::checkAndUpdateTimebase() {

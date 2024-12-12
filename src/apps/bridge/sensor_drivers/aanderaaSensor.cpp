@@ -2,15 +2,15 @@
 #include "aanderaa_data_msg.h"
 #include "app_config.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bridgeLog.h"
 #include "device_info.h"
 #include "reportBuilder.h"
 #include "semphr.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 #include <new>
 
 // TODO - get this from the sensor node itself
@@ -23,7 +23,7 @@ bool AanderaaSensor::subscribe() {
   int topic_strlen =
       snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
-    rval = bm_sub_wl(sub, topic_strlen, aanderaSubCallback);
+    rval = bm_sub_wl(sub, topic_strlen, aanderaSubCallback) == BmOK;
   }
   vPortFree(sub);
   return rval;

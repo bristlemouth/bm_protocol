@@ -214,7 +214,7 @@ set(MICROPY_COMPILER_FLAGS
 
 	${BSP_CPU_FLAGS}
 	)
-
+add_compile_options(${COMPILE_FLAGS})
 
 set(APP_NAME ${APP})
 
@@ -385,7 +385,7 @@ target_include_directories(${EXECUTABLE} PRIVATE
 	)
 
 # Link any libraries the application might have included
-target_link_libraries(${EXECUTABLE} ${APP_LIBS})
+target_link_libraries(${EXECUTABLE} "${APP_LIBS}")
 
 target_linker_map(${EXECUTABLE})
 
@@ -397,8 +397,7 @@ add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
 add_custom_command(
 	TARGET ${EXECUTABLE} POST_BUILD
 	COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE} ${EXECUTABLE}.hex
-	BYPRODUCTS ${EXECUTABLE}.hex
-)
+	BYPRODUCTS ${EXECUTABLE}.hex)
 
 # Generate bin file
 add_custom_command(

@@ -11,22 +11,10 @@ add_subdirectory(${SRC_DIR}/lib/usb usb_build)
 include(${SRC_DIR}/third_party/memfault.cmake)
 
 # Include BCMP
-add_subdirectory(${SRC_DIR}/lib/bcmp bcmp)
-
-# Include BM Common Messages
-add_subdirectory(${SRC_DIR}/lib/bm_common_messages bm_common_messages)
+add_subdirectory(${SRC_DIR}/lib/bm_integration bcmp)
 
 set(BRISTLEMOUTH_FILES
-    ${SRC_DIR}/lib/middleware/bm_pubsub.cpp
-    ${SRC_DIR}/lib/middleware/bm_network.cpp
-    ${SRC_DIR}/lib/middleware/bm_service.cpp
-    ${SRC_DIR}/lib/middleware/services/echo_service.cpp
-    ${SRC_DIR}/lib/middleware/services/sys_info_service.cpp
-    ${SRC_DIR}/lib/middleware/services/config_cbor_map_service.cpp
-    ${SRC_DIR}/lib/middleware/bm_service_request.cpp
-    ${SRC_DIR}/lib/middleware/middleware.cpp
-
-    ${BCMP_FILES}
+    ${BM_INTEGRATION_FILES}
     )
 
 set(BRISTLEMOUTH_INCLUDES
@@ -35,8 +23,9 @@ set(BRISTLEMOUTH_INCLUDES
     ${SRC_DIR}/lib/middleware/services
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc
-    ${BCMP_INCLUDES}
-    ${BM_COMMON_MESSAGES_INCLUDES}
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/include
+    ${CMAKE_BINARY_DIR}/_deps/bm_common-src/third_party/crc
+    ${BM_INTEGRATION_INCLUDES}
     )
 
 set(LIB_FILES
@@ -49,7 +38,6 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/external_flash_partitions.c
     ${SRC_DIR}/lib/common/freertos_support.c
     ${SRC_DIR}/lib/common/gpioISR.c
-    ${SRC_DIR}/lib/common/lib_state_machine.cpp
     ${SRC_DIR}/lib/common/lpm_u5.c
     ${SRC_DIR}/lib/common/lptimTick_u5.c
     ${SRC_DIR}/lib/common/nvmPartition.cpp
@@ -62,12 +50,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/uptime.c
     ${SRC_DIR}/lib/common/util.c
     ${SRC_DIR}/lib/common/watchdog.c
-    ${SRC_DIR}/lib/common/timer_callback_handler.cpp
-    ${SRC_DIR}/lib/bm_common_messages/sys_info_svc_reply_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_request_msg.cpp
-    ${SRC_DIR}/lib/bm_common_messages/config_cbor_map_srv_reply_msg.cpp
     ${SRC_DIR}/lib/sys/ram_partitions.c
-    ${SRC_DIR}/lib/sys/configuration.cpp
+    ${SRC_DIR}/lib/sys/bm_config_wrapper.cpp
     ${SRC_DIR}/lib/debug/debug.c
     ${SRC_DIR}/lib/debug/debug_spotter.cpp
     ${SRC_DIR}/lib/debug/debug_gpio.c
@@ -82,13 +66,7 @@ set(LIB_FILES
     ${SRC_DIR}/lib/debug/debug_bm_service.cpp
     ${SRC_DIR}/lib/debug/debug_configuration.cpp
     ${SRC_DIR}/lib/drivers/abstract/abstract_i2c.cpp
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_bsp.c
     ${SRC_DIR}/lib/drivers/adin2111/src/adi_hal.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_mac.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_phy.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adi_spi_oa.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/adin2111.c
-    ${SRC_DIR}/lib/drivers/adin2111/src/eth_adin2111.cpp
     ${SRC_DIR}/lib/drivers/htu21d.cpp
     ${SRC_DIR}/lib/drivers/ms5803.cpp
     ${SRC_DIR}/lib/drivers/ina232.cpp
@@ -96,6 +74,8 @@ set(LIB_FILES
     ${SRC_DIR}/lib/drivers/protected/protected_i2c.c
     ${SRC_DIR}/lib/drivers/protected/protected_spi.c
     ${SRC_DIR}/lib/drivers/abstract/abstract_spi.cpp
+    ${SRC_DIR}/lib/drivers/bm_dfu_wrapper.cpp
+    ${SRC_DIR}/lib/drivers/bm_rtc_wrapper.c
     ${SRC_DIR}/lib/drivers/stm32_adc.c
     ${SRC_DIR}/lib/drivers/stm32_io.c
     ${SRC_DIR}/lib/drivers/stm32_rtc.c
@@ -112,24 +92,17 @@ set(LIB_FILES
     ${SRC_DIR}/lib/common/LineParser.cpp
     ${SRC_DIR}/lib/common/OrderedSeparatorLineParser.cpp
     ${SRC_DIR}/third_party/aligned_malloc/aligned_malloc.c
-    ${SRC_DIR}/third_party/crc/crc16.c
-    ${SRC_DIR}/third_party/crc/crc32.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/printf/printf.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborparser.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder_float.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborencoder.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborerrorstrings.c
-    ${SRC_DIR}/third_party/tinycbor/src/cborvalidation.c
     ${SRC_DIR}/lib/drivers/bme280driver.cpp
     ${SRC_DIR}/third_party/BME280_driver/bme280.c
     )
 
 set(LIB_INCLUDES
-    ${SRC_DIR}/lib/bcmp
+    ${SRC_DIR}/lib/bm_integration
     ${SRC_DIR}/lib/cli
     ${SRC_DIR}/lib/common
     ${SRC_DIR}/lib/debug
@@ -144,7 +117,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/middleware
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc/
-    ${SRC_DIR}/third_party/crc
     ${SRC_DIR}/third_party/fnv/
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/
     ${SRC_DIR}/third_party/printf/
@@ -152,7 +124,6 @@ set(LIB_INCLUDES
     ${SRC_DIR}/lib/bristlefin
     ${SRC_DIR}/lib/sensor_sampler
     ${SRC_DIR}/lib/sys
-    ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/third_party/BME280_driver
     )
 
@@ -242,7 +213,6 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/sensors/sensors.cpp
     ${MCUBOOT_FILES}
@@ -270,7 +240,22 @@ set(APP_INCLUDES
 
 set(APP_LIBS
     lwipcore
+    bmcore
     )
+
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${SRC_DIR}/lib/lwip
+    ${LWIP_INCLUDE_DIRS}
+    ${BM_INTEGRATION_INCLUDES}
+    ${BRISTLEMOUTH_INCLUDES}
+)
+set(BM_CORE_FREERTOS_INCLUDES
+    ${FREERTOS_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common
+    ${SRC_DIR}/lib/common
+    ${MEMFAULT_INCLUDES}
+)
 
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
@@ -278,7 +263,15 @@ set(APP_DEFINES
 
     # Add network stress test functions
     STRESS_TEST_ENABLE
-    )
+)
+
+include(${SRC_DIR}/lib/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${SRC_DIR}/lib/bm_core bmcore)
+target_include_directories(bmcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common)
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
+target_link_libraries(bmcore PUBLIC lwipcore)
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")

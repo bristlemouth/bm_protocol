@@ -23,4 +23,5 @@ add_compile_options(
     -DGTEST_BREAK_ON_FAILURE=1
 )
 
+add_compile_definitions(ENABLE_TESTING)
 add_subdirectory("src")

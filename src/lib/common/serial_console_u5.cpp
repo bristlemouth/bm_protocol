@@ -8,7 +8,7 @@
 #include "stream_buffer.h"
 #include "task.h"
 #include "task_priorities.h"
-#include "util.h"
+#include "app_util.h"
 
 // Enable echo
 const bool bEcho = true;

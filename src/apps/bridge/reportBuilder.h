@@ -1,9 +1,9 @@
 #pragma once
 
 #include "FreeRTOS.h"
-#include "queue.h"
-#include "configuration.h"
 #include "aanderaaSensor.h"
+#include "configuration.h"
+#include "queue.h"
 #include "softSensor.h"
 
 typedef enum {
@@ -20,6 +20,8 @@ typedef struct {
   uint32_t sensor_data_size;
 } report_builder_queue_item_t;
 
-void reportBuilderInit(cfg::Configuration* sys_cfg);
-void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor_data, uint32_t sensor_data_size, report_builder_message_e msg_type);
-uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32, uint32_t &cbor_config_size);
+void reportBuilderInit(void);
+void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor_data,
+                             uint32_t sensor_data_size, report_builder_message_e msg_type);
+uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
+                                                  uint32_t &cbor_config_size);
