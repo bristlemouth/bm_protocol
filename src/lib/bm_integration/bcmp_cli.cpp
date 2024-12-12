@@ -552,13 +552,16 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         const char *data_str = NULL;
         uint8_t data = 0;
         BaseType_t data_str_len = 0;
-        data_str = FreeRTOS_CLIGetParameter(commandString, 3, &data_str_len);
-        data = (uint8_t)strtoul(data_str, NULL, 0);
-        rb_buf[idx++] = data;
-        if (idx >= CHUNK_SIZE_DFU) {
-          printf("Adding to queue at: %d\n", idx);
-          bm_dfu_host_queue_data(rb_buf, sizeof(rb_buf));
-          idx = 0;
+        uint8_t command_idx = 3;
+        while ((data_str = FreeRTOS_CLIGetParameter(commandString, command_idx++,
+                                                    &data_str_len)) != NULL) {
+          data = (uint8_t)strtoul(data_str, NULL, 0);
+          rb_buf[idx++] = data;
+          if (idx >= CHUNK_SIZE_DFU) {
+            printf("Adding to queue at: %d\n", idx);
+            bm_dfu_host_queue_data(rb_buf, sizeof(rb_buf));
+            idx = 0;
+          }
         }
         printf("DFU Byte Added\n");
       } else if (strncmp("finish", sub_command, command_str_len) == 0) {
