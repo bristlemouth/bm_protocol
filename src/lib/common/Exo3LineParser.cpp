@@ -5,6 +5,10 @@
 #include "Exo3LineParser.h"
 #include "string.h"
 
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
+
 Exo3DataLineParser::Exo3DataLineParser(size_t numValues, const char* header)
     : OrderedSeparatorLineParser("+-", 256, nullptr, numValues + 1, header) {
   // Allocate and set up `valueTypes` based on `num_values`, add one for response identifier header
