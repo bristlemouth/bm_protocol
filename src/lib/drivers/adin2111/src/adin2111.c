@@ -547,6 +547,24 @@ adi_eth_Result_e adin2111_GetLinkStatus(adin2111_DeviceHandle_t hDevice, adin211
 }
 
 /*!
+ * @brief            Renegotiote link
+ *
+ * @param [in]       hDevice     Device driver handle.
+ * @param [in]       port        Port number.
+ *
+ * @return           Status
+ *                  - #ADI_ETH_SUCCESS              Call completed successfully.
+ *
+ * @details          This function restarts auto-negotiation.
+ *
+ * @sa
+*/
+adi_eth_Result_e adin2111_Renegotiate(adin2111_DeviceHandle_t hDevice, adin2111_Port_e port)
+{
+    return phyDriverEntry.Renegotiate(hDevice->pPhyDevice[port]);
+}
+
+/*!
  * @brief           Read MAC statistics counters.
  *
  * @param [in]      hDevice     Device driver handle.

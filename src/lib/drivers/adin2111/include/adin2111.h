@@ -176,6 +176,7 @@ adi_eth_Result_e    adin2111_DisablePort             (adin2111_DeviceHandle_t hD
 adi_eth_Result_e    adin2111_Reset                   (adin2111_DeviceHandle_t hDevice, adi_eth_ResetType_e resetType);
 adi_eth_Result_e    adin2111_SyncConfig              (adin2111_DeviceHandle_t hDevice);
 adi_eth_Result_e    adin2111_GetLinkStatus           (adin2111_DeviceHandle_t hDevice, adin2111_Port_e port, adi_eth_LinkStatus_e *linkStatus);
+adi_eth_Result_e    adin2111_Renegotiate             (adin2111_DeviceHandle_t hDevice, adin2111_Port_e port);
 adi_eth_Result_e    adin2111_GetStatCounters         (adin2111_DeviceHandle_t hDevice, adin2111_Port_e port, adi_eth_MacStatCounters_t *stat);
 adi_eth_Result_e    adin2111_LedEn                   (adin2111_DeviceHandle_t hDevice, adin2111_Port_e port, bool enable);
 adi_eth_Result_e    adin2111_SetLoopbackMode         (adin2111_DeviceHandle_t hDevice, adin2111_Port_e port, adi_phy_LoopbackMode_e loopbackMode);
