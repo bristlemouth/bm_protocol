@@ -19,3 +19,8 @@
 #define MEMFAULT_METRICS_HEARTBEAT_INTERVAL_SECS (6 * 60 * 60)
 
 #define MEMFAULT_WATCHDOG_SW_TIMEOUT_SECS 30
+
+// If you want to enable heap stats collection while debugging, uncomment the following lines
+// #define MEMFAULT_COREDUMP_COLLECT_HEAP_STATS 1
+// #define MEMFAULT_FREERTOS_PORT_HEAP_STATS_ENABLE 1
+// #define MEMFAULT_COREDUMP_HEAP_STATS_LOCK_ENABLE 0
