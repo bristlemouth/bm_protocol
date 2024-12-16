@@ -103,7 +103,7 @@ static BaseType_t dfuCommand( char *writeBuffer,
             }
             image_info.filter_key = filter_key;
             printf("Image valid, attempting to update\n");
-            if(!bm_dfu_initiate_update(image_info, node_id, updateSuccessCallback, timeoutMS)){
+            if(!bm_dfu_initiate_update(image_info, node_id, updateSuccessCallback, timeoutMS, true)){
                 printf("Failed to start update\n");
             }
 

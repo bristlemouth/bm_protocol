@@ -10,9 +10,12 @@
 #include "configuration.h"
 
 #include "app_util.h"
+#include "dfu.h"
 #include "messages.h"
 #include "pubsub.h"
+#include "serial_console.h"
 extern "C" {
+#include "dfu_host.h"
 #include "messages/config.h"
 #include "messages/heartbeat.h"
 #include "messages/info.h"
@@ -25,6 +28,8 @@ extern "C" {
 #include "util.h"
 
 #include "debug.h"
+
+#define CHUNK_SIZE_DFU (CONSOLE_RX_BUFF_SIZE * 2)
 
 static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
                               const char *commandString);
@@ -48,11 +53,24 @@ static const CLI_Command_Definition_t cmd_bcmp = {
     " * bm resources <node_id>\n"
     " * bm sub <topic>\n"
     " * bm unsub <topic>\n"
-    " * bm pub <topic> <data> <type> <version>\n",
+    " * bm pub <topic> <data> <type> <version>\n"
+    " * bm dfu start <node_id> <size> <crc> <major> <minor> <sha>\n"
+    " * bm dfu byte <data>\n"
+    " * bm dfu finish\n",
     // Command function
     cmd_bcmp_fn,
     // Number of parameters
     -1};
+
+static uint8_t rb_buf[CHUNK_SIZE_DFU] = {0};
+
+static void updateSuccessCallback(bool success, BmDfuErr err, uint64_t node_id) {
+  if (success) {
+    printf("Update successful %016" PRIx64 "\n", node_id);
+  } else {
+    printf("Update failed, err: %d\n", err);
+  }
+}
 
 static void print_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
                                 const uint8_t *data, uint16_t data_len, uint8_t type,
@@ -163,10 +181,10 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_get(node_id, partition, key_str_str_len, key_str, &err, NULL)) {
-          printf("Failed to send message config get\n");
+        if (bcmp_config_get(node_id, partition, key_str_str_len, key_str, &err, NULL)) {
+          printf("Successfully sent config get msg\n");
         } else {
-          printf("Succesfully sent config get msg\n");
+          printf("Failed to send config get msg\n");
         }
       } else if (strncmp("set", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
@@ -258,11 +276,11 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         default:
           break;
         }
-        if (!bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size,
-                             cbor_buf, &err, NULL)) {
-          printf("Failed to send message config set\n");
+        if (bcmp_config_set(node_id, partition, key_str_str_len, key_str, buffer_size, cbor_buf,
+                            &err, NULL)) {
+          printf("Successfully sent config set msg\n");
         } else {
-          printf("Succesfully sent config set msg\n");
+          printf("Failed to send config set msg\n");
         }
         vPortFree(cbor_buf);
       } else if (strncmp("commit", cmd_id_str, cmd_id_str_len) == 0) {
@@ -287,10 +305,10 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_commit(node_id, partition, &err)) {
-          printf("Failed to send config commit\n");
+        if (bcmp_config_commit(node_id, partition, &err)) {
+          printf("Successfully sent config commit msg\n");
         } else {
-          printf("Succesfully config commit send\n");
+          printf("Failed to send config commit\n");
         }
       } else if (strncmp("status", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
@@ -314,10 +332,10 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         BmErr err;
-        if (!bcmp_config_status_request(node_id, partition, &err, NULL)) {
-          printf("Failed to send status request \n");
+        if (bcmp_config_status_request(node_id, partition, &err, NULL)) {
+          printf("Successfully sent status request msg\n");
         } else {
-          printf("Successful status request send\n");
+          printf("Failed to send status request msg\n");
         }
       } else if (strncmp("del", cmd_id_str, cmd_id_str_len) == 0) {
         const char *node_id_str;
@@ -344,9 +362,9 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           break;
         }
         if (bcmp_config_del_key(node_id, partition, key_str_str_len, key_str, NULL)) {
-          printf("Successfully sent del key request\n");
+          printf("Successfully sent del key request msg\n");
         } else {
-          printf("Failed to send del key request\n");
+          printf("Failed to send del key request msg\n");
         }
       } else {
         printf("Invalid arguments\n");
@@ -483,6 +501,75 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       }
       vPortFree(topic);
       vPortFree(data);
+    } else if (strncmp("dfu", command, command_str_len) == 0) {
+      const char *sub_command = FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
+      static uint32_t idx = 0;
+
+      if (command_str_len == 0) {
+        printf("ERR start or chunk must be defined\n");
+        break;
+      }
+      if (strncmp("start", sub_command, command_str_len) == 0) {
+        const char *node_id_str = NULL;
+        BaseType_t node_id_str_len = 0;
+        node_id_str = FreeRTOS_CLIGetParameter(commandString, 3, &node_id_str_len);
+        const char *size_str = NULL;
+        BaseType_t size_str_len = 0;
+        size_str = FreeRTOS_CLIGetParameter(commandString, 4, &size_str_len);
+        const char *crc_str = NULL;
+        BaseType_t crc_str_len = 0;
+        crc_str = FreeRTOS_CLIGetParameter(commandString, 5, &crc_str_len);
+        const char *major_str = NULL;
+        BaseType_t major_str_len = 0;
+        major_str = FreeRTOS_CLIGetParameter(commandString, 6, &major_str_len);
+        const char *minor_str = NULL;
+        BaseType_t minor_str_len = 0;
+        minor_str = FreeRTOS_CLIGetParameter(commandString, 7, &minor_str_len);
+        const char *sha_str = NULL;
+        BaseType_t sha_str_len = 0;
+        sha_str = FreeRTOS_CLIGetParameter(commandString, 8, &sha_str_len);
+        if (!size_str || !crc_str || !major_str || !minor_str || !sha_str) {
+          printf("Invalid arguments\n");
+          break;
+        }
+
+        idx = 0;
+
+        BmDfuImgInfo image_info;
+        uint64_t node_id = strtoull(node_id_str, NULL, 0);
+        image_info.image_size = strtoul(size_str, NULL, 0);
+        image_info.chunk_size = CHUNK_SIZE_DFU;
+        image_info.crc16 = strtoul(crc_str, NULL, 0);
+        image_info.major_ver = strtoul(major_str, NULL, 0);
+        image_info.minor_ver = strtoul(minor_str, NULL, 0);
+        image_info.filter_key = BM_DFU_IMG_INFO_FORCE_UPDATE;
+        image_info.gitSHA = strtoul(sha_str, NULL, 0);
+        if (!bm_dfu_initiate_update(image_info, node_id, updateSuccessCallback, 600000,
+                                    false)) {
+          printf("Failed to start update\n");
+        }
+      } else if (strncmp("byte", sub_command, command_str_len) == 0) {
+        const char *data_str = NULL;
+        uint8_t data = 0;
+        BaseType_t data_str_len = 0;
+        uint8_t command_idx = 3;
+        while ((data_str = FreeRTOS_CLIGetParameter(commandString, command_idx++,
+                                                    &data_str_len)) != NULL) {
+          data = (uint8_t)strtoul(data_str, NULL, 0);
+          rb_buf[idx++] = data;
+          if (idx >= CHUNK_SIZE_DFU) {
+            printf("Adding to queue at: %d\n", idx);
+            bm_dfu_host_queue_data(rb_buf, sizeof(rb_buf));
+            idx = 0;
+          }
+        }
+        printf("DFU Byte Added\n");
+      } else if (strncmp("finish", sub_command, command_str_len) == 0) {
+        printf("Adding to queue at: %d\n", idx);
+        bm_dfu_host_queue_data(rb_buf, sizeof(rb_buf));
+        idx = 0;
+        printf("DFU Finish\n");
+      }
     } else {
       printf("ERR Invalid arguments\n");
     }
