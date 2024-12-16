@@ -1,6 +1,6 @@
 #include "stm32_rtc.h"
 #include "stm32u5xx_ll_rcc.h"
-#include "util.h"
+#include "app_util.h"
 #include <stdio.h>
 #include <string.h>
 

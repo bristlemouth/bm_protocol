@@ -5,7 +5,6 @@
 #include "gtest/gtest.h"
 
 #include "fff.h"
-#include "util.h"
 #include "string.h"
 #include "OrderedSeparatorLineParser.h"
 #include "Exo3LineParser.h"

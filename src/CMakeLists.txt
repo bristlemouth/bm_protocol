@@ -214,21 +214,33 @@ set(MICROPY_COMPILER_FLAGS
 
 	${BSP_CPU_FLAGS}
 	)
-
+add_compile_options(${COMPILE_FLAGS})
 
 set(APP_NAME ${APP})
 
+set(APP_DIR_COMMON "")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(APP_NAME ${APP_NAME}-dbg)
 endif()
 if(CMAKE_APP_TYPE STREQUAL "BMDK")
-	add_subdirectory(apps/bm_devkit/${APP})
+    set(APP_DIR_COMMON ${CMAKE_CURRENT_LIST_DIR}/apps/bm_devkit/bmdk_common)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/bm_devkit/${APP})
 elseif(CMAKE_APP_TYPE STREQUAL "bristleback")
-	add_subdirectory(apps/bristleback_apps/${APP})
+    set(APP_DIR_COMMON ${CMAKE_CURRENT_LIST_DIR}/apps/bristleback_apps/bristleback_apps_common)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/bristleback_apps/${APP})
 elseif(CMAKE_APP_TYPE STREQUAL "rs232_expander")
-	add_subdirectory(apps/rs232_expander_apps/${APP})
+    set(APP_DIR_COMMON ${CMAKE_CURRENT_LIST_DIR}/apps/rs232_expander_apps/rs232_expander_apps_common)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/rs232_expander_apps/${APP})
 else()
-    add_subdirectory(apps/${APP})
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/${APP})
+endif()
+
+if (DFU_HOST  STREQUAL 1)
+list(APPEND APP_DEFINES "BM_DFU_HOST=1")
+message(STATUS "DFU HOST AND CLIENT")
+else()
+list(APPEND APP_DEFINES "BM_DFU_HOST=0")
+message(STATUS "DFU CLIENT ONLY")
 endif()
 
 # TODO - remove once we are using just one type of Aanderaa current meter
@@ -264,16 +276,6 @@ set(LINKER_DEFINES
 	MCUBOOT_HEADER_SIZE=${MCUBOOT_HEADER_SIZE}
 	SCRATCH_SIZE=${MCUBOOT_SCRATCH_SIZE}
  )
-
-add_compile_definitions(
-	${BSP_DEFINES}
-	${APP_DEFINES}
-	${LINKER_DEFINES}
-	${BOOTLOADER_DEFINES}
-	MCUBOOT_BOOT_MAX_ALIGN=${MCUBOOT_BOOT_MAX_ALIGN}
-	$<$<CONFIG:Debug>:BUILD_DEBUG=1>
-	$<$<CONFIG:Release>:BUILD_DEBUG=0>
-	)
 
 add_compile_options(${COMPILE_FLAGS})
 
@@ -320,6 +322,23 @@ add_link_options(
         )
 
 add_executable(${EXECUTABLE})
+
+# Include LIB directory
+if(NOT APP MATCHES "bootloader")
+add_subdirectory(lib)
+add_subdirectory(third_party)
+endif()
+
+add_compile_definitions(
+	${BSP_DEFINES}
+    ${LIB_DEFINES}
+	${APP_DEFINES}
+	${LINKER_DEFINES}
+	${BOOTLOADER_DEFINES}
+	MCUBOOT_BOOT_MAX_ALIGN=${MCUBOOT_BOOT_MAX_ALIGN}
+	$<$<CONFIG:Debug>:BUILD_DEBUG=1>
+	$<$<CONFIG:Release>:BUILD_DEBUG=0>
+	)
 
 # Make sure the linker file processing gets run before main app is built
 add_dependencies(${EXECUTABLE} linkerscript)
@@ -375,17 +394,96 @@ endif() # if (APP STREQUAL "bootloader")
 
 target_sources(${EXECUTABLE} PRIVATE
 	${BSP_FILES}
+    ${LIB_FILES}
+    ${THIRD_PARTY_FILES}
 	${APP_FILES}
 	${KEY_FILES}
 	${CMAKE_CURRENT_BINARY_DIR}/version.c)
 
 target_include_directories(${EXECUTABLE} PRIVATE
 	${BSP_INCLUDES}
+    ${LIB_INCLUDES}
+    ${APP_DIR_COMMON}
+    ${THIRD_PARTY_INCLUDES}
 	${APP_INCLUDES}
 	)
 
+if(NOT APP MATCHES "bootloader")
+# Include bm_core
+set(BM_CORE_LWIP_INCLUDES
+    ${LIB_DIR}/lwip
+    ${THIRD_PARTY_INCLUDES}
+)
+
+set(BM_CORE_FREERTOS_INCLUDES
+    ${THIRD_PARTY_INCLUDES}
+    ${LIB_DIR}/common
+    ${MEMFAULT_INCLUDES}
+    ${APP_DIR}
+    ${APP_DIR_COMMON}
+)
+
+include_directories("${LIB_DIR}/bm_integration")
+include(${LIB_DIR}/bm_core/cmake/bm_core.cmake)
+setup_bm_ip_stack(LWIP "${BM_CORE_LWIP_INCLUDES}")
+setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
+add_subdirectory(${LIB_DIR}/bm_core bmcore)
+target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
+target_link_libraries(bmcore PUBLIC lwipcore)
+
+if (USE_MICROPYTHON STREQUAL 1)
+include(${LIB_DIR}/micropython/CMakeLists.txt)
+
+list(APPEND APP_DEFINES "USE_MICROPYTHON")
+list(APPEND APP_DEFINES "MICROPY_HEAP_SIZE=1024*64;${MICROPY_DEFINITIONS}")
+list(APPEND APP_LIBS micropython)
+list(APPEND APP_INCLUDES "${MICROPY_INCLUDE_DIRS}")
+list(APPEND APP_FILES
+        ${LIB_DIR}/micropython/micropython_freertos.c
+        ${LIB_DIR}/micropython/mphalport.c)
+
+target_compile_options(
+    micropython PRIVATE
+    -Wno-dangling-pointer -Wno-sign-compare
+    )
+
+set_source_files_properties(
+    ${LIB_DIR}/micropython/mphalport.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+set_source_files_properties(
+    ${LIB_DIR}/micropython/micropython_freertos.c
+
+    DIRECTORY ${SRC_DIR}
+
+    PROPERTIES
+    COMPILE_FLAGS -Wno-unused-parameter
+    )
+
+endif()
+
+
 # Link any libraries the application might have included
-target_link_libraries(${EXECUTABLE} ${APP_LIBS})
+target_link_libraries(${EXECUTABLE}
+    bmcore
+    "${APP_LIBS}"
+    "${THIRD_PARTY_LIBS}"
+    "${LIB_LIBS}"
+)
+
+else()
+
+# Link any libraries the application might have included
+target_link_libraries(${EXECUTABLE}
+    "${APP_LIBS}"
+)
+
+endif()
 
 target_linker_map(${EXECUTABLE})
 
@@ -397,8 +495,7 @@ add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
 add_custom_command(
 	TARGET ${EXECUTABLE} POST_BUILD
 	COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE} ${EXECUTABLE}.hex
-	BYPRODUCTS ${EXECUTABLE}.hex
-)
+	BYPRODUCTS ${EXECUTABLE}.hex)
 
 # Generate bin file
 add_custom_command(

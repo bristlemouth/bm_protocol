@@ -9,10 +9,10 @@
 #include "device_info.h"
 #include "queue.h"
 #include "rbrCodaSensor.h"
+#include "seapointTurbiditySensor.h"
 #include "semphr.h"
 #include "sensorController.h"
 #include "softSensor.h"
-#include "seapointTurbiditySensor.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
@@ -628,16 +628,16 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                      "Failed to open seapoint_turbidity sample in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
-                                               &seapoint_turbidity_sample.turbidity_s_mean_ftu) !=
-        CborNoError) {
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &seapoint_turbidity_sample.turbidity_s_mean_ftu) != CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to add seapoint_turbidity sample member in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
-                                               &seapoint_turbidity_sample.turbidity_r_mean_ftu) !=
-        CborNoError) {
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &seapoint_turbidity_sample.turbidity_r_mean_ftu) != CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to add seapoint_turbidity sample member in addSamplesToReport\n");
       break;
@@ -660,34 +660,32 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
 }
 
 // Task init
-void reportBuilderInit(cfg::Configuration *sys_cfg) {
-  configASSERT(sys_cfg);
-  bool save_config = false;
+void reportBuilderInit(void) {
+  bool save = false;
   _ctx._samplesPerReport = DEFAULT_SAMPLES_PER_REPORT;
-  if (!sys_cfg->getConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
-                          _ctx._samplesPerReport)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLES_PER_REPORT,
+                       strlen(AppConfig::SAMPLES_PER_REPORT), &_ctx._samplesPerReport)) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get samples per report from config, using default %" PRIu32
                    " and saving to config\n",
                    _ctx._samplesPerReport);
-    sys_cfg->setConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
-                       _ctx._samplesPerReport);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLES_PER_REPORT,
+                    strlen(AppConfig::SAMPLES_PER_REPORT), _ctx._samplesPerReport);
+    save = true;
   }
   _ctx._transmitAggregations = DEFAULT_TRANSMIT_AGGREGATIONS;
-  if (!sys_cfg->getConfig(AppConfig::TRANSMIT_AGGREGATIONS,
-                          strlen(AppConfig::TRANSMIT_AGGREGATIONS),
-                          _ctx._transmitAggregations)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TRANSMIT_AGGREGATIONS,
+                       strlen(AppConfig::TRANSMIT_AGGREGATIONS), &_ctx._transmitAggregations)) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get transmit aggregations from config, using default %" PRIu32
                    " and saving to config\n",
                    _ctx._transmitAggregations);
-    sys_cfg->setConfig(AppConfig::TRANSMIT_AGGREGATIONS,
-                       strlen(AppConfig::TRANSMIT_AGGREGATIONS), _ctx._transmitAggregations);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TRANSMIT_AGGREGATIONS,
+                    strlen(AppConfig::TRANSMIT_AGGREGATIONS), _ctx._transmitAggregations);
+    save = true;
   }
-  if (save_config) {
-    sys_cfg->saveConfig(false);
+  if (save) {
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
   }
   _ctx._sample_counter = 0;
   _ctx._config_mutex = xSemaphoreCreateMutex();

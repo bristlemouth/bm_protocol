@@ -1,22 +1,22 @@
 #include "sensorController.h"
 #include "aanderaaSensor.h"
 #include "app_config.h"
+#include "app_util.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
 #include "device_info.h"
 #include "rbrCodaSensor.h"
 #include "reportBuilder.h"
-#include "softSensor.h"
 #include "seapointTurbiditySensor.h"
+#include "softSensor.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
 #include "task_priorities.h"
-#include "util.h"
 
 // TODO: Once we have bcmp_config request reply, we should read this value from the modules.
-#define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000 // default is 1 minute: 60,000 ms
-#define DEFAULT_SOFT_READING_PERIOD_MS 500          // default is 500 ms (2 HZ)
-#define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000      // default is 1 second: 1000 ms (1 HZ)
+#define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
+#define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
+#define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -27,7 +27,6 @@ typedef struct sensorControllerCtx {
   uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   bool _initialized;
   BridgePowerController *_bridge_power_controller;
-  cfg::Configuration *_sys_cfg;
   uint32_t current_reading_period_ms;
   uint32_t soft_reading_period_ms;
   uint32_t rbr_coda_reading_period_ms;
@@ -48,74 +47,70 @@ static void abstractSensorAddSensorSub(AbstractSensor *sensor);
  * This controller is responsible for identifying & detecting sensor nodes and subscribing to them.
  * It will also aggregate the data from the Aanderaa nodes and transmit it over the spotter_tx service.
  */
-void sensorControllerInit(BridgePowerController *power_controller,
-                          cfg::Configuration *sys_cfg) {
+void sensorControllerInit(BridgePowerController *power_controller) {
   configASSERT(power_controller);
-  configASSERT(sys_cfg);
   _ctx._bridge_power_controller = power_controller;
-  _ctx._sys_cfg = sys_cfg;
-  bool save_config = false;
+  bool save = false;
   _ctx.current_reading_period_ms = DEFAULT_CURRENT_READING_PERIOD_MS;
-  if (!_ctx._sys_cfg->getConfig(AppConfig::CURRENT_READING_PERIOD_MS,
-                                strlen(AppConfig::CURRENT_READING_PERIOD_MS),
-                                _ctx.current_reading_period_ms)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::CURRENT_READING_PERIOD_MS,
+                       strlen(AppConfig::CURRENT_READING_PERIOD_MS),
+                       &_ctx.current_reading_period_ms)) {
     bridgeLogPrint(
         BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
         "Failed to get current reading period from config, using default value and writing "
         "to config: %" PRIu32 "ms\n",
         _ctx.current_reading_period_ms);
-    _ctx._sys_cfg->setConfig(AppConfig::CURRENT_READING_PERIOD_MS,
-                             strlen(AppConfig::CURRENT_READING_PERIOD_MS),
-                             _ctx.current_reading_period_ms);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::CURRENT_READING_PERIOD_MS,
+                    strlen(AppConfig::CURRENT_READING_PERIOD_MS),
+                    _ctx.current_reading_period_ms);
+    save = true;
   }
 
   _ctx.soft_reading_period_ms = DEFAULT_SOFT_READING_PERIOD_MS;
-  if (!_ctx._sys_cfg->getConfig(AppConfig::SOFT_READING_PERIOD_MS,
-                                strlen(AppConfig::SOFT_READING_PERIOD_MS),
-                                _ctx.soft_reading_period_ms)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SOFT_READING_PERIOD_MS,
+                       strlen(AppConfig::SOFT_READING_PERIOD_MS),
+                       &_ctx.soft_reading_period_ms)) {
     bridgeLogPrint(
         BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
         "Failed to get soft reading period from config, using default value and writing "
         "to config: %" PRIu32 "ms\n",
         _ctx.soft_reading_period_ms);
-    _ctx._sys_cfg->setConfig(AppConfig::SOFT_READING_PERIOD_MS,
-                             strlen(AppConfig::SOFT_READING_PERIOD_MS),
-                             _ctx.soft_reading_period_ms);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SOFT_READING_PERIOD_MS,
+                    strlen(AppConfig::SOFT_READING_PERIOD_MS), _ctx.soft_reading_period_ms);
+    save = true;
   }
 
   _ctx.rbr_coda_reading_period_ms = RbrCodaSensor::DEFAULT_RBR_CODA_READING_PERIOD_MS;
-  if (!_ctx._sys_cfg->getConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
-                                strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
-                                _ctx.rbr_coda_reading_period_ms)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::RBR_CODA_READING_PERIOD_MS,
+                       strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                       &_ctx.rbr_coda_reading_period_ms)) {
     bridgeLogPrint(
         BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
         "Failed to get coda reading period from config, using default value and writing "
         "to config: %" PRIu32 "ms\n",
         _ctx.rbr_coda_reading_period_ms);
-    _ctx._sys_cfg->setConfig(AppConfig::RBR_CODA_READING_PERIOD_MS,
-                             strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
-                             _ctx.rbr_coda_reading_period_ms);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::RBR_CODA_READING_PERIOD_MS,
+                    strlen(AppConfig::RBR_CODA_READING_PERIOD_MS),
+                    _ctx.rbr_coda_reading_period_ms);
+    save = true;
   }
 
   _ctx.seapoint_turbidity_reading_period_ms = DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS;
-  if (!_ctx._sys_cfg->getConfig(AppConfig::TURBIDITY_READING_PERIOD_MS,
-                                strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
-                                _ctx.seapoint_turbidity_reading_period_ms)) {
-    bridgeLogPrint(
-        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-        "Failed to get seapoint_turbidity reading period from config, using default value and writing "
-        "to config: %" PRIu32 "ms\n",
-        _ctx.seapoint_turbidity_reading_period_ms);
-    _ctx._sys_cfg->setConfig(AppConfig::TURBIDITY_READING_PERIOD_MS,
-                             strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
-                             _ctx.seapoint_turbidity_reading_period_ms);
-    save_config = true;
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TURBIDITY_READING_PERIOD_MS,
+                       strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
+                       &_ctx.seapoint_turbidity_reading_period_ms)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get seapoint_turbidity reading period from config, using default "
+                   "value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   _ctx.seapoint_turbidity_reading_period_ms);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TURBIDITY_READING_PERIOD_MS,
+                    strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
+                    _ctx.seapoint_turbidity_reading_period_ms);
+    save = true;
   }
-  if (save_config) {
-    _ctx._sys_cfg->saveConfig(false);
+  if (save) {
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
   }
 
   BaseType_t rval = xTaskCreate(runController, "Sensor Controller", 128 * 4, NULL,
@@ -170,7 +165,8 @@ static void runController(void *param) {
             RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
             rbr_coda->aggregate();
           } else if (curr->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
-            SeapointTurbiditySensor *seapoint_turbidity = static_cast<SeapointTurbiditySensor *>(curr);
+            SeapointTurbiditySensor *seapoint_turbidity =
+                static_cast<SeapointTurbiditySensor *>(curr);
             seapoint_turbidity->aggregate();
           }
           curr = curr->next;
@@ -220,10 +216,10 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
   (void)service;
   bool rval = false;
   printf("Msg id: %" PRIu32 "\n", msg_id);
-  SysInfoSvcReplyMsg::Data reply = {0, 0, 0, 0, NULL};
+  SysInfoReplyData reply = {0, 0, 0, 0, NULL};
   do {
     if (ack) {
-      if (SysInfoSvcReplyMsg::decode(reply, reply_data, reply_len) != CborNoError) {
+      if (sys_info_reply_decode(&reply, reply_data, reply_len) != CborNoError) {
         printf("Failed to decode sys info reply\n");
         break;
       }
@@ -232,9 +228,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         if (!sensorControllerFindSensorById(reply.node_id)) {
           uint32_t current_agg_period_ms =
               (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS,
-                                   strlen(AppConfig::SAMPLE_DURATION_MS),
-                                   current_agg_period_ms);
+          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
+                          strlen(AppConfig::SAMPLE_DURATION_MS), &current_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
               (current_agg_period_ms / _ctx.current_reading_period_ms) +
               Aanderaa_t::N_SAMPLES_PAD;
@@ -249,8 +244,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         if (!sensorControllerFindSensorById(reply.node_id)) {
           uint32_t soft_agg_period_ms =
               (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS,
-                                   strlen(AppConfig::SAMPLE_DURATION_MS), soft_agg_period_ms);
+          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
+                          strlen(AppConfig::SAMPLE_DURATION_MS), &soft_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
               (soft_agg_period_ms / _ctx.soft_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
           Soft_t *soft_sub =
@@ -264,13 +259,14 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         if (!sensorControllerFindSensorById(reply.node_id)) {
           uint32_t rbr_coda_agg_period_ms =
               (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS,
-                                   strlen(AppConfig::SAMPLE_DURATION_MS),
-                                   rbr_coda_agg_period_ms);
+          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
+                          strlen(AppConfig::SAMPLE_DURATION_MS), &rbr_coda_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (rbr_coda_agg_period_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
+              (rbr_coda_agg_period_ms / _ctx.rbr_coda_reading_period_ms) +
+              RbrCoda_t::N_SAMPLES_PAD;
           RbrCoda_t *rbr_coda_sub =
-              createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES, _ctx.rbr_coda_reading_period_ms);
+              createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES,
+                               _ctx.rbr_coda_reading_period_ms);
           if (rbr_coda_sub) {
             abstractSensorAddSensorSub(rbr_coda_sub);
           }
@@ -280,14 +276,14 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         if (!sensorControllerFindSensorById(reply.node_id)) {
           uint32_t seapoint_turbidity_agg_period_ms =
               (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          _ctx._sys_cfg->getConfig(AppConfig::SAMPLE_DURATION_MS,
-                                   strlen(AppConfig::SAMPLE_DURATION_MS),
-                                   seapoint_turbidity_agg_period_ms);
+          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
+                          strlen(AppConfig::SAMPLE_DURATION_MS),
+                          &seapoint_turbidity_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
               (seapoint_turbidity_agg_period_ms / _ctx.seapoint_turbidity_reading_period_ms) +
               SeapointTurbidity_t::N_SAMPLES_PAD;
-          SeapointTurbidity_t *seapoint_turbidity_sub =
-              createSeapointTurbiditySub(reply.node_id, seapoint_turbidity_agg_period_ms, AVERAGER_MAX_SAMPLES);
+          SeapointTurbidity_t *seapoint_turbidity_sub = createSeapointTurbiditySub(
+              reply.node_id, seapoint_turbidity_agg_period_ms, AVERAGER_MAX_SAMPLES);
           if (seapoint_turbidity_sub) {
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
           }

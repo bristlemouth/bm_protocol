@@ -1,27 +1,67 @@
+#include "configuration.h"
 #include "fff.h"
 #include "mock_configuration.h"
 #include "sm_config_crc_list.h"
 #include "gtest/gtest.h"
 
+extern "C" {
+#include "bm_configs_generic.h"
+#include "configuration.h"
+}
+
 DEFINE_FFF_GLOBALS;
 
 using namespace testing;
 
-TEST(SMConfigCRCListTests, EmptyList) {
-  MockConfiguration mock_cfg;
-  ON_CALL(mock_cfg,
-          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(
-          Invoke([](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
-            (void)key;
-            (void)key_len;
-            uint8_t buf[] = {0x80}; // empty cbor array
-            value_len = sizeof(buf);
-            memcpy(value, buf, value_len);
-            return true;
-          }));
+bool bm_config_read(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
+                    size_t length, uint32_t timeout_ms) {
+  bool ret = false;
+  (void)offset;
+  (void)buffer;
+  (void)length;
+  (void)timeout_ms;
 
-  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  switch (partition) {
+  case BM_CFG_PARTITION_USER:
+  case BM_CFG_PARTITION_SYSTEM:
+  case BM_CFG_PARTITION_HARDWARE:
+    ret = true;
+    break;
+  default:
+    break;
+  }
+
+  return ret;
+}
+bool bm_config_write(BmConfigPartition partition, uint32_t offset, uint8_t *buffer,
+                     size_t length, uint32_t timeout_ms) {
+  bool ret = false;
+  (void)offset;
+  (void)buffer;
+  (void)length;
+  (void)timeout_ms;
+
+  switch (partition) {
+  case BM_CFG_PARTITION_USER:
+  case BM_CFG_PARTITION_SYSTEM:
+  case BM_CFG_PARTITION_HARDWARE:
+    ret = true;
+    break;
+  default:
+    break;
+  }
+
+  return ret;
+}
+void bm_config_reset(void) {}
+
+TEST(SMConfigCRCListTests, EmptyList) {
+  config_init();
+  uint8_t buf[] = {0x80}; // empty cbor array
+  uint32_t buf_len = sizeof(buf);
+  SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_SYSTEM);
+  set_config_cbor(BM_CFG_PARTITION_SYSTEM, SMConfigCRCList::KEY, SMConfigCRCList::KEY_LEN, buf,
+                  buf_len);
   EXPECT_EQ(sm_config_crc_list.contains(0x12345678), false);
   uint32_t list_size = 0;
   uint32_t *crc_list = sm_config_crc_list.alloc_list(list_size);
@@ -30,21 +70,13 @@ TEST(SMConfigCRCListTests, EmptyList) {
 }
 
 TEST(SMConfigCRCListTests, OneItemList) {
-  MockConfiguration mock_cfg;
-  ON_CALL(mock_cfg,
-          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(
-          Invoke([](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
-            (void)key;
-            (void)key_len;
-            // cbor array containing one uint32
-            uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
-            value_len = sizeof(buf);
-            memcpy(value, buf, value_len);
-            return true;
-          }));
+  uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
+  uint32_t buf_len = sizeof(buf);
 
-  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  config_init();
+  SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_SYSTEM);
+  set_config_cbor(BM_CFG_PARTITION_SYSTEM, SMConfigCRCList::KEY, SMConfigCRCList::KEY_LEN, buf,
+                  buf_len);
   EXPECT_EQ(sm_config_crc_list.contains(0x78563412), false);
   EXPECT_EQ(sm_config_crc_list.contains(0x12345678), true);
 }
@@ -53,29 +85,10 @@ TEST(SMConfigCRCListTests, AddOneItem) {
   uint8_t buf[SMConfigCRCList::MAX_BUFFER_SIZE] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
   size_t buf_size = 6;
 
-  MockConfiguration mock_cfg;
-  ON_CALL(mock_cfg,
-          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(Invoke([&buf, &buf_size](const char *key, size_t key_len, uint8_t *value,
-                                              size_t &value_len) {
-        (void)key;
-        (void)key_len;
-        value_len = buf_size;
-        memcpy(value, buf, value_len);
-        return true;
-      }));
-  EXPECT_CALL(mock_cfg,
-              setConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillOnce(Invoke(
-          [&buf, &buf_size](const char *key, size_t key_len, uint8_t *value, size_t value_len) {
-            (void)key;
-            (void)key_len;
-            buf_size = value_len;
-            memcpy(buf, value, value_len);
-            return true;
-          }));
-
-  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  config_init();
+  SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_SYSTEM);
+  set_config_cbor(BM_CFG_PARTITION_SYSTEM, SMConfigCRCList::KEY, SMConfigCRCList::KEY_LEN, buf,
+                  buf_size);
   EXPECT_TRUE(sm_config_crc_list.contains(0x12345678));
   EXPECT_FALSE(sm_config_crc_list.contains(0x78563412));
   EXPECT_FALSE(sm_config_crc_list.contains(0x21436587));
@@ -89,30 +102,10 @@ TEST(SMConfigCRCListTests, AddMoreItemsThanListMax) {
   uint8_t buf[SMConfigCRCList::MAX_BUFFER_SIZE] = {0x80};
   size_t buf_size = 1;
 
-  MockConfiguration mock_cfg;
-  ON_CALL(mock_cfg,
-          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(Invoke([&buf, &buf_size](const char *key, size_t key_len, uint8_t *value,
-                                              size_t &value_len) {
-        (void)key;
-        (void)key_len;
-        value_len = buf_size;
-        memcpy(value, buf, value_len);
-        return true;
-      }));
-  ON_CALL(mock_cfg,
-          setConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(Invoke(
-          [&buf, &buf_size](const char *key, size_t key_len, uint8_t *value, size_t value_len) {
-            (void)key;
-            (void)key_len;
-            buf_size = value_len;
-            memcpy(buf, value, value_len);
-            return true;
-          }));
-
-  SMConfigCRCList sm_config_crc_list(&mock_cfg);
-
+  config_init();
+  SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_SYSTEM);
+  set_config_cbor(BM_CFG_PARTITION_SYSTEM, SMConfigCRCList::KEY, SMConfigCRCList::KEY_LEN, buf,
+                  buf_size);
   // Fill the list and check that they are all there
   constexpr uint32_t crc_start = 0xF0000001;
   constexpr uint32_t crc_endcap = crc_start + SMConfigCRCList::MAX_LIST_SIZE;
@@ -133,48 +126,24 @@ TEST(SMConfigCRCListTests, AddMoreItemsThanListMax) {
 }
 
 TEST(SMConfigCRCListTests, Clear) {
-  MockConfiguration mock_cfg;
-  ON_CALL(mock_cfg,
-          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(
-          Invoke([](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
-            (void)key;
-            (void)key_len;
-            uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
-            value_len = sizeof(buf);
-            memcpy(value, buf, value_len);
-            return true;
-          }));
-  EXPECT_CALL(mock_cfg,
-              setConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillOnce(Invoke([](const char *key, size_t key_len, uint8_t *value, size_t value_len) {
-        (void)key;
-        (void)key_len;
-        EXPECT_EQ(value_len, 1);
-        EXPECT_EQ(value[0], 0x80);
-        return true;
-      }));
+  uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
+  uint32_t buf_len = sizeof(buf);
 
-  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  config_init();
+  SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_SYSTEM);
+  set_config_cbor(BM_CFG_PARTITION_SYSTEM, SMConfigCRCList::KEY, SMConfigCRCList::KEY_LEN, buf,
+                  buf_len);
   sm_config_crc_list.clear();
 }
 
 TEST(SMConfigCRCListTests, AllocList) {
-  MockConfiguration mock_cfg;
-  ON_CALL(mock_cfg,
-          getConfigCbor(StrEq(SMConfigCRCList::KEY), Eq(SMConfigCRCList::KEY_LEN), _, _))
-      .WillByDefault(
-          Invoke([](const char *key, size_t key_len, uint8_t *value, size_t &value_len) {
-            (void)key;
-            (void)key_len;
-            // cbor array containing one uint32
-            uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
-            value_len = sizeof(buf);
-            memcpy(value, buf, value_len);
-            return true;
-          }));
+  uint8_t buf[] = {0x81, 0x1A, 0x12, 0x34, 0x56, 0x78};
+  uint32_t buf_len = sizeof(buf);
 
-  SMConfigCRCList sm_config_crc_list(&mock_cfg);
+  config_init();
+  SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_SYSTEM);
+  set_config_cbor(BM_CFG_PARTITION_SYSTEM, SMConfigCRCList::KEY, SMConfigCRCList::KEY_LEN, buf,
+                  buf_len);
   EXPECT_EQ(sm_config_crc_list.contains(0x12345678), true);
   uint32_t list_size;
   uint32_t *crc_list = sm_config_crc_list.alloc_list(list_size);

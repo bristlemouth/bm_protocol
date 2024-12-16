@@ -37,7 +37,7 @@ bool Exo3DataLineParser::parseValueFromToken(const char* token, size_t index, ch
   //  OrderedSeparatorLineParser::parseValueFromToken know how to handle those.
   token_copy[0] = foundSeparator;
   // Copy token and null-terminator
-  strncpy(&token_copy[1], token, token_len + 1);
+  memcpy(&token_copy[1], token, token_len + 1);
   // Pass the combined string to the parent parser.
   return OrderedSeparatorLineParser::parseValueFromToken(token_copy, index, foundSeparator);
 }

@@ -1,15 +1,15 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "app_util.h"
 #include "bm_rbr_data_msg.h"
 #include "bsp.h"
 #include "debug.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "rbr_sensor.h"
 #include "sensorWatchdog.h"
+#include "spotter.h"
 #include "uptime.h"
-#include "util.h"
 
 static constexpr char BM_RBR_WATCHDOG_ID[] = "bm_rbr";
 static constexpr uint32_t PAYLOAD_WATCHDOG_TIMEOUT_MS = 10 * 1000;
@@ -19,7 +19,6 @@ static constexpr uint32_t PROBE_TIME_PERIOD_MS = 8 * 1000;
 static constexpr uint32_t BM_RBR_DATA_MSG_MAX_SIZE = 256;
 static constexpr uint8_t NO_MAX_TRIGGER = 0;
 
-extern cfg::Configuration *systemConfigurationPartition;
 static RbrSensor rbr_sensor;
 static char bmRbrTopic[BM_TOPIC_MAX_LEN];
 static int bmRbrTopicStrLen;
@@ -34,12 +33,11 @@ static bool BmRbrWatchdogHandler(void *arg);
 static int createBmRbrDataTopic(void);
 
 void setup(void) {
-  configASSERT(systemConfigurationPartition);
   uint32_t sensor_type = static_cast<uint32_t>(BmRbrDataMsg::SensorType_t::UNKNOWN);
-  systemConfigurationPartition->getConfig(RbrSensor::CFG_RBR_TYPE,
-                                          strlen(RbrSensor::CFG_RBR_TYPE), sensor_type);
-  systemConfigurationPartition->getConfig(CFG_FTL_RECOVERY_MS, strlen(CFG_FTL_RECOVERY_MS),
-                                          ftl_recovery_ms);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, RbrSensor::CFG_RBR_TYPE,
+                  strlen(RbrSensor::CFG_RBR_TYPE), &sensor_type);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, CFG_FTL_RECOVERY_MS, strlen(CFG_FTL_RECOVERY_MS),
+                  &ftl_recovery_ms);
   rbr_sensor.init(static_cast<BmRbrDataMsg::SensorType_t>(sensor_type), PROBE_TIME_PERIOD_MS);
   SensorWatchdog::SensorWatchdogAdd(BM_RBR_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     BmRbrWatchdogHandler, NO_MAX_TRIGGER,
@@ -61,7 +59,8 @@ void loop(void) {
     memset(cbor_buf, 0, sizeof(cbor_buf));
     size_t encoded_len = 0;
     if (BmRbrDataMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
-      bm_pub_wl(bmRbrTopic, bmRbrTopicStrLen, cbor_buf, encoded_len, 0);
+      bm_pub_wl(bmRbrTopic, bmRbrTopicStrLen, cbor_buf, encoded_len, 0,
+                BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode data message\n");
     }
@@ -73,8 +72,8 @@ void loop(void) {
 
 static bool BmRbrWatchdogHandler(void *arg) {
   (void)arg;
-  bm_fprintf(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
-  bm_printf(0, "DEBUG - attempting FTL recovery");
+  spotter_log(0, RbrSensor::RBR_RAW_LOG, USE_TIMESTAMP, "DEBUG - attempting FTL recovery\n");
+  spotter_log_console(0, "DEBUG - attempting FTL recovery");
   printf("DEBUG - attempting FTL recovery\n");
   IOWrite(&DISCHARGE_ON, 1);
   IOWrite(&PL_BUCK_EN, 1);
