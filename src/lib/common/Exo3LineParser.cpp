@@ -5,10 +5,6 @@
 #include "Exo3LineParser.h"
 #include "string.h"
 
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wstringop-truncation"
-#endif
-
 Exo3DataLineParser::Exo3DataLineParser(size_t numValues, const char* header)
     : OrderedSeparatorLineParser("+-", 256, nullptr, numValues + 1, header) {
   // Allocate and set up `valueTypes` based on `num_values`, add one for response identifier header
@@ -41,7 +37,7 @@ bool Exo3DataLineParser::parseValueFromToken(const char* token, size_t index, ch
   //  OrderedSeparatorLineParser::parseValueFromToken know how to handle those.
   token_copy[0] = foundSeparator;
   // Copy token and null-terminator
-  strncpy(&token_copy[1], token, token_len + 1);
+  memcpy(&token_copy[1], token, token_len + 1);
   // Pass the combined string to the parent parser.
   return OrderedSeparatorLineParser::parseValueFromToken(token_copy, index, foundSeparator);
 }
