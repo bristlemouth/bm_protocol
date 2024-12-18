@@ -1,3 +1,5 @@
 # Run unit tests for entire repo
 - name: Unit Tests
   type: unit_tests
+  args:
+    app: unit_tests

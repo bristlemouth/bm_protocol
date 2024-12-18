@@ -19,7 +19,7 @@ dependencies:
   - make=4.3
   - pre_commit
   - pyserial
-  - python=3.10
+  - python=3.12
   - pip
   - pip:
       - cbor2
@@ -31,4 +31,8 @@ dependencies:
       - pytest
       - python-dotenv
       - bitstring==4.2
-
+      - pyserial
+      - regex
+      - func_timeout
+      - pytest-order
+      - crcmod

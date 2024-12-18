@@ -28,14 +28,12 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: bristlemouth
           environment-file: environment_ci.yml
           auto-activate-base: false
-
       - name: Checkout submodules
         run: |
           git submodule update --init --recursive src/lib/bm_core
@@ -50,6 +48,7 @@ jobs:
           git submodule update --init src/third_party/tinyusb
           git submodule update --init src/third_party/BME280_driver
           git submodule update --init test/third_party/fff
-
       - name: Run Tests
-        run: python3 tools/scripts/test/did_i_break_something.py tools/scripts/test/configs
+        run: python3 tools/scripts/test/did_i_break_something.py tools/scripts/test/configs --store
+      - name: Run HIL
+        run: python tools/scripts/cicd/bm_hil.py ./build/hello_world/src/bm_mote_v1.0-hello_world.elf.dfu.bin C000
