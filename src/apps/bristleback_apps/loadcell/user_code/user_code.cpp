@@ -1,14 +1,13 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
 #include "bsp.h"
 #include "configuration.h"
 #include "debug.h"
 #include "loadCellSampler.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -21,7 +20,6 @@
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
-extern cfg::Configuration *systemConfigurationPartition;
 // This function is called from the payload UART library in src/lib/common/payload_uart.cpp::processLine function.
 //  Every time the uart receives the configured termination character ('\0' character by default),
 //  It will:
@@ -37,17 +35,16 @@ void setup(void) {
       .calibration_factor = DEFAULT_CALIBRATION_FACTOR,
       .zero_offset = DEFAULT_ZERO_OFFSET,
   };
-  if (!systemConfigurationPartition->getConfig("loadCellCalibrationFactor",
-                                               strlen("loadCellCalibrationFactor"),
-                                               load_cell_cfg.calibration_factor)) {
-    systemConfigurationPartition->setConfig("loadCellCalibrationFactor",
-                                            strlen("loadCellCalibrationFactor"),
-                                            load_cell_cfg.calibration_factor);
+  if (!get_config_float(BM_CFG_PARTITION_SYSTEM, "loadCellCalibrationFactor",
+                        strlen("loadCellCalibrationFactor"),
+                        &load_cell_cfg.calibration_factor)) {
+    set_config_float(BM_CFG_PARTITION_SYSTEM, "loadCellCalibrationFactor",
+                     strlen("loadCellCalibrationFactor"), load_cell_cfg.calibration_factor);
   }
-  if (!systemConfigurationPartition->getConfig(
-          "loadCellZeroOffset", strlen("loadCellZeroOffset"), load_cell_cfg.zero_offset)) {
-    systemConfigurationPartition->setConfig("loadCellZeroOffset", strlen("loadCellZeroOffset"),
-                                            load_cell_cfg.zero_offset);
+  if (!get_config_int(BM_CFG_PARTITION_SYSTEM, "loadCellZeroOffset",
+                      strlen("loadCellZeroOffset"), &load_cell_cfg.zero_offset)) {
+    set_config_int(BM_CFG_PARTITION_SYSTEM, "loadCellZeroOffset", strlen("loadCellZeroOffset"),
+                   load_cell_cfg.zero_offset);
   }
   // Adds the load cell as a sensor for periodic sampling.
   loadCellSamplerInit(&load_cell, load_cell_cfg);

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "util.h"
+#include "app_util.h"
 
 #define MICROSECONDS_PER_SECOND (1000000)
 
@@ -191,7 +191,7 @@ TEST_F(UTCFromDateTime, MillisTest)
   uint32_t timestamp = utcFromDateTime(2024, 2, 29, 0, 0, 0);
   EXPECT_EQ(timestamp, 1709164800);
   utcDateTime_t datetime;
-  uint64_t utc_us = static_cast<uint64_t>(timestamp) * MICROSECONDS_PER_SECOND + (11000); 
+  uint64_t utc_us = static_cast<uint64_t>(timestamp) * MICROSECONDS_PER_SECOND + (11000);
   dateTimeFromUtc(utc_us, &datetime);
   EXPECT_EQ(datetime.year, 2024);
   EXPECT_EQ(datetime.month, 2);
@@ -207,7 +207,7 @@ TEST_F(UTCFromDateTime, Check2038)
   uint32_t timestamp = utcFromDateTime(2038, 1, 19, 0, 0, 0);
   EXPECT_EQ(timestamp, 2147472000);
   utcDateTime_t datetime;
-  uint64_t utc_us = static_cast<uint64_t>(timestamp) * MICROSECONDS_PER_SECOND; 
+  uint64_t utc_us = static_cast<uint64_t>(timestamp) * MICROSECONDS_PER_SECOND;
   dateTimeFromUtc(utc_us, &datetime);
   EXPECT_EQ(datetime.year, 2038);
   EXPECT_EQ(datetime.month, 1);

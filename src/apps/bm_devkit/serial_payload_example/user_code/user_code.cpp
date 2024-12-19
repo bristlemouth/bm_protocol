@@ -1,28 +1,24 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "app_util.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 #define DEFAULT_BAUD_RATE 9600
 #define DEFAULT_LINE_TERM 10 // newline, '\n', 0x0A
-#define BYTES_CLUSTER_MS 50 // used for console printing convenience
+#define BYTES_CLUSTER_MS 50  // used for console printing convenience
 #define DEFAULT_UART_MODE MODE_RS232
-
-// app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *userConfigurationPartition;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
@@ -36,14 +32,14 @@ char payload_buffer[2048];
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
-  userConfigurationPartition->getConfig("plUartBaudRate", strlen("plUartBaudRate"),
-                                        baud_rate_config);
-  userConfigurationPartition->getConfig("plUartLineTerm", strlen("plUartLineTerm"),
-                                        line_term_config);
-  userConfigurationPartition->getConfig("plUartMode", strlen("plUartMode"),
-                                        uart_mode_config);
+  get_config_uint(BM_CFG_PARTITION_USER, "plUartBaudRate", strlen("plUartBaudRate"),
+                  &baud_rate_config);
+  get_config_uint(BM_CFG_PARTITION_USER, "plUartLineTerm", strlen("plUartLineTerm"),
+                  &line_term_config);
+  get_config_uint(BM_CFG_PARTITION_USER, "plUartMode", strlen("plUartMode"), &uart_mode_config);
   if (uart_mode_config >= MODE_MAX) {
-    printf("ERROR - PLUART UART MODE %lu is not supported. Reverting to MODE_RS232\n", uart_mode_config);
+    printf("ERROR - PLUART UART MODE %lu is not supported. Reverting to MODE_RS232\n",
+           uart_mode_config);
     uart_mode_config = MODE_RS232;
   }
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
@@ -60,7 +56,7 @@ void setup(void) {
   PLUART::setTerminationCharacter((char)line_term_config);
   if (uart_mode_config == MODE_RS485_HD) {
     printf("Enabling RS485 Half-Duplex.\n");
-    bristlefin.setRS485HalfDuplex();  // Set the RS485 transceiver to Half-Duplex.
+    bristlefin.setRS485HalfDuplex(); // Set the RS485 transceiver to Half-Duplex.
     // Set up PLUART transactions for proper RS485 enable Tx / enable Rx
     PLUART::enableTransactions(Bristlefin::setRS485Tx, Bristlefin::setRS485Rx);
   }
@@ -72,7 +68,7 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   bristlefin.enableVout();
-// enable 5V out.
+  // enable 5V out.
   bristlefin.enable5V();
 }
 
@@ -87,8 +83,7 @@ void loop(void) {
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
-  else if (led2State &&
-           ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
+  else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     bristlefin.setLed(2, Bristlefin::LED_OFF);
     ledLinePulse = -1;
     led2State = false;
@@ -102,16 +97,14 @@ void loop(void) {
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!led1State &&
-      ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State &&
-           ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
@@ -126,8 +119,7 @@ void loop(void) {
     rtcGet(&time_and_date);
     char rtcTimeBuffer[32];
     rtcPrint(rtcTimeBuffer, &time_and_date);
-    printf("[payload-bytes] | tick: %llu, rtc: %s, bytes:", uptimeGetMs(),
-           rtcTimeBuffer);
+    printf("[payload-bytes] | tick: %llu, rtc: %s, bytes:", uptimeGetMs(), rtcTimeBuffer);
     // not very readable, but it's a compact trick to overload our timer variable with a -1 flag
     readingBytesTimer = (int64_t)((u_int32_t)uptimeGetMs());
   }
@@ -150,8 +142,7 @@ void loop(void) {
       printf("\n");
       readingBytesTimer = -1;
     }
-    uint16_t read_len =
-        PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+    uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
     // Get the RTC if available
     RTCTimeAndDate_t time_and_date = {};
@@ -159,13 +150,13 @@ void loop(void) {
     char rtcTimeBuffer[32];
     rtcPrint(rtcTimeBuffer, &time_and_date);
 
-    // Print the payload data to a file, to the bm_printf console, and to the printf console.
-    bm_fprintf(0, "payload_data.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
+    // Print the payload data to a file, to the spotter_log_console console, and to the printf console.
+    spotter_log(0, "payload_data.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    bm_printf(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
-              rtcTimeBuffer, read_len, payload_buffer);
-    printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(),
-           rtcTimeBuffer, read_len, payload_buffer);
+    spotter_log_console(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
+              read_len, payload_buffer);
+    printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+           read_len, payload_buffer);
 
     ledLinePulse = uptimeGetMs(); // trigger a pulse on LED2
   }

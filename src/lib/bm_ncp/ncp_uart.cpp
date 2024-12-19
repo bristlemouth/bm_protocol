@@ -1,31 +1,33 @@
-#include <string.h>
 #include "FreeRTOS.h"
-#include "task.h"
 #include "queue.h"
+#include "task.h"
+#include <string.h>
 
 #include "bcmp.h"
-#include "bcmp_info.h"
-#include "bcmp_resource_discovery.h"
-#include "bcmp_topology.h"
-#include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "bsp.h"
 #include "cobs.h"
 #include "crc.h"
 #include "debug.h"
 #include "device_info.h"
+#include "gpio.h"
+#include "memfault/core/reboot_tracking.h"
+#include "memfault_platform_core.h"
+extern "C" {
+#include "messages/info.h"
+#include "messages/resource_discovery.h"
+#include "topology.h"
+}
+#include "ncp_config.h"
+#include "ncp_dfu.h"
 #include "ncp_uart.h"
+#include "pubsub.h"
+#include "reset_reason.h"
 #include "stm32_rtc.h"
 #include "stm32u5xx_ll_usart.h"
 #include "task_priorities.h"
-#include "ncp_dfu.h"
-#include "ncp_config.h"
-#include "reset_reason.h"
-#include "memfault_platform_core.h"
-#include "memfault/core/reboot_tracking.h"
-#include "gpio.h"
 
-#define NCP_NOTIFY_BUFF_MASK ( 1 << 0)
+#define NCP_NOTIFY_BUFF_MASK (1 << 0)
 #define NCP_NOTIFY (1 << 1)
 #define NCP_PROCESSOR_QUEUE_DEPTH (16)
 
@@ -51,7 +53,7 @@ static void ncpPreTxCb(SerialHandle_t *handle);
 static void ncpPostTxCb(SerialHandle_t *handle);
 
 typedef struct ProcessorQueueItem {
-  uint8_t * buffer;
+  uint8_t *buffer;
   size_t len;
 } ProcessorQueueItem_t;
 
@@ -67,7 +69,7 @@ static bool cobs_tx(const uint8_t *buff, size_t len) {
   // we then need to convert the whole thing to cobs!
   cobs_encode_result cobs_result = cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, buff, len);
 
-  if(cobs_result.status == COBS_ENCODE_OK) {
+  if (cobs_result.status == COBS_ENCODE_OK) {
     // then we send the buffer out!
     serialWrite(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1);
     rval = true;
@@ -78,22 +80,26 @@ static bool cobs_tx(const uint8_t *buff, size_t len) {
 
 static bm_serial_callbacks_t bm_serial_callbacks;
 
-static void ncp_uart_pub_cb(uint64_t node_id, const char* topic, uint16_t topic_len, const uint8_t* data, uint16_t data_len, uint8_t type, uint8_t version) {
+static void ncp_uart_pub_cb(uint64_t node_id, const char *topic, uint16_t topic_len,
+                            const uint8_t *data, uint16_t data_len, uint8_t type,
+                            uint8_t version) {
   bm_serial_pub(node_id, topic, topic_len, data, data_len, type, version);
 }
 
-static bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id, const uint8_t *payload, size_t len, uint8_t type, uint8_t version) {
+static bool bm_serial_pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id,
+                             const uint8_t *payload, size_t len, uint8_t type,
+                             uint8_t version) {
   printf("Pub data on topic \"%.*s\" from %016" PRIx64 " Type: %u, Version: %u\n", topic_len,
          topic, node_id, type, version);
-  return bm_pub_wl(topic,topic_len,payload,len,type,version);
+  return bm_pub_wl(topic, topic_len, payload, len, type, version) == BmOK;
 }
 
 static bool bm_serial_sub_cb(const char *topic, uint16_t topic_len) {
-  return bm_sub_wl(topic, topic_len, ncp_uart_pub_cb);
+  return bm_sub_wl(topic, topic_len, ncp_uart_pub_cb) == BmOK;
 }
 
 static bool bm_serial_unsub_cb(const char *topic, uint16_t topic_len) {
-  return bm_unsub_wl(topic, topic_len, ncp_uart_pub_cb);
+  return bm_unsub_wl(topic, topic_len, ncp_uart_pub_cb) == BmOK;
 }
 
 static bool ncp_log_cb(uint64_t node_id, const uint8_t *data, size_t len) {
@@ -110,23 +116,17 @@ static bool ncp_debug_cb(const uint8_t *data, size_t len) {
 
 static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
   RTCTimeAndDate_t rtc_time = {
-    .year = time->year,
-    .month = time->month,
-    .day = time->day,
-    .hour = time->hour,
-    .minute = time->minute,
-    .second = time->second,
-    .ms = (time->us / 1000),
+      .year = time->year,
+      .month = time->month,
+      .day = time->day,
+      .hour = time->hour,
+      .minute = time->minute,
+      .second = time->second,
+      .ms = (time->us / 1000),
   };
 
-  printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n",
-    rtc_time.year,
-    rtc_time.month,
-    rtc_time.day,
-    rtc_time.hour,
-    rtc_time.minute,
-    rtc_time.second,
-    rtc_time.ms);
+  printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n", rtc_time.year, rtc_time.month,
+         rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.ms);
 
   // NOTE: rtcSet ignores milliseconds right now
   return (rtcSet(&rtc_time) == pdPASS);
@@ -135,65 +135,69 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
 // TODO - redefine, or define in a spot where this is only needed once!
 #define VER_STR_MAX_LEN 255
 
-static void bcmp_info_reply_cb(void* bcmp_info_reply){
-  bm_serial_device_info_reply_t *info_reply = reinterpret_cast<bm_serial_device_info_reply_t *>(bcmp_info_reply);
+static void bcmp_info_reply_cb(void *bcmp_info_reply) {
+  bm_serial_device_info_reply_t *info_reply =
+      reinterpret_cast<bm_serial_device_info_reply_t *>(bcmp_info_reply);
   bm_serial_send_info_reply(info_reply->info.node_id, info_reply);
 }
 
-static void bcmp_resource_table_reply_cb(void* bcmp_resource_table_reply){
-  bm_serial_resource_table_reply_t *resource_reply = reinterpret_cast<bm_serial_resource_table_reply_t *>(bcmp_resource_table_reply);
+static void bcmp_resource_table_reply_cb(void *bcmp_resource_table_reply) {
+  bm_serial_resource_table_reply_t *resource_reply =
+      reinterpret_cast<bm_serial_resource_table_reply_t *>(bcmp_resource_table_reply);
   bm_serial_send_resource_reply(resource_reply->node_id, resource_reply);
 }
 
-static void bm_serial_all_info_cb(networkTopology_t* networkTopology) {
+static void bm_serial_all_info_cb(NetworkTopology *networkTopology) {
   configASSERT(networkTopology);
   uint16_t num_nodes = networkTopology->length;
-  neighborTableEntry_t *cursor = NULL;
+  NeighborTableEntry *cursor = NULL;
   uint16_t counter;
-  for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
+  for (cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes);
+       cursor = cursor->nextNode, counter++) {
     uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
-    if (current_node_id != getNodeId()){
+    if (current_node_id != getNodeId()) {
       bcmp_request_info(current_node_id, &multicast_global_addr, bcmp_info_reply_cb);
     }
   }
 }
 
-static void bm_serial_all_resources_cb(networkTopology_t* networkTopology) {
+static void bm_serial_all_resources_cb(NetworkTopology *networkTopology) {
   configASSERT(networkTopology);
   uint16_t num_nodes = networkTopology->length;
-  neighborTableEntry_t *cursor = NULL;
+  NeighborTableEntry *cursor = NULL;
   uint16_t counter;
-  for(cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes); cursor = cursor->nextNode, counter++) {
+  for (cursor = networkTopology->front, counter = 0; (cursor != NULL) && (counter < num_nodes);
+       cursor = cursor->nextNode, counter++) {
     uint64_t current_node_id = cursor->neighbor_table_reply->node_id;
-    if (current_node_id != getNodeId()){
-      bcmp_resource_discovery::bcmp_resource_discovery_send_request(current_node_id, bcmp_resource_table_reply_cb);
+    if (current_node_id != getNodeId()) {
+      bcmp_resource_discovery_send_request(current_node_id, bcmp_resource_table_reply_cb);
     }
   }
 }
 
 static bool bcmp_info_request_cb(uint64_t node_id) {
 
-  if (node_id ==  getNodeId() || node_id == 0) {
+  if (node_id == getNodeId() || node_id == 0) {
     // send back our info!
     char *ver_str = static_cast<char *>(pvPortMalloc(VER_STR_MAX_LEN));
     configASSERT(ver_str);
     memset(ver_str, 0, VER_STR_MAX_LEN);
 
-    uint8_t ver_str_len = snprintf(ver_str, VER_STR_MAX_LEN, "%s@%s", APP_NAME, getFWVersionStr());
+    uint8_t ver_str_len =
+        snprintf(ver_str, VER_STR_MAX_LEN, "%s@%s", APP_NAME, getFWVersionStr());
 
     // TODO - use device name instead of UID str
     uint8_t dev_name_len = strlen(getUIDStr());
 
-    uint16_t info_len = sizeof(bm_serial_device_info_reply_t) +
-                          ver_str_len +
-                          dev_name_len;
+    uint16_t info_len = sizeof(bm_serial_device_info_reply_t) + ver_str_len + dev_name_len;
 
     uint8_t *dev_info_buff = static_cast<uint8_t *>(pvPortMalloc(info_len));
     configASSERT(info_len);
 
     memset(dev_info_buff, 0, info_len);
 
-    bm_serial_device_info_reply_t *dev_info = reinterpret_cast<bm_serial_device_info_reply_t *>(dev_info_buff);
+    bm_serial_device_info_reply_t *dev_info =
+        reinterpret_cast<bm_serial_device_info_reply_t *>(dev_info_buff);
     dev_info->info.node_id = getNodeId();
 
     // TODO - fill these with actual values
@@ -227,11 +231,12 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
 }
 
 static bool bcmp_resource_request_cb(uint64_t node_id) {
-  if (node_id ==  getNodeId() || node_id == 0) {
+  if (node_id == getNodeId() || node_id == 0) {
     // send back our resource info!
-    bcmp_resource_table_reply_t* local_resources = bcmp_resource_discovery::bcmp_resource_discovery_get_local_resources();
+    BcmpResourceTableReply *local_resources = bcmp_resource_discovery_get_local_resources();
     // Sending via serial will make a copy of the resources so we can free them after sending
-    bm_serial_send_resource_reply(getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
+    bm_serial_send_resource_reply(
+        getNodeId(), reinterpret_cast<bm_serial_resource_table_reply_t *>(local_resources));
     // getting the local resources allocates them, we need to free them after sending them out
     vPortFree(local_resources);
     if (node_id == 0) {
@@ -239,7 +244,7 @@ static bool bcmp_resource_request_cb(uint64_t node_id) {
     }
   } else {
     // send back the resource info for the node_id
-    bcmp_resource_discovery::bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
+    bcmp_resource_discovery_send_request(node_id, bcmp_resource_table_reply_cb);
   }
   return true;
 }
@@ -261,22 +266,22 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
 }
 
 static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args) {
-    (void) args;
-    (void) pinHandle;
+  (void)args;
+  (void)pinHandle;
 
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-    if(value) {
-      lpmPeripheralInactiveFromISR(LPM_USART3_RX);
-    } else {
-      lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
-    }
+  if (value) {
+    lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+  } else {
+    lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
+  }
 
-    return xHigherPriorityTaskWoken;
+  return xHigherPriorityTaskWoken;
 }
 
-void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller,
-  cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg, cfg::Configuration* hw_cfg){
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
+             BridgePowerController *power_controller) {
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
 
@@ -300,27 +305,18 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
   configASSERT(dfu_partition);
   configASSERT(power_controller);
   ncp_dfu_init(dfu_partition, power_controller);
-  ncp_cfg_init(usr_cfg, sys_cfg, hw_cfg);
-  ncp_processor_queue_handle = xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH,sizeof(ProcessorQueueItem_t));
+  ncp_cfg_init();
+  ncp_processor_queue_handle =
+      xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
   configASSERT(ncp_processor_queue_handle);
 
   // Create the task
-  BaseType_t rval = xTaskCreate(
-              ncpRXTask,
-              "NCP",
-              configMINIMAL_STACK_SIZE * 3,
-              NULL,
-              NCP_TASK_PRIORITY,
-              &ncpRXTaskHandle);
+  BaseType_t rval = xTaskCreate(ncpRXTask, "NCP", configMINIMAL_STACK_SIZE * 3, NULL,
+                                NCP_TASK_PRIORITY, &ncpRXTaskHandle);
   configASSERT(rval == pdTRUE);
 
-  rval = xTaskCreate(
-              ncpRXProcessor,
-              "NCP_Processor",
-              configMINIMAL_STACK_SIZE * 3,
-              NULL,
-              NCP_PROCESSOR_TASK_PRIORITY,
-              NULL);
+  rval = xTaskCreate(ncpRXProcessor, "NCP_Processor", configMINIMAL_STACK_SIZE * 3, NULL,
+                     NCP_PROCESSOR_TASK_PRIORITY, NULL);
   configASSERT(rval == pdTRUE);
 
   bm_serial_callbacks.tx_fn = cobs_tx;
@@ -355,11 +351,13 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgeP
 
   serialEnable(ncpSerialHandle);
   ncp_dfu_check_for_update();
-  bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(), memfault_reboot_tracking_get_crash_count(), memfault_get_pc(), memfault_get_lr());
+  bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(),
+                             memfault_reboot_tracking_get_crash_count(), memfault_get_pc(),
+                             memfault_get_lr());
 }
 
-void ncpRXTask( void *parameters) {
-  ( void ) parameters;
+void ncpRXTask(void *parameters) {
+  (void)parameters;
 
   for (;;) {
     uint32_t taskNotifyValue = 0;
@@ -373,27 +371,27 @@ void ncpRXTask( void *parameters) {
     // this is used to determine which static buffer to read from
     uint8_t bufferIdx = taskNotifyValue & NCP_NOTIFY_BUFF_MASK;
 
-
     // Decode the COBS
-    cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN, ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
+    cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN,
+                                                 ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
     // Allocate a buffer for the ncpRXProcessor to process the data.
     // Note that ncpRXProcessor will be in charge of freeing that data.
-    uint8_t * processor_buffer = static_cast<uint8_t*>(pvPortMalloc(cobs_result.out_len));
+    uint8_t *processor_buffer = static_cast<uint8_t *>(pvPortMalloc(cobs_result.out_len));
     configASSERT(processor_buffer);
     memcpy(processor_buffer, ncpRXBuffDecoded, cobs_result.out_len);
     ProcessorQueueItem_t q_msg = {
-      .buffer = processor_buffer,
-      .len = cobs_result.out_len,
+        .buffer = processor_buffer,
+        .len = cobs_result.out_len,
     };
     configASSERT(xQueueSend(ncp_processor_queue_handle, &q_msg, pdMS_TO_TICKS(10)) == pdTRUE);
   }
 }
 
 static void ncpRXProcessor(void *parameters) {
-  ( void ) parameters;
+  (void)parameters;
   ProcessorQueueItem_t q_item;
   for (;;) {
-    configASSERT(xQueueReceive(ncp_processor_queue_handle,&q_item,portMAX_DELAY) == pdPASS);
+    configASSERT(xQueueReceive(ncp_processor_queue_handle, &q_item, portMAX_DELAY) == pdPASS);
     bm_serial_packet_t *packet = reinterpret_cast<bm_serial_packet_t *>(q_item.buffer);
     bm_serial_process_packet(packet, q_item.len);
     vPortFree(packet);
@@ -404,14 +402,14 @@ static void ncpRXProcessor(void *parameters) {
 // TODO - make this not USART3 dependent?
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
-    configASSERT(ncpSerialHandle);
-    serialGenericUartIRQHandler(ncpSerialHandle);
+  configASSERT(ncpSerialHandle);
+  serialGenericUartIRQHandler(ncpSerialHandle);
 }
 #endif
 
 // cppcheck-suppress constParameter
 static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
-  ( void ) handle;
+  (void)handle;
 
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
   BaseType_t higherPriorityTaskWoken = pdFALSE;
@@ -426,18 +424,18 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
   ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
 
   do {
-    if(ncpRXBuffIdx >= NCP_BUFF_LEN) {
+    if (ncpRXBuffIdx >= NCP_BUFF_LEN) {
       // too much data so lets reset the current buffer
       ncpRXBuffIdx = 0;
       break;
     }
 
-    if(byte != 0) {
+    if (byte != 0) {
       // Keep receiving data
       break;
     }
 
-    if(ncpRXBuffIdx <= sizeof(bm_serial_packet_t)) {
+    if (ncpRXBuffIdx <= sizeof(bm_serial_packet_t)) {
       // Empty packet, reset current buffer
       ncpRXBuffIdx = 0;
       break;
@@ -448,10 +446,8 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
     ncpRXBuffIdx = 0;
 
-    BaseType_t rval = xTaskNotifyFromISR( ncpRXTaskHandle,
-                                          (ncpRXCurrBuff | NCP_NOTIFY),
-                                          eSetValueWithoutOverwrite,
-                                          &higherPriorityTaskWoken);
+    BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
+                                         eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
     if (rval == pdFALSE) {
       // previous packet still pending, 😬
       // TODO - track dropped packets?
@@ -460,7 +456,7 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
       // switch ncp buffers
       ncpRXCurrBuff ^= 1;
     }
-  } while(0);
+  } while (0);
 
   return higherPriorityTaskWoken;
 }

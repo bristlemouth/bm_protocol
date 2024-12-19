@@ -76,5 +76,6 @@ else()
       GIT_TAG release-1.11.0
     )
 
+    set(ENABLE_TESTING ON)
     add_subdirectory("test")
 endif()

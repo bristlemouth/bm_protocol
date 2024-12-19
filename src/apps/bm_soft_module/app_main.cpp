@@ -16,48 +16,48 @@
 #include "task_priorities.h"
 
 #include "app_pub_sub.h"
-#include "bm_l2.h"
-#include "bm_pubsub.h"
+#include "app_util.h"
 #include "bristlefin.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
+#include "config_cbor_map_service.h"
+#include "debug_bm_service.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
 #include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_nvm_cli.h"
+#include "debug_pluart_cli.h"
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
-#include "debug_pluart_cli.h"
 #include "debug_w25.h"
+#include "echo_service.h"
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "l2.h"
 #include "memfault_platform_core.h"
 #include "ms5803.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "sensorSampler.h"
+#include "sensorWatchdog.h"
 #include "sensors.h"
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
+#include "sys_info_service.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
-#include "util.h"
 #include "w25.h"
 #include "watchdog.h"
-#include "debug_bm_service.h"
-#include "echo_service.h"
-#include "sys_info_service.h"
-#include "config_cbor_map_service.h"
-#include "sensorWatchdog.h"
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -137,15 +137,15 @@ SerialHandle_t usbPcap = {
     .postTxCb = NULL,
 };
 
-cfg::Configuration *userConfigurationPartition = NULL;
-cfg::Configuration *sysConfigurationPartition = NULL;
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
-extern "C" void USART3_IRQHandler(void) {
-  serialGenericUartIRQHandler(&usart3);
-}
+extern "C" void USART3_IRQHandler(void) { serialGenericUartIRQHandler(&usart3); }
 
 // Only needed if we want the debug commands too
 // extern MS5803 debugPressure;
@@ -349,7 +349,6 @@ static void defaultTask(void *parameters) {
   pcapInit(&usbPcap);
 
   startCLI();
-  // pcapInit(&usbPcap);
 
   gpioISRStartTask();
 
@@ -374,26 +373,21 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(debug_user_partition, ram_user_configuration,
-                                              RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(
-      debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
-                                       sys_cfg_sensorsPollIntervalMs);
-  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
-                                       sys_cfg_sensorsCheckIntervalS);
-  sysConfigurationPartition = &debug_configuration_system;
-  userConfigurationPartition = &debug_configuration_user;
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
-                         &debug_configuration_system);
+  dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  bcl_init();
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
+  debugConfigurationInit();
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
@@ -405,9 +399,8 @@ static void defaultTask(void *parameters) {
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
   echo_service_init();
-  sys_info_service_init(debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  config_cbor_map_service_init();
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif

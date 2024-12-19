@@ -1,7 +1,6 @@
 #include "user_code.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -10,7 +9,7 @@
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
+#include "app_util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000

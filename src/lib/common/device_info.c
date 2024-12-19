@@ -120,10 +120,11 @@ const char *getFWVersionStr(void) {
     if (fwIsEng(getVersionInfo())) {
       const uint8_t *buildId;
       getBuildId(&buildId);
-      snprintf(fwVersionStr, sizeof(fwVersionStr), "ENG-%s+%02x%02x%02x%02x",
+      snprintf(fwVersionStr, sizeof(fwVersionStr), "%s@ENG-%s+%02x%02x%02x%02x", APP_NAME,
                versionNote.info.versionStr, buildId[0], buildId[1], buildId[2], buildId[3]);
     } else {
-      snprintf(fwVersionStr, sizeof(fwVersionStr), "%s", versionNote.info.versionStr);
+      snprintf(fwVersionStr, sizeof(fwVersionStr), "%s@%s", APP_NAME,
+               versionNote.info.versionStr);
     }
     versionStrGenerated = true;
   }

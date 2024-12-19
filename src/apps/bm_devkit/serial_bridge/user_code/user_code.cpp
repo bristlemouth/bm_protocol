@@ -1,7 +1,7 @@
-#include "bm_pubsub.h"
 #include "bm_serial.h"
 #include "cobs.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "task_priorities.h"
 #include <string.h>
 
@@ -16,7 +16,7 @@ static bool pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id,
                    const uint8_t *payload, size_t len, uint8_t type, uint8_t version) {
   (void)node_id;
   printf("publishing %u bytes to %.*s\n", len, topic_len, topic);
-  return bm_pub_wl(topic, topic_len, payload, len, type, version);
+  return bm_pub_wl(topic, topic_len, payload, len, type, version) == BmOK;
 }
 
 void setup() {

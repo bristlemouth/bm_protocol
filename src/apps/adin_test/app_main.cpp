@@ -15,9 +15,8 @@
 #include "task.h"
 
 #include "app_pub_sub.h"
-#include "bm_l2.h"
-#include "bm_pubsub.h"
-#include "bristlemouth.h"
+#include "app_util.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
 #include "debug_configuration.h"
@@ -32,11 +31,13 @@
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "l2.h"
 #include "memfault_platform_core.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "serial.h"
 #include "serial_console.h"
@@ -44,7 +45,6 @@
 #include "stress.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
-#include "util.h"
 #include "w25.h"
 #include "watchdog.h"
 
@@ -104,7 +104,7 @@ SerialHandle_t usart1 = {
 };
 
 // Serial console USB device
-SerialHandle_t usbCLI   = {
+SerialHandle_t usbCLI = {
     .device = (void *)0, // Using CDC 0
     .name = "vcp-cli",
     .txPin = NULL,
@@ -124,7 +124,7 @@ SerialHandle_t usbCLI   = {
     .postTxCb = NULL,
 };
 
-SerialHandle_t usbPcap   = {
+SerialHandle_t usbPcap = {
     .device = (void *)1, // Using CDC 1
     .name = "vcp-bm",
     .txPin = NULL,
@@ -144,10 +144,13 @@ SerialHandle_t usbPcap   = {
     .postTxCb = NULL,
 };
 
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
+
 #ifndef BSP_MOTE_V1_0
-extern "C" void USART1_IRQHandler(void) {
-  serialGenericUartIRQHandler(&usart1);
-}
+extern "C" void USART1_IRQHandler(void) { serialGenericUartIRQHandler(&usart1); }
 #endif // BM_MOTE_V1_0
 
 extern "C" int main(void) {
@@ -224,18 +227,17 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
   return false;
 }
 
-void handle_subscriptions(uint64_t node_id, const char *topic,
-                          uint16_t topic_len, const uint8_t *data,
-                          uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
+                          const uint8_t *data, uint16_t data_len, uint8_t type,
+                          uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_BUTTON_TOPIC, topic, topic_len) == 0) {
-    if (type == APP_PUB_SUB_BUTTON_TYPE &&
-        version == APP_PUB_SUB_BUTTON_VERSION) {
-      if (strncmp(APP_PUB_SUB_BUTTON_CMD_ON,
-                  reinterpret_cast<const char *>(data), data_len) == 0) {
+    if (type == APP_PUB_SUB_BUTTON_TYPE && version == APP_PUB_SUB_BUTTON_VERSION) {
+      if (strncmp(APP_PUB_SUB_BUTTON_CMD_ON, reinterpret_cast<const char *>(data), data_len) ==
+          0) {
         IOWrite(&LED_BLUE, LED_ON);
-      } else if (strncmp(APP_PUB_SUB_BUTTON_CMD_OFF,
-                         reinterpret_cast<const char *>(data), data_len) == 0) {
+      } else if (strncmp(APP_PUB_SUB_BUTTON_CMD_OFF, reinterpret_cast<const char *>(data),
+                         data_len) == 0) {
         IOWrite(&LED_BLUE, LED_OFF);
       } else {
         // Not handled
@@ -261,9 +263,8 @@ void handle_subscriptions(uint64_t node_id, const char *topic,
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n", rtc_time.year,
-               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
-               rtc_time.second, rtc_time.ms);
+        printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n", rtc_time.year, rtc_time.month,
+               rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.ms);
       } else {
         printf("\n Failed to set RTC.\n");
       }
@@ -350,23 +351,16 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(
-      debug_user_partition, ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration,
-      RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(debug_system_partition,
-                                                ram_system_configuration,
-                                                RAM_SYSTEM_CONFIG_SIZE_BYTES);
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user,
-                         &debug_configuration_hardware,
-                         &debug_configuration_system);
+  dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user,
-           &debug_configuration_system);
+  bcl_init();
+  debugConfigurationInit();
 
 #ifdef BSP_BRIDGE_V1_0
   printf("Enabling 24V!\n");

@@ -16,7 +16,7 @@ set(FREERTOS_FILES
 set(FREERTOS_INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/portable/GCC/ARM_CM33_NTZ/non_secure
-non_secure/        PARENT_SCOPE)
+        PARENT_SCOPE)
 
 # Deal with library compile warnings
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/Source/portable/GCC/ARM_CM4F/port.c

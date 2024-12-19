@@ -1,6 +1,6 @@
 #include "ncp_dfu.h"
 #include "FreeRTOS.h"
-#include "bm_dfu.h"
+#include "dfu.h"
 #include "bm_serial.h"
 #include "bootutil/bootutil_public.h"
 #include "bootutil/image.h"
@@ -12,7 +12,7 @@
 #include "stm32_flash.h"
 #include "sysflash/sysflash.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 #include <stdio.h>
 
 typedef struct __attribute__((__packed__)) {
@@ -40,7 +40,7 @@ typedef struct {
 static ncp_dfu_ctx_t _ctx;
 static NcpReboootUpdateInfo_t _reboot_info __attribute__((section(".noinit")));
 
-static void _ncp_dfu_finish(bool success, bm_dfu_err_t err, uint64_t node_id) {
+static void _ncp_dfu_finish(bool success, BmDfuErr err, uint64_t node_id) {
   memset(&_reboot_info, 0, sizeof(_reboot_info));
   bm_serial_dfu_send_finish(node_id, success, err);
   if (_ctx.power_controller_was_enabled) {
@@ -48,7 +48,7 @@ static void _ncp_dfu_finish(bool success, bm_dfu_err_t err, uint64_t node_id) {
   }
 }
 
-static void _update_success_cb(bool success, bm_dfu_err_t err, uint64_t node_id) {
+static void _update_success_cb(bool success, BmDfuErr err, uint64_t node_id) {
   _ncp_dfu_finish(success, err, node_id);
 }
 
@@ -92,15 +92,15 @@ static bool _do_self_update(bm_serial_dfu_start_t *dfu_start) {
   return rval;
 }
 
-static bm_dfu_err_t _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
-  bm_dfu_err_t rval = BM_DFU_ERR_ABORTED;
+static BmDfuErr _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
+  BmDfuErr rval = BmDfuErrAborted;
   do {
     uint64_t node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
     size_t node_list_size = sizeof(node_list);
     uint32_t num_nodes;
     if (!topology_sampler_get_node_list(node_list, node_list_size, num_nodes,
                                         TOPOLOGY_TIMEOUT_MS)) {
-      rval = BM_DFU_ERR_UNKNOWN_NODE_ID;
+      rval = BmDfuErrUnkownNodeId;
       break;
     }
 
@@ -113,11 +113,11 @@ static bm_dfu_err_t _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
     }
     // If we didn't find the node_id in the list, return an error
     if (i >= num_nodes) {
-      rval = BM_DFU_ERR_UNKNOWN_NODE_ID;
+      rval = BmDfuErrUnkownNodeId;
       break;
     }
 
-    bm_dfu_img_info_t info = {
+    BmDfuImgInfo info = {
         .image_size = dfu_start->image_size,
         .chunk_size = dfu_start->chunk_size,
         .crc16 = dfu_start->crc16,
@@ -130,23 +130,23 @@ static bm_dfu_err_t _do_bcmp_update(bm_serial_dfu_start_t *dfu_start) {
                                 NODE_UPDATE_TIMEOUT_MS)) {
       break;
     }
-    rval = BM_DFU_ERR_NONE;
+    rval = BmDfuErrNone;
   } while (0);
   return rval;
 }
 
 bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
   bool rval = false;
-  bm_dfu_err_t err = BM_DFU_ERR_ABORTED;
+  BmDfuErr err = BmDfuErrAborted;
   do {
     uint16_t computed_crc16;
     if (!_ctx.dfu_cli_partition->crc16(DFU_IMG_START_OFFSET_BYTES, dfu_start->image_size,
                                        computed_crc16, IMG_CRC_TIMEOUT_MS)) {
-      err = BM_DFU_ERR_BAD_CRC;
+      err = BmDfuErrBadCrc;
       break;
     }
     if (computed_crc16 != dfu_start->crc16) {
-      err = BM_DFU_ERR_BAD_CRC;
+      err = BmDfuErrBadCrc;
       break;
     }
     if (getNodeId() == dfu_start->node_id) {
@@ -165,7 +165,7 @@ bool ncp_dfu_start_cb(bm_serial_dfu_start_t *dfu_start) {
                                                pdMS_TO_TICKS(POWER_CONTROLLER_TIMEOUT_MS))) {
         printf("Bus is ON! Queueing node update\n");
         err = _do_bcmp_update(dfu_start);
-        rval = (err == BM_DFU_ERR_NONE);
+        rval = (err == BmDfuErrNone);
       }
     }
   } while (0);
@@ -200,9 +200,9 @@ void ncp_dfu_check_for_update(void) {
   if (_reboot_info.magic == REBOOT_MAGIC) {
     if (_reboot_info.gitSHA == getGitSHA()) {
       boot_set_confirmed();
-      _ncp_dfu_finish(true, BM_DFU_ERR_NONE, getNodeId());
+      _ncp_dfu_finish(true, BmDfuErrNone, getNodeId());
     } else {
-      _ncp_dfu_finish(false, BM_DFU_ERR_WRONG_VER, getNodeId());
+      _ncp_dfu_finish(false, BmDfuErrWrongVer, getNodeId());
       vTaskDelay(pdMS_TO_TICKS(
           REBOOT_DELAY_MS)); // Short delay before reboot revert to allow for message to host.
       resetSystem(RESET_REASON_MCUBOOT);

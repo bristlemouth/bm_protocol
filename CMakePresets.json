@@ -71,12 +71,19 @@
             }
         },
         {
+            "name": "bridge-raw-pressure",
+            "inherits": "bridge",
+            "cacheVariables": {
+                "RAW_PRESSURE_ENABLE": "1"
+            }
+        },
+        {
             "name": "bringup-bridge",
             "inherits": "default",
             "cacheVariables": {
                 "APP": "bringup_bridge",
                 "BSP": "bridge_v1_0"
-            }
+                }
         },
         {
             "name": "bringup-mote",
@@ -139,6 +146,13 @@
             }
         },
         {
+            "name": "pub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "pub_example"
+            }
+        },
+        {
             "name": "rbr-bristleback",
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
@@ -160,10 +174,24 @@
             }
         },
         {
+            "name": "rx-live-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "rx_live_example"
+            }
+        },
+        {
             "name": "seapoint-turbidity-bristleback",
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
                 "APP": "seapoint_turbidity"
+            }
+        },
+        {
+            "name": "serial-bridge",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_bridge"
             }
         },
         {
@@ -196,6 +224,13 @@
                 "APP": "bm_soft_module",
                 "BSP": "bm_mote_spi_v1_0"
             }
+        },
+        {
+            "name": "sub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sub_example"
+            }
         }
     ],
     "buildPresets": [
@@ -227,6 +262,11 @@
         {
             "configurePreset": "bridge",
             "name": "bridge",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "bridge-raw-pressure",
+            "name": "bridge-raw-pressure",
             "jobs": 8
         },
         {
@@ -275,6 +315,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "pub-example",
+            "name": "pub-example",
+            "jobs": 8
+        },
+        {
             "configurePreset": "rbr-bristleback",
             "name": "rbr-bristleback",
             "jobs": 8
@@ -290,8 +335,18 @@
             "jobs": 8
         },
         {
+            "configurePreset": "rx-live-example",
+            "name": "rx-live-example",
+            "jobs": 8
+        },
+        {
             "configurePreset": "seapoint-turbidity-bristleback",
             "name": "seapoint-turbidity-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-bridge",
+            "name": "serial-bridge",
             "jobs": 8
         },
         {
@@ -312,6 +367,11 @@
         {
             "configurePreset": "soft",
             "name": "soft",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sub-example",
+            "name": "sub-example",
             "jobs": 8
         }
     ]
