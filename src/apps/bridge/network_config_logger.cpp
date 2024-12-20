@@ -14,7 +14,7 @@ static CborError print_stream_handler(void *out, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   int n = vsnprintf(nullptr, log_buffer_max_size - log_buffer_size, fmt, args);
-  if (n > 0) {
+  if (n > 0 && log_buffer_size < log_buffer_max_size) {
     vsnprintf(&log_buffer[log_buffer_size], log_buffer_max_size - log_buffer_size, fmt, args);
     log_buffer_size += n;
   }
