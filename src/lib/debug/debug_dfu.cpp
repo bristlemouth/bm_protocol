@@ -13,7 +13,7 @@ static const CLI_Command_Definition_t cmdDfu = {
   // Command string
   "dfu",
   // Help string
-  "dfu:\n"
+  "dfu (for binary loaded in flash):\n"
   " * dfu start <node id> <filter_key> <TimeoutMs>\n",
   // Command function
   dfuCommand,
