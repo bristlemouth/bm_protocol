@@ -332,11 +332,11 @@ err_t bm_l2_rx(void* device_handle, uint8_t* payload, uint16_t payload_len, uint
     do {
 
         if (port_mask & ~bm_l2_ctx.enabled_port_mask){
-            adin2111_DeviceHandle_t device_handle = ((adin2111_DeviceHandle_t) bm_l2_ctx.devices[0].device_handle);
-            adin2111_Renegotiate(device_handle, (adin2111_Port_e)port_mask);
             printf("Received on port: %d. Renegotiating, bm_l2_ctx thinks the enabled ports are: %d. The device_handle thinks this port is: %d (0 disabled, 1 enabled)\n", port_mask, bm_l2_ctx.enabled_port_mask, device_handle->portEnabled[port_mask]);
             bm_printf(0, "Received on port: %d. Renegotiating, bm_l2_ctx thinks the enabled ports are: %d. The device_handle thinks this port is: %d (0 disabled, 1 enabled)\n", port_mask, bm_l2_ctx.enabled_port_mask, device_handle->portEnabled[port_mask]);
             bm_fprintf(0, "port.log", "Received on port: %d. Renegotiating, bm_l2_ctx thinks the enabled ports are: %d. The device_handle thinks this port is: %d (0 disabled, 1 enabled)\n", port_mask, bm_l2_ctx.enabled_port_mask, device_handle->portEnabled[port_mask]);
+            adin2111_DeviceHandle_t device_handle = ((adin2111_DeviceHandle_t) bm_l2_ctx.devices[0].device_handle);
+            adin2111_Renegotiate(device_handle, (adin2111_Port_e)port_mask);
         }
 
         tx_evt.pbuf = pbuf_alloc(PBUF_RAW, payload_len, PBUF_RAM);
