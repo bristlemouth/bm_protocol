@@ -52,3 +52,11 @@ jobs:
         run: python3 tools/scripts/test/did_i_break_something.py tools/scripts/test/configs --store
       - name: Run HIL
         run: python tools/scripts/cicd/bm_hil.py ./build/hello_world/src/bm_mote_v1.0-hello_world.elf.dfu.bin C000
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hil_log
+          path: ~/sys_logs/cicd
+      - name: Clean Up
+        run: |
+          mkdir -p ~/sys_logs/cicd_local
+          mv -v ~/sys_logs/cicd/* ~/sys_logs/cicd_local
