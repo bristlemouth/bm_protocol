@@ -41,6 +41,7 @@ def dfu_util_update(image: str, offset: int = 0):
     print(debug_str)
     LOGGER.log(LOGGER.INFO, debug_str)
 
+    found = 0
     ports = serial.tools.list_ports.comports()
     fail_count = 0
     offset = 0x8000000 + offset
@@ -48,12 +49,18 @@ def dfu_util_update(image: str, offset: int = 0):
     # Iterate updates over all nodes connected over serial
     for port, desc, __ in sorted(ports):
         if "Bristlemouth" in desc and int(port[-1]) == 1:
+            found += 1
             retry_count = 0
             while retry_count < DFU_UTIL_RETRY:
                 status = True
-                ser = SerialHelper(port)
-                ser.transmit_str("\nbootloader\n")
-                ser.close()
+                try:
+                    ser = SerialHelper(port)
+                    ser.transmit_str("\nbootloader\n")
+                    ser.close()
+                except SerialHelper.SerialException:
+                    debug_str = "Device may already be in bootloader,"
+                    "cannot communicate over serial"
+                    LOGGER.log(LOGGER.WARNING, debug_str)
                 debug_str = f"DFU Update On Port {port} For File: {image}"
                 print(debug_str)
                 LOGGER.log(LOGGER.INFO, debug_str)
@@ -87,6 +94,11 @@ def dfu_util_update(image: str, offset: int = 0):
                 else:
                     LOGGER.log(LOGGER.INFO, output_str)
                     break
+    if found == 0:
+        debug_str = "Could not find any ports to run DFU update"
+        LOGGER.log(LOGGER.ERROR, debug_str)
+        print(debug_str)
+        sys.exit(1)
 
 
 def run_hil_tests():
@@ -97,6 +109,7 @@ def run_hil_tests():
     # Set CWD to bm_core HIL test scripts
     os.chdir(cwd)
 
+    found = 0
     ports = serial.tools.list_ports.comports()
     fail_count = 0
 
@@ -104,6 +117,7 @@ def run_hil_tests():
     for port, desc, __ in sorted(ports):
         # Determine if this is a node we want to talk to over serial
         if "Bristlemouth" in desc and int(port[-1]) == 1:
+            found += 1
             status = True
             debug_str = f"HIL Test Running On: {port}"
             print(debug_str)
@@ -133,6 +147,11 @@ def run_hil_tests():
                 print("Failure output result:\n" + output)
             else:
                 LOGGER.log(LOGGER.INFO, output_str)
+    if found == 0:
+        debug_str = "Could not find any ports to run HIL tests"
+        LOGGER.log(LOGGER.ERROR, debug_str)
+        print(debug_str)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
