@@ -155,7 +155,7 @@ void RbrCodaSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+    int8_t node_position = topology_sampler_get_node_position(node_id, 5000);
 
     // Use the latest sensor type to determine the sensor type string
     const char *sensor_type_str;

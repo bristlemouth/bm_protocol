@@ -6,6 +6,8 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sm_config_crc_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/aanderaaSensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/abstractSensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/borealisSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/rbrCodaSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/softSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/seapointTurbiditySensor.cpp
