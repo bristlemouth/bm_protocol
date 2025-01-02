@@ -20,7 +20,7 @@ typedef struct pme_dissolved_oxygen_aggregations_s {
 typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   uint32_t agg_period_ms;
   AveragingSampler temperature_deg_c;
-  AveraginSample do_mg_per_l;
+  AveragingSampler do_mg_per_l;
   AveragingSampler quality; // TODO - will this need a sampler?
   AveragingSampler do_saturation_pct;
   uint32_t reading_count;
@@ -37,12 +37,12 @@ public:
 
 private:
   static void pmeDissolvedOxygenSubCallback(uint64_t node_id, const char *topic,
-                                           uint16_t topic_len, const uint8_t *data,
-                                           uint16_t data_len, uint8_t type, uint8_t version);
+                                            uint16_t topic_len, const uint8_t *data,
+                                            uint16_t data_len, uint8_t type, uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/pme/dissolved_oxygen_data";
+  static constexpr char subtag[] = "/pme/do_reading";
 } PmeDissolvedOxygen_t;
 
 PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t agg_period_ms,
-                                                uint32_t averager_max_samples);
+                                                  uint32_t averager_max_samples);
