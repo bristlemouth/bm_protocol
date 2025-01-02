@@ -1,4 +1,5 @@
 import logging
+import git
 from pathlib import Path
 from time import time
 import os
@@ -15,10 +16,21 @@ class LoggingHelper:
     DEBUG = 10
 
     def __init__(self, sub_dir: str, name: str, stdout: bool = False):
+        repo = git.Repo(search_parent_directories=True)
+        commit_hash = repo.head.commit.hexsha
         home = Path.home()
         directory = str(home) + "/" + self.LOG_DIR + "/" + sub_dir
         os.makedirs(directory, mode=0o777, exist_ok=True)
-        filename = directory + "/" + name + "_" + str(int(time())) + ".log"
+        filename = (
+            directory
+            + "/"
+            + name
+            + "_"
+            + commit_hash[:7]
+            + "_"
+            + str(int(time()))
+            + ".log"
+        )
 
         # Set Up Logger to file
         self.log_name = name
