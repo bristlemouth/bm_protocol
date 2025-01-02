@@ -45,6 +45,15 @@
     defines: -DCMAKE_APP_TYPE=BMDK
     sub: mote
 
+- name: sdi12_example on bm_mote_v1.0
+  type: build_fw
+  args:
+    app: sdi12_example
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
+
 - name: devkit_monitor on bm_mote_v1.0
   type: build_fw
   args:
