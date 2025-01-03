@@ -18,6 +18,7 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
+#define DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -32,6 +33,7 @@ typedef struct sensorControllerCtx {
   uint32_t soft_reading_period_ms;
   uint32_t rbr_coda_reading_period_ms;
   uint32_t seapoint_turbidity_reading_period_ms;
+  uint32_t pme_dissolved_oxygen_reading_period_ms;
 } sensorsControllerCtx_t;
 
 static sensorsControllerCtx_t _ctx;
@@ -108,6 +110,20 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TURBIDITY_READING_PERIOD_MS,
                     strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
                     _ctx.seapoint_turbidity_reading_period_ms);
+    save = true;
+  }
+  _ctx.pme_dissolved_oxygen_reading_period_ms = DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS;
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS,
+                       strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
+                       &_ctx.pme_dissolved_oxygen_reading_period_ms)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get pme dissolved oxygen reading period from config, using default "
+                   "value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   _ctx.pme_dissolved_oxygen_reading_period_ms);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS,
+                    strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
+                    _ctx.pme_dissolved_oxygen_reading_period_ms);
     save = true;
   }
   if (save) {

@@ -1,8 +1,7 @@
 #pragma once
-#include "FreeRTOS.h"
+
 #include "abstractSensor.h"
 #include "avgSampler.h"
-#include "sensorController.h"
 
 #include <stdint.h>
 #include <stdlib.h>

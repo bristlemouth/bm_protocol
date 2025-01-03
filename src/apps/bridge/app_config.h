@@ -17,6 +17,7 @@ constexpr const char *ALIGNMENT_INTERVAL_5MIN = "alignmentInterval5Min";
 constexpr const char *TRANSMIT_AGGREGATIONS = "transmitAggregations";
 constexpr const char *SAMPLES_PER_REPORT = "samplesPerReport";
 constexpr const char *CURRENT_READING_PERIOD_MS = "currentReadingPeriodMs";
+constexpr const char *PME_DISSOLVED_OXYGEN_PERIOD_MS = "pmeDissolveOxygenReadingPeriodMs";
 constexpr const char *SOFT_READING_PERIOD_MS = "softReadingPeriodMs";
 constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
 constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
