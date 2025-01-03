@@ -1,6 +1,9 @@
 #include "pmeDissolvedOxygenSensor.h"
+#include "FreeRTOS.h"
 #include "app_config.h"
 #include "avgSampler.h"
+#include "bm_config.h"
+#include "bm_os.h"
 #include "spotter.h"
 #include "pubsub.h"
 #include "pme_dissolved_oxygen_msg.h"
@@ -18,14 +21,15 @@
 
 bool PmeDissolvedOxygenSensor::subscribe() {
   bool rval = false;
-  char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
-  configASSERT(sub);
-  int topic_strlen =
-      snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
-  if (topic_strlen > 0) {
-    rval = bm_sub_wl(sub, topic_strlen, pmeDissolvedOxygenSubCallback);
+  char *sub = static_cast<char *>(bm_malloc(BM_TOPIC_MAX_LEN));
+  if (sub) {
+    int topic_strlen =
+        snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
+    if (topic_strlen > 0) {
+      rval = bm_sub_wl(sub, topic_strlen, pmeDissolvedOxygenSubCallback);
+    }
+    bm_free(sub);
   }
-  vPortFree(sub);
   return rval;
 }
 
@@ -34,15 +38,15 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(uint64_t node_id, c
                                                              uint16_t data_len, uint8_t type, uint8_t version) {
   (void) type;
   (void) version;
-  printf("PME Dissolved Oxygen data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
+  bm_debug("PME Dissolved Oxygen data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
   PmeDissolvedOxygen_t *dissolved_oxygen_sensor =
       static_cast<PmeDissolvedOxygen_t *>(sensorControllerFindSensorById(node_id));
-  if (dissolved_oxygen_sensor && dissolved_oxygen_sensor->type == SENSOR_TYPE_PME_DO) {
-    if (xSemaphoreTake(dissolved_oxygen_sensor->_mutex, portMAX_DELAY)) {
+  if (dissolved_oxygen_sensor && dissolved_oxygen_sensor->type == SENSOR_TYPE_PME_DO && dissolved_oxygen_sensor->_mutex) {
+    if (bm_semaphore_take(dissolved_oxygen_sensor->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
       static PmeDissolvedOxygenMsg::Data dissolved_oxygen_data;
       if (PmeDissolvedOxygenMsg::decode(dissolved_oxygen_data, data, data_len) == CborNoError) {
-        char *log_buff = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
+        char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buff);
         dissolved_oxygen_sensor->temperature_deg_c.addSample(dissolved_oxygen_data.temperature_deg_c);
         dissolved_oxygen_sensor->do_mg_per_l.addSample(dissolved_oxygen_data.do_mg_per_l);
@@ -61,7 +65,7 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(uint64_t node_id, c
         if (current_timestamp - dissolved_oxygen_sensor->last_timestamp >
             DEFAULT_PME_DISSOLVED_READING_PERIOD_MS + 1000U ||
             dissolved_oxygen_sensor->reading_count == 1U) {
-          printf("Updating PME Dissolved Oxygen %016" PRIx64
+          bm_debug("Updating PME Dissolved Oxygen %016" PRIx64
                  " node position, current_time = %" PRIu32 ", last_time = %" PRIu32
                  ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, dissolved_oxygen_sensor->last_timestamp,
@@ -93,21 +97,21 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(uint64_t node_id, c
         if (log_buff_len > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buff, log_buff_len);
         } else {
-          printf("ERROR: Failed to print PME Dissolved Oxygen data to log\n");
+          bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to log\n");
         }
-        vPortFree(log_buff);
+        bm_free(log_buff);
       }
-      xSemaphoreGive(dissolved_oxygen_sensor->_mutex);
+      bm_semaphore_give(dissolved_oxygen_sensor->_mutex);
     } else {
-      printf("Failed to take mutex for PME Dissolved Oxygen Sensor after getting a new reading\n");
+      bm_debug("Failed to take mutex for PME Dissolved Oxygen Sensor after getting a new reading\n");
     }
   }
 }
 
 void PmeDissolvedOxygenSensor::aggregate(void) {
-  char *log_buff = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
+  char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
   configASSERT(log_buff);
-  if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
+  if (bm_semaphore_take(_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
     pme_dissolved_oxygen_aggregations_t dissolved_oxygen_aggs = {
       .temperature_deg_c_mean = NAN,
       .do_mg_per_l_mean = NAN,
@@ -127,7 +131,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
     char time_str[TIME_STR_BUFSIZE];
     if (!logRtcGetTimeStr(time_str, TIME_STR_BUFSIZE, true)) {
-      printf("Failed to get RTC time string for PME Dissolved Oxygen aggregation\n");
+      bm_debug("Failed to get RTC time string for PME Dissolved Oxygen aggregation\n");
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
@@ -150,7 +154,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     if (log_buflen > 0) {
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buff, log_buflen);
     } else {
-      printf("ERROR: Failed to print PME Dissolved Oxygen aggregation to log\n");
+      bm_debug("ERROR: Failed to print PME Dissolved Oxygen aggregation to log\n");
     }
     reportBuilderAddToQueue(
         node_id, SENSOR_TYPE_PME_DO, static_cast<void *>(&dissolved_oxygen_aggs),
@@ -162,30 +166,36 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     quality.clear();
     do_saturation_pct.clear();
     reading_count = 0;
-    xSemaphoreGive(_mutex);
+    bm_semaphore_give(_mutex);
   } else {
-    printf("Failed to take mutex for PME Dissolved Oxygen Sensor after getting a new reading\n");
+    bm_debug("Failed to take mutex for PME Dissolved Oxygen Sensor after getting a new reading\n");
   }
-  vPortFree(log_buff);
+  bm_free(log_buff);
 }
 
 PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t agg_period_ms,
                                                   uint32_t averager_max_samples) {
-  PmeDissolvedOxygen_t *new_sub = static_cast<PmeDissolvedOxygen_t *>(pvPortMalloc(sizeof(PmeDissolvedOxygen_t)));
-  new_sub = new (new_sub) PmeDissolvedOxygen_t();
-  configASSERT(new_sub);
+  PmeDissolvedOxygen_t *new_sub = static_cast<PmeDissolvedOxygen_t *>(bm_malloc(sizeof(PmeDissolvedOxygen_t)));
+  if (new_sub) {
+    new_sub = new (new_sub) PmeDissolvedOxygen_t();
 
-  new_sub->_mutex = xSemaphoreCreateMutex();
-  configASSERT(new_sub->_mutex);
+    new_sub->_mutex = xSemaphoreCreateMutex();
 
-  new_sub->node_id = node_id;
-  new_sub->type = SENSOR_TYPE_PME_DO;
-  new_sub->next = NULL;
-  new_sub->agg_period_ms = agg_period_ms;
-  new_sub->temperature_deg_c.initBuffer(averager_max_samples);
-  new_sub->do_mg_per_l.initBuffer(averager_max_samples);
-  new_sub->quality.initBuffer(averager_max_samples);
-  new_sub->do_saturation_pct.initBuffer(averager_max_samples);
-  new_sub->reading_count = 0;
+    if (new_sub->_mutex) {
+
+      new_sub->node_id = node_id;
+      new_sub->type = SENSOR_TYPE_PME_DO;
+      new_sub->next = NULL;
+      new_sub->agg_period_ms = agg_period_ms;
+      new_sub->temperature_deg_c.initBuffer(averager_max_samples);
+      new_sub->do_mg_per_l.initBuffer(averager_max_samples);
+      new_sub->quality.initBuffer(averager_max_samples);
+      new_sub->do_saturation_pct.initBuffer(averager_max_samples);
+      new_sub->reading_count = 0;
+    } else {
+      bm_free(new_sub);
+      new_sub = NULL;
+    }
+  }
   return new_sub;
 }
