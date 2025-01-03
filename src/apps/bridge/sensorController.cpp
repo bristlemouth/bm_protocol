@@ -5,6 +5,7 @@
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
 #include "device_info.h"
+#include "pmeDissolvedOxygenSensor.h"
 #include "rbrCodaSensor.h"
 #include "reportBuilder.h"
 #include "seapointTurbiditySensor.h"
@@ -223,18 +224,19 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         printf("Failed to decode sys info reply\n");
         break;
       }
+
+      // All sensors will have the same sample duration
+      uint32_t sample_duration_ms = BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000U;
+      get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
+                      strlen(AppConfig::SAMPLE_DURATION_MS), &sample_duration_ms);
+
       if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
           0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          uint32_t current_agg_period_ms =
-              (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
-                          strlen(AppConfig::SAMPLE_DURATION_MS), &current_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (current_agg_period_ms / _ctx.current_reading_period_ms) +
-              Aanderaa_t::N_SAMPLES_PAD;
+              (sample_duration_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
           Aanderaa_t *aanderaa_sub =
-              createAanderaaSub(reply.node_id, current_agg_period_ms, AVERAGER_MAX_SAMPLES);
+              createAanderaaSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
           if (aanderaa_sub) {
             abstractSensorAddSensorSub(aanderaa_sub);
           }
@@ -242,14 +244,10 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "bm_soft_module",
                          MIN(reply.app_name_strlen, strlen("bm_soft_module"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          uint32_t soft_agg_period_ms =
-              (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
-                          strlen(AppConfig::SAMPLE_DURATION_MS), &soft_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (soft_agg_period_ms / _ctx.soft_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
+              (sample_duration_ms / _ctx.soft_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
           Soft_t *soft_sub =
-              createSoftSub(reply.node_id, soft_agg_period_ms, AVERAGER_MAX_SAMPLES);
+              createSoftSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
           if (soft_sub) {
             abstractSensorAddSensorSub(soft_sub);
           }
@@ -257,15 +255,10 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "bm_rbr",
                          MIN(reply.app_name_strlen, strlen("bm_rbr"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          uint32_t rbr_coda_agg_period_ms =
-              (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
-                          strlen(AppConfig::SAMPLE_DURATION_MS), &rbr_coda_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (rbr_coda_agg_period_ms / _ctx.rbr_coda_reading_period_ms) +
-              RbrCoda_t::N_SAMPLES_PAD;
+              (sample_duration_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
           RbrCoda_t *rbr_coda_sub =
-              createRbrCodaSub(reply.node_id, rbr_coda_agg_period_ms, AVERAGER_MAX_SAMPLES,
+              createRbrCodaSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES,
                                _ctx.rbr_coda_reading_period_ms);
           if (rbr_coda_sub) {
             abstractSensorAddSensorSub(rbr_coda_sub);
@@ -274,18 +267,25 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "seapoint_turbidity",
                          MIN(reply.app_name_strlen, strlen("seapoint_turbidity"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          uint32_t seapoint_turbidity_agg_period_ms =
-              (BridgePowerController::DEFAULT_SAMPLE_DURATION_S * 1000);
-          get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
-                          strlen(AppConfig::SAMPLE_DURATION_MS),
-                          &seapoint_turbidity_agg_period_ms);
           uint32_t AVERAGER_MAX_SAMPLES =
-              (seapoint_turbidity_agg_period_ms / _ctx.seapoint_turbidity_reading_period_ms) +
+              (sample_duration_ms / _ctx.seapoint_turbidity_reading_period_ms) +
               SeapointTurbidity_t::N_SAMPLES_PAD;
           SeapointTurbidity_t *seapoint_turbidity_sub = createSeapointTurbiditySub(
-              reply.node_id, seapoint_turbidity_agg_period_ms, AVERAGER_MAX_SAMPLES);
+              reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
           if (seapoint_turbidity_sub) {
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
+          }
+        }
+      } else if (strncmp(reply.app_name, "pme_dissolved_oxygen",
+                         MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
+        if (!sensorControllerFindSensorById(reply.node_id)) {
+          uint32_t AVERAGER_MAX_SAMPLES =
+              (sample_duration_ms / _ctx.current_reading_period_ms) +
+              PmeDissolvedOxygen_t::N_SAMPLES_PAD;
+          PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub = createPmeDissolvedOxygenSub(
+              reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          if (pme_dissolved_oxygen_sub) {
+            abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
         }
       }
