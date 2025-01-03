@@ -9,6 +9,7 @@
 #include "queue.h"
 #include "task.h"
 
+#include "adi_hal.h"
 #include "bcmp_cli.h"
 #include "bm_ports.h"
 #include "bsp.h"
@@ -51,6 +52,7 @@ static void adin_power_callback(bool on) {
 
 void bcl_init(void) {
   IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
+  HAL_Init_Hook();
   config_init();
   //TODO: This should all be moved to user code
   uint8_t major, minor, patch;
