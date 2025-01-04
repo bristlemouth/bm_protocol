@@ -26,7 +26,7 @@ bool PmeDissolvedOxygenSensor::subscribe() {
     int topic_strlen =
         snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
     if (topic_strlen > 0) {
-      rval = bm_sub_wl(sub, topic_strlen, pmeDissolvedOxygenSubCallback);
+      rval = (bm_sub_wl(sub, topic_strlen, pmeDissolvedOxygenSubCallback) == BmOK);
     }
     bm_free(sub);
   }
