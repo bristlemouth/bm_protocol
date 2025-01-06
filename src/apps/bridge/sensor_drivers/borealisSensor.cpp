@@ -94,7 +94,7 @@ static BmErr borealisConfigCb(uint8_t *payload) {
 
   if (payload && CURRENT_SUB) {
     BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
-    uint32_t size = sizeof(AbstractSensor::m_reading_period_ms);
+    size_t size = sizeof(AbstractSensor::m_reading_period_ms);
     err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
                                    &CURRENT_SUB->m_reading_period_ms, &size);
     CURRENT_SUB = NULL;
