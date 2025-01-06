@@ -5,11 +5,11 @@
 #include "bsp.h"
 #include "protected_spi.h"
 #include "semphr.h"
+#include "task_priorities.h"
 #include "util.h"
 #include <stdio.h>
 #include <string.h>
 
-#define adin_spi_task_priority 30
 #define adin_semaphore_max_queue 10
 
 static HAL_Callback_t ADIN2111_MAC_SPI_CALLBACK = NULL;
@@ -64,7 +64,7 @@ uint32_t HAL_GetEnableIrq(void) { return NVIC_GetEnableIRQ(ADIN_INT_EXTI_IRQn); 
 uint32_t HAL_Init_Hook(void) {
   BmErr err = BmENOMEM;
 
-  err = bm_task_create(adi_spi_task, "ADIN SPI Task", 512, NULL, adin_spi_task_priority,
+  err = bm_task_create(adi_spi_task, "ADIN SPI Task", 512, NULL, ADIN_SPI_TASK_PRIORITY,
                        &ADI_SPI_TASK_HANDLE);
 
   return err == BmOK ? ADI_HAL_SUCCESS : ADI_HAL_ERROR;
