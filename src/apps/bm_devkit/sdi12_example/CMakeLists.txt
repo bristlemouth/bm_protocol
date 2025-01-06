@@ -2,7 +2,6 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bmdk_common/bm_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/exo3s_sensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/exo3s_sensor.h
