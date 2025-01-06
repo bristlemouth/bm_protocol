@@ -185,6 +185,10 @@ static void runController(void *param) {
             SeapointTurbiditySensor *seapoint_turbidity =
                 static_cast<SeapointTurbiditySensor *>(curr);
             seapoint_turbidity->aggregate();
+          } else if (curr->type == SENSOR_TYPE_PME_DO) {
+            PmeDissolvedOxygenSensor *pme_dissolved_oxygen =
+                static_cast<PmeDissolvedOxygenSensor *>(curr);
+            pme_dissolved_oxygen->aggregate();
           }
           curr = curr->next;
         }
