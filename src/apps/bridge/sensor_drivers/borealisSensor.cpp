@@ -3,6 +3,7 @@
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bristlemouth.h"
+#include "messages/config.h"
 #include "pubsub.h"
 #include "semphr.h"
 #include "sensorController.h"
@@ -10,6 +11,9 @@
 #include <new>
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
+
+static constexpr char READING_PERIOD_KEY[] = "bandsSampleTimeMs";
+static struct BorealisSensor *CURRENT_SUB;
 
 //TODO: remove this once codec is in place
 CborError BorealisDataMsg::decode(Data &d, const uint8_t *cbor_buffer, size_t size) {
@@ -85,6 +89,20 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
   }
 }
 
+static BmErr borealisConfigCb(uint8_t *payload) {
+  BmErr err = BmENODATA;
+
+  if (payload && CURRENT_SUB) {
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
+    uint32_t size = sizeof(AbstractSensor::m_reading_period_ms);
+    err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
+                                   &CURRENT_SUB->m_reading_period_ms, &size);
+    CURRENT_SUB = NULL;
+  }
+
+  return err;
+}
+
 /*!
  @brief Creates A Borealis Sensor Subscriber
 
@@ -94,9 +112,10 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
  @return pointer to new borealis subscriber
  @return nullptr on failure
  */
-Borealis_t *createBorealisSensorSub(uint64_t node_id, uint32_t reading_period_ms) {
+Borealis_t *createBorealisSensorSub(uint64_t node_id) {
   Borealis_t *sub = static_cast<Borealis_t *>(bm_malloc(sizeof(Borealis_t)));
   Borealis_t *ret = nullptr;
+  BmErr err = BmOK;
 
   if (sub) {
     ret = new (sub) Borealis_t();
@@ -107,11 +126,19 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id, uint32_t reading_period_ms
       ret->node_id = node_id;
       ret->type = SENSOR_TYPE_BOREALIS;
       ret->next = nullptr;
-      ret->m_reading_period_ms = reading_period_ms;
-    } else {
+      ret->m_reading_period_ms = BorealisSensor::DEFAULT_BOREALIS_READING_PERIOD_MS;
+      CURRENT_SUB = ret;
+      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM, strlen(READING_PERIOD_KEY),
+                      READING_PERIOD_KEY, &err, borealisConfigCb);
+    }
+
+    if (!ret->_mutex || err != BmOK) {
+      bm_debug("Failed to create borealis sensor err: %d\n", err);
       bm_free(sub);
       ret = nullptr;
     }
+  } else {
+    bm_debug("Failed to allocate memory for borealis sensor\n");
   }
 
   return ret;

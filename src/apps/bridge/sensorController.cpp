@@ -32,7 +32,6 @@ typedef struct sensorControllerCtx {
   uint32_t soft_reading_period_ms;
   uint32_t rbr_coda_reading_period_ms;
   uint32_t seapoint_turbidity_reading_period_ms;
-  uint32_t borealis_reading_period_ms;
 } sensorsControllerCtx_t;
 
 static sensorsControllerCtx_t _ctx;
@@ -109,21 +108,6 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TURBIDITY_READING_PERIOD_MS,
                     strlen(AppConfig::TURBIDITY_READING_PERIOD_MS),
                     _ctx.seapoint_turbidity_reading_period_ms);
-    save = true;
-  }
-
-  _ctx.borealis_reading_period_ms = BorealisSensor::DEFAULT_BOREALIS_READING_PERIOD_MS;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::BOREALIS_READING_PERIOD_MS,
-                       strlen(AppConfig::BOREALIS_READING_PERIOD_MS),
-                       &_ctx.borealis_reading_period_ms)) {
-    bridgeLogPrint(
-        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-        "Failed to get borealis reading period from config, using default value and writing "
-        "to config: %" PRIu32 "ms\n",
-        _ctx.borealis_reading_period_ms);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::BOREALIS_READING_PERIOD_MS,
-                    strlen(AppConfig::BOREALIS_READING_PERIOD_MS),
-                    _ctx.borealis_reading_period_ms);
     save = true;
   }
 
@@ -309,8 +293,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "borealis",
                          MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
-          Borealis_t *borealis_sub =
-              createBorealisSensorSub(reply.node_id, _ctx.borealis_reading_period_ms);
+          Borealis_t *borealis_sub = createBorealisSensorSub(reply.node_id);
           if (borealis_sub) {
             abstractSensorAddSensorSub(borealis_sub);
           }

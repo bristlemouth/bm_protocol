@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstractSensor.h"
+#include "util.h"
 
 //TODO: Remove this when codec is in place
 #include "sensor_header_msg.h"
@@ -29,4 +30,4 @@ private:
   static constexpr char subtag[] = "/aos/borealis/spectrum";
 } Borealis_t;
 
-Borealis_t *createBorealisSensorSub(uint64_t node_id, uint32_t reading_period_ms);
+Borealis_t *createBorealisSensorSub(uint64_t node_id);
