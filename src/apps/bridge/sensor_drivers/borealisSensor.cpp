@@ -9,6 +9,7 @@
 #include "sensorController.h"
 #include <inttypes.h>
 #include <new>
+#include <string.h>
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
 
@@ -17,10 +18,10 @@ static struct BorealisSensor *CURRENT_SUB;
 
 //TODO: remove this once codec is in place
 CborError BorealisDataMsg::decode(Data &d, const uint8_t *cbor_buffer, size_t size) {
-  (void)d;
   (void)cbor_buffer;
   (void)size;
-  return CborUnknownError;
+  memcpy(&d, cbor_buffer, sizeof(Data));
+  return CborNoError;
 }
 
 /*!
@@ -78,7 +79,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
       err = borealis->send_spotter_log_individual(
           "borealis", d.header, MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
           //TODO: Replace with borealis specific data here
-          "%.3f", 0.0f);
+          "%.3f\n", 0.0f);
       if (err != BmOK) {
         bm_debug("Failed to send borealis individual log to spotter, reason: %d\n", err);
       }
