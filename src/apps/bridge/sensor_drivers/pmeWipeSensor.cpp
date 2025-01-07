@@ -103,7 +103,7 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
 void PmeWipeSensor::aggregate(void) {
   char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
   configASSERT(log_buff);
-  if (bm_semaphore_take(_mutex, BM_MAX_DELAY) == BmOK) {
+  if (bm_semaphore_take(_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
     pme_wipe_aggregations_t wipe_aggs = {
         .wipe_current_mean_ma = NAN,
         .wipe_duration_s = NAN,
