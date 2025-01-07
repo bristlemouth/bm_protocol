@@ -70,21 +70,22 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
         }
         wipe_sensor->last_timestamp = current_timestamp;
 
-        size_t log_buff_len = snprintf(
-            log_buff, SENSOR_LOG_BUF_SIZE,
-            "%016" PRIx64 ","       // Node Id
-            "%" PRIi8 ","           // node_position
-            "pme_dissolved_oxygen," // node_app_name
-            "%" PRIu64 ","          // reading_uptime_millis
-            "%" PRIu64 "."          // reading_time_utc_ms seconds part
-            "%03" PRIu32 ","        // reading_time_utc_ms millis part
-            "%" PRIu64 ","          // sensor_reading_time_ms seconds part
-            "%03" PRIu32 ","        // sensor_reading_time_ms millis part
-            "%.3f,"                 // Wipe current mean
-            "%.3f\n",               // Wipe duration mean
-            node_id, wipe_sensor->node_position, wipe_data.header.reading_uptime_millis,
-            reading_time_sec, reading_time_millis, sensor_reading_time_sec,
-            sensor_reading_time_millis, wipe_data.wipe_current_mean_ma, wipe_data.wipe_duration_s);
+        size_t log_buff_len =
+            snprintf(log_buff, SENSOR_LOG_BUF_SIZE,
+                     "%016" PRIx64 ","       // Node Id
+                     "%" PRIi8 ","           // node_position
+                     "pme_dissolved_oxygen," // node_app_name
+                     "%" PRIu64 ","          // reading_uptime_millis
+                     "%" PRIu64 "."          // reading_time_utc_ms seconds part
+                     "%03" PRIu32 ","        // reading_time_utc_ms millis part
+                     "%" PRIu64 ","          // sensor_reading_time_ms seconds part
+                     "%03" PRIu32 ","        // sensor_reading_time_ms millis part
+                     "%.3f,"                 // Wipe current mean
+                     "%.3f\n",               // Wipe duration mean
+                     node_id, wipe_sensor->node_position,
+                     wipe_data.header.reading_uptime_millis, reading_time_sec,
+                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
+                     wipe_data.wipe_current_mean_ma, wipe_data.wipe_duration_s);
         if (log_buff_len > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buff, log_buff_len);
         } else {
@@ -100,7 +101,58 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
 }
 
 void PmeWipeSensor::aggregate(void) {
-  // TODO!
+  char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
+  configASSERT(log_buff);
+  if (bm_semaphore_take(_mutex, BM_MAX_DELAY) == BmOK) {
+    pme_wipe_aggregations_t wipe_aggs = {
+        .wipe_current_mean_ma = NAN,
+        .wipe_duration_s = NAN,
+        .reading_count = reading_count,
+    };
+
+    if (wipe_current_ma.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
+      wipe_aggs.wipe_current_mean_ma = wipe_current_ma.getMean();
+      wipe_aggs.wipe_duration_s = wipe_duration_s.getMean();
+      wipe_aggs.reading_count = reading_count;
+    }
+
+    static constexpr uint8_t TIME_STR_BUFSIZE = 50;
+    char time_str[TIME_STR_BUFSIZE];
+    if (!logRtcGetTimeStr(time_str, TIME_STR_BUFSIZE, true)) {
+      bm_debug("Failed to get time string for PME Wiper Sensor\n");
+      snprintf(time_str, TIME_STR_BUFSIZE, "0");
+    }
+
+    int8_t node_position = topology_sampler_get_node_position(node_id, 5000);
+
+    size_t log_buflen = snprintf(log_buff, SENSOR_LOG_BUF_SIZE,
+                                 "%016" PRIx64 ","       // Node Id
+                                 "%" PRIi8 ","           // node_position
+                                 "pme_dissolved_oxygen," // node_app_name
+                                 "%s,"                   // timestamp(ticks/UTC)
+                                 "%" PRIu32 ","          // reading_count
+                                 "%.4f,"                 // temperature_deg_c
+                                 "%.3f\n",               // do_mg_per_l
+                                 node_id, node_position, time_str, wipe_aggs.reading_count,
+                                 wipe_aggs.wipe_current_mean_ma, wipe_aggs.wipe_duration_s);
+
+    if (log_buflen > 0) {
+      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buff, log_buflen);
+    } else {
+      bm_debug("ERROR: Failed to print PME Wiper data to log\n");
+    }
+
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_PME_WIPE, static_cast<void *>(&wipe_aggs),
+                            sizeof(pme_wipe_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    memset(log_buff, 0, SENSOR_LOG_BUF_SIZE);
+    wipe_current_ma.clear();
+    wipe_duration_s.clear();
+    reading_count = 0;
+    bm_semaphore_give(_mutex);
+  } else {
+    bm_debug("Failed to take mutex for PME Wiper Sensor after getting a new reading\n");
+  }
+  bm_free(log_buff);
 }
 
 PmeWipe_t *createPmeWipeSub(uint64_t node_id, uint32_t agg_period_ms,
@@ -126,4 +178,3 @@ PmeWipe_t *createPmeWipeSub(uint64_t node_id, uint32_t agg_period_ms,
   }
   return new_sub;
 }
-

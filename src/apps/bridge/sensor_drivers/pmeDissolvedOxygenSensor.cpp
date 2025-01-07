@@ -135,7 +135,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+    int8_t node_position = topology_sampler_get_node_position(node_id, 5000);
 
     size_t log_buflen =
         snprintf(log_buff, SENSOR_LOG_BUF_SIZE,
