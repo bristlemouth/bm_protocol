@@ -120,7 +120,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
       .reading_count = 0
     };
 
-    if (temperature_deg_c.getNumSamples() > MIN_READINGS_FOR_AGGREGATION) {
+    if (temperature_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       dissolved_oxygen_aggs.temperature_deg_c_mean = temperature_deg_c.getMean();
       dissolved_oxygen_aggs.do_mg_per_l_mean = do_mg_per_l.getMean();
       dissolved_oxygen_aggs.quality_mean = quality.getMean();
