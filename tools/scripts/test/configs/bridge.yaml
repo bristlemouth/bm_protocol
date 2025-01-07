@@ -5,6 +5,7 @@
     bsp: bridge_v1_0
     build_type: Release
     use_bootloader: True
+    sub: bridge
 
 - name: bridge w/upy - Release
   type: build_fw
@@ -14,6 +15,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DUSE_MICROPYTHON=1
+    sub: upy
 
 - name: bridge w/raw pressure - Release
   type: build_fw
@@ -23,3 +25,4 @@
     build_type: Release
     use_bootloader: True
     defines: -DRAW_PRESSURE_ENABLE=1
+    sub: raw_pressure

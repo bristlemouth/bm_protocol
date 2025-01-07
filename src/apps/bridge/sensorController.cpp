@@ -2,6 +2,7 @@
 #include "aanderaaSensor.h"
 #include "app_config.h"
 #include "app_util.h"
+#include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
 #include "device_info.h"
@@ -112,6 +113,7 @@ void sensorControllerInit(BridgePowerController *power_controller) {
                     _ctx.seapoint_turbidity_reading_period_ms);
     save = true;
   }
+
   _ctx.pme_dissolved_oxygen_reading_period_ms = DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS;
   if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS,
                        strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
@@ -126,6 +128,7 @@ void sensorControllerInit(BridgePowerController *power_controller) {
                     _ctx.pme_dissolved_oxygen_reading_period_ms);
     save = true;
   }
+
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
   }
@@ -306,6 +309,14 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
               reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
+          }
+        }
+      } else if (strncmp(reply.app_name, "borealis",
+                         MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
+        if (!sensorControllerFindSensorById(reply.node_id)) {
+          Borealis_t *borealis_sub = createBorealisSensorSub(reply.node_id);
+          if (borealis_sub) {
+            abstractSensorAddSensorSub(borealis_sub);
           }
         }
       }
