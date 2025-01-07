@@ -10,6 +10,7 @@ typedef enum abstractSensorType : uint8_t {
     SENSOR_TYPE_RBR_CODA = 3,
     SENSOR_TYPE_SEAPOINT_TURBIDITY = 4,
     SENSOR_TYPE_PME_DO = 5,
+    SENSOR_TYPE_PME_WIPE = 6,
 } abstractSensorType_e;
 
 struct AbstractSensor {

@@ -182,7 +182,6 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t agg
     new_sub->_mutex = xSemaphoreCreateMutex();
 
     if (new_sub->_mutex) {
-
       new_sub->node_id = node_id;
       new_sub->type = SENSOR_TYPE_PME_DO;
       new_sub->next = NULL;
