@@ -7,6 +7,7 @@
 #include "bridgePowerController.h"
 #include "device_info.h"
 #include "pmeDissolvedOxygenSensor.h"
+#include "pmeWipeSensor.h"
 #include "rbrCodaSensor.h"
 #include "reportBuilder.h"
 #include "seapointTurbiditySensor.h"
@@ -20,6 +21,7 @@
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
 #define DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
+#define DEFAULT_PME_WIPER_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -35,6 +37,7 @@ typedef struct sensorControllerCtx {
   uint32_t rbr_coda_reading_period_ms;
   uint32_t seapoint_turbidity_reading_period_ms;
   uint32_t pme_dissolved_oxygen_reading_period_ms;
+  uint32_t pme_wiper_reading_period_ms;
 } sensorsControllerCtx_t;
 
 static sensorsControllerCtx_t _ctx;
@@ -129,6 +132,20 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     save = true;
   }
 
+  _ctx.pme_wiper_reading_period_ms = DEFAULT_PME_WIPER_READING_PERIOD_MS;
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
+                       strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
+                       &_ctx.pme_wiper_reading_period_ms)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get pme wiper reading period from config, using default "
+                   "value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   _ctx.pme_wiper_reading_period_ms);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
+                    strlen(AppConfig::PME_WIPER_READING_PERIOD_MS), _ctx.pme_wiper_reading_period_ms);
+    save = true;
+  }
+
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
   }
@@ -192,6 +209,9 @@ static void runController(void *param) {
             PmeDissolvedOxygenSensor *pme_dissolved_oxygen =
                 static_cast<PmeDissolvedOxygenSensor *>(curr);
             pme_dissolved_oxygen->aggregate();
+          } else if (curr->type == SENSOR_TYPE_PME_WIPE) {
+            PmeWipeSensor *pme_wiper = static_cast<PmeWipeSensor *>(curr);
+            pme_wiper->aggregate();
           }
           curr = curr->next;
         }
@@ -303,12 +323,19 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                          MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id)) {
           uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.current_reading_period_ms) +
+              (sample_duration_ms / _ctx.pme_dissolved_oxygen_reading_period_ms) +
               PmeDissolvedOxygen_t::N_SAMPLES_PAD;
           PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub = createPmeDissolvedOxygenSub(
               reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
+          }
+          AVERAGER_MAX_SAMPLES = (sample_duration_ms / _ctx.pme_wiper_reading_period_ms) +
+                                PmeWipe_t::N_SAMPLES_PAD;
+          PmeWipe_t *pme_wiper_sub = createPmeWipeSub(reply.node_id, sample_duration_ms,
+                                                      AVERAGER_MAX_SAMPLES);
+          if (pme_wiper_sub) {
+            abstractSensorAddSensorSub(pme_wiper_sub);
           }
         }
       } else if (strncmp(reply.app_name, "borealis",
