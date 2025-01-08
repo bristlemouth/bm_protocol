@@ -137,7 +137,7 @@ void PmeWipeSensor::aggregate(void) {
                                  wipe_aggs.wipe_current_mean_ma, wipe_aggs.wipe_duration_s);
 
     if (log_buflen > 0) {
-      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buff, log_buflen);
+      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buff, log_buflen);
     } else {
       bm_debug("ERROR: Failed to print PME Wiper data to log\n");
     }
