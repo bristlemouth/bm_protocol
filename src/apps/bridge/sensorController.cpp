@@ -241,11 +241,11 @@ void abstractSensorAddSensorSub(AbstractSensor *sensor) {
   }
 }
 
-AbstractSensor *sensorControllerFindSensorById(uint64_t node_id) {
+AbstractSensor *sensorControllerFindSensorById(uint64_t node_id, abstractSensorType_e type) {
   AbstractSensor *ret = NULL;
   AbstractSensor *curr = _ctx._subbed_sensors;
   while (curr != NULL) {
-    if (curr->node_id == node_id) {
+    if (curr->node_id == node_id && curr->type == type) {
       ret = curr;
       break;
     }
@@ -275,7 +275,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 
       if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
           0) {
-        if (!sensorControllerFindSensorById(reply.node_id)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
           Aanderaa_t *aanderaa_sub =
@@ -286,7 +286,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "bm_soft_module",
                          MIN(reply.app_name_strlen, strlen("bm_soft_module"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_SOFT)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.soft_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
           Soft_t *soft_sub =
@@ -297,7 +297,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "bm_rbr",
                          MIN(reply.app_name_strlen, strlen("bm_rbr"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_RBR_CODA)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
           RbrCoda_t *rbr_coda_sub =
@@ -309,7 +309,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "seapoint_turbidity",
                          MIN(reply.app_name_strlen, strlen("seapoint_turbidity"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.seapoint_turbidity_reading_period_ms) +
               SeapointTurbidity_t::N_SAMPLES_PAD;
@@ -321,7 +321,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "pme_dissolved_oxygen",
                          MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.pme_dissolved_oxygen_reading_period_ms) +
               PmeDissolvedOxygen_t::N_SAMPLES_PAD;
@@ -340,7 +340,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "borealis",
                          MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_WIPE)) {
           Borealis_t *borealis_sub = createBorealisSensorSub(reply.node_id);
           if (borealis_sub) {
             abstractSensorAddSensorSub(borealis_sub);

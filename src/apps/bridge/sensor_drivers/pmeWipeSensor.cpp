@@ -40,7 +40,7 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
   (void)version;
   bm_debug("PME Wiper data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
            topic_len, topic);
-  PmeWipe_t *wipe_sensor = static_cast<PmeWipe_t *>(sensorControllerFindSensorById(node_id));
+  PmeWipe_t *wipe_sensor = static_cast<PmeWipe_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_PME_WIPE));
   if (wipe_sensor && wipe_sensor->type == SENSOR_TYPE_PME_WIPE && wipe_sensor->_mutex) {
     if (bm_semaphore_take(wipe_sensor->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
       static PmeWipeMsg::Data wipe_data;

@@ -20,4 +20,4 @@ extern TaskHandle_t sensor_controller_task_handle;
 
 void sensorControllerInit(BridgePowerController *power_controller);
 
-AbstractSensor *sensorControllerFindSensorById(uint64_t node_id);
+AbstractSensor *sensorControllerFindSensorById(uint64_t node_id, abstractSensorType_e type);

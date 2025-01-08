@@ -67,7 +67,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
   (void)version;
   BmErr err = BmOK;
   BorealisDataMsg::Data d;
-  Borealis_t *borealis = static_cast<Borealis_t *>(sensorControllerFindSensorById(node_id));
+  Borealis_t *borealis = static_cast<Borealis_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_BOREALIS));
 
   bm_debug("Borealis data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
            topic_len, topic);
@@ -108,7 +108,7 @@ static BmErr borealisConfigCb(uint8_t *payload) {
  @brief Creates A Borealis Sensor Subscriber
 
  @param node_id node ID of the subscriber
- @param reading_period_ms reading period of 
+ @param reading_period_ms reading period of
 
  @return pointer to new borealis subscriber
  @return nullptr on failure

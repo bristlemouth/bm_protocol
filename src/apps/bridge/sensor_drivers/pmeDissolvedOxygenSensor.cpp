@@ -41,7 +41,7 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(uint64_t node_id, c
   bm_debug("PME Dissolved Oxygen data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
   PmeDissolvedOxygen_t *dissolved_oxygen_sensor =
-      static_cast<PmeDissolvedOxygen_t *>(sensorControllerFindSensorById(node_id));
+      static_cast<PmeDissolvedOxygen_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_PME_DO));
   if (dissolved_oxygen_sensor && dissolved_oxygen_sensor->type == SENSOR_TYPE_PME_DO && dissolved_oxygen_sensor->_mutex) {
     if (bm_semaphore_take(dissolved_oxygen_sensor->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
       static PmeDissolvedOxygenMsg::Data dissolved_oxygen_data;
