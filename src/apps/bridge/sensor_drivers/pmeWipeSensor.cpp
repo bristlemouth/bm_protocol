@@ -74,7 +74,7 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
             snprintf(log_buff, SENSOR_LOG_BUF_SIZE,
                      "%016" PRIx64 ","       // Node Id
                      "%" PRIi8 ","           // node_position
-                     "pme_dissolved_oxygen," // node_app_name
+                     "pme_wiper,"            // node_app_name
                      "%" PRIu64 ","          // reading_uptime_millis
                      "%" PRIu64 "."          // reading_time_utc_ms seconds part
                      "%03" PRIu32 ","        // reading_time_utc_ms millis part
@@ -128,7 +128,7 @@ void PmeWipeSensor::aggregate(void) {
     size_t log_buflen = snprintf(log_buff, SENSOR_LOG_BUF_SIZE,
                                  "%016" PRIx64 ","       // Node Id
                                  "%" PRIi8 ","           // node_position
-                                 "pme_dissolved_oxygen," // node_app_name
+                                 "pme_wiper,"            // node_app_name
                                  "%s,"                   // timestamp(ticks/UTC)
                                  "%" PRIu32 ","          // reading_count
                                  "%.4f,"                 // temperature_deg_c
@@ -142,8 +142,10 @@ void PmeWipeSensor::aggregate(void) {
       bm_debug("ERROR: Failed to print PME Wiper data to log\n");
     }
 
-    reportBuilderAddToQueue(node_id, SENSOR_TYPE_PME_WIPE, static_cast<void *>(&wipe_aggs),
-                            sizeof(pme_wipe_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+    // TODO - figure out if we want to add to the report builder and how we will do it!
+    // reportBuilderAddToQueue(node_id, SENSOR_TYPE_PME_WIPE, static_cast<void *>(&wipe_aggs),
+    //                         sizeof(pme_wipe_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+
     memset(log_buff, 0, SENSOR_LOG_BUF_SIZE);
     wipe_current_ma.clear();
     wipe_duration_s.clear();
