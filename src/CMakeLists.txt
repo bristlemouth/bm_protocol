@@ -1,3 +1,12 @@
+execute_process(
+    COMMAND git submodule update --init
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+)
+add_custom_target(update_submodules_bm_protocol
+    COMMAND git submodule update --init
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+)
+
 # If we are on windows (CMAKE uses win32 for both win32 and win64), we need to set the python executable to python
 # even though we are using python3.
 if(CMAKE_HOST_WIN32)
@@ -322,6 +331,7 @@ add_link_options(
         )
 
 add_executable(${EXECUTABLE})
+add_dependencies(${EXECUTABLE} update_submodules_bm_protocol)
 
 # Include LIB directory
 if(NOT APP MATCHES "bootloader")
