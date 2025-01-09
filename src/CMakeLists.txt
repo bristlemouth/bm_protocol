@@ -219,21 +219,38 @@ add_compile_options(${COMPILE_FLAGS})
 set(APP_NAME ${APP})
 
 set(APP_DIR_COMMON "")
+
+if(CMAKE_APP_TYPE STREQUAL "BMDK")
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/bm_devkit)
+    set(APP_DIR_SOURCES ${DEV_KIT_FILES})
+    set(APP_DIR_COMMON ${DEV_KIT_INCLUDES})
+    set(APP_LOCATION ${CMAKE_CURRENT_LIST_DIR}/apps/bm_devkit/${APP})
+elseif(CMAKE_APP_TYPE STREQUAL "bristleback")
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/bristleback_apps)
+    set(APP_DIR_SOURCES ${BRISTLEBACK_FILES})
+    set(APP_DIR_COMMON ${BRISTLEBACK_INCLUDES})
+    set(APP_LOCATION ${CMAKE_CURRENT_LIST_DIR}/apps/bristleback_apps/${APP})
+elseif(CMAKE_APP_TYPE STREQUAL "rs232_expander")
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/rs232_expander_apps)
+    set(APP_DIR_SOURCES ${RS232_FILES})
+    set(APP_DIR_COMMON ${RS232_INCLUDES})
+    set(APP_LOCATION ${CMAKE_CURRENT_LIST_DIR}/apps/rs232_expander_apps/${APP})
+else()
+    set(APP_LOCATION ${CMAKE_CURRENT_LIST_DIR}/apps/${APP})
+endif()
+
+if (EXISTS ${APP_LOCATION})
+    add_subdirectory(${APP_LOCATION})
+else()
+    get_filename_component(APP ${APP} REALPATH)
+    get_filename_component(APP_NAME ${APP} NAME)
+    add_subdirectory(${APP} ${CMAKE_BINARY_DIR}/borealis)
+endif()
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(APP_NAME ${APP_NAME}-dbg)
 endif()
-if(CMAKE_APP_TYPE STREQUAL "BMDK")
-    set(APP_DIR_COMMON ${CMAKE_CURRENT_LIST_DIR}/apps/bm_devkit/bmdk_common)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/bm_devkit/${APP})
-elseif(CMAKE_APP_TYPE STREQUAL "bristleback")
-    set(APP_DIR_COMMON ${CMAKE_CURRENT_LIST_DIR}/apps/bristleback_apps/bristleback_apps_common)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/bristleback_apps/${APP})
-elseif(CMAKE_APP_TYPE STREQUAL "rs232_expander")
-    set(APP_DIR_COMMON ${CMAKE_CURRENT_LIST_DIR}/apps/rs232_expander_apps/rs232_expander_apps_common)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/rs232_expander_apps/${APP})
-else()
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/apps/${APP})
-endif()
+
 
 if (DFU_HOST  STREQUAL 1)
 list(APPEND APP_DEFINES "BM_DFU_HOST=1")
@@ -399,6 +416,7 @@ target_sources(${EXECUTABLE} PRIVATE
     ${THIRD_PARTY_FILES}
 	${APP_FILES}
 	${KEY_FILES}
+    ${APP_DIR_SOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/version.c)
 
 target_include_directories(${EXECUTABLE} PRIVATE
