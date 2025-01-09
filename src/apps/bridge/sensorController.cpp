@@ -342,7 +342,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "borealis",
                          MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_WIPE)) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS)) {
           Borealis_t *borealis_sub = createBorealisSensorSub(reply.node_id);
           if (borealis_sub) {
             abstractSensorAddSensorSub(borealis_sub);

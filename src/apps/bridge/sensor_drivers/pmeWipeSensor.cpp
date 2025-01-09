@@ -70,7 +70,7 @@ void PmeWipeSensor::aggregate(void) {
     pme_wipe_aggregations_t wipe_aggs = {
         .wipe_current_mean_ma = NAN,
         .wipe_duration_s = NAN,
-        .reading_count = reading_count,
+        .reading_count = 0,
     };
 
     if (wipe_current_ma.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
