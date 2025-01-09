@@ -98,7 +98,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     }
 
     BmErr err = send_spotter_log_aggregate(
-        node_id, "pme_dissolved_oxygen", dissolved_oxygen_aggs.reading_count,
+        "pme_dissolved_oxygen", dissolved_oxygen_aggs.reading_count,
         "%.4f,"   // temperature_deg_c
         "%.3f,"   // do_mg_per_l
         "%.3f,"   // quality

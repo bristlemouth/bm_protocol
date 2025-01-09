@@ -79,11 +79,11 @@ void PmeWipeSensor::aggregate(void) {
       wipe_aggs.reading_count = reading_count;
     }
 
-    BmErr err = send_spotter_log_aggregate(node_id, "pme_wiper", wipe_aggs.reading_count,
+    BmErr err =
+        send_spotter_log_aggregate("pme_wiper", wipe_aggs.reading_count,
                                    "%.2f,"   // wipe_current_mean_ma
                                    "%.1f\n", // wipe_duration_s
-                                   wipe_aggs.wipe_current_mean_ma,
-                                   wipe_aggs.wipe_duration_s);
+                                   wipe_aggs.wipe_current_mean_ma, wipe_aggs.wipe_duration_s);
     if (err != BmOK) {
       bm_debug("ERROR: Failed to print PME Wiper data to AGG log, err: %d\n", err);
     }

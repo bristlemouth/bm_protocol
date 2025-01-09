@@ -111,7 +111,20 @@ BmErr AbstractSensor::send_spotter_log_individual(const char *app_name,
   return err;
 }
 
-BmErr AbstractSensor::send_spotter_log_aggregate(uint64_t node_id, const char *app_name,
+/*!
+ @brief Format And Send An Aggregate Sensor LogPrintf Message
+
+ @details Provides a generic way to format and send aggregate sensor readings.
+
+ @param app_name name of the bristlemouth node's application
+ @param reading_count number of readings aggregated
+ @param fmt format string of the data to be logged
+ @param ... formatted string arguments
+
+ @return BmOK on success
+ @return BmErr on failure
+ */
+BmErr AbstractSensor::send_spotter_log_aggregate(const char *app_name,
                                                  uint32_t reading_count, const char *fmt, ...) {
   BmErr err = BmENOMEM;
   char *log_buf = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
