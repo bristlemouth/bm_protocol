@@ -11,7 +11,7 @@
 typedef struct pme_dissolved_oxygen_aggregations_s {
   double temperature_deg_c_mean;
   double do_mg_per_l_mean;
-  double quality_mean; // TODO - will this be the mean?
+  double quality_mean;
   double do_saturation_pct_mean;
   uint32_t reading_count;
 } pme_dissolved_oxygen_aggregations_t;
@@ -20,13 +20,12 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   uint32_t agg_period_ms;
   AveragingSampler temperature_deg_c;
   AveragingSampler do_mg_per_l;
-  AveragingSampler quality; // TODO - will this need a sampler?
+  AveragingSampler quality;
   AveragingSampler do_saturation_pct;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;
 
-  // TODO - do we need the sample padding?
   static constexpr uint32_t N_SAMPLES_PAD = 2;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 1;
 
