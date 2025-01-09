@@ -1,7 +1,3 @@
-execute_process(
-    COMMAND git submodule update --init
-    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-)
 add_custom_target(update_submodules_bm_protocol
     COMMAND git submodule update --init
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
