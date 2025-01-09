@@ -124,8 +124,8 @@ BmErr AbstractSensor::send_spotter_log_individual(const char *app_name,
  @return BmOK on success
  @return BmErr on failure
  */
-BmErr AbstractSensor::send_spotter_log_aggregate(const char *app_name,
-                                                 uint32_t reading_count, const char *fmt, ...) {
+BmErr AbstractSensor::send_spotter_log_aggregate(const char *app_name, uint32_t reading_count,
+                                                 const char *fmt, ...) {
   BmErr err = BmENOMEM;
   char *log_buf = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
   va_list args;
