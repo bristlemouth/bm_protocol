@@ -57,17 +57,18 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
             dissolved_oxygen_data.do_saturation_pct);
         dissolved_oxygen_sensor->reading_count++;
 
-        if (dissolved_oxygen_sensor->send_spotter_log_individual(
-                "pme_dissolved_oxygen", dissolved_oxygen_data.header,
-                (DEFAULT_PME_DISSOLVED_READING_PERIOD_MS + 1000U),
-                "%.4f,"   // temperature_deg_c
-                "%.3f,"   // do_mg_per_l
-                "%.3f,"   // quality
-                "%.1f\n", // do_saturation_pct
-                dissolved_oxygen_data.temperature_deg_c, dissolved_oxygen_data.do_mg_per_l,
-                dissolved_oxygen_data.quality,
-                dissolved_oxygen_data.do_saturation_pct) != BmOK) {
-          bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to log\n");
+        BmErr err = dissolved_oxygen_sensor->send_spotter_log_individual(
+            "pme_dissolved_oxygen", dissolved_oxygen_data.header,
+            (DEFAULT_PME_DISSOLVED_READING_PERIOD_MS + 1000U),
+            "%.4f,"   // temperature_deg_c
+            "%.3f,"   // do_mg_per_l
+            "%.3f,"   // quality
+            "%.1f\n", // do_saturation_pct
+            dissolved_oxygen_data.temperature_deg_c, dissolved_oxygen_data.do_mg_per_l,
+            dissolved_oxygen_data.quality, dissolved_oxygen_data.do_saturation_pct);
+        if (err != BmOK) {
+          bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to IND log, err: %d\n",
+                   err);
         }
       }
       bm_semaphore_give(dissolved_oxygen_sensor->_mutex);
@@ -96,16 +97,16 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
       dissolved_oxygen_aggs.reading_count = reading_count;
     }
 
-    if (send_spotter_log_aggregate(
-            node_id, "pme_dissolved_oxygen", dissolved_oxygen_aggs.reading_count,
-            "%.4f,"   // temperature_deg_c
-            "%.3f,"   // do_mg_per_l
-            "%.3f,"   // quality
-            "%.1f\n", // do_saturation_pct
-            dissolved_oxygen_aggs.temperature_deg_c_mean,
-            dissolved_oxygen_aggs.do_mg_per_l_mean, dissolved_oxygen_aggs.quality_mean,
-            dissolved_oxygen_aggs.do_saturation_pct_mean) != BmOK) {
-      bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to log\n");
+    BmErr err = send_spotter_log_aggregate(
+        node_id, "pme_dissolved_oxygen", dissolved_oxygen_aggs.reading_count,
+        "%.4f,"   // temperature_deg_c
+        "%.3f,"   // do_mg_per_l
+        "%.3f,"   // quality
+        "%.1f\n", // do_saturation_pct
+        dissolved_oxygen_aggs.temperature_deg_c_mean, dissolved_oxygen_aggs.do_mg_per_l_mean,
+        dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean);
+    if (err != BmOK) {
+      bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to AGG log, err: %d\n", err);
     }
 
     reportBuilderAddToQueue(

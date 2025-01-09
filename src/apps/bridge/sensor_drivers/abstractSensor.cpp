@@ -101,6 +101,7 @@ BmErr AbstractSensor::send_spotter_log_individual(const char *app_name,
 
       size_t total_length = (size_t)(var_length + fixed_length);
       BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, total_length);
+      err = BmOK;
     } while (0);
     bm_free(log_buf);
   }

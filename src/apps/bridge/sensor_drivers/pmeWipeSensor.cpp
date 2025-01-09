@@ -53,7 +53,7 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
             "pme_wiper", wipe_data.header, (DEFAULT_PME_WIPER_READING_PERIOD_MS + 1000U),
             "%.3f,%.3f\n", wipe_data.wipe_current_mean_ma, wipe_data.wipe_duration_s);
         if (err != BmOK) {
-          bm_debug("ERROR: Failed to print PME Wiper data to log, err: %d\n", err);
+          bm_debug("ERROR: Failed to print PME Wiper data to IND log, err: %d\n", err);
         }
       }
       bm_semaphore_give(wipe_sensor->_mutex);
@@ -79,12 +79,13 @@ void PmeWipeSensor::aggregate(void) {
       wipe_aggs.reading_count = reading_count;
     }
 
-    if (send_spotter_log_aggregate(node_id, "pme_wiper", wipe_aggs.reading_count,
+    BmErr err = send_spotter_log_aggregate(node_id, "pme_wiper", wipe_aggs.reading_count,
                                    "%.2f,"   // wipe_current_mean_ma
                                    "%.1f\n", // wipe_duration_s
                                    wipe_aggs.wipe_current_mean_ma,
-                                   wipe_aggs.wipe_duration_s) != BmOK) {
-      bm_debug("ERROR: Failed to print PME Wiper data to log\n");
+                                   wipe_aggs.wipe_duration_s);
+    if (err != BmOK) {
+      bm_debug("ERROR: Failed to print PME Wiper data to AGG log, err: %d\n", err);
     }
 
     // TODO - figure out if we want to add to the report builder and how we will do it!
