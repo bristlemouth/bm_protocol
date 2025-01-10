@@ -21,7 +21,7 @@
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
 #define DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
-#define DEFAULT_PME_WIPER_READING_PERIOD_MS 10 * 60 * 1000            // 10 minutes
+#define DEFAULT_PME_WIPER_READING_PERIOD_MS 4 * 60 * 60 * 1000            // 4 hours
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -133,20 +133,20 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     save = true;
   }
 
-  _ctx.pme_wiper_reading_period_ms = DEFAULT_PME_WIPER_READING_PERIOD_MS;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
-                       strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
-                       &_ctx.pme_wiper_reading_period_ms)) {
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Failed to get pme wiper reading period from config, using default "
-                   "value and writing "
-                   "to config: %" PRIu32 "ms\n",
-                   _ctx.pme_wiper_reading_period_ms);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
-                    strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
-                    _ctx.pme_wiper_reading_period_ms);
-    save = true;
-  }
+  // _ctx.pme_wiper_reading_period_ms = DEFAULT_PME_WIPER_READING_PERIOD_MS;
+  // if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
+  //                      strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
+  //                      &_ctx.pme_wiper_reading_period_ms)) {
+  //   bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+  //                  "Failed to get pme wiper reading period from config, using default "
+  //                  "value and writing "
+  //                  "to config: %" PRIu32 "ms\n",
+  //                  _ctx.pme_wiper_reading_period_ms);
+  //   set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
+  //                   strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
+  //                   _ctx.pme_wiper_reading_period_ms);
+  //   save = true;
+  // }
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
@@ -332,10 +332,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
-          AVERAGER_MAX_SAMPLES = (sample_duration_ms / _ctx.pme_wiper_reading_period_ms) +
-                                 PmeWipe_t::N_SAMPLES_PAD;
           PmeWipe_t *pme_wiper_sub =
-              createPmeWipeSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+              createPmeWipeSub(reply.node_id, sample_duration_ms);
           if (pme_wiper_sub) {
             abstractSensorAddSensorSub(pme_wiper_sub);
           }
