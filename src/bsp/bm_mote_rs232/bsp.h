@@ -20,6 +20,7 @@ void mxInit(void);
 void bspInit();
 
 // Pin definitions
+extern IOPinHandle_t BB_3V3_EN;
 extern IOPinHandle_t VUSB_DETECT;
 extern IOPinHandle_t PL_BUCK_EN;
 extern IOPinHandle_t VBUS_EN;

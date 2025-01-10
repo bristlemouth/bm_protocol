@@ -71,6 +71,9 @@ void bspInit() {
   // Turn off the DISCHARGE_ON by default
   IOWrite(&DISCHARGE_ON, 0);
 
+  // Turn off 3V3_EN by default (using for LPM test).
+  IOWrite(&BB_3V3_EN, 0);
+
 }
 
 bool usb_is_connected() {

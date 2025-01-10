@@ -5,6 +5,8 @@
 //
 
 #include <stdbool.h>
+#include "io.h"
+#include "../../bsp/bm_mote_rs232/bsp.h"
 // #include "stm32l4xx.h"
 #include "stm32u5xx.h"
 #include "FreeRTOS.h"
@@ -137,6 +139,7 @@ void lpmPreSleepProcessing() {
 
    if (useDeepSleep)
    {
+      IOWrite(&BB_3V3_EN, 1);
       rccCrSave = RCC->CR;
       rccCfgrSave = RCC->CFGR1;
       rccIcscr1Save = RCC->ICSCR1; // Restoring MSI to original value after stop.
@@ -177,6 +180,8 @@ void lpmPostSleepProcessing() {
       RCC->CFGR1 = rccCfgrSave;
 
       SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+
+      IOWrite(&BB_3V3_EN, 0);
 
       //      This application bypasses the RTC shadow registers, so we don't need to clear the sync flag for
       // those registers.  They are always out of sync when coming out of deep sleep.

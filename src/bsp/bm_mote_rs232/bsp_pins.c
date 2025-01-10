@@ -1,6 +1,7 @@
 #include "bsp.h"
 #include "stm32_io.h"
 
+IOPinHandle_t BB_3V3_EN = {&STM32PinDriver, &(STM32Pin_t){BB_3v3_EN_GPIO_Port, BB_3v3_EN_Pin, NULL, NULL}};
 IOPinHandle_t VUSB_DETECT = {&STM32PinDriver, &(STM32Pin_t){VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, NULL, NULL}};
 IOPinHandle_t DISCHARGE_ON = {&STM32PinDriver, &(STM32Pin_t){DISCHARGE_ON_GPIO_Port, DISCHARGE_ON_Pin, NULL, NULL}};
 IOPinHandle_t PL_BUCK_EN = {&STM32PinDriver, &(STM32Pin_t){PL_BUCK_EN_GPIO_Port, PL_BUCK_EN_Pin, NULL, NULL}};
