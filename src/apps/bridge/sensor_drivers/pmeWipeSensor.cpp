@@ -109,27 +109,30 @@ static BmErr pmeWiperCfgGetCb(uint8_t *payload) {
   BmErr err = BmENODATA;
   if (payload && CURRENT_SUB) {
     BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
-    size_t size = sizeof(PmeWipeSensor::m_reading_period_ms);
+    size_t size = sizeof(AbstractSensor::m_reading_period_ms);
     err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
                                    &CURRENT_SUB->m_reading_period_ms, &size);
     if (err == BmOK) {
-      uint32_t averager_max_samples = (CURRENT_SUB->m_reading_period_ms / CURRENT_SUB->agg_period_ms) +
-                                      PmeWipeSensor::N_SAMPLES_PAD;
+      uint32_t averager_max_samples =
+          (CURRENT_SUB->m_reading_period_ms / CURRENT_SUB->agg_period_ms) +
+          PmeWipeSensor::N_SAMPLES_PAD;
 
       // We can re-init the buffers here now that we have the reading period
       // This will free the current buffer and re-malloc a new one
       // so any data that may have been in the buffer will be lost
+      bm_debug("Updating the PME Wiper buffers with max samples: %" PRIu32 "ms\n",
+               averager_max_samples);
       CURRENT_SUB->wipe_current_ma.initBuffer(averager_max_samples);
       CURRENT_SUB->wipe_duration_s.initBuffer(averager_max_samples);
+    } else {
+      bm_debug("Failed to decode PME Wiper config get, err: %d\n", err);
     }
-    xSemaphoreGive(CURRENT_SUB->_mutex);
     CURRENT_SUB = NULL;
   }
   return err;
 }
 
-PmeWipe_t *createPmeWipeSub(uint64_t node_id,
-                            uint32_t sample_duration_ms) {
+PmeWipe_t *createPmeWipeSub(uint64_t node_id, uint32_t sample_duration_ms) {
   PmeWipe_t *new_sub = static_cast<PmeWipe_t *>(bm_malloc(sizeof(PmeWipe_t)));
   if (new_sub) {
     new_sub = new (new_sub) PmeWipe_t();
@@ -143,29 +146,21 @@ PmeWipe_t *createPmeWipeSub(uint64_t node_id,
       new_sub->agg_period_ms = PmeWipeSensor::DEFAULT_PME_WIPER_READING_PERIOD_MS;
 
       // This is the default value
-      uint32_t averager_max_samples = static_cast<uint32_t>(ceil((sample_duration_ms / new_sub->agg_period_ms) +
-                                       PmeWipeSensor::N_SAMPLES_PAD));
+      uint32_t averager_max_samples = static_cast<uint32_t>(
+          ceil((sample_duration_ms / new_sub->agg_period_ms) + PmeWipeSensor::N_SAMPLES_PAD));
 
       CURRENT_SUB = new_sub;
-      // take the semaphore before calling the config get function so the cb can give it back
-      bm_semaphore_take(new_sub->_mutex, BM_MAX_DELAY_UINT32);
       BmErr err = BmOK;
-      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM, strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
-                      AppConfig::PME_WIPER_READING_PERIOD_MS, &err, pmeWiperCfgGetCb);
-      // Something like this?
-      // we need to wait for the callback to give the semaphore back before continuing
-      if (bm_semaphore_take(new_sub->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
-        // TODO - we need to calculate the averager_max_samples here now... maybe change the input to the
-        // configured sample duration?
-        new_sub->wipe_current_ma.initBuffer(averager_max_samples);
-        new_sub->wipe_duration_s.initBuffer(averager_max_samples);
-        new_sub->reading_count = 0;
-        bm_semaphore_give(new_sub->_mutex);
-      } else {
-        bm_debug("Failed to create PME Wiper Sensor err: %d\n", err);
-        bm_free(new_sub);
-        new_sub = NULL;
+      if (!bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
+                           strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
+                           AppConfig::PME_WIPER_READING_PERIOD_MS, &err, pmeWiperCfgGetCb)) {
+        bm_debug("Failed to send PME Wiper config get\n");
       }
+
+      new_sub->wipe_current_ma.initBuffer(averager_max_samples);
+      new_sub->wipe_duration_s.initBuffer(averager_max_samples);
+      new_sub->reading_count = 0;
+
     } else {
       bm_free(new_sub);
       new_sub = NULL;
