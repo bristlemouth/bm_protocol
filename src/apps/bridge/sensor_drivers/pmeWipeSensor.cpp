@@ -120,8 +120,9 @@ static BmErr pmeWiperCfgGetCb(uint8_t *payload) {
       // We can re-init the buffers here now that we have the reading period
       // This will free the current buffer and re-malloc a new one
       // so any data that may have been in the buffer will be lost
-      bm_debug("Updating the PME Wiper buffers with max samples: %" PRIu32 "\n",
-               averager_max_samples);
+      bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                     "Updating the PME Wiper buffers with max samples: %" PRIu32 "\n",
+                     averager_max_samples);
       CURRENT_SUB->wipe_current_ma.initBuffer(averager_max_samples);
       CURRENT_SUB->wipe_duration_s.initBuffer(averager_max_samples);
     } else {
@@ -149,17 +150,17 @@ PmeWipe_t *createPmeWipeSub(uint64_t node_id, uint32_t sample_duration_ms) {
       uint32_t averager_max_samples = static_cast<uint32_t>(
           ceil((sample_duration_ms / new_sub->agg_period_ms) + PmeWipeSensor::N_SAMPLES_PAD));
 
-      CURRENT_SUB = new_sub;
-      BmErr err = BmOK;
-      if (!bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
-                           strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
-                           AppConfig::PME_WIPER_READING_PERIOD_MS, &err, pmeWiperCfgGetCb)) {
-        bm_debug("Failed to send PME Wiper config get\n");
-      }
-
       new_sub->wipe_current_ma.initBuffer(averager_max_samples);
       new_sub->wipe_duration_s.initBuffer(averager_max_samples);
       new_sub->reading_count = 0;
+
+      CURRENT_SUB = new_sub;
+      BmErr err = BmOK;
+      if (!bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
+                      strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
+                      AppConfig::PME_WIPER_READING_PERIOD_MS, &err, pmeWiperCfgGetCb)) {
+        bm_debug("Failed to send PME Wiper config get\n");
+      }
 
     } else {
       bm_free(new_sub);

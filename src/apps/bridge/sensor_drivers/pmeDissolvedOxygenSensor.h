@@ -26,6 +26,8 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   int8_t node_position;
   uint32_t last_timestamp;
 
+  // 10 minutes
+  static constexpr uint32_t DEFAULT_PME_DISSOLVED_READING_PERIOD_MS = 10 * 60 * 1000;
   static constexpr uint32_t N_SAMPLES_PAD = 2;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 1;
 
@@ -42,5 +44,4 @@ private:
   static constexpr char subtag[] = "/pme/do_reading";
 } PmeDissolvedOxygen_t;
 
-PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t agg_period_ms,
-                                                  uint32_t averager_max_samples);
+PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms);

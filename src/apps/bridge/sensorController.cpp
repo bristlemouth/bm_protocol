@@ -21,7 +21,7 @@
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
 #define DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
-#define DEFAULT_PME_WIPER_READING_PERIOD_MS 4 * 60 * 60 * 1000            // 4 hours
+#define DEFAULT_PME_WIPER_READING_PERIOD_MS 4 * 60 * 60 * 1000        // 4 hours
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -324,16 +324,12 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "pme_dissolved_oxygen",
                          MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
-          uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.pme_dissolved_oxygen_reading_period_ms) +
-              PmeDissolvedOxygen_t::N_SAMPLES_PAD;
-          PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub = createPmeDissolvedOxygenSub(
-              reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub =
+              createPmeDissolvedOxygenSub(reply.node_id, sample_duration_ms);
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
-          PmeWipe_t *pme_wiper_sub =
-              createPmeWipeSub(reply.node_id, sample_duration_ms);
+          PmeWipe_t *pme_wiper_sub = createPmeWipeSub(reply.node_id, sample_duration_ms);
           if (pme_wiper_sub) {
             abstractSensorAddSensorSub(pme_wiper_sub);
           }

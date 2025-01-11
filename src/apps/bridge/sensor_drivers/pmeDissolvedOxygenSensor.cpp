@@ -7,6 +7,7 @@
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
+#include "messages/config.h"
 #include "pme_dissolved_oxygen_msg.h"
 #include "pubsub.h"
 #include "reportBuilder.h"
@@ -17,7 +18,7 @@
 #include "util.h"
 #include <new>
 
-#define DEFAULT_PME_DISSOLVED_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
+static PmeDissolvedOxygen_t *CURRENT_SUB;
 
 bool PmeDissolvedOxygenSensor::subscribe() {
   bool rval = false;
@@ -128,8 +129,36 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
   bm_free(log_buff);
 }
 
-PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t agg_period_ms,
-                                                  uint32_t averager_max_samples) {
+static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
+  BmErr err = BmENODATA;
+
+  if (payload && CURRENT_SUB) {
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
+    size_t size = sizeof(AbstractSensor::m_reading_period_ms);
+    err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
+                                   &CURRENT_SUB->m_reading_period_ms, &size);
+    if (err == BmOK) {
+      uint32_t averager_max_samples =
+          (CURRENT_SUB->m_reading_period_ms / CURRENT_SUB->agg_period_ms) +
+          PmeDissolvedOxygen_t::N_SAMPLES_PAD;
+
+      bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                     "Updating the PME Dissolved Oxygen buffers with max samples  %" PRIu32
+                     "\n", averager_max_samples);
+      CURRENT_SUB->temperature_deg_c.initBuffer(averager_max_samples);
+      CURRENT_SUB->do_mg_per_l.initBuffer(averager_max_samples);
+      CURRENT_SUB->quality.initBuffer(averager_max_samples);
+      CURRENT_SUB->do_saturation_pct.initBuffer(averager_max_samples);
+    } else {
+      bm_debug("Failed to decode PME Dissolved Oxygen config get, err: %d\n", err);
+    }
+    CURRENT_SUB = NULL;
+  }
+
+  return err;
+}
+
+PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms) {
   PmeDissolvedOxygen_t *new_sub =
       static_cast<PmeDissolvedOxygen_t *>(bm_malloc(sizeof(PmeDissolvedOxygen_t)));
   if (new_sub) {
@@ -141,12 +170,28 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t agg
       new_sub->node_id = node_id;
       new_sub->type = SENSOR_TYPE_PME_DO;
       new_sub->next = NULL;
-      new_sub->agg_period_ms = agg_period_ms;
+      new_sub->agg_period_ms =
+          PmeDissolvedOxygenSensor::DEFAULT_PME_DISSOLVED_READING_PERIOD_MS;
+
+      uint32_t averager_max_samples =
+          static_cast<uint32_t>(ceil((sample_duration_ms / new_sub->agg_period_ms) +
+                                     PmeDissolvedOxygenSensor::N_SAMPLES_PAD));
+
       new_sub->temperature_deg_c.initBuffer(averager_max_samples);
       new_sub->do_mg_per_l.initBuffer(averager_max_samples);
       new_sub->quality.initBuffer(averager_max_samples);
       new_sub->do_saturation_pct.initBuffer(averager_max_samples);
       new_sub->reading_count = 0;
+
+      CURRENT_SUB = new_sub;
+      BmErr err = BmOK;
+      if (!bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
+                           strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
+                           AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS, &err,
+                           pmeDissolvedOxygenCfgGetCb)) {
+        bm_debug("Failed to send PME Wiper config get\n");
+      }
+
     } else {
       bm_free(new_sub);
       new_sub = NULL;
