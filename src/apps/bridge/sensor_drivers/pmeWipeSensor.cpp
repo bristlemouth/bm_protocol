@@ -120,7 +120,7 @@ static BmErr pmeWiperCfgGetCb(uint8_t *payload) {
       // We can re-init the buffers here now that we have the reading period
       // This will free the current buffer and re-malloc a new one
       // so any data that may have been in the buffer will be lost
-      bm_debug("Updating the PME Wiper buffers with max samples: %" PRIu32 "ms\n",
+      bm_debug("Updating the PME Wiper buffers with max samples: %" PRIu32 "\n",
                averager_max_samples);
       CURRENT_SUB->wipe_current_ma.initBuffer(averager_max_samples);
       CURRENT_SUB->wipe_duration_s.initBuffer(averager_max_samples);
