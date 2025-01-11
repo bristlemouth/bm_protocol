@@ -322,6 +322,7 @@ add_link_options(
         )
 
 add_executable(${EXECUTABLE})
+add_dependencies(${EXECUTABLE} update_submodules_bm_protocol)
 
 # Include LIB directory
 if(NOT APP MATCHES "bootloader")
@@ -430,6 +431,7 @@ setup_bm_os(FREERTOS "${BM_CORE_FREERTOS_INCLUDES}")
 add_subdirectory(${LIB_DIR}/bm_core bmcore)
 target_compile_definitions(middleware PRIVATE ${APP_DEFINES})
 target_link_libraries(bmcore PUBLIC lwipcore)
+add_dependencies(update_submodules update_submodules_bm_protocol)
 
 if (USE_MICROPYTHON STREQUAL 1)
 include(${LIB_DIR}/micropython/CMakeLists.txt)
