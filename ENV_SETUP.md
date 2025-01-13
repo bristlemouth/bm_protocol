@@ -123,6 +123,9 @@ $  cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=
 ```
 
 Pay attention to the `../` relative paths in the args - depending on how your cmake build directories are set up, you might have to replace them with `../..`.
+You can optionally set the build type to release (it defaults to Debug) by appending `-DCMAKE_BUILD_TYPE=Release` to the command.
+
+### Configure CMake For External Projects
 
 In order to build an application located outside of the `bm_protocol` repository,
 run the following command:
@@ -132,7 +135,6 @@ cmake relative/path/to/bm_protocol -DCMAKE_TOOLCHAIN_FILE=relative/path/to/bm_pr
 ```
 
 Pay close attention to the paths in the associated arguments in the above cmake command.
-
 You can optionally set the build type to release (it defaults to Debug) by appending `-DCMAKE_BUILD_TYPE=Release` to the command.
 
 ### Building the Project
