@@ -37,7 +37,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
   (void)version;
   printf("RBR CODA data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id));
+  RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_RBR_CODA));
   if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR_CODA) {
     if (xSemaphoreTake(rbr_coda->_mutex, portMAX_DELAY)) {
       static BmRbrDataMsg::Data rbr_data;

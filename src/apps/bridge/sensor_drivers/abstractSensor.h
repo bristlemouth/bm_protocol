@@ -12,6 +12,8 @@ typedef enum abstractSensorType : uint8_t {
   SENSOR_TYPE_RBR_CODA = 3,
   SENSOR_TYPE_SEAPOINT_TURBIDITY = 4,
   SENSOR_TYPE_BOREALIS = 5,
+  SENSOR_TYPE_PME_DO = 6,
+  SENSOR_TYPE_PME_WIPE = 7,
 } abstractSensorType_e;
 
 struct AbstractSensor {
@@ -34,4 +36,6 @@ public:
   int8_t update_node_position(uint32_t max_reading_period_ms);
   BmErr send_spotter_log_individual(const char *app_name, SensorHeaderMsg::Data header,
                                     uint32_t sensor_max_reading_ms, const char *fmt, ...);
+  BmErr send_spotter_log_aggregate(const char *app_name, uint32_t reading_count,
+                                   const char *fmt, ...);
 };

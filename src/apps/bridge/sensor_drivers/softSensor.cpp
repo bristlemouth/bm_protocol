@@ -36,7 +36,7 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
   (void)version;
   printf("SOFT data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  Soft_t *soft = static_cast<Soft_t *>(sensorControllerFindSensorById(node_id));
+  Soft_t *soft = static_cast<Soft_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_SOFT));
   if (soft && soft->type == SENSOR_TYPE_SOFT) {
     if (xSemaphoreTake(soft->_mutex, portMAX_DELAY)) {
       static BmSoftDataMsg::Data soft_data;

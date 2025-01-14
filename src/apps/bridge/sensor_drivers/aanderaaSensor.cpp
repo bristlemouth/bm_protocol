@@ -36,7 +36,7 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
   (void)version;
   printf("Aanderaa data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(sensorControllerFindSensorById(node_id));
+  Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_AANDERAA));
   if (aanderaa && aanderaa->type == SENSOR_TYPE_AANDERAA) {
     if (xSemaphoreTake(aanderaa->_mutex, portMAX_DELAY)) {
       static AanderaaDataMsg::Data d;
