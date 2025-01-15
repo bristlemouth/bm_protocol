@@ -25,6 +25,7 @@ if(NOT VERSION_STR)
     set(GIT_ARGS_TAG describe --always --dirty --abbrev=8)
 
     execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS_TAG}
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/..
                     OUTPUT_VARIABLE VERSION_STR
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()

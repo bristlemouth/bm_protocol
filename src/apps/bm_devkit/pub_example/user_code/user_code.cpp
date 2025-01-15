@@ -41,7 +41,7 @@ void loop(void) {
     sprintf((char *)data_buffer, "[%" PRId64 " ms] Hello World!", uptimeGetMs());
     // Publish the data buffer to the topic.
     if (bm_pub(EXAMPLE_PUBLISH_TOPIC, data_buffer, sizeof(data_buffer),
-               EXAMPLE_PUBLISH_TOPIC_TYPE, EXAMPLE_PUBLISH_TOPIC_VERSION) == BmOK) {
+               EXAMPLE_PUBLISH_TOPIC_TYPE, EXAMPLE_PUBLISH_TOPIC_VERSION) != BmOK) {
       printf("Failed to publish message\n");
     } else {
       printf("Published message to network: %s\n", data_buffer);

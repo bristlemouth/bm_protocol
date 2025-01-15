@@ -37,7 +37,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
   (void)version;
   printf("RBR CODA data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id));
+  RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_RBR_CODA));
   if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR_CODA) {
     if (xSemaphoreTake(rbr_coda->_mutex, portMAX_DELAY)) {
       static BmRbrDataMsg::Data rbr_data;
@@ -155,7 +155,7 @@ void RbrCodaSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+    int8_t node_position = topology_sampler_get_node_position(node_id, 5000);
 
     // Use the latest sensor type to determine the sensor type string
     const char *sensor_type_str;

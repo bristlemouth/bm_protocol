@@ -36,7 +36,7 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
   (void)version;
   printf("SOFT data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  Soft_t *soft = static_cast<Soft_t *>(sensorControllerFindSensorById(node_id));
+  Soft_t *soft = static_cast<Soft_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_SOFT));
   if (soft && soft->type == SENSOR_TYPE_SOFT) {
     if (xSemaphoreTake(soft->_mutex, portMAX_DELAY)) {
       static BmSoftDataMsg::Data soft_data;
@@ -59,7 +59,8 @@ void SoftSensor::softSubCallback(uint64_t node_id, const char *topic, uint16_t t
           printf("Updating soft %016" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, soft->last_timestamp, soft->reading_count);
-          soft->node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+          soft->node_position =
+              topology_sampler_get_node_position(node_id, 5000);
         }
         soft->last_timestamp = current_timestamp;
 
