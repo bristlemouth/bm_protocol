@@ -34,6 +34,7 @@ set(LIB_FILES
     ${LIB_DIR}/common/lptimTick_u5.c
     ${LIB_DIR}/common/nvmPartition.cpp
     ${LIB_DIR}/common/pcap.c
+    ${LIB_DIR}/common/port_monitor.c
     ${LIB_DIR}/common/trace.c
     ${LIB_DIR}/common/reset_reason.c
     ${LIB_DIR}/common/serial.c
