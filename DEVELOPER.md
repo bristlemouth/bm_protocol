@@ -42,35 +42,21 @@ Each app directory has a CMakeLists.txt file where most of the action happens.
 To add files located in the **src/apps/appname/** directory, look for the APP_FILES CMake variable in the project. For example:
 ```
 set(APP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/external_flash_partitions.c
 #
-#   Insert new file here! (For example)
+#   Insert files here!
 #
-    ${MCUBOOT_FILES}
-    ${FREERTOS_FILES}
-    ${LIB_FILES}
-    ${BRISTLEMOUTH_FILES}
-    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
-    ${MEMFAULT_SOURCES}
-    ${TINYUSB_FILES}
-    PARENT_SCOPE)
+    example_file.cpp
+    PARENT_SCOPE
+)
 ```
 
-### New library files
-Library files should be added under the LIB_FILES CMake variable. For example:
-```
-set(LIB_FILES
-    ${SRC_DIR}/lib/cli/cli.c
-    ${SRC_DIR}/lib/common/bootloader_helper.c
-    ${SRC_DIR}/lib/common/device_info.c
-#
-#   Insert new file here! (For example)
-#
-    ${SRC_DIR}/lib/common/enumToStr.c
-```
-
-Don't forget to also add the include directory to LIB_INCLUDES, otherwise you'll have to use the full path for including files (which is ok too, for example `#include "lib/bm_serial/crc.h"`).
+### New project outside of the repository
+Custom applications can be developed outside of the `bm_protocol` repository.
+In order to do this create a directory for the application.
+Copy the contents of the `src/apps/bm_devkit/example` directory to new newly created external directory.
+After, the project can then be configured with CMake,
+see the [following](/ENV_SETUP.md#configure-cmake-for-external-projects) for the command necessary to do so.
+Custom application code can now be added to the `user_code/user_code.cpp` file.
 
 ## defaultTask
 Since bristlemouth uses FreeRTOS, most of the work happens inside tasks. The defaultTask is the first task that gets created. All other tasks are created from it (or from one of the newly created ones.)

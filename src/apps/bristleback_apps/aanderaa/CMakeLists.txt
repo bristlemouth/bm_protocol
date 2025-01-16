@@ -1,16 +1,12 @@
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/sensors/sensors.cpp
  )
 
 set(APP_INCLUDES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
-    ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/sensors
 )
 
 set(APP_LIBS
