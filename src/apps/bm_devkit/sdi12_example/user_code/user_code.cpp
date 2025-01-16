@@ -91,7 +91,7 @@ void setup(void) {
   // Initializing
   sondeEXO3sSensor.init();
   // Waking up sensor
-  sondeEXO3sSensor.sdi_wake();
+  bristlefin.sdi_wake();
   vTaskDelay(pdMS_TO_TICKS(10000));
   // Inquire Sensor address
   sondeEXO3sSensor.inquire_cmd();

@@ -47,53 +47,10 @@ void SondeEXO3sSensor::init() {
   PLUART::enable();
 }
 
-void SondeEXO3sSensor::sdi_wake(void) {
-  uint32_t timeStart;
-  timeStart = uptimeGetMs();
-  PLUART::disable();
-  //Set TX pin to output
-  PLUART::configTxPinOutput();
-  // HIGH at TX pin
-  PLUART::setTxPinOutputLevel();
-  // Wake - hold HIGH for 12 ms
-  timeStart = uptimeGetMs();
-  while (uptimeGetMs() - timeStart < breakTimeMs)
-    ;
-  // Set TX pin back to TX (alternate) mode
-  PLUART::configTxPinAlternate();
-  // Re-enable UART
-  PLUART::enable();
-  printf("sdi_wake\n");
-}
-
-void SondeEXO3sSensor::sdi_break_mark(void) {
-  flush();
-  uint32_t timeStart;
-  PLUART::disable();
-  //Set TX pin to output
-  PLUART::configTxPinOutput();
-  // HIGH at TX pin
-  PLUART::setTxPinOutputLevel();
-  // Break - hold HIGH for 12 ms
-  timeStart = uptimeGetMs();
-  while (uptimeGetMs() - timeStart < breakTimeMs)
-    ;
-  // LOW at TX pin
-  PLUART::resetTxPinOutputLevel();
-  // Mark - hold LOW for 9 ms
-  timeStart = uptimeGetMs();
-  while (uptimeGetMs() - timeStart < markTimeMs)
-    ;
-  // Set TX pin back to TX (alternate) mode
-  PLUART::configTxPinAlternate();
-  // Re-enable UART
-  PLUART::enable();
-}
-
 void SondeEXO3sSensor::sdi_transmit(const char *ptr) {
   // TX enable
   PLUART::startTransaction();
-  sdi_break_mark();
+  bristlefin.sdi_break_mark();
   PLUART::write((uint8_t *)ptr, strlen(ptr));
   // TX disable
   PLUART::endTransaction(100); // 50,28 ms to release/get some mutex/semaphore????

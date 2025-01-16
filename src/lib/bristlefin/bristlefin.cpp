@@ -205,3 +205,46 @@ void Bristlefin::setGpioDefault() {
   IOWrite(&BF_HFIO, 0);
   IOWrite(&BF_SDI12_OE, 0);
 }
+
+void Bristlefin::sdi_wake(void) {
+  PLUART::disable();
+  //Set TX pin to output
+  PLUART::configTxPinOutput();
+  // HIGH at TX pin
+  PLUART::setTxPinOutputLevel();
+  // Wake - hold HIGH for 12 ms
+  const uint32_t timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < SDI12_BREAK_MS){};
+  // Set TX pin back to TX (alternate) mode
+  PLUART::configTxPinAlternate();
+  // Re-enable UART
+  PLUART::enable();
+}
+
+void Bristlefin::sdi_break_mark(void) {
+  // Set the OE on the transceiver
+  Bristlefin::sdi12Tx();
+
+  // Send the break sequence
+  PLUART::reset();
+  uint32_t timeStart;
+  PLUART::disable();
+  //Set TX pin to output
+  PLUART::configTxPinOutput();
+  // HIGH at TX pin
+  PLUART::setTxPinOutputLevel();
+  // Break - hold HIGH for 12 ms
+  timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < SDI12_BREAK_MS){};
+
+  // Send the mark sequence
+  // LOW at TX pin
+  PLUART::resetTxPinOutputLevel();
+  // Mark - hold LOW for 9 ms
+  timeStart = uptimeGetMs();
+  while(uptimeGetMs() - timeStart < SDI12_MARK_MS){};
+  // Set TX pin back to TX (alternate) mode
+  PLUART::configTxPinAlternate();
+  // Re-enable UART
+  PLUART::enable();
+}
