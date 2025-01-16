@@ -1,8 +1,8 @@
 #include "seapointTurbiditySensor.h"
 #include "app_config.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bm_seapoint_turbidity_data_msg.h"
 #include "bridgeLog.h"
 #include "cbor.h"
@@ -11,7 +11,7 @@
 #include "semphr.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 #include <new>
 
 #define DEFAULT_TURBIDITY_READING_PERIOD_MS 1000 // 1 second
@@ -23,7 +23,7 @@ bool SeapointTurbiditySensor::subscribe() {
   int topic_strlen =
       snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
-    rval = bm_sub_wl(sub, topic_strlen, seapointTurbiditySubCallback);
+    rval = bm_sub_wl(sub, topic_strlen, seapointTurbiditySubCallback) == BmOK;
   }
   vPortFree(sub);
   return rval;
@@ -39,7 +39,7 @@ void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, con
   printf("Seapoint Turbidity data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
   SeapointTurbidity_t *turbidity_sensor =
-      static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id));
+      static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY));
   if (turbidity_sensor && turbidity_sensor->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
     if (xSemaphoreTake(turbidity_sensor->_mutex, portMAX_DELAY)) {
       static BmSeapointTurbidityDataMsg::Data turbidity_data;

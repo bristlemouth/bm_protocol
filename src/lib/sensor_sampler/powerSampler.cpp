@@ -2,8 +2,8 @@
   Power sensor(s) sampling functions
 */
 
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "ina232.h"
@@ -54,10 +54,10 @@ static bool powerSample() {
       rtcPrint(rtcTimeBuffer, &time_and_date);
       printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(),
              rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-      bm_fprintf(0, "power.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
+      spotter_log(0, "power.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
                  uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
                  _powerData.current);
-      bm_printf(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
+      spotter_log_console(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
                 uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
                 _powerData.current);
 
@@ -68,8 +68,8 @@ static bool powerSample() {
       taskEXIT_CRITICAL();
     } else {
       printf("ERR Failed to sample power monitor %u!", dev_num);
-      bm_printf(0, "ERR Failed to sample power monitor %u!", dev_num);
-      bm_fprintf(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!", dev_num);
+      spotter_log_console(0, "ERR Failed to sample power monitor %u!", dev_num);
+      spotter_log(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!", dev_num);
     }
     rval &= success;
   }

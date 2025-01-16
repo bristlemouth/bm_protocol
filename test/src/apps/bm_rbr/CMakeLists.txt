@@ -3,6 +3,7 @@ add_executable(rbr_sensor_util_tests)
 target_include_directories(rbr_sensor_util_tests
     PRIVATE
     ${TEST_DIR}/header_overrides
+    ${SRC_DIR}/lib/bm_core/bcmp
     ${TEST_DIR}/mocks
     ${TEST_DIR}/third_party/fff
     ${SRC_DIR}/lib/common

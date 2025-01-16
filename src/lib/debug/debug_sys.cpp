@@ -15,7 +15,7 @@
 #include "bootloader_helper.h"
 #include "bsp.h"
 #ifndef NO_NETWORK
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #endif
 
 #ifdef USE_BOOTLOADER

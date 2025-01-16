@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "bm_dfu_message_structs.h"
+#include "dfu_message_structs.h"
 #include <assert.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -27,10 +27,6 @@ extern const ext_flash_partition_t system_configuration;
 extern const ext_flash_partition_t user_configuration;
 extern const ext_flash_partition_t cli_configuration;
 extern const ext_flash_partition_t dfu_configuration;
-#define DFU_HEADER_OFFSET_BYTES (0)
-#define DFU_IMG_START_OFFSET_BYTES (sizeof(bm_dfu_img_info_t))
-static_assert(DFU_IMG_START_OFFSET_BYTES > DFU_HEADER_OFFSET_BYTES,
-              "Invalid DFU image offset");
 
 #ifdef __cplusplus
 }

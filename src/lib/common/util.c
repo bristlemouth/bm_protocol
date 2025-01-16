@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "util.h"
+#include "app_util.h"
 
 #define MAX_FRACTION_LEN 45
 
@@ -195,12 +195,12 @@ static const uint8_t * getDaysPerMonth(uint32_t year) {
   Convert unix timestamp(UTC) in microseconds to date (YYYYMMDDhhmmss)
 
   \param[in] utc_us - utc in microseconds
-  \param[out] utcDateTime - date time 
+  \param[out] utcDateTime - date time
   \return None
 */
 void dateTimeFromUtc(uint64_t utc_us, utcDateTime_t *dateTime) {
   configASSERT(dateTime);
-  
+
   // year
   uint64_t days = (utc_us / MICROSECONDS_PER_SECOND) / SECS_PER_DAY;
   dateTime->year = 1970;
@@ -227,7 +227,7 @@ void dateTimeFromUtc(uint64_t utc_us, utcDateTime_t *dateTime) {
   // minutes
   dateTime->min = (secondsRemaining / SECS_PER_MIN) % SECS_PER_MIN;
 
-  // seconds 
+  // seconds
   dateTime->sec = secondsRemaining % SECS_PER_MIN;
 
   // useconds

@@ -1,8 +1,8 @@
 #include "rbrCodaSensor.h"
 #include "app_config.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bm_rbr_data_msg.h"
 #include "bridgeLog.h"
 #include "cbor.h"
@@ -11,7 +11,7 @@
 #include "semphr.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "util.h"
+#include "app_util.h"
 #include <new>
 #ifdef RAW_PRESSURE_ENABLE
 #include "rbrPressureProcessor.h"
@@ -24,7 +24,7 @@ bool RbrCodaSensor::subscribe() {
   int topic_strlen =
       snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
-    rval = bm_sub_wl(sub, topic_strlen, rbrCodaSubCallback);
+    rval = bm_sub_wl(sub, topic_strlen, rbrCodaSubCallback) == BmOK;
   }
   vPortFree(sub);
   return rval;
@@ -37,7 +37,7 @@ void RbrCodaSensor::rbrCodaSubCallback(uint64_t node_id, const char *topic, uint
   (void)version;
   printf("RBR CODA data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id));
+  RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_RBR_CODA));
   if (rbr_coda && rbr_coda->type == SENSOR_TYPE_RBR_CODA) {
     if (xSemaphoreTake(rbr_coda->_mutex, portMAX_DELAY)) {
       static BmRbrDataMsg::Data rbr_data;
@@ -155,7 +155,7 @@ void RbrCodaSensor::aggregate(void) {
       snprintf(time_str, TIME_STR_BUFSIZE, "0");
     }
 
-    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+    int8_t node_position = topology_sampler_get_node_position(node_id, 5000);
 
     // Use the latest sensor type to determine the sensor type string
     const char *sensor_type_str;

@@ -5,12 +5,12 @@
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
 
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"
+#include "pubsub.h"
+#include "spotter.h"
+#include "util.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -49,43 +49,38 @@ static BaseType_t cmd_spotter_fn(char *writeBuffer, size_t writeBufferLen,
 
   do {
     BaseType_t command_str_len;
-    const char *command =
-        FreeRTOS_CLIGetParameter(commandString,
-                                 1, // Get the first parameter (command)
-                                 &command_str_len);
+    const char *command = FreeRTOS_CLIGetParameter(commandString,
+                                                   1, // Get the first parameter (command)
+                                                   &command_str_len);
 
     if (command == NULL) {
       printf("ERR Invalid command\n");
       break;
     } else if (strncmp("printf", command, command_str_len) == 0) {
-      const char *dataStr =
-          FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
+      const char *dataStr = FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
 
       if (command_str_len == 0) {
         printf("ERR data required\n");
         break;
       }
       size_t dataLen = strnlen(dataStr, 128);
-      bm_printf_err_t res;
-      res = bm_printf(0, "%.*s", dataLen, dataStr);
-      if (res != BM_PRINTF_OK) {
-        printf("bm_printf err: %d\n", res);
+      BmErr res;
+      res = spotter_log_console(0, "%.*s", dataLen, dataStr);
+      if (res != BmOK) {
+        printf("spotter_log_console err: %d\n", res);
       }
     } else if (strncmp("fprintf", command, command_str_len) == 0) {
-      const char *filename =
-          FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
+      const char *filename = FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
 
       if (command_str_len == 0) {
         printf("ERR file name required\n");
         break;
       }
-      char *just_filename =
-          static_cast<char *>(pvPortMalloc(command_str_len + 1));
+      char *just_filename = static_cast<char *>(pvPortMalloc(command_str_len + 1));
       configASSERT(just_filename);
       memset(just_filename, 0, command_str_len + 1);
       strncpy(just_filename, filename, command_str_len);
-      const char *dataStr =
-          FreeRTOS_CLIGetParameter(commandString, 3, &command_str_len);
+      const char *dataStr = FreeRTOS_CLIGetParameter(commandString, 3, &command_str_len);
 
       if (command_str_len == 0) {
         printf("ERR data required\n");
@@ -94,25 +89,23 @@ static BaseType_t cmd_spotter_fn(char *writeBuffer, size_t writeBufferLen,
         break;
       }
       size_t dataLen = strnlen(dataStr, 128);
-      bm_printf_err_t res;
-      res = bm_fprintf(0, just_filename, USE_TIMESTAMP, "%.*s\n", dataLen + 1,
+      BmErr res;
+      res = spotter_log(0, just_filename, USE_TIMESTAMP, "%.*s\n", dataLen + 1,
                        dataStr); // add one for the \n
-      if (res != BM_PRINTF_OK) {
-        printf("bm_fprintf err: %d\n", res);
+      if (res != BmOK) {
+        printf("spotter_log err: %d\n", res);
       }
       vPortFree(just_filename);
       just_filename = NULL;
     } else if (strncmp("txdata", command, command_str_len) == 0) {
       BaseType_t typeStrLen;
-      const char *typestr =
-          FreeRTOS_CLIGetParameter(commandString, 2, &typeStrLen);
+      const char *typestr = FreeRTOS_CLIGetParameter(commandString, 2, &typeStrLen);
 
       if (typeStrLen == 0) {
         printf("Network type required\n");
         break;
       }
-      const char *dataStr =
-          FreeRTOS_CLIGetParameter(commandString, 3, &command_str_len);
+      const char *dataStr = FreeRTOS_CLIGetParameter(commandString, 3, &command_str_len);
 
       if (command_str_len == 0) {
         printf("ERR data required\n");
@@ -124,11 +117,11 @@ static BaseType_t cmd_spotter_fn(char *writeBuffer, size_t writeBufferLen,
         break;
       }
       printf("transmit-data byte len: %u\n", (uint8_t)dataLen);
-      bm_serial_network_type_e type;
+      BmSerialNetworkType type;
       if (strncmp(typestr, "i", typeStrLen) == 0) {
-        type = BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK;
+        type = BmNetworkTypeCellularIriFallback;
       } else if (strncmp(typestr, "c", typeStrLen) == 0) {
-        type = BM_NETWORK_TYPE_CELLULAR_ONLY;
+        type = BmNetworkTypeCellularOnly;
       } else {
         printf("Invalid network type\n");
         break;

@@ -7,12 +7,13 @@
 #include "bridgeLog.h"
 #include "cbor_sensor_report_encoder.h"
 #include "device_info.h"
+#include "pmeDissolvedOxygenSensor.h"
 #include "queue.h"
 #include "rbrCodaSensor.h"
+#include "seapointTurbiditySensor.h"
 #include "semphr.h"
 #include "sensorController.h"
 #include "softSensor.h"
-#include "seapointTurbiditySensor.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
@@ -68,6 +69,12 @@ static rbr_coda_aggregations_t RBR_CODA_NAN_AGG = {.temp_mean_deg_c = NAN,
                                                    .reading_count = 0,
                                                    .sensor_type =
                                                        BmRbrDataMsg::SensorType::UNKNOWN};
+
+static pme_dissolved_oxygen_aggregations_t PME_DO_NAN_AGG = {.temperature_deg_c_mean = NAN,
+                                                             .do_mg_per_l_mean = NAN,
+                                                             .quality_mean = NAN,
+                                                             .do_saturation_pct_mean = NAN,
+                                                             .reading_count = 0};
 
 static seapoint_turbidity_aggregations_t seapoint_turbidity_NAN_AGG = {
     .turbidity_s_mean_ftu = NAN, .turbidity_r_mean_ftu = NAN, .reading_count = 0};
@@ -289,6 +296,26 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
       memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
                  element->sensor_data))[element->sample_counter],
              &seapoint_turbidity_NAN_AGG, sizeof(seapoint_turbidity_aggregations_t));
+    }
+    element->sample_counter++;
+    break;
+  }
+  case SENSOR_TYPE_PME_DO: {
+    if (element->sample_counter < sample_counter) {
+      for (; element->sample_counter < sample_counter; element->sample_counter++) {
+        memcpy(&(static_cast<pme_dissolved_oxygen_aggregations_t *>(
+                   element->sensor_data))[element->sample_counter],
+               &PME_DO_NAN_AGG, sizeof(pme_dissolved_oxygen_aggregations_t));
+      }
+    }
+    if (sensor_data != NULL) {
+      memcpy(&(static_cast<pme_dissolved_oxygen_aggregations_t *>(
+                 element->sensor_data))[element->sample_counter],
+             sensor_data, sizeof(pme_dissolved_oxygen_aggregations_t));
+    } else {
+      memcpy(&(static_cast<pme_dissolved_oxygen_aggregations_t *>(
+                 element->sensor_data))[element->sample_counter],
+             &PME_DO_NAN_AGG, sizeof(pme_dissolved_oxygen_aggregations_t));
     }
     element->sample_counter++;
     break;
@@ -628,18 +655,62 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                      "Failed to open seapoint_turbidity sample in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
-                                               &seapoint_turbidity_sample.turbidity_s_mean_ftu) !=
-        CborNoError) {
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &seapoint_turbidity_sample.turbidity_s_mean_ftu) != CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to add seapoint_turbidity sample member in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
-                                               &seapoint_turbidity_sample.turbidity_r_mean_ftu) !=
-        CborNoError) {
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &seapoint_turbidity_sample.turbidity_r_mean_ftu) != CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to add seapoint_turbidity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_close_sample(context) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to close sample in addSamplesToReport\n");
+      break;
+    }
+    rval = true;
+    break;
+  }
+  case SENSOR_TYPE_PME_DO: {
+    pme_dissolved_oxygen_aggregations_t pme_do_sample =
+        (static_cast<pme_dissolved_oxygen_aggregations_t *>(sensor_data))[sample_index];
+    if (sensor_report_encoder_open_sample(context, PME_DISSOLVED_OXYGEN_NUM_SAMPLE_MEMBERS,
+                                          "bm_pme_do_v0") != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to open pme_do sample in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                                &pme_do_sample.temperature_deg_c_mean) !=
+        CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add pme_do sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                                &pme_do_sample.do_mg_per_l_mean) !=
+        CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add pme_do sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                                &pme_do_sample.quality_mean) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add pme_do sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                                &pme_do_sample.do_saturation_pct_mean) !=
+        CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add pme_do sample member in addSamplesToReport\n");
       break;
     }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
@@ -660,34 +731,32 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
 }
 
 // Task init
-void reportBuilderInit(cfg::Configuration *sys_cfg) {
-  configASSERT(sys_cfg);
-  bool save_config = false;
+void reportBuilderInit(void) {
+  bool save = false;
   _ctx._samplesPerReport = DEFAULT_SAMPLES_PER_REPORT;
-  if (!sys_cfg->getConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
-                          _ctx._samplesPerReport)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLES_PER_REPORT,
+                       strlen(AppConfig::SAMPLES_PER_REPORT), &_ctx._samplesPerReport)) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get samples per report from config, using default %" PRIu32
                    " and saving to config\n",
                    _ctx._samplesPerReport);
-    sys_cfg->setConfig(AppConfig::SAMPLES_PER_REPORT, strlen(AppConfig::SAMPLES_PER_REPORT),
-                       _ctx._samplesPerReport);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLES_PER_REPORT,
+                    strlen(AppConfig::SAMPLES_PER_REPORT), _ctx._samplesPerReport);
+    save = true;
   }
   _ctx._transmitAggregations = DEFAULT_TRANSMIT_AGGREGATIONS;
-  if (!sys_cfg->getConfig(AppConfig::TRANSMIT_AGGREGATIONS,
-                          strlen(AppConfig::TRANSMIT_AGGREGATIONS),
-                          _ctx._transmitAggregations)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TRANSMIT_AGGREGATIONS,
+                       strlen(AppConfig::TRANSMIT_AGGREGATIONS), &_ctx._transmitAggregations)) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get transmit aggregations from config, using default %" PRIu32
                    " and saving to config\n",
                    _ctx._transmitAggregations);
-    sys_cfg->setConfig(AppConfig::TRANSMIT_AGGREGATIONS,
-                       strlen(AppConfig::TRANSMIT_AGGREGATIONS), _ctx._transmitAggregations);
-    save_config = true;
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::TRANSMIT_AGGREGATIONS,
+                    strlen(AppConfig::TRANSMIT_AGGREGATIONS), _ctx._transmitAggregations);
+    save = true;
   }
-  if (save_config) {
-    sys_cfg->saveConfig(false);
+  if (save) {
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
   }
   _ctx._sample_counter = 0;
   _ctx._config_mutex = xSemaphoreCreateMutex();
@@ -782,6 +851,14 @@ static void report_builder_task(void *parameters) {
                             _ctx._report_period_node_list[i],
                             _ctx._report_period_sensor_type_list[i], NULL,
                             sizeof(seapoint_turbidity_aggregations_t), _ctx._samplesPerReport,
+                            (_ctx._sample_counter - 1));
+                        break;
+                      }
+                      case SENSOR_TYPE_PME_DO: {
+                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
+                            _ctx._report_period_node_list[i],
+                            _ctx._report_period_sensor_type_list[i], NULL,
+                            sizeof(pme_dissolved_oxygen_aggregations_t), _ctx._samplesPerReport,
                             (_ctx._sample_counter - 1));
                         break;
                       }

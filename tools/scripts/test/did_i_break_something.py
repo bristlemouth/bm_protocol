@@ -52,7 +52,11 @@ def unit_test_commands(test, verbose=False, jobs=4):
     cmake_cmd = f"cmake {project_root}"
     ctest_cmd = "ctest -V"
 
-    commands = [cmake_cmd.split(" "), f"make -j {jobs}".split(" "), ctest_cmd.split(" ")]
+    commands = [
+        cmake_cmd.split(" "),
+        f"make -j {jobs}".split(" "),
+        ctest_cmd.split(" "),
+    ]
 
     return commands
 
@@ -61,36 +65,50 @@ def unit_test_commands(test, verbose=False, jobs=4):
 test_handlers = {"build_fw": build_fw_commands, "unit_tests": unit_test_commands}
 
 
-def run_test(test, verbose=False):
+def run_tests_in_dir(dir, test, verbose=False):
+    returncode = 0
+    previous_dir = os.getcwd()
+    os.chdir(dir)
+
+    if test["type"] not in test_handlers:
+        raise NotImplementedError("Unsupported test type!")
+
+    # Get all commands for specific test
+    commands = test_handlers[test["type"]](test, verbose)
+
+    for command in commands:
+        if verbose:
+            print("Running ", " ".join(command))
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode != 0:
+            print("\nSTDOUT:\n", result.stdout)
+            print("\nSTDERR:\n", result.stderr)
+            print("return code:", result.returncode)
+            returncode = result.returncode
+            break
+
+    # Go back to where we started before the temp dir gets deleted
+    os.chdir(previous_dir)
+
+    return returncode
+
+
+def run_test(test, verbose=False, store=False):
     returncode = 0
 
     # Tests are run in temporary directory inside repository
     # This is so scripts that use/reference git will work (like version.c)
-    with tempfile.TemporaryDirectory(
-        dir=get_project_root(), prefix="tmpbuild_"
-    ) as tmpdirname:
-        previous_dir = os.getcwd()
-        os.chdir(tmpdirname)
-
-        if test["type"] not in test_handlers:
-            raise NotImplementedError("Unsupported test type!")
-
-        # Get all commands for specific test
-        commands = test_handlers[test["type"]](test, verbose)
-
-        for command in commands:
-            if verbose:
-                print("Running ", " ".join(command))
-            result = subprocess.run(command, capture_output=True, text=True)
-            if result.returncode != 0:
-                print("\nSTDOUT:\n", result.stdout)
-                print("\nSTDERR:\n", result.stderr)
-                print("return code:", result.returncode)
-                returncode = result.returncode
-                break
-
-        # Go back to where we started before the temp dir gets deleted
-        os.chdir(previous_dir)
+    if store is False:
+        with tempfile.TemporaryDirectory(
+            dir=get_project_root(), prefix="tmpbuild_"
+        ) as tmpdirname:
+            returncode = run_tests_in_dir(tmpdirname, test, verbose)
+    else:
+        dir = get_project_root() + "/build/" + test["args"]["app"]
+        if "sub" in test["args"]:
+            dir += "/" + test["args"]["sub"]
+        os.makedirs(dir, exist_ok=True)
+        returncode = run_tests_in_dir(dir, test, verbose)
 
     return returncode
 
@@ -101,6 +119,11 @@ parser.add_argument(
     "configs",
     nargs="+",
     help="Configuration (yaml) files with build/test configuration. Can also be directory with config files",
+)
+parser.add_argument(
+    "--store",
+    action="store_true",
+    help="Store the tests in the build directory at the top of this repository",
 )
 args = parser.parse_args()
 
@@ -127,7 +150,7 @@ for path in config_paths:
 # Run through each test and see if it fails or not
 for test in tests:
     print(f'Building: {test["name"]}')
-    returncode = run_test(test, args.verbose)
+    returncode = run_test(test, args.verbose, args.store)
     if returncode == 0:
         print("PASS")
     else:

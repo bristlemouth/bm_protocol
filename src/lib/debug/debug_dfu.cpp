@@ -3,7 +3,7 @@
 #include "FreeRTOS_CLI.h"
 #include "external_flash_partitions.h"
 #include <stdio.h>
-#include "bm_dfu.h"
+#include "dfu.h"
 
 static BaseType_t dfuCommand( char *writeBuffer,
                                   size_t writeBufferLen,
@@ -13,7 +13,7 @@ static const CLI_Command_Definition_t cmdDfu = {
   // Command string
   "dfu",
   // Help string
-  "dfu:\n"
+  "dfu (for binary loaded in flash):\n"
   " * dfu start <node id> <filter_key> <TimeoutMs>\n",
   // Command function
   dfuCommand,
@@ -29,7 +29,7 @@ void debugDfuInit(NvmPartition *dfu_cli_partition) {
     FreeRTOS_CLIRegisterCommand( &cmdDfu );
 }
 
-void updateSuccessCallback(bool success, bm_dfu_err_t err, uint64_t node_id) {
+void updateSuccessCallback(bool success, BmDfuErr err, uint64_t node_id) {
     if(success){
         printf("update successful %016" PRIx64 "\n", node_id);
     } else {
@@ -87,8 +87,8 @@ static BaseType_t dfuCommand( char *writeBuffer,
             uint64_t node_id = strtoull(nodeIdStr, NULL, 0);
             uint32_t filter_key = strtoul(filterKeyStr, NULL, 0);
             uint32_t timeoutMS = strtoul(timeoutMsStr, NULL, 0);
-            bm_dfu_img_info_t image_info;
-            if(!_dfu_cli_partition->read(DFU_HEADER_OFFSET_BYTES, reinterpret_cast<uint8_t*>(&image_info), sizeof(bm_dfu_img_info_t), 1000)){
+            BmDfuImgInfo image_info;
+            if(!_dfu_cli_partition->read(DFU_HEADER_OFFSET_BYTES, reinterpret_cast<uint8_t*>(&image_info), sizeof(BmDfuImgInfo), 1000)){
                 printf("Failed to read DFU header.\n");
                 break;
             }
@@ -103,7 +103,7 @@ static BaseType_t dfuCommand( char *writeBuffer,
             }
             image_info.filter_key = filter_key;
             printf("Image valid, attempting to update\n");
-            if(!bm_dfu_initiate_update(image_info, node_id, updateSuccessCallback, timeoutMS)){
+            if(!bm_dfu_initiate_update(image_info, node_id, updateSuccessCallback, timeoutMS, true)){
                 printf("Failed to start update\n");
             }
 

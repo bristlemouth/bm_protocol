@@ -1,7 +1,6 @@
 #include "rbrPressureProcessor.h"
 #include "FreeRTOS.h"
 #include "app_pub_sub.h"
-#include "bm_network.h"
 #include "bm_rbr_pressure_difference_signal_msg.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
@@ -9,6 +8,7 @@
 #include "differenceSignal.h"
 #include "event_groups.h"
 #include "queue.h"
+#include "spotter.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timers.h"
@@ -28,7 +28,6 @@ typedef struct PressureProcessorContext {
   uint32_t maxRawReports;
   double rawDepthThresholdUbar;
   bool started;
-  cfg::Configuration *usrCfg;
   uint32_t nRawReportsSent;
   uint32_t rbrCodaReadingPeriodMs;
 } PressureProcessorContext_t;
@@ -50,13 +49,11 @@ static void diffSigSendTimerCallback(TimerHandle_t xTimer);
 static PressureProcessorContext_t _ctx;
 
 void rbrPressureProcessorInit(uint32_t rawSampleS, uint32_t maxRawReports,
-                              double rawDepthThresholdUbar, cfg::Configuration *usrCfg,
-                              uint32_t rbrCodaReadingPeriodMs) {
-  configASSERT(usrCfg);
-  _ctx.usrCfg = usrCfg;
+                              double rawDepthThresholdUbar, uint32_t rbrCodaReadingPeriodMs) {
   _ctx.rbrCodaReadingPeriodMs = rbrCodaReadingPeriodMs;
-  if (!_ctx.usrCfg->getConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent),
-                              _ctx.nRawReportsSent)) {
+  bool success = get_config_uint(BM_CFG_PARTITION_USER, kRBRnRawReportsSent,
+                                 strlen(kRBRnRawReportsSent), &_ctx.nRawReportsSent);
+  if (!success) {
     _ctx.nRawReportsSent = 0;
   }
   _ctx.q = xQueueCreate(10, sizeof(BmRbrDataMsg::Data));
@@ -168,9 +165,11 @@ static void runTask(void *param) {
             vTaskDelay(100);
           }
           _ctx.nRawReportsSent++;
-          _ctx.usrCfg->setConfig(kRBRnRawReportsSent, strlen(kRBRnRawReportsSent),
-                                 _ctx.nRawReportsSent);
-          _ctx.usrCfg->saveConfig(false);
+          bool success = set_config_uint(BM_CFG_PARTITION_USER, kRBRnRawReportsSent,
+                                         strlen(kRBRnRawReportsSent), _ctx.nRawReportsSent);
+          if (success) {
+            save_config(BM_CFG_PARTITION_USER, false);
+          }
         }
       } while (0);
 

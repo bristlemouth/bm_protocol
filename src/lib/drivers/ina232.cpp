@@ -1,6 +1,6 @@
 #include "ina232.h"
 #include "debug.h"
-#include "util.h"
+#include "app_util.h"
 
 using namespace INA;
 

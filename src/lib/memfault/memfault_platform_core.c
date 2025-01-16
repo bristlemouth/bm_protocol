@@ -29,7 +29,7 @@
 #include "sd.h"
 #include "stm32_rtc.h"
 #include "stm32l4xx_hal.h"
-#include "util.h"
+#include "app_util.h"
 #include "version.h"
 
 // static sMfltCoredumpRegion s_coredump_regions[16];

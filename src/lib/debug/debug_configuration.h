@@ -7,9 +7,7 @@
 extern "C" {
 #endif
 
-using namespace cfg;
-
-void debugConfigurationInit(Configuration *user_config, Configuration *hardware_config ,Configuration *system_config);
+void debugConfigurationInit(void);
 
 #ifdef __cplusplus
 }

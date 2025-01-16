@@ -17,9 +17,9 @@ typedef enum {
   BRIDGE_CFG,
 } bridgeLogType_e;
 
-void bridgeLogPrint(bridgeLogType_e type, bm_common_log_level_e level, bool print_header,
+void bridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
                     const char *format, ...);
-void vBridgeLogPrint(bridgeLogType_e type, bm_common_log_level_e level, bool print_header,
+void vBridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
                      const char *format, va_list va_args);
 void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t len);
 #define BRIDGE_SENSOR_LOG_PRINT(type, x) bridgeSensorLogPrintf(type, x, sizeof(x))

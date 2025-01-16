@@ -5,6 +5,7 @@
     bsp: bm_mote_v1.0
     build_type: Release
     use_bootloader: True
+    sub: regular
 
 - name: mote_bristlefin w/upy on bm_mote_v1.0
   type: build_fw
@@ -14,6 +15,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DUSE_MICROPYTHON=1
+    sub: upy
 
 - name: hello_world on bm_mote_v1.0
   type: build_fw
@@ -41,6 +43,16 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
+    sub: mote
+
+- name: sdi12_example on bm_mote_v1.0
+  type: build_fw
+  args:
+    app: sdi12_example
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
 
 - name: devkit_monitor on bm_mote_v1.0
   type: build_fw
@@ -59,6 +71,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
+    sub: bristleback
 
 - name: aanderaa on bm_mote_bristleback_v1_0
   type: build_fw
@@ -69,6 +82,7 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
              -DCMAKE_AANDERAA_TYPE=4830
+    sub: bristleback
 
 - name: nortek on bm_mote_bristleback_v1_0
   type: build_fw
@@ -78,6 +92,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
+    sub: bristleback
 
 - name: nortek on bm_mote_v1.0
   type: build_fw
@@ -87,6 +102,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
+    sub: mote
 
 - name: loadcell on bm_mote_v1.0
   type: build_fw
@@ -96,6 +112,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
+    sub: mote
 
 - name: loadcell on bristleback
   type: build_fw
@@ -105,6 +122,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
+    sub: bristleback
 
 - name: bm_soft_module on bm_mote_spi_v1_0
   type: build_fw
@@ -122,6 +140,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=bristleback
+    sub: bristleback
 
 - name: seapoint_turbidity on bm_mote_bristleback_v1_0
   type: build_fw
@@ -140,6 +159,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=rs232_expander
+    sub: rs232
 
 - name: bm_rbr on bm_mote_rs232
   type: build_fw
@@ -149,6 +169,7 @@
     build_type: Release
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=rs232_expander
+    sub: rs232
 
 - name: aanderaa on bm_mote_rs232
   type: build_fw
@@ -159,4 +180,4 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=rs232_expander
              -DCMAKE_AANDERAA_TYPE=4830
-             
+    sub: rs232

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void bridgeLogPrint(bridgeLogType_e type, bm_common_log_level_e level, bool print_header,
+void bridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
                     const char *format, ...) {
   va_list va_args;
   va_start(va_args, format);
@@ -15,16 +15,16 @@ void bridgeLogPrint(bridgeLogType_e type, bm_common_log_level_e level, bool prin
   va_end(va_args);
 }
 
-void vBridgeLogPrint(bridgeLogType_e type, bm_common_log_level_e level, bool print_header,
+void vBridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
                      const char *format, va_list va_args) {
-  bm_common_log_t *log_msg = NULL;
+  BmLog *log_msg = NULL;
   size_t msg_len = 0;
   do {
     int print_size = vsnprintf(nullptr, 0, format, va_args);
     if (print_size < 0) {
       static constexpr char error_msg[] = "vsnprintf failed in bridgeLogPrint\n";
-      msg_len = sizeof(bm_common_log_t) + sizeof(error_msg);
-      log_msg = static_cast<bm_common_log_t *>(pvPortMalloc(msg_len));
+      msg_len = sizeof(BmLog) + sizeof(error_msg);
+      log_msg = static_cast<BmLog *>(pvPortMalloc(msg_len));
       configASSERT(log_msg);
       memset(log_msg, 0, msg_len);
       log_msg->level = BM_COMMON_LOG_LEVEL_ERROR;
@@ -33,8 +33,8 @@ void vBridgeLogPrint(bridgeLogType_e type, bm_common_log_level_e level, bool pri
       memcpy(log_msg->message, error_msg, sizeof(error_msg));
     } else {
       print_size++; // Add 1 for null terminator
-      msg_len = sizeof(bm_common_log_t) + print_size;
-      log_msg = static_cast<bm_common_log_t *>(pvPortMalloc(msg_len));
+      msg_len = sizeof(BmLog) + print_size;
+      log_msg = static_cast<BmLog *>(pvPortMalloc(msg_len));
       configASSERT(log_msg);
       memset(log_msg, 0, msg_len);
       log_msg->level = level;

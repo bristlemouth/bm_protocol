@@ -15,12 +15,13 @@
 #include "task.h"
 
 #include "app_pub_sub.h"
-#include "bm_l2.h"
-#include "bm_pubsub.h"
+#include "app_util.h"
 #include "bristlefin.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
+#include "config_cbor_map_service.h"
+#include "debug_bm_service.h"
 #include "debug_configuration.h"
 #include "debug_dfu.h"
 #include "debug_gpio.h"
@@ -34,12 +35,14 @@
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "l2.h"
 #include "memfault_platform_core.h"
 #include "ms5803.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "sensorSampler.h"
 #include "sensors.h"
@@ -47,15 +50,12 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "stress.h"
+#include "sys_info_service.h"
 #include "tca9546a.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
-#include "util.h"
 #include "w25.h"
 #include "watchdog.h"
-#include "debug_bm_service.h"
-#include "sys_info_service.h"
-#include "config_cbor_map_service.h"
 
 #ifdef USE_MICROPYTHON
 #include "micropython_freertos.h"
@@ -91,7 +91,7 @@ SerialHandle_t usart3 = {
 };
 
 // Serial console USB device
-SerialHandle_t usbCLI   = {
+SerialHandle_t usbCLI = {
     .device = (void *)0, // Using CDC 0
     .name = "vcp-cli",
     .txPin = NULL,
@@ -111,7 +111,7 @@ SerialHandle_t usbCLI   = {
     .postTxCb = NULL,
 };
 
-SerialHandle_t usbPcap   = {
+SerialHandle_t usbPcap = {
     .device = (void *)1, // Using CDC 1
     .name = "vcp-bm",
     .txPin = NULL,
@@ -131,9 +131,13 @@ SerialHandle_t usbPcap   = {
     .postTxCb = NULL,
 };
 
-extern "C" void USART3_IRQHandler(void) {
-  serialGenericUartIRQHandler(&usart3);
-}
+extern "C" void USART3_IRQHandler(void) { serialGenericUartIRQHandler(&usart3); }
+
+// TODO - make a getter API for these
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
@@ -165,13 +169,12 @@ extern "C" int main(void) {
   // Enable hardfault on divide-by-zero
   SCB->CCR |= 0x10;
 
-  BaseType_t rval =
-      xTaskCreate(defaultTask, "Default",
-                  // TODO - verify stack size
-                  128 * 4, NULL,
-                  // Start with very high priority during boot then downgrade
-                  // once done initializing everything
-                  2, NULL);
+  BaseType_t rval = xTaskCreate(defaultTask, "Default",
+                                // TODO - verify stack size
+                                128 * 4, NULL,
+                                // Start with very high priority during boot then downgrade
+                                // once done initializing everything
+                                2, NULL);
   configASSERT(rval == pdTRUE);
 
   // Start FreeRTOS scheduler
@@ -213,17 +216,15 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
   return false;
 }
 
-void handle_subscriptions(uint64_t node_id, const char *topic,
-                          uint16_t topic_len, const uint8_t *data,
-                          uint16_t data_len, uint8_t type, uint8_t version) {
+void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
+                          const uint8_t *data, uint16_t data_len, uint8_t type,
+                          uint8_t version) {
   (void)node_id;
   if (strncmp(APP_PUB_SUB_BUTTON_TOPIC, topic, topic_len) == 0) {
-    if (type == APP_PUB_SUB_BUTTON_TYPE &&
-        version == APP_PUB_SUB_BUTTON_VERSION) {
+    if (type == APP_PUB_SUB_BUTTON_TYPE && version == APP_PUB_SUB_BUTTON_VERSION) {
       if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
         IOWrite(&BF_LED_G1, LED_ON);
-      } else if (strncmp("off", reinterpret_cast<const char *>(data),
-                         data_len) == 0) {
+      } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) == 0) {
         IOWrite(&BF_LED_G1, LED_OFF);
       } else {
         // Not handled
@@ -249,9 +250,8 @@ void handle_subscriptions(uint64_t node_id, const char *topic,
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year,
-               rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
-               rtc_time.second, rtc_time.ms);
+        printf("Set RTC to %04u-%02u-%02uT%02u:%02u:%02u.%03u\n", rtc_time.year, rtc_time.month,
+               rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.ms);
       } else {
         printf("\n Failed to set RTC.\n");
       }
@@ -321,7 +321,6 @@ static void defaultTask(void *parameters) {
   pcapInit(&usbPcap);
 
   startCLI();
-  // pcapInit(&usbPcap);
 
   gpioISRStartTask();
 
@@ -346,29 +345,20 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(
-      debug_user_partition, ram_user_configuration, RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration,
-      RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(debug_system_partition,
-                                                ram_system_configuration,
-                                                RAM_SYSTEM_CONFIG_SIZE_BYTES);
-
-debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
-                                       sys_cfg_sensorsPollIntervalMs);
-debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
-                                       sys_cfg_sensorsCheckIntervalS);
-
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
-  debugConfigurationInit(&debug_configuration_user,
-                         &debug_configuration_hardware,
-                         &debug_configuration_system);
+  dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user,
-           &debug_configuration_system);
+  bcl_init();
+  debugConfigurationInit();
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
@@ -376,9 +366,8 @@ debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsChe
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();
   debugBmServiceInit();
-  sys_info_service_init(debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  config_cbor_map_service_init();
   bm_sub(APP_PUB_SUB_BUTTON_TOPIC, handle_subscriptions);
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_subscriptions);
 
