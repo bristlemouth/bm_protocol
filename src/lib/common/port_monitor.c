@@ -2,8 +2,10 @@
 #include "bm_config.h"
 #include "bm_os.h"
 #include "configuration.h"
+#include "device.h"
 #include "l2.h"
 #include "spotter.h"
+#include <inttypes.h>
 #include <string.h>
 
 #define port_monitor_time_ms_key "disableUnusedPortsTimeMs"
@@ -44,14 +46,16 @@ static void port_monitor_timer_handler(BmTimer timer) {
     uint8_t port_num = i + 1;
     if (enabled == 0) {
       if (port_num != 1) {
-        spotter_log(0, port_monitor_log, USE_TIMESTAMP,
-                    "Disabling network port %d, it never came online\n", port_num);
+        const char *fmt_disable_str =
+            "Disabling network port %d on node: %" PRIx64 ", it never came online\n";
+        spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_disable_str, port_num);
+        spotter_log_console(0, fmt_disable_str, node_id(), port_num);
         bm_l2_netif_enable_disable_port(port_num, false);
       } else {
-        spotter_log(0, port_monitor_log, USE_TIMESTAMP,
-                    "Could not disable network port %d,"
-                    " unable to disable due to hardware restrictions\n",
-                    port_num);
+        const char *fmt_err_str = "Could not disable network port %d on node: %" PRIx64
+                                  ", unable to disable due to hardware restrictions\n";
+        spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_err_str, node_id(), port_num);
+        spotter_log_console(0, fmt_err_str, port_num);
       }
     }
   }
