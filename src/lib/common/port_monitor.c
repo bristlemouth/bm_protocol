@@ -3,10 +3,12 @@
 #include "bm_os.h"
 #include "configuration.h"
 #include "l2.h"
+#include "spotter.h"
 #include <string.h>
 
 #define port_monitor_time_ms_key "disableUnusedPortsTimeMs"
 #define port_monitor_time_ms_default (0U)
+#define port_monitor_log "port_monitor.log"
 
 static uint16_t ENABLED_PORT_MASK = 0;
 
@@ -41,8 +43,16 @@ static void port_monitor_timer_handler(BmTimer timer) {
     uint16_t enabled = (1 << i) & ENABLED_PORT_MASK;
     uint8_t port_num = i + 1;
     if (enabled == 0) {
-      bm_debug("Disabling port %d, it never came online\n", port_num);
-      bm_l2_netif_enable_disable_port(port_num, false);
+      if (port_num != 1) {
+        spotter_log(0, port_monitor_log, USE_TIMESTAMP,
+                    "Disabling network port %d, it never came online\n", port_num);
+        bm_l2_netif_enable_disable_port(port_num, false);
+      } else {
+        spotter_log(0, port_monitor_log, USE_TIMESTAMP,
+                    "Could not disable network port %d,"
+                    " unable to disable due to hardware restrictions\n",
+                    port_num);
+      }
     }
   }
 }
