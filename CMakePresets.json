@@ -160,6 +160,13 @@
             }
         },
         {
+            "name": "rx-live",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "rx_live_example"
+            }
+        },
+        {
             "name": "seapoint-turbidity-bristleback",
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
@@ -287,6 +294,11 @@
         {
             "configurePreset": "rbr-rs232",
             "name": "rbr-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "rx-live",
+            "name": "rx-live",
             "jobs": 8
         },
         {
