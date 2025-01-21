@@ -13,6 +13,7 @@ RxLiveSensor::RxLiveSensor()
     : _serial_number(0), _ccCode(0), _state(RX_LIVE_IDLE), _pending_command(nullptr),
       _state_timeout_timer(-1), _state_action_timer(-1),
       _std_parser(",", 256, STD_PARSER_VALUE_TYPES, 10),
+      _std_no_adc_parser(",", 256, STD_NO_ADC_PARSER_VALUE_TYPES, 9),
       _sts_parser(",", 256, STS_PARSER_VALUE_TYPES, 14),
       _latest_detection{} {
   // No need to compute CC code yet, as we don't have the serial number
@@ -22,6 +23,7 @@ void RxLiveSensor::init(const uint32_t serial_number) {
   // allocate memory for parsers
   _sts_parser.init();
   _std_parser.init();
+  _std_no_adc_parser.init();
   this->_serial_number = serial_number;
   computeCCCode();
 }
@@ -203,6 +205,36 @@ RxLiveStatusCode RxLiveSensor::run(const uint8_t *rx_data, const size_t rx_len) 
         printf("%llut | Rx-Live data was an STD detection!\n", uptimeGetMs());
         const Value tag_serial_no = _std_parser.getValue(4);
         const Value tag_code_space = _std_parser.getValue(3);
+        if (tag_serial_no.type != TYPE_UINT64) {
+          printf("%llut | Parsed invalid tag_serial_no data type: %u\n", uptimeGetMs(),
+                 tag_serial_no.type);
+          return RX_CODE_DETECTION_FAIL;
+        }
+        if (tag_code_space.type != TYPE_STRING) {
+          printf("%llut | Parsed invalid tag_code_space data type: %u\n", uptimeGetMs(),
+                 tag_code_space.type);
+          return RX_CODE_DETECTION_FAIL;
+        }
+        TagID parsed_tag_id;
+        if (parseTagCodeSpace(tag_code_space.data.string_val_ptr, &parsed_tag_id)) {
+          parsed_tag_id.tag_serial_no = tag_serial_no.data.uint64_val;
+          parsed_tag_id.detection_count = 1;
+          printf("\tParsed detection Tag ID:\n");
+          printf("\t\tCode Char: %c\n", parsed_tag_id.code_char);
+          printf("\t\tCode Freq: %u\n", parsed_tag_id.code_freq);
+          printf("\t\tCode Channel: %u\n", parsed_tag_id.code_channel);
+          printf("\t\tTag Serial no: %u\n", parsed_tag_id.tag_serial_no);
+          _latest_detection = parsed_tag_id;
+          return RX_CODE_DETECTION;
+        } else {
+          printf("\tERROR - Failed to parse tag code space!\n");
+          return RX_CODE_TAG_PARSE_FAIL;
+        }
+      }
+      if (_std_no_adc_parser.parseLine(reinterpret_cast<const char *>(rx_data), rx_len)) {
+        printf("%llut | Rx-Live data was an STD detection from tag with no ADC!\n", uptimeGetMs());
+        const Value tag_serial_no = _std_no_adc_parser.getValue(4);
+        const Value tag_code_space = _std_no_adc_parser.getValue(3);
         if (tag_serial_no.type != TYPE_UINT64) {
           printf("%llut | Parsed invalid tag_serial_no data type: %u\n", uptimeGetMs(),
                  tag_serial_no.type);
