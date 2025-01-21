@@ -1,5 +1,6 @@
 #include "sensorController.h"
 #include "aanderaaSensor.h"
+#include "abstractSensor.h"
 #include "app_config.h"
 #include "app_util.h"
 #include "borealisSensor.h"
@@ -306,8 +307,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                          MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
           PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub = createPmeDissolvedOxygenSub(
-              reply.node_id, sample_duration_ms, subsample_intertval_ms,
-              subsample_duration_ms, static_cast<bool>(subsample_enabled));
+              reply.node_id, sample_duration_ms, subsample_intertval_ms, subsample_duration_ms,
+              static_cast<bool>(subsample_enabled));
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
@@ -318,10 +319,18 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "borealis",
                          MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS)) {
-          Borealis_t *borealis_sub = createBorealisSensorSub(reply.node_id);
-          if (borealis_sub) {
-            abstractSensorAddSensorSub(borealis_sub);
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS_SPECTRUM)) {
+          Borealis_t *borealis_spectrum_sub =
+              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_SPECTRUM, reply.node_id);
+          if (borealis_spectrum_sub) {
+            Borealis_t *borealis_levels_sub =
+                createBorealisSensorSub(SENSOR_TYPE_BOREALIS_LEVELS, reply.node_id);
+            if (borealis_levels_sub) {
+              abstractSensorAddSensorSub(borealis_spectrum_sub);
+              abstractSensorAddSensorSub(borealis_levels_sub);
+            } else {
+              free(borealis_spectrum_sub);
+            }
           }
         }
       }
