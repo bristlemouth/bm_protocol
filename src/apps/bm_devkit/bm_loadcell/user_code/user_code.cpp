@@ -4,9 +4,10 @@
 #include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
+#include "configuration.h"
 #include "debug.h"
+#include "loadCellSampler.h"
 #include "lwip/inet.h"
-#include "nau7802.h"
 #include "payload_uart.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
@@ -14,16 +15,15 @@
 #include "uptime.h"
 #include "usart.h"
 #include "util.h"
+#include <string.h>
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
 
-void loadCellSamplerInit(NAU7802 *sensor);
-
-NAU7802 loadCell(&i2c1, NAU7802_ADDR);
-
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
+static NAU7802 load_cell(&i2c1, NAU7802_ADDR);
+extern cfg::Configuration *systemConfigurationPartition;
 // This function is called from the payload UART library in src/lib/common/payload_uart.cpp::processLine function.
 //  Every time the uart receives the configured termination character ('\0' character by default),
 //  It will:
@@ -35,8 +35,24 @@ static int32_t ledLinePulse = -1;
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
+  LoadCellConfig_t load_cell_cfg = {
+      .calibration_factor = DEFAULT_CALIBRATION_FACTOR,
+      .zero_offset = DEFAULT_ZERO_OFFSET,
+  };
+  if (!systemConfigurationPartition->getConfig("loadCellCalibrationFactor",
+                                               strlen("loadCellCalibrationFactor"),
+                                               load_cell_cfg.calibration_factor)) {
+    systemConfigurationPartition->setConfig("loadCellCalibrationFactor",
+                                            strlen("loadCellCalibrationFactor"),
+                                            load_cell_cfg.calibration_factor);
+  }
+  if (!systemConfigurationPartition->getConfig(
+          "loadCellZeroOffset", strlen("loadCellZeroOffset"), load_cell_cfg.zero_offset)) {
+    systemConfigurationPartition->setConfig("loadCellZeroOffset", strlen("loadCellZeroOffset"),
+                                            load_cell_cfg.zero_offset);
+  }
   // Adds the load cell as a sensor for periodic sampling.
-  loadCellSamplerInit(&loadCell);
+  loadCellSamplerInit(&load_cell, load_cell_cfg);
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
@@ -64,8 +80,7 @@ void loop(void) {
     led2State = true;
   }
   // If LED2 has been on for LED_ON_TIME_MS, turn it off.
-  else if (led2State &&
-           ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
+  else if (led2State && ((u_int32_t)uptimeGetMs() - ledLinePulse >= LED_ON_TIME_MS)) {
     bristlefin.setLed(2, Bristlefin::LED_OFF);
     ledLinePulse = -1;
     led2State = false;
@@ -79,16 +94,14 @@ void loop(void) {
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!led1State &&
-      ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_GREEN);
     ledOnTimer = uptimeGetMs();
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State &&
-           ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }

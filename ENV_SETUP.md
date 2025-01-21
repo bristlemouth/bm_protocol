@@ -234,7 +234,7 @@ $ cmake --build .
 
 
 ### Running the tests
-To run the tests, use the command (make sure you already built the tests before running!):
+To run all the tests, use the command (make sure you already built the tests before running!):
 
 ```
 $ ctest
@@ -244,6 +244,16 @@ To see fancy colored output with test details, run:
 ```
 $ export GTEST_COLOR=1; ctest -V
 ```
+
+To run an individual test suite, from the **test-build** directory run eg.:
+```
+$ ./test/src/common/differenceSignal
+```
+
+
+### Adding unit tests
+1. Add your test suite cpp file in **test/src**.
+2. Add a section for the new test suite to **test/src/common/CMakeLists.txt** with: `add_executable`, `target_include_directories`, `target_sources`, `target_link_libraries`, and `add_test`.
 
 ## micropython
 

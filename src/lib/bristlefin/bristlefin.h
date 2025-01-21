@@ -46,6 +46,10 @@ public:
   void enable3V();
   void disable3V();
 
+  // functions to switch between SDI12 Tx and Rx
+  static void sdi12Tx();
+  static void sdi12Rx();
+
   // LED control functions
   void setLed(uint8_t led_num, led_state_e led_state);
 

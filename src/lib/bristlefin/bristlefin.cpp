@@ -75,6 +75,14 @@ void Bristlefin::disableVout() {
   IOWrite(&BF_PL_BUCK_EN, 1); // 0 enables, 1 disables. Vout
 }
 
+void Bristlefin::sdi12Tx(){
+  IOWrite(&BF_SDI12_OE, 0); // reset to enable TX of data, disable Rx
+}
+
+void Bristlefin::sdi12Rx(){
+  IOWrite(&BF_SDI12_OE, 1); // set to disable TX and enable RX of data
+}
+
 void Bristlefin::enable3V() {
   IOWrite(&BF_IMU_RST, 1); // https://github.com/wavespotter/bristlemouth/issues/422 - Drive IMU RST high to avoid backpowering scenario.
   IOWrite(&BF_3V3_EN, 1); // 1 enables, 0 disables. Needed for I2C and I/O control.

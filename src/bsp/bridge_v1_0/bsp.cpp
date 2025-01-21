@@ -67,14 +67,6 @@ void bspInit() {
 
 }
 
-bool usb_is_connected() {
-  uint8_t vusb = 0;
-
-  IORead(&VUSB_DETECT, &vusb);
-
-  return (bool)vusb;
-}
-
 void mxInit(void) {
   MX_GPIO_Init();
   MX_USART3_UART_Init();

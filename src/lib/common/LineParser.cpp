@@ -47,12 +47,13 @@ LineParser::~LineParser() {
 }
 
 bool LineParser::parseLine(const char* line, uint16_t len) {
+  // TODO verify line is less than maxLineLen - 1 (for null character)
   // TODO verify line is 0-terminated.
   if (_values == nullptr) {
     printf("ERR Parser values uninitialized!\n");
     return false;
   }
-
+  // TODO reset all values to INVALID
   // Create a mutable copy for strtok_r to mangle
   // add an extra byte to ensure 0 termination
   char* work_str = static_cast<char *>(pvPortMalloc(len + 1));
@@ -98,7 +99,8 @@ const Value& LineParser::getValue(uint16_t index) {
   }
 }
 
-bool LineParser::parseValueFromToken(const char *token, size_t index) {
+bool LineParser::parseValueFromToken(const char *token, size_t index, char foundSeparator) {
+  (void)(foundSeparator);
   char* endptr;
   switch (_values[index].type) {
     case TYPE_INVALID: {

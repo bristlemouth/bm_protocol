@@ -120,6 +120,33 @@ void EXTI0_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles EXTI Line1 interrupt.
+  */
+void EXTI1_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI1_IRQn 0 */
+  BaseType_t rval = pdFALSE;
+  /* USER CODE END EXTI1_IRQn 0 */
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_1) != RESET)
+  {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_1);
+    /* USER CODE BEGIN LL_EXTI_LINE_1_FALLING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)VUSB_DETECT.pin);
+    /* USER CODE END LL_EXTI_LINE_1_FALLING */
+  }
+  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_1) != RESET)
+  {
+    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_1);
+    /* USER CODE BEGIN LL_EXTI_LINE_1_RISING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)VUSB_DETECT.pin);
+    /* USER CODE END LL_EXTI_LINE_1_RISING */
+  }
+  /* USER CODE BEGIN EXTI1_IRQn 1 */
+  portYIELD_FROM_ISR(rval);
+  /* USER CODE END EXTI1_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI Line8 interrupt.
   */
 void EXTI8_IRQHandler(void)

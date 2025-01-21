@@ -35,7 +35,7 @@ bool OrderedKVPLineParser::parseValues(char *workStr) {
     }
     //    printf("DEBUG - found token: %s\n", token);
     // Parse the value at specified index
-    if (!parseValueFromToken(token, i)) {
+    if (!parseValueFromToken(token, i, '\0')) {
       return false;
     }
     // Prepare for the next strstr call

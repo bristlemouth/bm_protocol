@@ -30,4 +30,5 @@ dependencies:
       - memfault-cli==1.0
       - pytest
       - python-dotenv
+      - bitstring==4.2
 

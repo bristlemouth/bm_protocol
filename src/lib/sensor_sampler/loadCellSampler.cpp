@@ -26,6 +26,7 @@ float mean_sum;
 float max_force;
 float min_force;
 uint32_t num_reads = 240; //This should be 4 minutes
+LoadCellConfig_t _cfg;
 
 #define INA_STR_LEN 80
 
@@ -52,31 +53,31 @@ static bool loadCellSample() {
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
   if (rtcGet(&timeAndDate) == pdPASS) {
-    sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-            timeAndDate.year, timeAndDate.month, timeAndDate.day,
-            timeAndDate.hour, timeAndDate.minute, timeAndDate.second,
-            timeAndDate.ms);
+    sprintf(rtcTimeBuffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u", timeAndDate.year,
+            timeAndDate.month, timeAndDate.day, timeAndDate.hour, timeAndDate.minute,
+            timeAndDate.second, timeAndDate.ms);
   } else {
     strcpy(rtcTimeBuffer, "0");
   }
   successful_lc_read = false;
   read_start_time = uptimeGetMicroSeconds() / 1000;
-  while ((!successful_lc_read) && (((uptimeGetMicroSeconds() / 1000) -
-                                    read_start_time) < read_attempt_duration)) {
+  while ((!successful_lc_read) &&
+         (((uptimeGetMicroSeconds() / 1000) - read_start_time) < read_attempt_duration)) {
     if (_loadCell->available()) {
       printf("%llu | reading: %d\n", uptimeGetMicroSeconds() / 1000, reading);
       // printf("%llu | reading corrs: %d\n", uptimeGetMicroSeconds()/1000, reading-333900);
       _loadCell->getInternalOffsetCal();
 
       // prints to SD card file
-      bm_fprintf(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, reading: %" PRId32 "\n",
-                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
+      bm_fprintf(0, "loadcell.log", USE_TIMESTAMP,
+                 "tick: %llu, rtc: %s, reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000,
+                 rtcTimeBuffer, reading);
       bm_fprintf(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, weight: %f\n",
                  uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
 
       // prints to Spotter console
       bm_printf(0, "loadcell | tick: %llu, rtc: %s, reading: %" PRId32 "\n",
-                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
+                uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
       bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %f\n",
                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
       printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
@@ -100,13 +101,13 @@ static bool loadCellSample() {
     printf("\n\n\n\nThis should only print once every 4 mins\n\n\n");
     mean_force = mean_sum / cellular_send_read_counter;
 
-    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force,
-           max_force, min_force);
+    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force, max_force,
+           min_force);
 
     char data_string[100];
 
-    sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f",
-            mean_force, max_force, min_force);
+    sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f", mean_force,
+            max_force, min_force);
 
     spotter_tx_data(data_string, 100, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK);
 
@@ -132,8 +133,8 @@ static bool loadCellInit() {
   // Wait 3 seconds before doing the lc self cal in begin().
   vTaskDelay(pdMS_TO_TICKS(3000));
   rval = _loadCell->begin();
-  _loadCell->setCalibrationFactor(859.08);
-  _loadCell->setZeroOffset(-25971);
+  _loadCell->setCalibrationFactor(_cfg.calibration_factor);
+  _loadCell->setZeroOffset(_cfg.zero_offset);
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
@@ -152,11 +153,11 @@ static bool loadCellCheck() {
   return 1;
 }
 
-static sensor_t loadCellSensor = {.initFn = loadCellInit,
-                                  .sampleFn = loadCellSample,
-                                  .checkFn = loadCellCheck};
+static sensor_t loadCellSensor = {
+    .initFn = loadCellInit, .sampleFn = loadCellSample, .checkFn = loadCellCheck};
 
-void loadCellSamplerInit(NAU7802 *sensor) {
+void loadCellSamplerInit(NAU7802 *sensor, LoadCellConfig_t cfg) {
   _loadCell = sensor;
+  _cfg = cfg;
   sensorSamplerAdd(&loadCellSensor, "LCL");
 }

@@ -42,7 +42,7 @@ public:
   const Value& getValue(uint16_t index);
 protected:
   virtual ~LineParser(); // Add virtual destructor
-  bool parseValueFromToken(const char* token, size_t index);
+  virtual bool parseValueFromToken(const char* token, size_t index, char foundSeparator);
 private:
   virtual bool parseValues(char* workStr) = 0;
   // parse string at token (must not be nullptr! must be NULL terminated!) and if sucessful add to _values array at i.
