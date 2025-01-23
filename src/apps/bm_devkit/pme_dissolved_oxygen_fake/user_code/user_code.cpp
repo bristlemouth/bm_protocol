@@ -54,6 +54,9 @@ static constexpr uint32_t PME_WIPE_MSG_MAX_SIZE = 256;
 bool baro_data_subscribed = false;
 static uint64_t check_for_baro_pubs_timer = 0;
 
+// This function is called when a message is received on the subscribed topic.
+// For this example, we will print the received message to the console.
+// But this is where you can get the pressure data and do something with it!
 static void subscribe_callback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                const uint8_t *data, uint16_t data_len, uint8_t type,
                                uint8_t version) {
@@ -63,13 +66,7 @@ static void subscribe_callback(uint64_t node_id, const char *topic, uint16_t top
   (void)type;
   (void)version;
   (void)topic;
-  // Check if the message is of the correct type and version
-  // if (type != SPOTTER_BARO_TYPE || version != SPOTTER_BARO_VERSION) {
-  //   printf("Received message with incorrect type or version\n");
-  //   return;
-  // }
-  // if (strncmp(topic, SPOTTER_BARO_TOPIC, strlen(SPOTTER_BARO_TOPIC)) == 0) {
-  //   // Print the received message
+  // Decode and print the received pressure data to the console.
   BarometricPressureDataMsg::Data baro_data;
   if (BarometricPressureDataMsg::decode(baro_data, data, data_len) == CborNoError) {
     printf("Recieved pressure publication from node %016" PRIx64 " on topic %.*s\n\tpressure: %0.02f\n", node_id,
@@ -79,6 +76,9 @@ static void subscribe_callback(uint64_t node_id, const char *topic, uint16_t top
   }
 }
 
+// When we recieve a resource table reply, we will loop through the pub resources and look for a resource that matches our barometric pressure topic.
+// If so then we will subscribe to that topic! Right now we are just looking for a topic that contains "sensor/" and "/barometric_pressure"
+// and subscribing to that topic. We provide the callback function subscribe_callback to be called when a message is received on that topic.
 static void sub_to_baro_publicating_node(void *bcmp_resource_table_reply) {
   BcmpResourceTableReply *reply =
       reinterpret_cast<BcmpResourceTableReply *>(bcmp_resource_table_reply);
@@ -102,6 +102,10 @@ static void sub_to_baro_publicating_node(void *bcmp_resource_table_reply) {
   }
 }
 
+// This function is called when the network topology is fully assembled.
+// In this function we will look for nodes that publish barometric pressure data.
+// In order to do this, we loop through the toplogy list and send a resource discovery request to each node.
+// The callback function sub_to_baro_publicating_node is called when a resource table reply is received.
 static void look_for_baro_publications(NetworkTopology *network_topology) {
   if (network_topology) {
     NeighborTableEntry *cursor = NULL;
@@ -131,6 +135,8 @@ void loop(void) {
 
   if (!baro_data_subscribed && uptimeGetMs() - check_for_baro_pubs_timer >= 10000U) {
     // get the topology list and check if we have a source for our barometric pressure data
+    // bcmp_topology_start will assemble the topology list and once fully assembled will call the callback function provided,
+    // in this case the look_for_baro_publications function.
     bcmp_topology_start(look_for_baro_publications);
     check_for_baro_pubs_timer = uptimeGetMs();
   }
