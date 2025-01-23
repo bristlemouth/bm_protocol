@@ -20,8 +20,6 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
-// #define DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
-// #define DEFAULT_PME_WIPER_READING_PERIOD_MS 4 * 60 * 60 * 1000        // 4 hours
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
