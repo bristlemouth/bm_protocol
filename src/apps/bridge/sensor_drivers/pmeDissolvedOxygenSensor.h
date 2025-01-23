@@ -44,5 +44,6 @@ private:
 } PmeDissolvedOxygen_t;
 
 PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms,
+                                                  uint32_t sub_sample_interval_ms,
                                                   uint32_t sub_sample_duration_ms,
                                                   bool sub_sample_enabled);

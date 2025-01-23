@@ -135,18 +135,21 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
   if (payload && CURRENT_SUB) {
     BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
     size_t size = sizeof(AbstractSensor::m_reading_period_ms);
+    uint32_t reading_period_s = 0;
     err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
-                                   &CURRENT_SUB->m_reading_period_ms, &size);
+                                   &reading_period_s, &size);
+
+    CURRENT_SUB->m_reading_period_ms = reading_period_s * 1000;
     if (err == BmOK) {
       uint32_t averager_max_samples = 0;
       if (CURRENT_SUB->m_sub_sample_enabled) {
         averager_max_samples =
             CURRENT_SUB->m_sub_sample_duration_ms / CURRENT_SUB->m_reading_period_ms +
-            CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_sub_sample_duration_ms +
+            CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_sub_sample_interval_ms +
             PmeDissolvedOxygen_t::N_SAMPLES_PAD;
       } else {
         averager_max_samples =
-            (CURRENT_SUB->m_reading_period_ms / CURRENT_SUB->m_reading_period_ms) +
+            (CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_reading_period_ms) +
             PmeDissolvedOxygen_t::N_SAMPLES_PAD;
       }
 
@@ -168,6 +171,7 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
 }
 
 PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms,
+                                                  uint32_t sub_sample_interval_ms,
                                                   uint32_t sub_sample_duration_ms,
                                                   bool sub_sample_enabled) {
   PmeDissolvedOxygen_t *new_sub =
@@ -185,6 +189,7 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
           PmeDissolvedOxygenSensor::DEFAULT_PME_DISSOLVED_READING_PERIOD_MS;
       new_sub->m_sample_duration_ms = sample_duration_ms;
       new_sub->m_sub_sample_enabled = sub_sample_enabled;
+      new_sub->m_sub_sample_interval_ms = sub_sample_interval_ms;
       new_sub->m_sub_sample_duration_ms = sub_sample_duration_ms;
 
       uint32_t averager_max_samples = 0;
@@ -206,8 +211,8 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
       CURRENT_SUB = new_sub;
       BmErr err = BmOK;
       if (!bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
-                           strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
-                           AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS, &err,
+                           strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_S),
+                           AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_S, &err,
                            pmeDissolvedOxygenCfgGetCb)) {
         bm_debug("Failed to send PME Wiper config get\n");
       }
