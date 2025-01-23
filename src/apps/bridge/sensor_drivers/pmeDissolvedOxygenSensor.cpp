@@ -138,13 +138,22 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
     err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
                                    &CURRENT_SUB->m_reading_period_ms, &size);
     if (err == BmOK) {
-      uint32_t averager_max_samples =
-          (CURRENT_SUB->m_reading_period_ms / CURRENT_SUB->agg_period_ms) +
-          PmeDissolvedOxygen_t::N_SAMPLES_PAD;
+      uint32_t averager_max_samples = 0;
+      if (CURRENT_SUB->m_sub_sample_enabled) {
+        averager_max_samples =
+            CURRENT_SUB->m_sub_sample_duration_ms / CURRENT_SUB->m_reading_period_ms +
+            CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_sub_sample_duration_ms +
+            PmeDissolvedOxygen_t::N_SAMPLES_PAD;
+      } else {
+        averager_max_samples =
+            (CURRENT_SUB->m_reading_period_ms / CURRENT_SUB->m_reading_period_ms) +
+            PmeDissolvedOxygen_t::N_SAMPLES_PAD;
+      }
 
       bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                      "Updating the PME Dissolved Oxygen buffers with max samples  %" PRIu32
-                     "\n", averager_max_samples);
+                     "\n",
+                     averager_max_samples);
       CURRENT_SUB->temperature_deg_c.initBuffer(averager_max_samples);
       CURRENT_SUB->do_mg_per_l.initBuffer(averager_max_samples);
       CURRENT_SUB->quality.initBuffer(averager_max_samples);
@@ -158,7 +167,9 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
   return err;
 }
 
-PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms) {
+PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms,
+                                                  uint32_t sub_sample_duration_ms,
+                                                  bool sub_sample_enabled) {
   PmeDissolvedOxygen_t *new_sub =
       static_cast<PmeDissolvedOxygen_t *>(bm_malloc(sizeof(PmeDissolvedOxygen_t)));
   if (new_sub) {
@@ -170,12 +181,21 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
       new_sub->node_id = node_id;
       new_sub->type = SENSOR_TYPE_PME_DO;
       new_sub->next = NULL;
-      new_sub->agg_period_ms =
+      new_sub->m_reading_period_ms =
           PmeDissolvedOxygenSensor::DEFAULT_PME_DISSOLVED_READING_PERIOD_MS;
+      new_sub->m_sample_duration_ms = sample_duration_ms;
+      new_sub->m_sub_sample_enabled = sub_sample_enabled;
+      new_sub->m_sub_sample_duration_ms = sub_sample_duration_ms;
 
-      uint32_t averager_max_samples =
-          static_cast<uint32_t>(ceil((sample_duration_ms / new_sub->agg_period_ms) +
-                                     PmeDissolvedOxygenSensor::N_SAMPLES_PAD));
+      uint32_t averager_max_samples = 0;
+
+      if (sub_sample_enabled) {
+        averager_max_samples = sample_duration_ms / sub_sample_duration_ms +
+                               PmeDissolvedOxygenSensor::N_SAMPLES_PAD;
+      } else {
+        averager_max_samples = static_cast<uint32_t>(ceil((sample_duration_ms / new_sub->m_reading_period_ms) +
+                                   PmeDissolvedOxygenSensor::N_SAMPLES_PAD));
+      }
 
       new_sub->temperature_deg_c.initBuffer(averager_max_samples);
       new_sub->do_mg_per_l.initBuffer(averager_max_samples);

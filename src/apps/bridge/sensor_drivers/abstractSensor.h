@@ -22,6 +22,9 @@ struct AbstractSensor {
   SemaphoreHandle_t _mutex;
   abstractSensorType_e type;
   uint32_t m_reading_period_ms;
+  uint32_t m_sample_duration_ms;
+  bool m_sub_sample_enabled;
+  uint32_t m_sub_sample_duration_ms;
 
 private:
   struct {

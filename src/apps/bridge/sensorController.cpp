@@ -275,6 +275,14 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
                       strlen(AppConfig::SAMPLE_DURATION_MS), &sample_duration_ms);
 
+      uint32_t sub_sample_duration_ms = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000U;
+      get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_DURATION_MS,
+                      strlen(AppConfig::SUBSAMPLE_DURATION_MS), &sub_sample_duration_ms);
+
+      uint32_t sub_sample_enabled = BridgePowerController::DEFAULT_SUBSAMPLE_ENABLED;
+      get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_ENABLED,
+                      strlen(AppConfig::SUBSAMPLE_ENABLED), &sub_sample_enabled);
+
       if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
           0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
@@ -325,7 +333,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                          MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
           PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub =
-              createPmeDissolvedOxygenSub(reply.node_id, sample_duration_ms);
+              createPmeDissolvedOxygenSub(reply.node_id, sample_duration_ms, sub_sample_duration_ms, static_cast<bool>(sub_sample_enabled));
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
