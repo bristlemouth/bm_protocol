@@ -44,8 +44,19 @@ void setup(void) {
   }
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
-  // Baud set per expected baud rate of the sensor.
-  PLUART::setBaud(baud_rate_config);
+  // SDI12 overrides baud rate setting, as protocol specs only 1200 baud.
+  // Also sets
+  if (uart_mode_config == MODE_SDI12) {
+    PLUART::setEvenParity(); // data width is 7 bits + 1 parity bit = 8 bits
+    PLUART::enableDataInversion(); // SDI12 transceiver inverts levels
+    PLUART::setBaud(1200); // SDI12 specifices 1200 baud rate
+  } else {
+    // for all other serial modes, use configurable baud rate,
+    //and default 8 bits, no parity, non-inverted.
+    // Baud set per expected baud rate of the sensor.
+    PLUART::setBaud(baud_rate_config);
+  }
+
   // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
   // Enable parsing lines and passing to user app.
@@ -54,12 +65,19 @@ void setup(void) {
   PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter((char)line_term_config);
+
+  // Setup PLUART transactions as needed per serial type
   if (uart_mode_config == MODE_RS485_HD) {
     printf("Enabling RS485 Half-Duplex.\n");
     bristlefin.setRS485HalfDuplex(); // Set the RS485 transceiver to Half-Duplex.
     // Set up PLUART transactions for proper RS485 enable Tx / enable Rx
     PLUART::enableTransactions(Bristlefin::setRS485Tx, Bristlefin::setRS485Rx);
+  } else if (uart_mode_config == MODE_SDI12) {
+    printf("Enabling SDI-12 serial.\n");
+    // Set up PLUART transactions for proper SDI12 enable Tx / enable Rx
+    PLUART::enableTransactions(Bristlefin::sdi_break_mark, Bristlefin::sdi12Rx);
   }
+
   // Turn on the UART.
   PLUART::enable();
   // Enable the input to the Vout power supply.
@@ -70,6 +88,8 @@ void setup(void) {
   bristlefin.enableVout();
   // enable 5V out.
   bristlefin.enable5V();
+  bristlefin.enable3V();
+  bristlefin.sdi_wake();
 }
 
 void loop(void) {
@@ -143,6 +163,14 @@ void loop(void) {
       readingBytesTimer = -1;
     }
     uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
+
+    //SDI-12 data has 7 bits datawidth. Incoming bytes need to be bitwise ANDed with 0x7F
+    //TODO - interpret the 8th bit for parity check
+    if (uart_mode_config == MODE_SDI12) {
+      for (size_t i = 0; i < sizeof(payload_buffer); ++i) {
+        payload_buffer[i] &= 0x7F;
+      }
+    }
 
     // Get the RTC if available
     RTCTimeAndDate_t time_and_date = {};
