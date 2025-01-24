@@ -143,10 +143,10 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
       CURRENT_SUB->m_reading_period_ms = reading_period_s * 1000;
       if (err == BmOK) {
         uint32_t averager_max_samples = 0;
-        if (CURRENT_SUB->m_sub_sample_enabled) {
+        if (CURRENT_SUB->m_subsample_enabled) {
           averager_max_samples =
-              CURRENT_SUB->m_sub_sample_duration_ms / CURRENT_SUB->m_reading_period_ms +
-              CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_sub_sample_interval_ms +
+              CURRENT_SUB->m_subsample_duration_ms / CURRENT_SUB->m_reading_period_ms +
+              CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_subsample_interval_ms +
               PmeDissolvedOxygen_t::N_SAMPLES_PAD;
         } else {
           averager_max_samples =
@@ -176,9 +176,9 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
 }
 
 PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms,
-                                                  uint32_t sub_sample_interval_ms,
-                                                  uint32_t sub_sample_duration_ms,
-                                                  bool sub_sample_enabled) {
+                                                  uint32_t subsample_interval_ms,
+                                                  uint32_t subsample_duration_ms,
+                                                  bool subsample_enabled) {
   PmeDissolvedOxygen_t *new_sub =
       static_cast<PmeDissolvedOxygen_t *>(bm_malloc(sizeof(PmeDissolvedOxygen_t)));
   if (new_sub) {
@@ -193,16 +193,16 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
       new_sub->m_reading_period_ms =
           PmeDissolvedOxygenSensor::DEFAULT_PME_DISSOLVED_READING_PERIOD_MS;
       new_sub->m_sample_duration_ms = sample_duration_ms;
-      new_sub->m_sub_sample_enabled = sub_sample_enabled;
-      new_sub->m_sub_sample_interval_ms = sub_sample_interval_ms;
-      new_sub->m_sub_sample_duration_ms = sub_sample_duration_ms;
+      new_sub->m_subsample_enabled = subsample_enabled;
+      new_sub->m_subsample_interval_ms = subsample_interval_ms;
+      new_sub->m_subsample_duration_ms = subsample_duration_ms;
 
       uint32_t averager_max_samples = 0;
 
-      if (sub_sample_enabled) {
+      if (subsample_enabled) {
         averager_max_samples =
-            new_sub->m_sub_sample_duration_ms / new_sub->m_reading_period_ms +
-            new_sub->m_sample_duration_ms / new_sub->m_sub_sample_interval_ms +
+            new_sub->m_subsample_duration_ms / new_sub->m_reading_period_ms +
+            new_sub->m_sample_duration_ms / new_sub->m_subsample_interval_ms +
             PmeDissolvedOxygen_t::N_SAMPLES_PAD;
       } else {
         averager_max_samples =
