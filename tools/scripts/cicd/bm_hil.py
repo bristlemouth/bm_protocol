@@ -44,18 +44,25 @@ def dfu_util_update(image: str, offset: int = 0):
     found = 0
     ports = serial.tools.list_ports.comports()
     fail_count = 0
+    # Bristlemouth console is only available on the first port of each device
+    # This variable will skip the pcap port
+    skip = False
     offset = 0x8000000 + offset
 
     # Iterate updates over all nodes connected over serial
     for port, desc, __ in sorted(ports):
-        if "Bristlemouth" in desc and int(port[-1]) == 1:
+        if "Bristlemouth" in desc and not skip:
             found += 1
             retry_count = 0
             while retry_count < DFU_UTIL_RETRY:
                 status = True
                 try:
-                    ser = SerialHelper(port)
-                    ser.transmit_str("\nbootloader\n")
+                    ser = SerialHelper(port, 115200, 1.0)
+                    ser.transmit_str("\ninfo\n")
+                    if len(ser.read_until("info_end")) != 0:
+                        ser.transmit_str("\nbootloader\n")
+                    else:
+                        print("Not a valid port, could not read simple command")
                     ser.close()
                 except SerialHelper.SerialException:
                     debug_str = "Device may already be in bootloader,"
@@ -91,9 +98,13 @@ def dfu_util_update(image: str, offset: int = 0):
                         debug_str = "Retrying DFU Util Update..."
                         print(debug_str)
                         LOGGER.log(LOGGER.WARNING, debug_str)
+                    sys.exit(1)
                 else:
+                    skip = True
                     LOGGER.log(LOGGER.INFO, output_str)
                     break
+        elif "Bristlemouth" in desc:
+            skip = False
     if found == 0:
         debug_str = "Could not find any ports to run DFU update"
         LOGGER.log(LOGGER.ERROR, debug_str)
