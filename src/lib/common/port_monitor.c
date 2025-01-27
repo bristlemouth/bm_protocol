@@ -19,13 +19,13 @@ static uint16_t ENABLED_PORT_MASK = 0;
 
   @details Will set a masked value of the ports which have come online.
 
-  @param port port that has had a link change
+  @param port_num port that has had a link change
   @param state state of the port
  */
-static void port_monitor_link_change(uint8_t port, bool state) {
+static void port_monitor_link_change(uint8_t port_num, bool state) {
   // If the port is online, update the mask
   if (state) {
-    ENABLED_PORT_MASK |= 1 << (port - 1);
+    ENABLED_PORT_MASK |= 1 << (port_num - 1);
   }
 }
 
@@ -52,6 +52,9 @@ static void port_monitor_timer_handler(BmTimer timer) {
         spotter_log_console(0, fmt_disable_str, node_id(), port_num);
         bm_l2_netif_enable_disable_port(port_num, false);
       } else {
+        // Port 1 cannot be solely disabled, it will also disable port 2 please
+        // refer to page 25 of the Rev B datasheet for the ADIN2111
+        // https://www.analog.com/media/en/technical-documentation/data-sheets/adin2111.pdf
         const char *fmt_err_str = "Could not disable network port %d on node: %" PRIx64
                                   ", unable to disable due to hardware restrictions\n";
         spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_err_str, node_id(), port_num);
