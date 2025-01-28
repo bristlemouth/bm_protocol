@@ -20,8 +20,6 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
-#define DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS 10 * 60 * 1000 // 10 minutes
-#define DEFAULT_PME_WIPER_READING_PERIOD_MS 4 * 60 * 60 * 1000        // 4 hours
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -116,37 +114,6 @@ void sensorControllerInit(BridgePowerController *power_controller) {
                     _ctx.seapoint_turbidity_reading_period_ms);
     save = true;
   }
-
-  _ctx.pme_dissolved_oxygen_reading_period_ms = DEFAULT_PME_DISSOLVED_OXYGEN_READING_PERIOD_MS;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS,
-                       strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
-                       &_ctx.pme_dissolved_oxygen_reading_period_ms)) {
-    bridgeLogPrint(
-        BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-        "Failed to get pme dissolved oxygen reading period from config, using default "
-        "value and writing "
-        "to config: %" PRIu32 "ms\n",
-        _ctx.pme_dissolved_oxygen_reading_period_ms);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS,
-                    strlen(AppConfig::PME_DISSOLVED_OXYGEN_PERIOD_MS),
-                    _ctx.pme_dissolved_oxygen_reading_period_ms);
-    save = true;
-  }
-
-  // _ctx.pme_wiper_reading_period_ms = DEFAULT_PME_WIPER_READING_PERIOD_MS;
-  // if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
-  //                      strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
-  //                      &_ctx.pme_wiper_reading_period_ms)) {
-  //   bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-  //                  "Failed to get pme wiper reading period from config, using default "
-  //                  "value and writing "
-  //                  "to config: %" PRIu32 "ms\n",
-  //                  _ctx.pme_wiper_reading_period_ms);
-  //   set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::PME_WIPER_READING_PERIOD_MS,
-  //                   strlen(AppConfig::PME_WIPER_READING_PERIOD_MS),
-  //                   _ctx.pme_wiper_reading_period_ms);
-  //   save = true;
-  // }
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
@@ -275,6 +242,20 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SAMPLE_DURATION_MS,
                       strlen(AppConfig::SAMPLE_DURATION_MS), &sample_duration_ms);
 
+      uint32_t subsample_duration_ms =
+          BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000U;
+      get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_DURATION_MS,
+                      strlen(AppConfig::SUBSAMPLE_DURATION_MS), &subsample_duration_ms);
+
+      uint32_t subsample_intertval_ms =
+          BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000U;
+      get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_INTERVAL_MS,
+                      strlen(AppConfig::SUBSAMPLE_INTERVAL_MS), &subsample_intertval_ms);
+
+      uint32_t subsample_enabled = BridgePowerController::DEFAULT_SUBSAMPLE_ENABLED;
+      get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_ENABLED,
+                      strlen(AppConfig::SUBSAMPLE_ENABLED), &subsample_enabled);
+
       if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
           0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
@@ -324,8 +305,9 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "pme_dissolved_oxygen",
                          MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
-          PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub =
-              createPmeDissolvedOxygenSub(reply.node_id, sample_duration_ms);
+          PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub = createPmeDissolvedOxygenSub(
+              reply.node_id, sample_duration_ms, subsample_intertval_ms,
+              subsample_duration_ms, static_cast<bool>(subsample_enabled));
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
