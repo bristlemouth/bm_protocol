@@ -113,6 +113,12 @@ if(APP_NAME MATCHES "bringup")
     )
 endif()
 
+if(APP_NAME MATCHES "bringup_mote")
+    list(APPEND LIB_FILES
+        ${LIB_DIR}/bristlefin/bristlefin.cpp
+    )
+endif()
+
 if(CMAKE_APP_TYPE STREQUAL "BMDK" OR
    CMAKE_APP_TYPE STREQUAL "bristleback" OR
    CMAKE_APP_TYPE STREQUAL "rs232_expander" OR
