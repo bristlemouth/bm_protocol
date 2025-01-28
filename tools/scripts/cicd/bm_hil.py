@@ -113,6 +113,10 @@ def dfu_util_update(image: str, offset: int = 0):
 
 
 def run_hil_tests():
+    # Bristlemouth console is only available on the first port of each device
+    # This variable will skip the pcap port
+    skip = False
+
     debug_str = "Running HIL Tests"
     print(debug_str)
     LOGGER.log(LOGGER.INFO, debug_str)
@@ -127,7 +131,7 @@ def run_hil_tests():
     # Iterate tests over all nodes connected over serial
     for port, desc, __ in sorted(ports):
         # Determine if this is a node we want to talk to over serial
-        if "Bristlemouth" in desc and int(port[-1]) == 1:
+        if "Bristlemouth" in desc and not skip:
             found += 1
             status = True
             debug_str = f"HIL Test Running On: {port}"
@@ -146,9 +150,11 @@ def run_hil_tests():
             )
 
             # Determine if any tests have failed
-            find = re.search(r"\w+ failed, \w+ passed", output)
+            find = re.findall(r"\w+ failed", output)
             if find:
-                status = False
+                failed_tests = [int(s) for s in find[0].split() if s.isdigit()]
+                if failed_tests[0] != 0:
+                    status = False
             output_str = "HIL Test Status: "
             output_str += "Success" if status is True else "Failure"
             print(output_str)
@@ -156,8 +162,12 @@ def run_hil_tests():
                 LOGGER.log(LOGGER.ERROR, output_str)
                 fail_count += 1
                 print("Failure output result:\n" + output)
+                sys.exit(1)
             else:
                 LOGGER.log(LOGGER.INFO, output_str)
+                skip = True
+        elif "Bristlemouth" in desc:
+            skip = False
     if found == 0:
         debug_str = "Could not find any ports to run HIL tests"
         LOGGER.log(LOGGER.ERROR, debug_str)
