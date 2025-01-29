@@ -3,6 +3,7 @@
 #include "abstractSensor.h"
 #include "app_config.h"
 #include "app_util.h"
+#include "bm_os.h"
 #include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
