@@ -329,7 +329,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
               abstractSensorAddSensorSub(borealis_spectrum_sub);
               abstractSensorAddSensorSub(borealis_levels_sub);
             } else {
-              free(borealis_spectrum_sub);
+              bm_free(borealis_spectrum_sub);
             }
           }
         }
