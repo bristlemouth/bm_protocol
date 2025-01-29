@@ -15,8 +15,10 @@
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"
+#include "memfault_platform_core.h"
 #include "payload_uart.h"
 #include "pubsub.h"
+#include "reset_reason.h"
 #include "sensors.h"
 #include "spotter.h"
 #include "stm32_rtc.h"
@@ -76,6 +78,8 @@ const ValueType valueTypes[] = {TYPE_UINT64, TYPE_DOUBLE};
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
 OrderedSeparatorLineParser parser(",", 256, valueTypes, 2);
 
+static bool sent_reset_reason = false;
+
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
 
@@ -107,6 +111,16 @@ void setup(void) {
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
+  if (uptimeGetMs() > 10000 && !sent_reset_reason) {
+    sent_reset_reason = true;
+    ResetReason_t resetReason = checkResetReason();
+    uint32_t pc = memfault_get_pc();
+    uint32_t lr = memfault_get_lr();
+    spotter_log_console(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    spotter_log(0, "reset.log", USE_TIMESTAMP, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+  }
+
   // This aggregates coda readings into stats, and sends them along to Spotter
   static u_int32_t codaStatsTimer = uptimeGetMs();
   if ((u_int32_t)uptimeGetMs() - codaStatsTimer >= CODA_AGG_PERIOD_MS) {
