@@ -8,8 +8,10 @@
 #include "debug.h"
 #include "device_info.h"
 #include "lwip/inet.h"
+#include "memfault_platform_core.h"
 #include "payload_uart.h"
 #include "pubsub.h"
+#include "reset_reason.h"
 #include "sensorWatchdog.h"
 #include "sensors.h"
 #include "spotter.h"
@@ -162,6 +164,8 @@ static char payload_buffer[2048];
 static char aanderaaTopic[BM_TOPIC_MAX_LEN];
 static int aanderaaTopicStrLen;
 
+static bool sent_reset_reason = false;
+
 // Declare the parser here with separator, buffer length, value types array, and number of values per line.
 //   We'll initialize the parser later in setup to allocate all the memory we'll need.
 static OrderedKVPLineParser parser("\t", 750, valueTypes, NUM_PARAMS_TO_AGG, keys, lineHeader);
@@ -299,6 +303,16 @@ static void mfgTestSendTxWakeup(void) {
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
+  if (uptimeGetMs() > 10000 && !sent_reset_reason) {
+    sent_reset_reason = true;
+    ResetReason_t resetReason = checkResetReason();
+    uint32_t pc = memfault_get_pc();
+    uint32_t lr = memfault_get_lr();
+    spotter_log_console(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    spotter_log(0, "reset.log", USE_TIMESTAMP, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+  }
+
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
