@@ -34,6 +34,7 @@ set(LIB_FILES
     ${LIB_DIR}/common/lptimTick_u5.c
     ${LIB_DIR}/common/nvmPartition.cpp
     ${LIB_DIR}/common/pcap.c
+    ${LIB_DIR}/common/port_monitor.c
     ${LIB_DIR}/common/trace.c
     ${LIB_DIR}/common/reset_reason.c
     ${LIB_DIR}/common/serial.c
@@ -110,6 +111,12 @@ if(APP_NAME MATCHES "bringup")
     list(APPEND LIB_FILES
         ${LIB_DIR}/debug/debug_uart.c
         ${LIB_DIR}/debug/debug_adin_raw.c
+    )
+endif()
+
+if(APP_NAME MATCHES "bringup_mote")
+    list(APPEND LIB_FILES
+        ${LIB_DIR}/bristlefin/bristlefin.cpp
     )
 endif()
 

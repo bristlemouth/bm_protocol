@@ -15,6 +15,15 @@ include(cmake/CheckAndApplyFlags.cmake)
 
 include(BuildOptions.cmake)
 
+add_custom_target(update_submodules_bm_protocol
+    COMMAND git submodule update --init
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+)
+execute_process(
+    COMMAND git submodule update --init
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+)
+
 ##################
 # Compiler Flags #
 ##################

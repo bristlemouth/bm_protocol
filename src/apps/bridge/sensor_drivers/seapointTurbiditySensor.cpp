@@ -39,7 +39,7 @@ void SeapointTurbiditySensor::seapointTurbiditySubCallback(uint64_t node_id, con
   printf("Seapoint Turbidity data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
   SeapointTurbidity_t *turbidity_sensor =
-      static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id));
+      static_cast<SeapointTurbidity_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY));
   if (turbidity_sensor && turbidity_sensor->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
     if (xSemaphoreTake(turbidity_sensor->_mutex, portMAX_DELAY)) {
       static BmSeapointTurbidityDataMsg::Data turbidity_data;

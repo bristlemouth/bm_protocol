@@ -11,6 +11,8 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/rbrCodaSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/softSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/seapointTurbiditySensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/pmeDissolvedOxygenSensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers/pmeWipeSensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensorController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp

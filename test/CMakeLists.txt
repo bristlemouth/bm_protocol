@@ -1,3 +1,7 @@
+add_custom_target(update_submodules_bm_core
+    COMMAND git submodule update --init --recursive src/lib/bm_core
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
 
 mark_as_advanced(
     BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
@@ -9,6 +13,8 @@ set_target_properties(gtest PROPERTIES FOLDER extern)
 set_target_properties(gtest_main PROPERTIES FOLDER extern)
 set_target_properties(gmock PROPERTIES FOLDER extern)
 set_target_properties(gmock_main PROPERTIES FOLDER extern)
+add_dependencies(update_submodules_bm_core update_submodules_bm_protocol)
+add_dependencies(gtest update_submodules_bm_core)
 
 add_compile_options(
     -Wall

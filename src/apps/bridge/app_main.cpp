@@ -42,6 +42,7 @@
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "l2.h"
 #include "memfault_platform_core.h"
 #include "messages/neighbors.h"
 #include "ncp_uart.h"
@@ -382,6 +383,7 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init();
+  bm_l2_netif_enable_disable_port(2, false);
 
   uint32_t hw_version = 0;
   get_config_uint(BM_CFG_PARTITION_HARDWARE, AppConfig::HARDWARE_VERSION,
