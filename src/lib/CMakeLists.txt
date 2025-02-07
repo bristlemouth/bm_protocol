@@ -100,7 +100,8 @@ set(LIB_FILES
 )
 
 if(APP_NAME MATCHES "bridge" AND
-   NOT APP_NAME MATCHES "bringup")
+   NOT APP_NAME MATCHES "bringup" AND
+   NOT APP_NAME MATCHES "serial")
     list(APPEND LIB_FILES
         ${LIB_DIR}/debug/debug_bridge_power_controller.cpp
         ${BM_NCP_FILES}
