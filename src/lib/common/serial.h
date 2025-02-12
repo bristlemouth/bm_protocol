@@ -1,24 +1,24 @@
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "FreeRTOS.h"
 #include "io.h"
 #include "queue.h"
 #include "stream_buffer.h"
 #include "trace.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  //
-  // Maximum time to spend transmitting a single message
-  //
-  // At 9600 baud, that's ~6kB. At 115200 that's 72kB. If you attempt
-  // to transmit a single buffer larger than that (at those baud rates)
-  // some data may be lost! (with a 5 second max time)
-  //
+//
+// Maximum time to spend transmitting a single message
+//
+// At 9600 baud, that's ~6kB. At 115200 that's 72kB. If you attempt
+// to transmit a single buffer larger than that (at those baud rates)
+// some data may be lost! (with a 5 second max time)
+//
 #define MAX_TX_TIME_MS (5000)
 
 typedef struct {
@@ -30,7 +30,7 @@ typedef struct {
 
 typedef struct SerialHandle {
   // Pointer to hardware struct
-  void * device;
+  void *device;
 
   // Name of peripheral (for debug)
   const char *name;
@@ -68,6 +68,7 @@ typedef struct SerialHandle {
 
   // Pointer for additonal arguments/data to link to this handle
   void *data;
+  void *arg;
 
   // Interface enabled
   volatile bool enabled;
@@ -95,6 +96,7 @@ typedef struct {
   uint8_t *buff;
   uint16_t len;
   void *destination;
+  void *arg;
 } SerialMessage_t;
 
 // Serial handle->device's will be pointing to high memory values
@@ -113,9 +115,11 @@ void serialDisable(SerialHandle_t *handle);
 void serialGenericRxTask(void *parameters);
 void serialTxTask(void *parameters);
 void startSerial();
+void serialSetBaudRate(SerialHandle_t *handle, uint32_t baud);
+uint32_t serialGetBaudRate(SerialHandle_t *handle);
 
-void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len);
-void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len);
+void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len, void *arg);
+void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len, void *arg);
 
 xQueueHandle serialGetTxQueue();
 
@@ -123,12 +127,12 @@ xQueueHandle serialGetTxQueue();
 static inline void traceAddSerial(SerialHandle_t *handle, uint8_t byte, bool tx, bool isr) {
   uint32_t arg = 0;
   arg = (uint32_t)handle & 0xFFFF;
-  if(tx) {
+  if (tx) {
     // Tx Flag
     arg |= 1 << 16;
   }
 
-  if(isr) {
+  if (isr) {
     // ISR Flag
     arg |= 1 << 17;
   }

@@ -108,6 +108,7 @@ SerialHandle_t usart3 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -129,6 +130,7 @@ SerialHandle_t usbCLI = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -149,6 +151,7 @@ SerialHandle_t usbPcap = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -419,6 +422,7 @@ static void defaultTask(void *parameters) {
       static_cast<bool>(pwrcfg.ticksSamplingEnabled));
 
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
+  ncp_negotiate_baud_rate(921600);
   topology_sampler_init(&bridge_power_controller);
   debug_ncp_init();
   debugBmServiceInit();
