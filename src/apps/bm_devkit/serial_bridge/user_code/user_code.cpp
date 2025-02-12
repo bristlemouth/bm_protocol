@@ -37,7 +37,7 @@ static void reset() {
 }
 
 void loop() {
-  if (PLUART::byteAvailable()) {
+  while (PLUART::byteAvailable()) {
     const uint8_t b = PLUART::readByte();
     rx_buffer[rx_idx++] = b;
     if (rx_idx >= rx_buf_size) {
