@@ -422,7 +422,6 @@ static void defaultTask(void *parameters) {
       static_cast<bool>(pwrcfg.ticksSamplingEnabled));
 
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
-  ncp_negotiate_baud_rate(921600);
   topology_sampler_init(&bridge_power_controller);
   debug_ncp_init();
   debugBmServiceInit();
