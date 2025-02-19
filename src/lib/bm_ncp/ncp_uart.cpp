@@ -567,7 +567,9 @@ static void ncpBaudRateDiscovery(void) {
   configASSERT(ncp_baud_rate_discovery_lock);
 
   while (!ncp_ctx.baud_found && baud_idx < array_size(acceptable_bauds)) {
-    //Send 0 to reset receiving buffer
+    // Reset buffers just incase anything was sent at a different baud rate
+    ncpRXCurrBuff = 0;
+    ncpRXBuffIdx = 0;
     serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
     bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
     ncp_negotiate_baud_rate(921600);
@@ -581,7 +583,7 @@ static void ncpBaudRateDiscovery(void) {
   if (!ncp_ctx.baud_found) {
     serialSetBaudRate(ncpSerialHandle, 115200);
     // Send 0 to reset receiving buffer on spotter and reset our buffers just
-    // incase anythin was sent at a different baud rate
+    // incase anything was sent at a different baud rate
     ncpRXCurrBuff = 0;
     ncpRXBuffIdx = 0;
     bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
