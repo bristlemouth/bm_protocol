@@ -34,44 +34,47 @@ static bool powerSample() {
 
   for (uint8_t dev_num = 0; dev_num < NUM_INA232_DEV; dev_num++) {
     uint8_t retriesRemaining = SENSORS_NUM_RETRIES;
-    do {
-      success = _inaSensors[dev_num]->measurePower();
+
+    if (_inaSensors[dev_num]->initialized) {
+      do {
+        success = _inaSensors[dev_num]->measurePower();
+        if (success) {
+          _inaSensors[dev_num]->getPower(voltage, current);
+        }
+      } while (!success && (--retriesRemaining > 0));
+
       if (success) {
-        _inaSensors[dev_num]->getPower(voltage, current);
+        RTCTimeAndDate_t time_and_date = {};
+        rtcGet(&time_and_date);
+        powerSample_t _powerData{.uptime = uptimeGetMs(),
+                                 .rtcTime = time_and_date,
+                                 .address = _inaSensors[dev_num]->getAddr(),
+                                 .voltage = voltage,
+                                 .current = current};
+
+        char rtcTimeBuffer[32];
+        rtcPrint(rtcTimeBuffer, &time_and_date);
+        printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(),
+               rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+        spotter_log(0, "power.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
+                   uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
+                   _powerData.current);
+        spotter_log_console(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
+                  uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
+                  _powerData.current);
+
+        taskENTER_CRITICAL();
+        _newPowerDataAvailable[dev_num] = true;
+        _latestVoltage[dev_num] = voltage;
+        _latestCurrent[dev_num] = current;
+        taskEXIT_CRITICAL();
+      } else {
+        printf("ERR Failed to sample power monitor %u!\n", dev_num);
+        spotter_log_console(0, "ERR Failed to sample power monitor %u!", dev_num);
+        spotter_log(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!", dev_num);
       }
-    } while (!success && (--retriesRemaining > 0));
-
-    if (success) {
-      RTCTimeAndDate_t time_and_date = {};
-      rtcGet(&time_and_date);
-      powerSample_t _powerData{.uptime = uptimeGetMs(),
-                               .rtcTime = time_and_date,
-                               .address = _inaSensors[dev_num]->getAddr(),
-                               .voltage = voltage,
-                               .current = current};
-
-      char rtcTimeBuffer[32];
-      rtcPrint(rtcTimeBuffer, &time_and_date);
-      printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(),
-             rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-      spotter_log(0, "power.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
-                 uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
-                 _powerData.current);
-      spotter_log_console(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
-                uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
-                _powerData.current);
-
-      taskENTER_CRITICAL();
-      _newPowerDataAvailable[dev_num] = true;
-      _latestVoltage[dev_num] = voltage;
-      _latestCurrent[dev_num] = current;
-      taskEXIT_CRITICAL();
-    } else {
-      printf("ERR Failed to sample power monitor %u!", dev_num);
-      spotter_log_console(0, "ERR Failed to sample power monitor %u!", dev_num);
-      spotter_log(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!", dev_num);
+      rval &= success;
     }
-    rval &= success;
   }
   return rval;
 }
