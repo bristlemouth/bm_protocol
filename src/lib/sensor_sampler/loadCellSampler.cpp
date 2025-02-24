@@ -15,17 +15,18 @@
 #include <stdint.h>
 
 static NAU7802 *_loadCell;
-bool successful_lc_read = false;
-uint64_t read_attempt_duration = 100;
-uint64_t read_start_time;
+static bool successful_lc_read = false;
+static uint64_t read_attempt_duration = 100;
+static uint64_t read_start_time;
 
-uint32_t cellular_send_read_counter;
-float mean_force;
-float mean_sum;
-float max_force;
-float min_force;
-uint32_t num_reads = 240; //This should be 4 minutes
-LoadCellConfig_t _cfg;
+static bool negative_factor = false;
+static uint32_t cellular_send_read_counter;
+static float mean_force;
+static float mean_sum;
+static float max_force;
+static float min_force;
+static uint32_t num_reads = 240; //This should be 4 minutes
+static LoadCellConfig_t _cfg;
 
 #define INA_STR_LEN 80
 
@@ -45,7 +46,7 @@ static bool loadCellSample() {
 
   bool rval = true;
   int32_t reading = _loadCell->getReading();
-  float weight = _loadCell->getWeight();
+  float weight = _loadCell->getWeight(negative_factor);
   float calFactor = _loadCell->getCalibrationFactor();
   int32_t zeroOffset = _loadCell->getZeroOffset();
 
@@ -134,6 +135,9 @@ static bool loadCellInit() {
   rval = _loadCell->begin();
   _loadCell->setCalibrationFactor(_cfg.calibration_factor);
   _loadCell->setZeroOffset(_cfg.zero_offset);
+  if (_cfg.calibration_factor < 0.0) {
+      negative_factor = true;
+  }
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
