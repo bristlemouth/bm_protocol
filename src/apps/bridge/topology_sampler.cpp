@@ -820,7 +820,7 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
       } else if (strncmp(app_name, "seapoint_turbidity", strlen("seapoint_turbidity")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_SEAPOINT_TURBIDITY;
         break;
-      } else if (strncmp(app_name, "pme_dissolved_oxygen", strlen("pme_dissolved_oxygen")) ==
+      } else if (strncmp(app_name, "pme_do_sensor", strlen("pme_do_sensor")) ==
                  0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_PME_DO;
         break;

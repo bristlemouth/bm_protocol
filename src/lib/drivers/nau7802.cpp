@@ -351,15 +351,18 @@ void NAU7802::setCalibrationFactor(float newCalFactor) {
 float NAU7802::getCalibrationFactor() { return (_calibrationFactor); }
 
 // Returns the y of y = mx + b using the current weight on scale, the cal factor, and the offset.
-float NAU7802::getWeight(bool allowNegativeWeights, uint8_t samplesToTake) {
+float NAU7802::getWeight(bool negativeScale, uint8_t samplesToTake) {
   int32_t onScale = getAverage(samplesToTake);
 
   // Prevent the current reading from being less than zero offset
   // This happens when the scale is zero'd, unloaded, and the load cell reports a value slightly less than zero value
   // causing the weight to be negative or jump to millions of pounds
-  if (allowNegativeWeights == false) {
+  if (negativeScale == false) {
     if (onScale < _zeroOffset)
       onScale = _zeroOffset; // Force reading to zero
+  } else {
+    if (onScale > _zeroOffset)
+      onScale = _zeroOffset;
   }
 
   float weight = (onScale - _zeroOffset) / _calibrationFactor;

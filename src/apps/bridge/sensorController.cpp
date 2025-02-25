@@ -304,8 +304,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
           }
         }
-      } else if (strncmp(reply.app_name, "pme_dissolved_oxygen",
-                         MIN(reply.app_name_strlen, strlen("pme_dissolved_oxygen"))) == 0) {
+      } else if (strncmp(reply.app_name, "pme_do_sensor",
+                         MIN(reply.app_name_strlen, strlen("pme_do_sensor"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
           PmeDissolvedOxygen_t *pme_dissolved_oxygen_sub = createPmeDissolvedOxygenSub(
               reply.node_id, sample_duration_ms, subsample_intertval_ms, subsample_duration_ms,

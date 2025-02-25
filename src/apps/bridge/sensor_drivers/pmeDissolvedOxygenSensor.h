@@ -40,7 +40,7 @@ private:
                                             uint16_t data_len, uint8_t type, uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/pme/do_reading";
+  static constexpr char subtag[] = "/pme/do_data";
 } PmeDissolvedOxygen_t;
 
 PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sample_duration_ms,

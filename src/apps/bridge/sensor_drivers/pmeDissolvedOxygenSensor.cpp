@@ -59,7 +59,7 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
         dissolved_oxygen_sensor->reading_count++;
 
         BmErr err = dissolved_oxygen_sensor->send_spotter_log_individual(
-            "pme_dissolved_oxygen", dissolved_oxygen_data.header,
+            "pme_do_sensor", dissolved_oxygen_data.header,
             (DEFAULT_PME_DISSOLVED_READING_PERIOD_MS + 1000U),
             "%.4f,"   // temperature_deg_c
             "%.3f,"   // do_mg_per_l
@@ -99,7 +99,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     }
 
     BmErr err = send_spotter_log_aggregate(
-        "pme_dissolved_oxygen", dissolved_oxygen_aggs.reading_count,
+        "pme_do_sensor", dissolved_oxygen_aggs.reading_count,
         "%.4f,"   // temperature_deg_c
         "%.3f,"   // do_mg_per_l
         "%.3f,"   // quality

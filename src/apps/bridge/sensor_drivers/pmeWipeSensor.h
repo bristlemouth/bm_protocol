@@ -45,7 +45,7 @@ private:
                                  uint16_t data_len, uint8_t type, uint8_t version);
 
 private:
-  static constexpr char subtag[] = "/pme/wiper";
+  static constexpr char subtag[] = "/pme/wipe_data";
 } PmeWipe_t;
 
 PmeWipe_t *createPmeWipeSub(uint64_t node_id, uint32_t sample_duration_ms);
