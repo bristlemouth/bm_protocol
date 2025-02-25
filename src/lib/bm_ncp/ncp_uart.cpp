@@ -31,7 +31,7 @@ extern "C" {
 #define NCP_NOTIFY_BUFF_MASK (1 << 0)
 #define NCP_NOTIFY (1 << 1)
 #define NCP_PROCESSOR_QUEUE_DEPTH (16)
-#define NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS (250)
+#define NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS (10)
 
 static uint32_t ncpRXBuffIdx = 0;
 static uint8_t ncpRXCurrBuff = 0;
@@ -76,8 +76,8 @@ typedef struct {
   TimerHandle_t negotiate_timer;
   SemaphoreHandle_t negotiating_lock;
   bool baud_found;
-} NCPContext_t;
-static NCPContext_t ncp_ctx = {};
+} NCPNegotiatingContext_t;
+static NCPNegotiatingContext_t ncp_ctx = {};
 
 static const uint32_t acceptable_bauds[] = {
     57600,
@@ -560,20 +560,20 @@ static void ncpRXProcessor(void *parameters) {
 }
 
 static void ncpBaudRateDiscovery(void) {
-  uint8_t baud_idx = 0;
+  uint8_t baud_idx = array_size(acceptable_bauds);
   static const uint8_t null_buf = 0;
 
   ncp_baud_rate_discovery_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_baud_rate_discovery_lock);
 
-  while (!ncp_ctx.baud_found && baud_idx < array_size(acceptable_bauds)) {
+  while (!ncp_ctx.baud_found && baud_idx > 0) {
+    baud_idx--;
     // Reset buffers just incase anything was sent at a different baud rate
     ncpRXCurrBuff = 0;
     ncpRXBuffIdx = 0;
     serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
     bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
     ncp_negotiate_baud_rate(921600);
-    baud_idx++;
     if (xSemaphoreTake(ncp_baud_rate_discovery_lock, portMAX_DELAY) != pdTRUE) {
       printf("Could not take baud rate discovery semaphore\n");
       break;
@@ -590,8 +590,10 @@ static void ncpBaudRateDiscovery(void) {
     printf("Could not find a baudrate to communicate to spotter with\n");
   }
 
-  vSemaphoreDelete(ncp_baud_rate_discovery_lock);
+  // Prevent race condition with semaphore usage in other tasks
+  SemaphoreHandle_t tmp_sem = ncp_baud_rate_discovery_lock;
   ncp_baud_rate_discovery_lock = NULL;
+  vSemaphoreDelete(tmp_sem);
 }
 
 // NCP USART rx irq
