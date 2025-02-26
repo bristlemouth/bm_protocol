@@ -41,8 +41,6 @@
 - Pull barometric pressure from spotter to use for DOsat% calc
 */
 
-
-
 uint32_t pmeLogEnable = 1;
 uint32_t pmeDOTIntervalS = 600;
 uint32_t pmeWipeIntervalS = 14400;
@@ -63,16 +61,14 @@ static constexpr char SENSOR_BM_LOG_ENABLE[] = "pmeLogEnable";
 static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
 
-
-
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
 static uint64_t lastDoMeasurementUptimeSec = 0;
 
 // Function to create the topic string for pme DO measurement data
 static int createPmeDoMeasurementDataTopic(void) { // DO measurement
-  int topicStrLen = snprintf(pmeDoTopic, BM_TOPIC_MAX_LEN,
-                             "sensor/%016" PRIx64 "/pme/do_data", getNodeId());
+  int topicStrLen =
+      snprintf(pmeDoTopic, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "/pme/do_data", getNodeId());
   configASSERT(topicStrLen > 0 && topicStrLen < BM_TOPIC_MAX_LEN);
   return topicStrLen;
 }
@@ -88,9 +84,12 @@ void debugTx(void) {}
 
 void setup(void) {
   // Load system configuration & initialize if not configured by user
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE), &pmeLogEnable);
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S, strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS);
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S, strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
+                  &pmeLogEnable);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S,
+                  strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S,
+                  strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS);
   printf("pmeLogEnable: %" PRIu32 "\n", pmeLogEnable);
   printf("pmeDOTIntervalS: %" PRIu32 "\n", pmeDOTIntervalS);
   printf("pmeWipeIntervalS: %" PRIu32 "\n", pmeWipeIntervalS);
@@ -109,7 +108,6 @@ void setup(void) {
   firstDo = true;
 }
 
-
 void loop(void) {
   RTCTimeAndDate_t time_and_date = {};
   bool rtcIsSet = rtcGet(&time_and_date);
@@ -120,7 +118,6 @@ void loop(void) {
   // Debugging timers
   // printf("currentUptimeSec: %llu\n",currentUptimeSec);
   // printf("currentUptimeMs: %" PRIu64 ", uptimeGetMs: %" PRIu64 ", remainingWipeTime: %" PRIu64 ", remainingDoTime: %" PRIu64 "\n", currentUptimeMs, uptimeGetMs(), remainingWipeTime, remainingDoTime);
-
 
   //////////
   // Wipe //
@@ -151,16 +148,15 @@ void loop(void) {
         }
       }
     } else {
-      printf("Wipe timer: %llu of %i seconds\n", elapsedWipe,
-             pmeWipeIntervalS);
+      printf("Wipe timer: %llu of %i seconds\n", elapsedWipe, pmeWipeIntervalS);
     }
   } else {
     printf("!  Not wiping; RTC is not set!\n");
   }
 
-/////////
-// DOT //
-/////////
+  /////////
+  // DOT //
+  /////////
   static PmeDissolvedOxygenMsg::Data d;
   uint64_t elapsedDoSec = currentUptimeSec - lastDoMeasurementUptimeSec;
   if (elapsedDoSec >= pmeDOTIntervalS || firstDo) {

@@ -9,8 +9,8 @@
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
 #include "user_code.h"
+#include "util.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -106,7 +106,6 @@ void PmeSensor::init() {
   ledBlinkBoot();
   ledAllOff();
 
-
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the microDOT sensor
   PLUART::setBaud(BAUD_RATE);
@@ -125,11 +124,11 @@ void PmeSensor::init() {
     PLUART::readLine(_SNpayload_buffer, sizeof(_SNpayload_buffer));
     printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
            "~~~ Communication with microDOT established! ~~~\n"
-           "~~~             S/N: %s             ~~~\n", _SNpayload_buffer);
+           "~~~             S/N: %s             ~~~\n",
+           _SNpayload_buffer);
     printf("~~~            Begin transmission            ~~~\n"
            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-  }
-  else {
+  } else {
     printf("!!! No microDOT S/N received - is the device connected?\n");
   }
 }
@@ -193,13 +192,11 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
         //d.do_saturation_pct = 0;
         success = true;
       }
-    }
-    else {
+    } else {
       printf("!  Failed to parse DOT data\n");
       ledBlinkOnce(&LED_RED);
     }
-  }
-  else {
+  } else {
     printf("!  No DOT line available from PLUART\n");
     ledBlinkOnce(&LED_RED);
   }
