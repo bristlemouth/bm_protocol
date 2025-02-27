@@ -311,7 +311,8 @@ PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
   PowerInfoReplyData d = {};
   BridgePowerController *power_controller = reinterpret_cast<BridgePowerController *>(arg);
 
-  if (!power_controller->_initDone && power_controller->isPowerControlEnabled()) {
+  if ((!power_controller->_initDone || !power_controller->_timebaseSet) &&
+      power_controller->isPowerControlEnabled()) {
     static const uint64_t init_uptime_s = 0;
     uint64_t current_uptime_s = uptimeGetMs() / 1000;
 
