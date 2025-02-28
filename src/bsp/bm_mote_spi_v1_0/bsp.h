@@ -13,7 +13,6 @@ extern "C" {
 #endif
 
 #define DEBUG_USE_LPUART1
-#define DEBUG_USE_USART3
 
 #define STM32_UUID ((uint32_t *)0x1FFF7A10)
 
@@ -84,6 +83,7 @@ typedef struct adin_pins_s {
 	IOPinHandle_t *reset;
 } adin_pins_t;
 
+#define I2C_INA_MAIN_ADDR  (0x43)
 #define I2C_INA_PODL_ADDR  (0x41)
 #define NUM_INA232_DEV (1)
 

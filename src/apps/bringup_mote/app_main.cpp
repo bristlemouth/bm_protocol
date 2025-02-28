@@ -211,7 +211,9 @@ static INA::INA232 debugIna1(&i2c1, I2C_INA_MAIN_ADDR);
 static INA::INA232 debugIna2(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
     &debugIna1,
+#if NUM_INA232_DEV == 2
     &debugIna2,
+#endif
 };
 
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
@@ -301,7 +303,9 @@ static void defaultTask(void *parameters) {
 
   MX_GPIO_Init();
   MX_LPUART1_UART_Init();
+#ifdef DEBUG_USE_USART3
   MX_USART3_UART_Init();
+#endif
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
