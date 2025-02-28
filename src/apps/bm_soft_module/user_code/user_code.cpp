@@ -169,8 +169,8 @@ void loop(void) {
   }
   }
 
-  // Delay between readings
-  vTaskDelay(pdMS_TO_TICKS(soft_delay_ms));
+  // Delay between readings, need to subtract the time it takes to do the conversion
+  vTaskDelay(pdMS_TO_TICKS(soft_delay_ms - ADC_CONV_WAIT_TIME_MS));
 }
 
 static bool BmSoftStartAndValidate(void) {
