@@ -22,4 +22,5 @@ typedef struct {
 
 void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
              BridgePowerController *power_controller);
+bool ncp_negotiate_baud_rate(uint32_t baud);
 // bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?

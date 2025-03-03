@@ -4,6 +4,7 @@
 #include "task.h"
 #include "stream_buffer.h"
 #include "queue.h"
+#include <string.h>
 
 #include "bsp.h"
 
@@ -43,6 +44,66 @@ void startSerial() {
               NULL);
 
   configASSERT(rval == pdTRUE);
+}
+
+void serialSetBaudRate(SerialHandle_t *handle, uint32_t baud) {
+  if (!handle || !handle->name) {
+      return;
+  }
+
+  uint32_t name_length = strlen(handle->name);
+  // assert_param(IS_LL_USART_BRR_MIN((USART_TypeDef *)(handle->device)->BRR));
+  if (strncmp(handle->name, "usart1", MIN(name_length, strlen("usart1"))) == 0) {
+    LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
+                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART1_CLKSOURCE),
+                         LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16, baud);
+#ifdef DEBUG_USE_LPUART1
+  } else if (strncmp(handle->name, "lpuart", MIN(name_length, strlen("lpuart"))) == 0) {
+    LL_LPUART_SetBaudRate((USART_TypeDef *)handle->device,
+                          LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
+                          LL_LPUART_PRESCALER_DIV8, baud);
+#endif
+  } else if (strncmp(handle->name, "usart2", MIN(name_length, strlen("usart2"))) == 0) {
+    LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
+                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART2_CLKSOURCE),
+                         LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16, baud);
+  } else if (strncmp(handle->name, "usart3", MIN(name_length, strlen("usart3"))) == 0) {
+    LL_USART_SetBaudRate((USART_TypeDef *)handle->device,
+                         LL_RCC_GetUSARTClockFreq(LL_RCC_USART3_CLKSOURCE),
+                         LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16, baud);
+  }
+}
+
+uint32_t serialGetBaudRate(SerialHandle_t *handle) {
+  uint32_t ret = 0;
+
+  if (!handle || !handle->name) {
+      return ret;
+  }
+
+  uint32_t name_length = strlen(handle->name);
+  // assert_param(IS_LL_USART_BRR_MIN((USART_TypeDef *)(handle->device)->BRR));
+  if (strncmp(handle->name, "usart1", MIN(name_length, strlen("usart1"))) == 0) {
+    ret = LL_USART_GetBaudRate((USART_TypeDef *)handle->device,
+                               LL_RCC_GetUSARTClockFreq(LL_RCC_USART1_CLKSOURCE),
+                               LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16);
+#ifdef DEBUG_USE_LPUART1
+  } else if (strncmp(handle->name, "lpuart", MIN(name_length, strlen("lpuart"))) == 0) {
+    ret = LL_LPUART_GetBaudRate((USART_TypeDef *)handle->device,
+                                LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
+                                LL_LPUART_PRESCALER_DIV8);
+#endif
+  } else if (strncmp(handle->name, "usart2", MIN(name_length, strlen("usart2"))) == 0) {
+    ret = LL_USART_GetBaudRate((USART_TypeDef *)handle->device,
+                               LL_RCC_GetUSARTClockFreq(LL_RCC_USART2_CLKSOURCE),
+                               LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16);
+  } else if (strncmp(handle->name, "usart3", MIN(name_length, strlen("usart3"))) == 0) {
+    ret = LL_USART_GetBaudRate((USART_TypeDef *)handle->device,
+                               LL_RCC_GetUSARTClockFreq(LL_RCC_USART3_CLKSOURCE),
+                               LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16);
+  }
+
+  return ret;
 }
 
 // Receive character from uart rx interrupt and place in stream buffer
@@ -262,11 +323,11 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
 // Like the console '> '
 extern xQueueHandle serialTxQueue; // TODO - don't extern this, put in handle or store otherwise
 void serialPutcharUnbuffered(SerialHandle_t *handle, char character) {
-  SerialMessage_t singleCharMessage = {NULL, 0xFF00 | (uint16_t)character, handle};
+  SerialMessage_t singleCharMessage = {NULL, 0xFF00 | (uint16_t)character, handle, NULL};
   xQueueSend( serialTxQueue, &singleCharMessage, 10 );
 }
 
-static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
+static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len, void *arg) {
   // Print out message in any connected interface
   configASSERT(handle != NULL);
 
@@ -279,6 +340,7 @@ static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len) {
     }
   }
 #endif
+  handle->arg = arg;
   if(handle->preTxCb){
     handle->preTxCb(handle);
   }
@@ -343,9 +405,9 @@ void serialTxTask( void *parameters ) {
     if ((message.buff == NULL) && ((message.len & 0xFF00) == 0xFF00)) {
       uint8_t single_byte;
       single_byte = (uint8_t)(message.len & 0xFF);
-      serialGenericTx(destination, &single_byte, sizeof(uint8_t));
+      serialGenericTx(destination, &single_byte, sizeof(uint8_t), message.arg);
     } else if(message.buff != NULL) {
-      serialGenericTx(destination, message.buff, message.len);
+      serialGenericTx(destination, message.buff, message.len, message.arg);
       vPortFree(message.buff);
     } else {
       // Null buffer (not on purpose)
@@ -361,7 +423,7 @@ void serialTxTask( void *parameters ) {
   \param *buff buffer of data to write
   \param len buffer length
 */
-void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len) {
+void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len, void *arg) {
   configASSERT(handle != NULL);
   configASSERT(buff != NULL);
 
@@ -370,7 +432,7 @@ void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len) {
 
   memcpy(txBuff, buff, len);
 
-  serialWriteNocopy(handle, txBuff, len);
+  serialWriteNocopy(handle, txBuff, len, arg);
 }
 
 /*!
@@ -383,14 +445,15 @@ void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len) {
   Sending task will free buff, therefore caller should not free buffer
   or use data from stack (or static)
 */
-void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len) {
+void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len, void *arg) {
   configASSERT(handle != NULL);
   configASSERT(buff != NULL);
 
   SerialMessage_t serialWriteMessage = {
     .buff = (uint8_t *)buff,
     .len = len,
-    .destination = handle
+    .destination = handle,
+    .arg = arg,
   };
 
   // Send buffer to serial output queue
