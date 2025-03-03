@@ -46,6 +46,8 @@ INA232::INA232(I2CInterface_t * interface, uint8_t address)
   _busCT = CT_1100;
   _shuntCT = CT_1100;
   _avg = AVG_1;
+
+  initialized = false;
 }
 
 /*!
@@ -83,6 +85,7 @@ bool INA232::init() {
 
 
     rval = true;
+    initialized = true;
   };
 
   return rval;
