@@ -91,7 +91,7 @@ static void print_coredump() {
       mbedtls_base64_encode(b64Data, b64Bytes, &olen, chunkData, buffLen);
       b64Data[olen] = '\n';
 
-      SerialMessage_t encodedMessage = {b64Data, olen + 1, _serialConsoleHandle};
+      SerialMessage_t encodedMessage = {b64Data, olen + 1, _serialConsoleHandle, NULL};
       if(xQueueSend(serialGetTxQueue(), &encodedMessage, 100) != pdTRUE) {
         // Free buffer if unable to send
         vPortFree(encodedMessage.buff);

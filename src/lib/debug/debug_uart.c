@@ -40,6 +40,7 @@ SerialHandle_t lpuart1 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = processLineBufferedRxByte,
     .data = &lpUART1LineBuffer,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -65,6 +66,7 @@ SerialHandle_t usart1 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = processLineBufferedRxByte,
     .data = &usart1LineBuffer,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -90,6 +92,7 @@ SerialHandle_t usart2 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = processLineBufferedRxByte,
     .data = &usart2LineBuffer,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -115,6 +118,7 @@ SerialHandle_t usart3 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = processLineBufferedRxByte,
     .data = &usart3LineBuffer,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -240,6 +244,7 @@ static BaseType_t debugSerialCommand(char *writeBuffer, size_t writeBufferLen,
                                            &parameterStringLength);
 
       SerialMessage_t debugUartMessage;
+      debugUartMessage.arg = NULL;
       debugUartMessage.len =
           strnlen(parameter, CONSOLE_OUTPUT_SIZE) + 2; // Added 2 characters for crlf
       debugUartMessage.buff = pvPortMalloc(debugUartMessage.len);

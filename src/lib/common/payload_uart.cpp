@@ -244,7 +244,7 @@ void write(uint8_t *buffer, size_t len) {
   // Note - multiple writes will likely be grouped in the same UART Tx transmission if there is no
   //  delay between them in the transaction in the user thread.
   xSemaphoreTake(_postTxSemaphore, 0);
-  serialWrite(&PLUART::uart_handle, buffer, len);
+  serialWrite(&PLUART::uart_handle, buffer, len, NULL);
 }
 
 void setBaud(uint32_t new_baud_rate) {
@@ -323,6 +323,7 @@ SerialHandle_t uart_handle = {
     .processByte =
         processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
     .data = &lpUART1LineBuffer, // Pointer to the line buffer this handle should use
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
