@@ -319,7 +319,7 @@ PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
     // Calculate how long the bus will be on before initialization is done
     d.total_on_s = INIT_POWER_ON_TIMEOUT_MS / 1000;
     d.remaining_on_s = timeRemainingGeneric(init_uptime_s, current_uptime_s, d.total_on_s);
-    d.upcoming_off_s = power_controller->_sampleIntervalS - d.total_on_s;
+    d.upcoming_off_s = POWER_SERVICE_UNDEFINED;
   } else if (power_controller->isSubsampleEnabled() &&
              power_controller->isPowerControlEnabled()) {
     uint32_t sample_duration_remain = timeRemainingGeneric(
@@ -350,8 +350,8 @@ PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
     }
     d.upcoming_off_s = power_controller->_sampleIntervalS - d.total_on_s;
   } else {
-    d.total_on_s = UINT32_MAX;
-    d.remaining_on_s = UINT32_MAX;
+    d.total_on_s = POWER_SERVICE_UNDEFINED;
+    d.remaining_on_s = POWER_SERVICE_UNDEFINED;
     d.upcoming_off_s = 0;
   }
 
