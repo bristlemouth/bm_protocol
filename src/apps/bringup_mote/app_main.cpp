@@ -43,6 +43,7 @@
 #include "gpioISR.h"
 #include "htu21d.h"
 #include "ina232.h"
+#include "bq25820.h"
 #include "io.h"
 #include "l2.h"
 #include "lpm.h"
@@ -214,6 +215,7 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
     &debugIna2,
 };
 
+static BQ::BQ25820 debugCharger(&i2c1, I2C_
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 static Bme280 debugPHTU(&i2c1, Bme280::I2C_ADDR);
 static HTU21D debugHTU(&i2c1);
@@ -371,6 +373,8 @@ static void defaultTask(void *parameters) {
 
   // Commenting out while we test usart1
   // lpmPeripheralInactive(LPM_BOOT);
+
+  bristlefin.enableVbus();
 
   while (1) {
     vTaskDelay(1000);
