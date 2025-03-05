@@ -12,9 +12,11 @@ TEST(rbrSensorUtilTest, validString) {
   static constexpr char temp[] = "14500, 17.7684\n";
   static constexpr char pressure[] = "332500, 9.9915\n";
   static constexpr char pressureAndTemp[] = "332500, 9.9915, 17.7684\n";
+  static constexpr char negTempAndPressure[] = "4500, -0.5079, 9.9655\n";
   EXPECT_TRUE(validSensorDataString(temp, strlen(temp)));
   EXPECT_TRUE(validSensorDataString(pressure, strlen(pressure)));
   EXPECT_TRUE(validSensorDataString(pressureAndTemp, strlen(pressureAndTemp)));
+  EXPECT_TRUE(validSensorDataString(negTempAndPressure, strlen(negTempAndPressure)));
 }
 
 TEST(rbrSensorUtilTest, InvalidString) {
