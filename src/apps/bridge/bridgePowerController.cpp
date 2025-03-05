@@ -10,6 +10,7 @@
 #include "stm32_rtc.h"
 #include "task.h"
 #include "task_priorities.h"
+#include "uptime.h"
 #include <cinttypes>
 #include <stdio.h>
 #ifdef RAW_PRESSURE_ENABLE
@@ -67,6 +68,8 @@ BridgePowerController::BridgePowerController(
   BaseType_t rval = xTaskCreate(BridgePowerController::powerControllerRun, "Power Controller",
                                 128 * 4, this, BRIDGE_POWER_TASK_PRIORITY, &_task_handle);
   configASSERT(rval == pdTRUE);
+
+  configASSERT(power_info_service_init(powerInfoStatsCb, this) == BmOK);
 }
 
 /*!
@@ -302,6 +305,57 @@ void BridgePowerController::powerControllerRun(void *arg) {
   while (true) {
     reinterpret_cast<BridgePowerController *>(arg)->_update();
   }
+}
+
+PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
+  PowerInfoReplyData d = {};
+  BridgePowerController *power_controller = reinterpret_cast<BridgePowerController *>(arg);
+
+  if ((!power_controller->_initDone || !power_controller->_timebaseSet) &&
+      power_controller->isPowerControlEnabled()) {
+    static const uint64_t init_uptime_s = 0;
+    uint64_t current_uptime_s = uptimeGetMs() / 1000;
+
+    // Calculate how long the bus will be on before initialization is done
+    d.total_on_s = INIT_POWER_ON_TIMEOUT_MS / 1000;
+    d.remaining_on_s = timeRemainingGeneric(init_uptime_s, current_uptime_s, d.total_on_s);
+    d.upcoming_off_s = POWER_SERVICE_UNDEFINED;
+  } else if (power_controller->isSubsampleEnabled() &&
+             power_controller->isPowerControlEnabled()) {
+    uint32_t sample_duration_remain = timeRemainingGeneric(
+        power_controller->_sampleIntervalStartS, power_controller->getCurrentTimeS(),
+        power_controller->_sampleDurationS);
+
+    d.total_on_s = power_controller->_subsampleDurationS;
+    if (power_controller->isBridgePowerOn()) {
+      d.remaining_on_s = timeRemainingGeneric(power_controller->_subsampleIntervalStartS,
+                                              power_controller->getCurrentTimeS(),
+                                              power_controller->_subsampleDurationS);
+    }
+
+    // Account for sample interval off time after sample duration in subsampling
+    if (sample_duration_remain >= d.total_on_s) {
+      d.upcoming_off_s = power_controller->_subsampleIntervalS - d.total_on_s;
+    } else {
+      d.upcoming_off_s =
+          (power_controller->_sampleIntervalStartS + power_controller->_sampleIntervalS) -
+          (power_controller->_subsampleIntervalStartS + power_controller->_subsampleDurationS);
+    }
+  } else if (power_controller->isPowerControlEnabled()) {
+    d.total_on_s = power_controller->_sampleDurationS;
+    if (power_controller->isBridgePowerOn()) {
+      d.remaining_on_s = timeRemainingGeneric(power_controller->_sampleIntervalStartS,
+                                              power_controller->getCurrentTimeS(),
+                                              power_controller->_sampleDurationS);
+    }
+    d.upcoming_off_s = power_controller->_sampleIntervalS - d.total_on_s;
+  } else {
+    d.total_on_s = POWER_SERVICE_UNDEFINED;
+    d.remaining_on_s = POWER_SERVICE_UNDEFINED;
+    d.upcoming_off_s = 0;
+  }
+
+  return d;
 }
 
 void BridgePowerController::checkAndUpdateTimebase() {
