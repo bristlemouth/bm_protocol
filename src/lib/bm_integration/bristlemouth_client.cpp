@@ -40,7 +40,7 @@ static bool network_device_interrupt(const void *pinHandle, uint8_t value, void 
   return bm_l2_handle_device_interrupt() == BmOK;
 }
 
-static void adin_power_callback(bool on) {
+void bcl_power_callback(bool on) {
   IOWrite(&ADIN_PWR, on);
   if (on) {
     IOWrite(&ADIN_CS, 1);
@@ -76,7 +76,7 @@ void bcl_init(void) {
   printf("Starting up BCL\n");
   device_init(device);
 
-  BmErr err = bristlemouth_init(adin_power_callback);
+  BmErr err = bristlemouth_init(bcl_power_callback);
   if (err == BmOK) {
     NetworkDevice network_device = bristlemouth_network_device();
     network_device.callbacks->debug_packet_dump = pcapTxPacket;

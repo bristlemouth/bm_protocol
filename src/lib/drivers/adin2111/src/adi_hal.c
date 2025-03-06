@@ -62,12 +62,17 @@ uint32_t HAL_GetEnableIrq(void) { return NVIC_GetEnableIRQ(ADIN_INT_EXTI_IRQn); 
  */
 
 uint32_t HAL_Init_Hook(void) {
+  uint32_t ret = ADI_HAL_SUCCESS;
   BmErr err = BmENOMEM;
 
-  err = bm_task_create(adi_spi_task, "ADIN SPI Task", 512, NULL, ADIN_SPI_TASK_PRIORITY,
-                       &ADI_SPI_TASK_HANDLE);
+  if (!ADI_SPI_TASK_HANDLE) {
+    err = bm_task_create(adi_spi_task, "ADIN SPI Task", 512, NULL, ADIN_SPI_TASK_PRIORITY,
+                         &ADI_SPI_TASK_HANDLE);
 
-  return err == BmOK ? ADI_HAL_SUCCESS : ADI_HAL_ERROR;
+    ret = err == BmOK ? ADI_HAL_SUCCESS : ADI_HAL_ERROR;
+  }
+
+  return ret;
 }
 
 uint32_t HAL_UnInit_Hook(void) { return ADI_HAL_SUCCESS; }

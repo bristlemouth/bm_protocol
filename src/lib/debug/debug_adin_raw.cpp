@@ -5,8 +5,10 @@
 /* FreeRTOS+CLI includes. */
 #include "FreeRTOS_CLI.h"
 
+#include "adi_hal.h"
 #include "bm_adin2111.h"
 #include "bm_config.h"
+#include "bristlemouth_client.h"
 #include "debug.h"
 #include "debug_adin_raw.h"
 #include "util.h"
@@ -70,13 +72,16 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     }
 
     if (strncmp("init", parameter, parameterStringLength) == 0) {
+      HAL_Init_Hook();
+      NetworkDevice network_device = adin2111_network_device();
+      network_device.callbacks->power = bcl_power_callback;
       BmErr err = adin2111_init();
       if (err == BmEALREADY) {
         printf("Adin already initialized\n");
       } else if (err == BmOK) {
         printf("Adin initialized successfully\n");
       } else {
-        printf("Adin initialization failed :(\n");
+        printf("Adin initialization failed, err: %d :(\n", err);
       }
     } else if (strncmp("tx", parameter, parameterStringLength) == 0) {
       NetworkDevice device = adin2111_network_device();
