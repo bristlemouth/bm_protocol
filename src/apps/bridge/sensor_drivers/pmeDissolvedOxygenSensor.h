@@ -29,6 +29,15 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   static constexpr uint32_t DEFAULT_PME_DISSOLVED_READING_PERIOD_MS = 10 * 60 * 1000;
   static constexpr uint32_t N_SAMPLES_PAD = 2;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 1;
+  static constexpr double TEMP_SAMPLE_MEMBER_MIN = -0.414;
+  static constexpr double TEMP_SAMPLE_MEMBER_MAX = 35.6;
+  static constexpr double DO_SAMPLE_MEMBER_MIN = -1.0;
+  static constexpr double DO_SAMPLE_MEMBER_MAX = 100.0;
+  static constexpr double QUALITY_SAMPLE_MEMBER_MIN = 0.0;
+  static constexpr double QUALITY_SAMPLE_MEMBER_MAX = 1.0;
+  static constexpr double DO_SATURATION_SAMPLE_MEMBER_MIN = 0.0;
+  static constexpr double DO_SATURATION_SAMPLE_MEMBER_MAX = 150.0;
+
 
 public:
   bool subscribe() override;
