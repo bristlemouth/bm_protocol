@@ -244,7 +244,7 @@ if (EXISTS ${APP_LOCATION})
 else()
     get_filename_component(APP ${APP} REALPATH)
     get_filename_component(APP_NAME ${APP} NAME)
-    add_subdirectory(${APP} ${CMAKE_BINARY_DIR}/borealis)
+    add_subdirectory(${APP} ${CMAKE_BINARY_DIR}/{APP_NAME})
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

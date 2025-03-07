@@ -68,7 +68,7 @@ int mp_hal_stdin_rx_chr(void) {
 // Write out string to output serial device
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
  if(_serial_handle && _serial_handle->enabled && len) {
-    serialWrite(_serial_handle, (const uint8_t *) str, len);
+    serialWrite(_serial_handle, (const uint8_t *) str, len, NULL);
   }
 }
 

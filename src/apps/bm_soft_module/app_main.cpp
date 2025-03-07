@@ -28,7 +28,6 @@
 #include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_nvm_cli.h"
-#include "debug_pluart_cli.h"
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
@@ -90,6 +89,7 @@ SerialHandle_t usart3 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -111,6 +111,7 @@ SerialHandle_t usbCLI = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -131,6 +132,7 @@ SerialHandle_t usbPcap = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -380,7 +382,6 @@ static void defaultTask(void *parameters) {
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
-  debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
@@ -407,7 +408,7 @@ static void defaultTask(void *parameters) {
   user_code_start();
 
   // Re-enable low power mode
-  // lpmPeripheralInactive(LPM_BOOT);
+  lpmPeripheralInactive(LPM_BOOT);
 
   while (1) {
     /* Do nothing */

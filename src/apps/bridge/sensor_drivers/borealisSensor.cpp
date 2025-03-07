@@ -1,5 +1,6 @@
 #include "borealisSensor.h"
 #include "FreeRTOS.h"
+#include "bm_borealis.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bristlemouth.h"
@@ -16,14 +17,6 @@
 static constexpr char READING_PERIOD_KEY[] = "bandsSampleTimeMs";
 static struct BorealisSensor *CURRENT_SUB;
 
-//TODO: remove this once codec is in place
-CborError BorealisDataMsg::decode(Data &d, const uint8_t *cbor_buffer, size_t size) {
-  (void)cbor_buffer;
-  (void)size;
-  memcpy(&d, cbor_buffer, sizeof(Data));
-  return CborNoError;
-}
-
 /*!
  @brief Subscribe To Borealis Topic
 
@@ -35,7 +28,20 @@ CborError BorealisDataMsg::decode(Data &d, const uint8_t *cbor_buffer, size_t si
 bool BorealisSensor::subscribe() {
   bool ret = false;
   char *sub = static_cast<char *>(bm_malloc(BM_TOPIC_MAX_LEN));
-  if (sub) {
+  const char *subtag = NULL;
+
+  switch (type) {
+  case SENSOR_TYPE_BOREALIS_SPECTRUM:
+    subtag = subtag_spectrum;
+    break;
+  case SENSOR_TYPE_BOREALIS_LEVELS:
+    subtag = subtag_levels;
+    break;
+  default:
+    break;
+  }
+
+  if (sub && subtag) {
     uint32_t topic_strlen =
         snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
     if (topic_strlen > 0) {
@@ -65,21 +71,48 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
                                          uint16_t data_len, uint8_t type, uint8_t version) {
   (void)type;
   (void)version;
-  BmErr err = BmOK;
-  BorealisDataMsg::Data d;
-  Borealis_t *borealis = static_cast<Borealis_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_BOREALIS));
+  BmErr err = BmEINVAL;
+  Borealis_t *borealis = NULL;
+  abstractSensorType_e sensor_type = SENSOR_TYPE_UNKNOWN;
+
+  if (strstr(topic, subtag_spectrum) != NULL) {
+    sensor_type = SENSOR_TYPE_BOREALIS_SPECTRUM;
+  } else if (strstr(topic, subtag_levels) != NULL) {
+    sensor_type = SENSOR_TYPE_BOREALIS_LEVELS;
+  }
+
+  if (sensor_type != SENSOR_TYPE_UNKNOWN) {
+    borealis = static_cast<Borealis_t *>(sensorControllerFindSensorById(node_id, sensor_type));
+  }
 
   bm_debug("Borealis data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
            topic_len, topic);
-  if (borealis && borealis->type == SENSOR_TYPE_BOREALIS && borealis->_mutex) {
-    if (xSemaphoreTake(borealis->_mutex, portMAX_DELAY) == pdTRUE &&
-        BorealisDataMsg::decode(d, data, data_len) == CborNoError) {
-      //TODO: Get borealis specific items here if necessary
-
-      err = borealis->send_spotter_log_individual(
-          "borealis", d.header, MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
-          //TODO: Replace with borealis specific data here
-          "%.3f\n", 0.0f);
+  if (borealis && borealis->_mutex) {
+    if (xSemaphoreTake(borealis->_mutex, portMAX_DELAY) == pdTRUE) {
+      switch (borealis->type) {
+      case SENSOR_TYPE_BOREALIS_SPECTRUM: {
+        borealis_spectrum_data d;
+        if (borealis_spectrum_data_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
+          err = borealis->send_spotter_log_individual(
+              "borealis", d.header,
+              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
+              "%.3f,%.3f,%u,%s\n", d.dt, d.df, d.bands_per_octave, d.spectrum_as_base64);
+          bm_free(d.spectrum_as_base64);
+        }
+      } break;
+      case SENSOR_TYPE_BOREALIS_LEVELS: {
+        borealis_levels d;
+        if (borealis_levels_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
+          err = borealis->send_spotter_log_individual(
+              "borealis", d.header,
+              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
+              "%.3f,%.3f,%u,%s\n", d.dt, d.dt_report, d.first_band_index, d.levels_as_base64);
+          bm_free(d.levels_as_base64);
+        }
+      } break;
+      default:
+        break;
+      }
       if (err != BmOK) {
         bm_debug("Failed to send borealis individual log to spotter, reason: %d\n", err);
       }
@@ -113,7 +146,7 @@ static BmErr borealisConfigCb(uint8_t *payload) {
  @return pointer to new borealis subscriber
  @return nullptr on failure
  */
-Borealis_t *createBorealisSensorSub(uint64_t node_id) {
+Borealis_t *createBorealisSensorSub(abstractSensorType type, uint64_t node_id) {
   Borealis_t *sub = static_cast<Borealis_t *>(bm_malloc(sizeof(Borealis_t)));
   Borealis_t *ret = nullptr;
   BmErr err = BmOK;
@@ -125,7 +158,7 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id) {
 
     if (ret->_mutex) {
       ret->node_id = node_id;
-      ret->type = SENSOR_TYPE_BOREALIS;
+      ret->type = type;
       ret->next = nullptr;
       ret->m_reading_period_ms = BorealisSensor::DEFAULT_BOREALIS_READING_PERIOD_MS;
       CURRENT_SUB = ret;

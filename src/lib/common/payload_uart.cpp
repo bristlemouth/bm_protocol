@@ -1,8 +1,8 @@
 #include "payload_uart.h"
 #include "spotter.h"
+#include "stm32_io.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
-#include "stm32_io.h"
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
@@ -80,7 +80,9 @@ bool endTransaction(uint32_t wait_ms) {
   _transactionInProgress = false;
   // If there were no writes during the transaction, don't wait for writes to complete.
   if (!_writeDuringTransaction) {
-    if (_postTxFunction != nullptr) _postTxFunction(); // Safely call the function
+    if (_postTxFunction != nullptr) {
+      _postTxFunction(); // Safely call the function
+    }
     return true;
   }
   // After each transmission compeltes, TC interrupt will call pluartPostTransactionCb,
@@ -93,7 +95,9 @@ bool endTransaction(uint32_t wait_ms) {
     ret_value = false; // TODO - maybe better to assert(false) here?
   }
   // Call the post-transaction function after the final transmission is fully complete
-  if (_postTxFunction != nullptr) _postTxFunction();
+  if (_postTxFunction != nullptr) {
+    _postTxFunction();
+  }
   return ret_value;
 }
 
@@ -240,53 +244,52 @@ void write(uint8_t *buffer, size_t len) {
   // Note - multiple writes will likely be grouped in the same UART Tx transmission if there is no
   //  delay between them in the transaction in the user thread.
   xSemaphoreTake(_postTxSemaphore, 0);
-  serialWrite(&PLUART::uart_handle, buffer, len);
+  serialWrite(&PLUART::uart_handle, buffer, len, NULL);
 }
 
 void setBaud(uint32_t new_baud_rate) {
   LL_LPUART_SetBaudRate(static_cast<USART_TypeDef *>(uart_handle.device),
                         LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
-                        LL_LPUART_PRESCALER_DIV64, new_baud_rate);
+                        LL_LPUART_PRESCALER_DIV8, new_baud_rate);
 }
 
-void setEvenParity(void){
+void setEvenParity(void) {
   LL_LPUART_Disable(static_cast<USART_TypeDef *>(uart_handle.device));
-  LL_LPUART_SetParity(static_cast<USART_TypeDef *>(uart_handle.device),
-                      LL_LPUART_PARITY_EVEN);
+  LL_LPUART_SetParity(static_cast<USART_TypeDef *>(uart_handle.device), LL_LPUART_PARITY_EVEN);
   LL_LPUART_Enable(static_cast<USART_TypeDef *>(uart_handle.device));
 }
 
-void enableDataInversion(void){
+void enableDataInversion(void) {
   LL_LPUART_Disable(static_cast<USART_TypeDef *>(uart_handle.device));
   LL_LPUART_SetTXPinLevel(static_cast<USART_TypeDef *>(uart_handle.device),
-                       LL_LPUART_TXPIN_LEVEL_INVERTED);
+                          LL_LPUART_TXPIN_LEVEL_INVERTED);
   LL_LPUART_Enable(static_cast<USART_TypeDef *>(uart_handle.device));
 }
 
 // Configuring TX as a GPIO
 void setTxPinOutputLevel(void) {
-  if(uart_handle.txPin) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   }
 }
 
-void resetTxPinOutputLevel(void){
-  if(uart_handle.txPin) {
+void resetTxPinOutputLevel(void) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   }
 }
 
-void configTxPinOutput(void){
-  if(uart_handle.txPin) {
+void configTxPinOutput(void) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_OUTPUT);
   }
 }
 
-void configTxPinAlternate(void){
-  if(uart_handle.txPin) {
+void configTxPinAlternate(void) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
   }
@@ -320,6 +323,7 @@ SerialHandle_t uart_handle = {
     .processByte =
         processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
     .data = &lpUART1LineBuffer, // Pointer to the line buffer this handle should use
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,

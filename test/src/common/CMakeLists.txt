@@ -93,6 +93,7 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/bm_core/drivers/adin2111
     ${SRC_DIR}/lib/bm_core/common
     ${SRC_DIR}/lib/bm_core/bm_common_messages
+    ${SRC_DIR}/lib/bm_core/middleware
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/lib/bm_core/test/mocks
@@ -112,8 +113,10 @@ target_sources(bridge_power_controller_tests
     ${TEST_DIR}/stubs/mock_bm_serial.cpp
     ${TEST_DIR}/stubs/mock_device_info.cpp
     ${TEST_DIR}/stubs/mock_bridgeLog.cpp
+    ${TEST_DIR}/stubs/mock_uptime.cpp
     ${TEST_DIR}/stubs/mock_sensorController.cpp
     ${SRC_DIR}/lib/bm_core/test/stubs/l2_stub.c
+    ${SRC_DIR}/lib/bm_core/test/stubs/power_info_service_stub.c
 
     # Stubs
     ${TEST_DIR}/stubs/FreeRTOSStubs.c

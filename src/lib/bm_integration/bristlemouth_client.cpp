@@ -15,6 +15,7 @@
 #include "bsp.h"
 #include "l2.h"
 #include "pcap.h"
+#include "port_monitor.h"
 #include "task_priorities.h"
 
 extern "C" {
@@ -54,6 +55,7 @@ void bcl_init(void) {
   IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
   HAL_Init_Hook();
   config_init();
+  port_monitor_init();
   //TODO: This should all be moved to user code
   uint8_t major, minor, patch;
   getFWVersion(&major, &minor, &patch);

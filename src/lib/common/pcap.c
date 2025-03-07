@@ -77,12 +77,12 @@ void pcapTxPacket(const uint8_t *buff, size_t len) {
     if(!firstMessage) {
       // Tx pcap header
       firstMessage = true;
-      serialWrite(pcapSerialHandle, (uint8_t *)&pcapHeader, sizeof(pcapHeader));
+      serialWrite(pcapSerialHandle, (uint8_t *)&pcapHeader, sizeof(pcapHeader), NULL);
     }
 
-    serialWrite(pcapSerialHandle, (uint8_t *)&header, sizeof(header));
+    serialWrite(pcapSerialHandle, (uint8_t *)&header, sizeof(header), NULL);
 
-    serialWrite(pcapSerialHandle, (uint8_t *)buff, len);
+    serialWrite(pcapSerialHandle, (uint8_t *)buff, len, NULL);
   }
 }
 

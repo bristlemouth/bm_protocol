@@ -11,9 +11,10 @@ typedef enum abstractSensorType : uint8_t {
   SENSOR_TYPE_SOFT = 2,
   SENSOR_TYPE_RBR_CODA = 3,
   SENSOR_TYPE_SEAPOINT_TURBIDITY = 4,
-  SENSOR_TYPE_BOREALIS = 5,
-  SENSOR_TYPE_PME_DO = 6,
-  SENSOR_TYPE_PME_WIPE = 7,
+  SENSOR_TYPE_BOREALIS_SPECTRUM = 5,
+  SENSOR_TYPE_BOREALIS_LEVELS = 6,
+  SENSOR_TYPE_PME_DO = 7,
+  SENSOR_TYPE_PME_WIPE = 8,
 } abstractSensorType_e;
 
 struct AbstractSensor {
@@ -22,6 +23,10 @@ struct AbstractSensor {
   SemaphoreHandle_t _mutex;
   abstractSensorType_e type;
   uint32_t m_reading_period_ms;
+  uint32_t m_sample_duration_ms;
+  bool m_subsample_enabled;
+  uint32_t m_subsample_interval_ms;
+  uint32_t m_subsample_duration_ms;
 
 private:
   struct {

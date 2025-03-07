@@ -92,6 +92,7 @@ SerialHandle_t usart3 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -113,6 +114,7 @@ SerialHandle_t usbCLI = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -133,6 +135,7 @@ SerialHandle_t usbPcap = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -407,7 +410,7 @@ static void defaultTask(void *parameters) {
   user_code_start();
 
   // Re-enable low power mode
-  // lpmPeripheralInactive(LPM_BOOT);
+  lpmPeripheralInactive(LPM_BOOT);
 
   while (1) {
     /* Do nothing */

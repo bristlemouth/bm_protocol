@@ -9,12 +9,17 @@
 #include "ina232.h"
 #include "ms5803.h"
 #include "tca9546a.h"
+#include "uptime.h"
+#include "payload_uart.h"
 
 class Bristlefin {
 public:
 // I/O states for LED1 and LED2 elements.
 #define BF_LED_ON (0)
 #define BF_LED_OFF (1)
+// SDI-12 BREAK and MARK times per the SDI-12 spec
+#define SDI12_BREAK_MS 15		// spec is 12 ms
+#define SDI12_MARK_MS 9		// spec is 8.33 ms
 
   // I2C Addresses
   static constexpr uint8_t I2C_ADDR_MOTE_THROUGH_POWER_MON = 0x41;
@@ -46,9 +51,14 @@ public:
   void enable3V();
   void disable3V();
 
-  // functions to switch between SDI12 Tx and Rx
+  // functions to switch between SDI12 Tx and Rx.
+  // These are static so they can more easily be used in PLUART transaction callbacks.
   static void sdi12Tx();
   static void sdi12Rx();
+  // functions for the SDI-12 break and mark operations per the spec https://www.sdi-12.org/current_specification/SDI-12_version-1_4-Jan-10-2019.pdf
+  // These are static so they can more easily be used in PLUART transaction callbacks.
+  static void sdi_wake();
+  static void sdi_break_mark();
 
   // LED control functions
   void setLed(uint8_t led_num, led_state_e led_state);

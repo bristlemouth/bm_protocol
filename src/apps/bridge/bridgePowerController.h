@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "event_groups.h"
 #include "io.h"
+#include "power_info_service.h"
 #include "task.h"
 #include <stdint.h>
 
@@ -32,6 +33,7 @@ public:
 private:
   void powerBusAndSetSignal(bool on, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
+  static PowerInfoReplyData powerInfoStatsCb(void *arg);
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
   void stateLogPrintTarget(const char *state, uint32_t target);

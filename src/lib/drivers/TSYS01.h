@@ -20,7 +20,7 @@
 #define SN_ADDR_1 0xAE
 
 #define RESET_WAIT_TIME_MS 6     // 2.8 ms x2 for assurance
-#define ADC_CONV_WAIT_TIME_MS 10 // 8.22 ms + 1 ms for assurance
+#define ADC_CONV_WAIT_TIME_MS 20 // 8.22 ms + 11 ms for assurance
 #define PROM_ADDR_CNT 8
 #define CALIB_CNT 5
 

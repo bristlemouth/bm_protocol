@@ -109,3 +109,11 @@
     bsp: bm_mote_rs232
     build_type: Release
   sign: true
+
+- name: pme_do_sensor_release
+  type: build_fw
+  args:
+    app: pme_do_sensor
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+  sign: false

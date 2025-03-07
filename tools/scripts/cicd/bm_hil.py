@@ -44,18 +44,25 @@ def dfu_util_update(image: str, offset: int = 0):
     found = 0
     ports = serial.tools.list_ports.comports()
     fail_count = 0
+    # Bristlemouth console is only available on the first port of each device
+    # This variable will skip the pcap port
+    skip = False
     offset = 0x8000000 + offset
 
     # Iterate updates over all nodes connected over serial
     for port, desc, __ in sorted(ports):
-        if "Bristlemouth" in desc and int(port[-1]) == 1:
+        if "Bristlemouth" in desc and not skip:
             found += 1
             retry_count = 0
             while retry_count < DFU_UTIL_RETRY:
                 status = True
                 try:
-                    ser = SerialHelper(port)
-                    ser.transmit_str("\nbootloader\n")
+                    ser = SerialHelper(port, 115200, 1.0)
+                    ser.transmit_str("\ninfo\n")
+                    if len(ser.read_until("info_end")) != 0:
+                        ser.transmit_str("\nbootloader\n")
+                    else:
+                        print("Not a valid port, could not read simple command")
                     ser.close()
                 except SerialHelper.SerialException:
                     debug_str = "Device may already be in bootloader,"
@@ -91,9 +98,13 @@ def dfu_util_update(image: str, offset: int = 0):
                         debug_str = "Retrying DFU Util Update..."
                         print(debug_str)
                         LOGGER.log(LOGGER.WARNING, debug_str)
+                    sys.exit(1)
                 else:
+                    skip = True
                     LOGGER.log(LOGGER.INFO, output_str)
                     break
+        elif "Bristlemouth" in desc:
+            skip = False
     if found == 0:
         debug_str = "Could not find any ports to run DFU update"
         LOGGER.log(LOGGER.ERROR, debug_str)
@@ -102,6 +113,10 @@ def dfu_util_update(image: str, offset: int = 0):
 
 
 def run_hil_tests():
+    # Bristlemouth console is only available on the first port of each device
+    # This variable will skip the pcap port
+    skip = False
+
     debug_str = "Running HIL Tests"
     print(debug_str)
     LOGGER.log(LOGGER.INFO, debug_str)
@@ -116,7 +131,7 @@ def run_hil_tests():
     # Iterate tests over all nodes connected over serial
     for port, desc, __ in sorted(ports):
         # Determine if this is a node we want to talk to over serial
-        if "Bristlemouth" in desc and int(port[-1]) == 1:
+        if "Bristlemouth" in desc and not skip:
             found += 1
             status = True
             debug_str = f"HIL Test Running On: {port}"
@@ -135,9 +150,11 @@ def run_hil_tests():
             )
 
             # Determine if any tests have failed
-            find = re.search(r"\w+ failed, \w+ passed", output)
+            find = re.findall(r"\w+ failed", output)
             if find:
-                status = False
+                failed_tests = [int(s) for s in find[0].split() if s.isdigit()]
+                if failed_tests[0] != 0:
+                    status = False
             output_str = "HIL Test Status: "
             output_str += "Success" if status is True else "Failure"
             print(output_str)
@@ -145,8 +162,12 @@ def run_hil_tests():
                 LOGGER.log(LOGGER.ERROR, output_str)
                 fail_count += 1
                 print("Failure output result:\n" + output)
+                sys.exit(1)
             else:
                 LOGGER.log(LOGGER.INFO, output_str)
+                skip = True
+        elif "Bristlemouth" in desc:
+            skip = False
     if found == 0:
         debug_str = "Could not find any ports to run HIL tests"
         LOGGER.log(LOGGER.ERROR, debug_str)

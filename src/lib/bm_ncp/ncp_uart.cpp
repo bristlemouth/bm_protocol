@@ -3,6 +3,7 @@
 #include "task.h"
 #include <string.h>
 
+#include "app_util.h"
 #include "bcmp.h"
 #include "bm_serial.h"
 #include "bsp.h"
@@ -30,6 +31,7 @@ extern "C" {
 #define NCP_NOTIFY_BUFF_MASK (1 << 0)
 #define NCP_NOTIFY (1 << 1)
 #define NCP_PROCESSOR_QUEUE_DEPTH (16)
+#define NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS (10)
 
 static uint32_t ncpRXBuffIdx = 0;
 static uint8_t ncpRXCurrBuff = 0;
@@ -37,8 +39,10 @@ static uint8_t ncpRXBuff[2][NCP_BUFF_LEN];
 static uint32_t ncpRXBuffLen[2];
 static uint8_t ncpRXBuffDecoded[NCP_BUFF_LEN];
 
-static uint8_t ncp_tx_buff[NCP_BUFF_LEN];
 static QueueHandle_t ncp_processor_queue_handle;
+static QueueHandle_t ncp_tx_queue_handle;
+static SemaphoreHandle_t ncp_serial_lock;
+static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
 
 // static const NCPConfig_t *_config;
 
@@ -46,33 +50,67 @@ static TaskHandle_t ncpRXTaskHandle;
 
 static SerialHandle_t *ncpSerialHandle = NULL;
 
+static void ncpTxTask(void *parameters);
 static void ncpRXTask(void *parameters);
 static void ncpRXProcessor(void *parameters);
+static void ncpBaudRateDiscovery(void);
 static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
 static void ncpPreTxCb(SerialHandle_t *handle);
 static void ncpPostTxCb(SerialHandle_t *handle);
 
+typedef enum {
+  NCP_NEGOTIATING_NONE,
+  BAUD_NEGOTIATING_REQUEST,
+  BAUD_NEGOTIATING_REPLY,
+} NCPNegotiatingEvent_t;
+
 typedef struct ProcessorQueueItem {
   uint8_t *buffer;
   size_t len;
+  bool negotiate_event;
 } ProcessorQueueItem_t;
 
+typedef struct {
+  uint32_t requested_baud;
+  NCPNegotiatingEvent_t event;
+  TimerHandle_t negotiate_timer;
+  SemaphoreHandle_t negotiating_lock;
+  bool baud_found;
+} NCPNegotiatingContext_t;
+static NCPNegotiatingContext_t ncp_ctx = {};
+
+static const uint32_t acceptable_bauds[] = {
+    57600,
+    115200,
+    921600,
+};
+
 // Send out cobs encoded message over serial port
-static bool cobs_tx(const uint8_t *buff, size_t len) {
+static bool queue_tx(const uint8_t *buff, size_t len, bm_serial_message_t message) {
   bool rval = false;
   configASSERT(buff);
   configASSERT(len);
+  uint8_t *tmp_buf = (uint8_t *)pvPortMalloc(len);
+  ProcessorQueueItem_t q_msg = {
+      .buffer = tmp_buf,
+      .len = len,
+      .negotiate_event = false,
+  };
 
-  // reset the whole buff to zero
-  memset(&ncp_tx_buff, 0, NCP_BUFF_LEN);
+  if (message == BM_SERIAL_BAUD_RATE_REQ || message == BM_SERIAL_BAUD_RATE_REPLY) {
+    q_msg.negotiate_event = true;
+  }
 
-  // we then need to convert the whole thing to cobs!
-  cobs_encode_result cobs_result = cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, buff, len);
-
-  if (cobs_result.status == COBS_ENCODE_OK) {
-    // then we send the buffer out!
-    serialWrite(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1);
-    rval = true;
+  if (tmp_buf) {
+    memcpy(tmp_buf, buff, len);
+    if (xQueueSend(ncp_tx_queue_handle, &q_msg, pdMS_TO_TICKS(10)) != pdTRUE) {
+      vPortFree(tmp_buf);
+      printf("Could not queue buffer for NCP message transmission");
+    } else {
+      rval = true;
+    }
+  } else {
+    printf("Could not allocate memory for NCP message transmission");
   }
 
   return rval;
@@ -83,6 +121,7 @@ static bm_serial_callbacks_t bm_serial_callbacks;
 static void ncp_uart_pub_cb(uint64_t node_id, const char *topic, uint16_t topic_len,
                             const uint8_t *data, uint16_t data_len, uint8_t type,
                             uint8_t version) {
+  printf("Publishing To Topic: %s\n", topic);
   bm_serial_pub(node_id, topic, topic_len, data, data_len, type, version);
 }
 
@@ -254,6 +293,53 @@ static bool node_id_request_cb(void) {
   return true;
 }
 
+static void baud_rate_negotiate_timer_handle(TimerHandle_t timer) {
+  (void)timer;
+  xSemaphoreGive(ncp_ctx.negotiating_lock);
+  if (ncp_baud_rate_discovery_lock) {
+    xSemaphoreGive(ncp_baud_rate_discovery_lock);
+  }
+}
+
+static bool baud_is_acceptable(uint32_t baud) {
+  bool ret = false;
+
+  for (uint8_t i = 0; i < array_size(acceptable_bauds); i++) {
+    if (baud == acceptable_bauds[i]) {
+      ret = true;
+      break;
+    }
+  }
+
+  return ret;
+}
+
+static bool baud_rate_request_cb(uint32_t baud) {
+  bool ret = false;
+
+  if (baud_is_acceptable(baud)) {
+    ret = true;
+    ncp_ctx.requested_baud = baud;
+    ncp_ctx.event = BAUD_NEGOTIATING_REPLY;
+    bm_serial_send_baud_rate_reply();
+  }
+
+  return ret;
+}
+
+static bool baud_rate_reply_cb(void) {
+  xTimerReset(ncp_ctx.negotiate_timer, 0);
+  xTimerStop(ncp_ctx.negotiate_timer, 0);
+  serialSetBaudRate(ncpSerialHandle, ncp_ctx.requested_baud);
+  if (ncp_baud_rate_discovery_lock) {
+    ncp_ctx.baud_found = true;
+    xSemaphoreGive(ncp_baud_rate_discovery_lock);
+  }
+  xSemaphoreGive(ncp_ctx.negotiating_lock);
+
+  return true;
+}
+
 // Used by spotter to request a self test
 static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   (void)node_id;
@@ -310,16 +396,36 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
       xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
   configASSERT(ncp_processor_queue_handle);
 
+  ncp_tx_queue_handle = xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
+  configASSERT(ncp_tx_queue_handle);
+
+  ncp_serial_lock = xSemaphoreCreateBinary();
+  configASSERT(ncp_serial_lock);
+  xSemaphoreGive(ncp_serial_lock);
+
+  ncp_ctx.negotiating_lock = xSemaphoreCreateBinary();
+  configASSERT(ncp_ctx.negotiating_lock);
+  xSemaphoreGive(ncp_ctx.negotiating_lock);
+
+  ncp_ctx.negotiate_timer =
+      xTimerCreate("Baud Neg Timer", pdMS_TO_TICKS(NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS), pdFALSE,
+                   NULL, baud_rate_negotiate_timer_handle);
+  configASSERT(ncp_ctx.negotiate_timer);
+
   // Create the task
-  BaseType_t rval = xTaskCreate(ncpRXTask, "NCP", configMINIMAL_STACK_SIZE * 3, NULL,
+  BaseType_t rval = xTaskCreate(ncpTxTask, "NCP_TX", configMINIMAL_STACK_SIZE * 3, NULL,
                                 NCP_TASK_PRIORITY, &ncpRXTaskHandle);
+  configASSERT(rval == pdTRUE);
+
+  rval = xTaskCreate(ncpRXTask, "NCP_RX", configMINIMAL_STACK_SIZE * 3, NULL, NCP_TASK_PRIORITY,
+                     &ncpRXTaskHandle);
   configASSERT(rval == pdTRUE);
 
   rval = xTaskCreate(ncpRXProcessor, "NCP_Processor", configMINIMAL_STACK_SIZE * 3, NULL,
                      NCP_PROCESSOR_TASK_PRIORITY, NULL);
   configASSERT(rval == pdTRUE);
 
-  bm_serial_callbacks.tx_fn = cobs_tx;
+  bm_serial_callbacks.tx_fn = queue_tx;
   bm_serial_callbacks.pub_fn = bm_serial_pub_cb;
   bm_serial_callbacks.sub_fn = bm_serial_sub_cb;
   bm_serial_callbacks.unsub_fn = bm_serial_unsub_cb;
@@ -346,14 +452,68 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.bcmp_resource_response_fn = NULL;
   bm_serial_callbacks.node_id_request_fn = node_id_request_cb;
   bm_serial_callbacks.node_id_reply_fn = NULL;
+  bm_serial_callbacks.baud_rate_negotiation_request_fn = baud_rate_request_cb;
+  bm_serial_callbacks.baud_rate_negotiation_reply_fn = baud_rate_reply_cb;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
   serialEnable(ncpSerialHandle);
+  ncpBaudRateDiscovery();
   ncp_dfu_check_for_update();
   bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(),
                              memfault_reboot_tracking_get_crash_count(), memfault_get_pc(),
                              memfault_get_lr());
+}
+
+bool ncp_negotiate_baud_rate(uint32_t baud) {
+  bool ret = false;
+
+  if (xTimerIsTimerActive(ncp_ctx.negotiate_timer) != pdTRUE &&
+      ncp_ctx.event == NCP_NEGOTIATING_NONE) {
+    ret = true;
+    ncp_ctx.requested_baud = baud;
+    ncp_ctx.event = BAUD_NEGOTIATING_REQUEST;
+    bm_serial_send_baud_rate_request(baud);
+  }
+
+  return ret;
+}
+
+void ncpTxTask(void *parameters) {
+  (void)parameters;
+  ProcessorQueueItem_t q_item;
+  BaseType_t res;
+  NCPNegotiatingEvent_t *negotiate_event = NULL;
+  static uint8_t ncp_tx_buff[NCP_BUFF_LEN];
+
+  while (1) {
+    res = xQueueReceive(ncp_tx_queue_handle, &q_item, portMAX_DELAY);
+    negotiate_event = NULL;
+
+    if (res == pdPASS) {
+      if (xSemaphoreTake(ncp_serial_lock, portMAX_DELAY) == pdPASS &&
+          xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS) {
+        // reset the whole buff to zero
+        memset(&ncp_tx_buff, 0, NCP_BUFF_LEN);
+
+        if (q_item.negotiate_event) {
+          negotiate_event = &ncp_ctx.event;
+        }
+
+        // we then need to convert the whole thing to cobs!
+        cobs_encode_result cobs_result =
+            cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, q_item.buffer, q_item.len);
+
+        if (cobs_result.status == COBS_ENCODE_OK) {
+          // then we send the buffer out!
+          serialWrite(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1, negotiate_event);
+        }
+      } else {
+        printf("Could not take serial lock to transmit message");
+      }
+    }
+    vPortFree(q_item.buffer);
+  }
 }
 
 void ncpRXTask(void *parameters) {
@@ -382,6 +542,7 @@ void ncpRXTask(void *parameters) {
     ProcessorQueueItem_t q_msg = {
         .buffer = processor_buffer,
         .len = cobs_result.out_len,
+        .negotiate_event = false,
     };
     configASSERT(xQueueSend(ncp_processor_queue_handle, &q_msg, pdMS_TO_TICKS(10)) == pdTRUE);
   }
@@ -396,6 +557,43 @@ static void ncpRXProcessor(void *parameters) {
     bm_serial_process_packet(packet, q_item.len);
     vPortFree(packet);
   }
+}
+
+static void ncpBaudRateDiscovery(void) {
+  uint8_t baud_idx = array_size(acceptable_bauds);
+  static const uint8_t null_buf = 0;
+
+  ncp_baud_rate_discovery_lock = xSemaphoreCreateBinary();
+  configASSERT(ncp_baud_rate_discovery_lock);
+
+  while (!ncp_ctx.baud_found && baud_idx > 0) {
+    baud_idx--;
+    // Reset buffers just incase anything was sent at a different baud rate
+    ncpRXCurrBuff = 0;
+    ncpRXBuffIdx = 0;
+    serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
+    bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
+    ncp_negotiate_baud_rate(921600);
+    if (xSemaphoreTake(ncp_baud_rate_discovery_lock, portMAX_DELAY) != pdTRUE) {
+      printf("Could not take baud rate discovery semaphore\n");
+      break;
+    }
+  }
+
+  if (!ncp_ctx.baud_found) {
+    serialSetBaudRate(ncpSerialHandle, 115200);
+    // Send 0 to reset receiving buffer on spotter and reset our buffers just
+    // incase anything was sent at a different baud rate
+    ncpRXCurrBuff = 0;
+    ncpRXBuffIdx = 0;
+    bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
+    printf("Could not find a baudrate to communicate to spotter with\n");
+  }
+
+  // Prevent race condition with semaphore usage in other tasks
+  SemaphoreHandle_t tmp_sem = ncp_baud_rate_discovery_lock;
+  ncp_baud_rate_discovery_lock = NULL;
+  vSemaphoreDelete(tmp_sem);
 }
 
 // NCP USART rx irq
@@ -420,6 +618,10 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
   configASSERT(len == 1);
 
+  if (ncpRXBuffIdx == 0) {
+    xSemaphoreTakeFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
+  }
+
   // but the byte into the current buffer
   ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
 
@@ -427,6 +629,7 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
     if (ncpRXBuffIdx >= NCP_BUFF_LEN) {
       // too much data so lets reset the current buffer
       ncpRXBuffIdx = 0;
+      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
       break;
     }
 
@@ -438,6 +641,7 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
     if (ncpRXBuffIdx <= sizeof(bm_serial_packet_t)) {
       // Empty packet, reset current buffer
       ncpRXBuffIdx = 0;
+      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
       break;
     }
 
@@ -456,9 +660,33 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
       // switch ncp buffers
       ncpRXCurrBuff ^= 1;
     }
+    xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
   } while (0);
 
   return higherPriorityTaskWoken;
+}
+
+static inline BaseType_t postTxEventHandle(SerialHandle_t *handle, NCPNegotiatingEvent_t event)
+    __attribute__((always_inline));
+static inline BaseType_t postTxEventHandle(SerialHandle_t *handle,
+                                           NCPNegotiatingEvent_t event) {
+  BaseType_t ret = pdFALSE;
+
+  switch (event) {
+  case BAUD_NEGOTIATING_REQUEST:
+    //Keep the negotiating lock  to avoid sending messages
+    xTimerStartFromISR(ncp_ctx.negotiate_timer, &ret);
+    break;
+  case BAUD_NEGOTIATING_REPLY:
+    serialSetBaudRate(handle, ncp_ctx.requested_baud);
+    xSemaphoreGiveFromISR(ncp_ctx.negotiating_lock, NULL);
+    break;
+  case NCP_NEGOTIATING_NONE:
+    break;
+  }
+  ncp_ctx.event = NCP_NEGOTIATING_NONE;
+
+  return ret;
 }
 
 static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
@@ -471,10 +699,19 @@ static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
 }
 
 static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
   configASSERT(handle);
+
+  if (handle->arg) {
+    higherPriorityTaskWoken = postTxEventHandle(handle, *(NCPNegotiatingEvent_t *)handle->arg);
+  } else {
+    xSemaphoreGiveFromISR(ncp_ctx.negotiating_lock, NULL);
+  }
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
   LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
   LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
   // LPM_USART3_RX will get set on the next rising edge
   lpmPeripheralInactiveFromISR(LPM_USART3_TX);
+  xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
+  portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
