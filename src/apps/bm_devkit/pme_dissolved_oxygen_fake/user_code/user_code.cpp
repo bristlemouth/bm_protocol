@@ -1,21 +1,21 @@
 #include "user_code.h"
 #include "FreeRTOS.h"
+#include "barometric_pressure_data_msg.h"
 #include "device_info.h"
+#include "pme_dissolved_oxygen_msg.h"
+#include "pme_wipe_msg.h"
 #include "pubsub.h"
+#include "stm32_rtc.h"
 #include "topology.h"
 #include "uptime.h"
-#include "pme_dissolved_oxygen_msg.h"
-#include "barometric_pressure_data_msg.h"
-#include "pme_wipe_msg.h"
-#include "stm32_rtc.h"
-#include <stdlib.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdlib.h>
 #include <string.h>
 
 extern "C" {
-  #include "messages/resource_discovery.h"
+#include "messages/resource_discovery.h"
 }
 
 // Modified Sub + Pub Example to create a fake PME DO sensor for testing the bridge code!
@@ -40,14 +40,14 @@ int topic_strlen;
 // Publish at a rate of 10 minutes
 static constexpr uint32_t PUBLISH_PERIOD_MS = (10 * 60 * 1000);
 static constexpr uint32_t DO_PUB_TOPIC_VERSION = (1);
-static const char *const DO_SUB_TAG = "/pme/do_reading";
+static const char *const DO_SUB_TAG = "/pme/do_data";
 static constexpr uint32_t PME_DO_MSG_MAX_SIZE = 256;
 
 // The wipers sensor data
 char *pub_topic_wiper;
 int topic_strlen_wiper;
 static constexpr uint32_t PME_WIPER_PUB_TOPIC_VERSION = (1);
-static const char *const PME_WIPER_SUB_TAG = "/pme/wiper";
+static const char *const PME_WIPER_SUB_TAG = "/pme/wipe_data";
 static constexpr uint32_t PME_WIPE_MSG_MAX_SIZE = 256;
 
 // used to track if we have a source for our barometric pressure data!
@@ -69,8 +69,9 @@ static void subscribe_callback(uint64_t node_id, const char *topic, uint16_t top
   // Decode and print the received pressure data to the console.
   BarometricPressureDataMsg::Data baro_data;
   if (BarometricPressureDataMsg::decode(baro_data, data, data_len) == CborNoError) {
-    printf("Recieved pressure publication from node %016" PRIx64 " on topic %.*s\n\tpressure: %0.02f\n", node_id,
-            topic_len, topic, baro_data.barometric_pressure_mbar);
+    printf("Recieved pressure publication from node %016" PRIx64
+           " on topic %.*s\n\tpressure: %0.02f\n",
+           node_id, topic_len, topic, baro_data.barometric_pressure_mbar);
   } else {
     printf("Failed to decode barometric pressure data message\n");
   }
@@ -92,7 +93,8 @@ static void sub_to_baro_publicating_node(void *bcmp_resource_table_reply) {
     num_pubs--;
     // check for "sensor/" and "/barometric_pressure" in the string!
     if (strncmp(cur_resource->resource, "sensor/", strlen("sensor/")) == 0 &&
-        strncmp(cur_resource->resource + cur_resource->resource_len - strlen("/barometric_pressure"),
+        strncmp(cur_resource->resource + cur_resource->resource_len -
+                    strlen("/barometric_pressure"),
                 "/barometric_pressure", strlen("/barometric_pressure")) == 0) {
       // we have a source for our barometric pressure data!
       printf("FOUND A BARO SENSOR!\n");
@@ -110,7 +112,8 @@ static void look_for_baro_publications(NetworkTopology *network_topology) {
   if (network_topology) {
     NeighborTableEntry *cursor = NULL;
     for (cursor = network_topology->front; cursor != NULL; cursor = cursor->nextNode) {
-      bcmp_resource_discovery_send_request(cursor->neighbor_table_reply->node_id, sub_to_baro_publicating_node);
+      bcmp_resource_discovery_send_request(cursor->neighbor_table_reply->node_id,
+                                           sub_to_baro_publicating_node);
     }
   } else {
     printf("Failed to get network topology while looking for nodes that publish baro data\n");
@@ -124,11 +127,13 @@ void setup(void) {
 
   pub_topic = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(pub_topic);
-  topic_strlen = snprintf(pub_topic, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", getNodeId(), DO_SUB_TAG);
+  topic_strlen =
+      snprintf(pub_topic, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", getNodeId(), DO_SUB_TAG);
 
   pub_topic_wiper = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(pub_topic_wiper);
-  topic_strlen_wiper = snprintf(pub_topic_wiper, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", getNodeId(), PME_WIPER_SUB_TAG);
+  topic_strlen_wiper = snprintf(pub_topic_wiper, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s",
+                                getNodeId(), PME_WIPER_SUB_TAG);
 }
 
 void loop(void) {
@@ -140,7 +145,6 @@ void loop(void) {
     bcmp_topology_start(look_for_baro_publications);
     check_for_baro_pubs_timer = uptimeGetMs();
   }
-
 
   static uint64_t publishTimer = uptimeGetMs();
   // Publish data every PUBLISH_PERIOD_MS milliseconds.
@@ -155,50 +159,65 @@ void loop(void) {
     }
 
     pme_do_data = {
-      .header = {
-        .version = PmeDissolvedOxygenMsg::VERSION,
-        .reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3),
-        .reading_uptime_millis = uptimeGetMs(),
-        .sensor_reading_time_ms = uptimeGetMs(),
-      },
-      // TODO - only add the saturation when we get baro data once that is implemented!
-      .temperature_deg_c = 25.0 + (rand() % 10) - (rand() % 10),
-      .do_mg_per_l = (rand() % 100) + 1,
-      .quality = ((double)((rand() % 100) + 1)) / 100,
-      .do_saturation_pct = (rand() % 100),
+        .header =
+            {
+                .version = PmeDissolvedOxygenMsg::VERSION,
+                .reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3),
+                .reading_uptime_millis = uptimeGetMs(),
+                .sensor_reading_time_ms = uptimeGetMs(),
+            },
+        // TODO - only add the saturation when we get baro data once that is implemented!
+        .temperature_deg_c = 25.0 + (rand() % 10) - (rand() % 10),
+        .do_mg_per_l = (rand() % 100) + 1,
+        .quality = ((double)((rand() % 100) + 1)) / 100,
+        .do_saturation_pct = (rand() % 100),
     };
     uint8_t cbor_buf[PME_DO_MSG_MAX_SIZE];
     size_t encoded_len = 0;
-    if (PmeDissolvedOxygenMsg::encode(pme_do_data, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
-      if (bm_pub_wl(pub_topic, topic_strlen, cbor_buf, encoded_len, 0, DO_PUB_TOPIC_VERSION) != BmOK) {
+    if (PmeDissolvedOxygenMsg::encode(pme_do_data, cbor_buf, sizeof(cbor_buf), &encoded_len) ==
+        CborNoError) {
+      if (bm_pub_wl(pub_topic, topic_strlen, cbor_buf, encoded_len, 0, DO_PUB_TOPIC_VERSION) !=
+          BmOK) {
         printf("Failed to publish PME DO message\n");
       } else {
-        printf("Published PME DO message to network:\n\ttemperature: %.2f\n\tdissolved oxygen: %.2f\n\tquality: %.2f\n\tsaturation: %.2f\n",
-               pme_do_data.temperature_deg_c, pme_do_data.do_mg_per_l, pme_do_data.quality, pme_do_data.do_saturation_pct);
+        printf("Published PME DO message to network:\n\ttemperature: %.2f\n\tdissolved oxygen: "
+               "%.2f\n\tquality: %.2f\n\tsaturation: %.2f\n",
+               pme_do_data.temperature_deg_c, pme_do_data.do_mg_per_l, pme_do_data.quality,
+               pme_do_data.do_saturation_pct);
       }
     } else {
       printf("Failed to encode PME DO data message\n");
     }
 
     PmeWipeMsg::Data pme_wipe_data = {
-      .header = {
-        .version = PmeWipeMsg::VERSION,
-        .reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3),
-        .reading_uptime_millis = uptimeGetMs(),
-        .sensor_reading_time_ms = uptimeGetMs(),
-      },
-      .wipe_current_mean_ma = (rand() % 100) + 1,
-      .wipe_duration_s = ((rand() % 100) + 1) / 10,
+        .header =
+            {
+                .version = PmeWipeMsg::VERSION,
+                .reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3),
+                .reading_uptime_millis = uptimeGetMs(),
+                .sensor_reading_time_ms = uptimeGetMs(),
+            },
+        .wipe_time_sec = (rand() % 100) + 1,
+        .start1_mA = (rand() % 100) + 1,
+        .avg_mA = (rand() % 100) + 1,
+        .start2_mA = (rand() % 100) + 1,
+        .final_mA = (rand() % 100) + 1,
+        .rsource = (rand() % 100) + 1,
     };
 
     uint8_t wipe_cbor_buf[PME_WIPE_MSG_MAX_SIZE];
     size_t wipe_encoded_len = 0;
-    if (PmeWipeMsg::encode(pme_wipe_data, wipe_cbor_buf, sizeof(wipe_cbor_buf), &wipe_encoded_len) == CborNoError) {
-      if (bm_pub_wl(pub_topic_wiper, topic_strlen_wiper, wipe_cbor_buf, wipe_encoded_len, 0, PME_WIPER_PUB_TOPIC_VERSION) != BmOK) {
+    if (PmeWipeMsg::encode(pme_wipe_data, wipe_cbor_buf, sizeof(wipe_cbor_buf),
+                           &wipe_encoded_len) == CborNoError) {
+      if (bm_pub_wl(pub_topic_wiper, topic_strlen_wiper, wipe_cbor_buf, wipe_encoded_len, 0,
+                    PME_WIPER_PUB_TOPIC_VERSION) != BmOK) {
         printf("Failed to publish PME Wiper message\n");
       } else {
-        printf("Published PME Wiper message to network:\n\tcurrent: %.2f\n\tduration: %.2f\n",
-               pme_wipe_data.wipe_current_mean_ma, pme_wipe_data.wipe_duration_s);
+        printf(
+            "Published PME Wiper message to network:\n\twipe time: %.2f\n\tstart1 mA: "
+            "%.2f\n\tavg mA: %.2f\n\tstart2 mA: %.2f\n\tfinal mA: %.2f\n\trsource mA: %.2f\n",
+            pme_wipe_data.wipe_time_sec, pme_wipe_data.start1_mA, pme_wipe_data.avg_mA,
+            pme_wipe_data.start2_mA, pme_wipe_data.final_mA, pme_wipe_data.rsource);
       }
     } else {
       printf("Failed to encode PME Wiper data message\n");
