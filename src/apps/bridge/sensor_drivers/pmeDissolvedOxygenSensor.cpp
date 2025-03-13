@@ -96,6 +96,23 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
       dissolved_oxygen_aggs.quality_mean = quality.getMean();
       dissolved_oxygen_aggs.do_saturation_pct_mean = do_saturation_pct.getMean();
       dissolved_oxygen_aggs.reading_count = reading_count;
+
+      if (dissolved_oxygen_aggs.temperature_deg_c_mean < TEMP_SAMPLE_MEMBER_MIN ||
+          dissolved_oxygen_aggs.temperature_deg_c_mean > TEMP_SAMPLE_MEMBER_MAX) {
+        dissolved_oxygen_aggs.temperature_deg_c_mean = NAN;
+      }
+      if (dissolved_oxygen_aggs.do_mg_per_l_mean < DO_SAMPLE_MEMBER_MIN ||
+          dissolved_oxygen_aggs.do_mg_per_l_mean > DO_SAMPLE_MEMBER_MAX) {
+        dissolved_oxygen_aggs.do_mg_per_l_mean = NAN;
+      }
+      if (dissolved_oxygen_aggs.quality_mean < QUALITY_SAMPLE_MEMBER_MIN ||
+          dissolved_oxygen_aggs.quality_mean > QUALITY_SAMPLE_MEMBER_MAX) {
+        dissolved_oxygen_aggs.quality_mean = NAN;
+      }
+      if (dissolved_oxygen_aggs.do_saturation_pct_mean < DO_SATURATION_SAMPLE_MEMBER_MIN ||
+          dissolved_oxygen_aggs.do_saturation_pct_mean > DO_SATURATION_SAMPLE_MEMBER_MAX) {
+        dissolved_oxygen_aggs.do_saturation_pct_mean = NAN;
+      }
     }
 
     BmErr err = send_spotter_log_aggregate(
