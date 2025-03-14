@@ -8,11 +8,22 @@
 #include "adi_hal.h"
 #include "bm_adin2111.h"
 #include "bm_config.h"
+#include "bsp.h"
 #include "bristlemouth_client.h"
 #include "debug.h"
+#include "l2.h"
 #include "debug_adin_raw.h"
 #include "util.h"
 #include <string.h>
+
+extern adin_pins_t adin_pins;
+
+static bool network_device_interrupt(const void *pinHandle, uint8_t value, void *args) {
+  (void)pinHandle;
+  (void)value;
+  (void)args;
+  return bm_l2_handle_device_interrupt() == BmOK;
+}
 
 static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
                               const char *commandString);
@@ -68,6 +79,7 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     }
 
     if (strncmp("init", parameter, parameterStringLength) == 0) {
+      IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
       HAL_Init_Hook();
       NetworkDevice network_device = adin2111_network_device();
       network_device.callbacks->receive = debug_l2_rx;
