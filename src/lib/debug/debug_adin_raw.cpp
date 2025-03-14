@@ -31,17 +31,13 @@ static const CLI_Command_Definition_t cmdGpio = {
 
 void debugAdinRawInit(void) { FreeRTOS_CLIRegisterCommand(&cmdGpio); }
 
-BmErr debug_l2_rx(void *device_handle, uint8_t *payload, uint16_t payload_len,
-                  uint8_t port_mask) {
-  (void)device_handle;
+void debug_l2_rx(uint8_t port_mask, uint8_t *payload, size_t payload_len) {
 
   printf("ADIN RX <%d> ", port_mask);
   for (uint32_t idx = 0; idx < payload_len; idx++) {
     printf("%02X ", payload[idx]);
   }
   printf("\n");
-
-  return BmOK;
 }
 
 uint8_t data[] = {0x33, 0x33, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xD5, 0xAD, 0x7A, 0xDD, 0x86,
@@ -74,6 +70,7 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     if (strncmp("init", parameter, parameterStringLength) == 0) {
       HAL_Init_Hook();
       NetworkDevice network_device = adin2111_network_device();
+      network_device.callbacks->receive = debug_l2_rx;
       network_device.callbacks->power = bcl_power_callback;
       BmErr err = adin2111_init();
       if (err == BmEALREADY) {
