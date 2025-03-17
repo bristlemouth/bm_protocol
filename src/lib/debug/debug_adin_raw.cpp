@@ -82,13 +82,18 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
       IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
       HAL_Init_Hook();
       NetworkDevice network_device = adin2111_network_device();
-      network_device.callbacks->receive = debug_l2_rx;
       network_device.callbacks->power = bcl_power_callback;
       BmErr err = adin2111_init();
       if (err == BmEALREADY) {
         printf("Adin already initialized\n");
       } else if (err == BmOK) {
         printf("Adin initialized successfully\n");
+        if (bm_l2_init(network_device) == BmOK) {
+          network_device.callbacks->receive = debug_l2_rx;
+          printf("L2 initialized successfully\n");
+        } else {
+          printf("L2 initialization failed, err: %d\n", err);
+        }
       } else {
         printf("Adin initialization failed, err: %d :(\n", err);
       }
