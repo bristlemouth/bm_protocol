@@ -67,14 +67,14 @@ void ledAllOff() {
 }
 
 void saveLastWipeEpoch(uint32_t newLastWipeEpochS) {
-  set_config_uint(BM_CFG_PARTITION_SYSTEM, LAST_WIPE_EPOCH_KEY, strlen(LAST_WIPE_EPOCH_KEY),
+  set_config_uint(BM_CFG_PARTITION_HARDWARE, LAST_WIPE_EPOCH_KEY, strlen(LAST_WIPE_EPOCH_KEY),
                   newLastWipeEpochS);
-  save_config(BM_CFG_PARTITION_SYSTEM, false);
+  save_config(BM_CFG_PARTITION_HARDWARE, false);
   lastWipeEpochS = newLastWipeEpochS;
 }
 
 uint32_t loadLastWipeEpoch() {
-  bool success = get_config_uint(BM_CFG_PARTITION_SYSTEM, LAST_WIPE_EPOCH_KEY,
+  bool success = get_config_uint(BM_CFG_PARTITION_HARDWARE, LAST_WIPE_EPOCH_KEY,
                                  strlen(LAST_WIPE_EPOCH_KEY), &lastWipeEpochS);
   if (!success) {
     printf("LAST_WIPE_EPOCH_KEY not found. Initializing to 0.\n");
