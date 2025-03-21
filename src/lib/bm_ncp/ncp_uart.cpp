@@ -467,6 +467,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
 
   serialEnable(ncpSerialHandle);
   ncpBaudRateDiscovery();
+  serialSetBaudRate(ncpSerialHandle, 1000000);
   ncp_dfu_check_for_update();
   bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(),
                              memfault_reboot_tracking_get_crash_count(), memfault_get_pc(),
@@ -512,8 +513,7 @@ void ncpTxTask(void *parameters) {
             cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, q_item.buffer, q_item.len);
 
         if (cobs_result.status == COBS_ENCODE_OK) {
-          serialGenericTx(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1,
-                          negotiate_event);
+          serialGenericTx(ncpSerialHandle, ncp_tx_buff, NCP_BUFF_LEN, negotiate_event);
         }
       } else {
         printf("Could not take serial lock to transmit message");
@@ -567,40 +567,40 @@ static void ncpRXProcessor(void *parameters) {
 }
 
 static void ncpBaudRateDiscovery(void) {
-  uint8_t baud_idx = array_size(acceptable_bauds);
-  static const uint8_t null_buf = 0;
+  //uint8_t baud_idx = array_size(acceptable_bauds);
+  //static const uint8_t null_buf = 0;
 
-  ncp_baud_rate_discovery_lock = xSemaphoreCreateBinary();
-  configASSERT(ncp_baud_rate_discovery_lock);
+  //ncp_baud_rate_discovery_lock = xSemaphoreCreateBinary();
+  //configASSERT(ncp_baud_rate_discovery_lock);
 
-  while (!ncp_ctx.baud_found && baud_idx > 0) {
-    baud_idx--;
-    // Reset buffers just incase anything was sent at a different baud rate
-    ncpRXCurrBuff = 0;
-    ncpRXBuffIdx = 0;
-    serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
-    bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
-    ncp_negotiate_baud_rate(1000000);
-    if (xSemaphoreTake(ncp_baud_rate_discovery_lock, portMAX_DELAY) != pdTRUE) {
-      printf("Could not take baud rate discovery semaphore\n");
-      break;
-    }
-  }
+  //while (!ncp_ctx.baud_found && baud_idx > 0) {
+  //  baud_idx--;
+  //  // Reset buffers just incase anything was sent at a different baud rate
+  //  ncpRXCurrBuff = 0;
+  //  ncpRXBuffIdx = 0;
+  //  serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
+  //  bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
+  //  ncp_negotiate_baud_rate(1000000);
+  //  if (xSemaphoreTake(ncp_baud_rate_discovery_lock, portMAX_DELAY) != pdTRUE) {
+  //    printf("Could not take baud rate discovery semaphore\n");
+  //    break;
+  //  }
+  //}
 
-  if (!ncp_ctx.baud_found) {
-    serialSetBaudRate(ncpSerialHandle, 115200);
-    // Send 0 to reset receiving buffer on spotter and reset our buffers just
-    // incase anything was sent at a different baud rate
-    ncpRXCurrBuff = 0;
-    ncpRXBuffIdx = 0;
-    bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
-    printf("Could not find a baudrate to communicate to spotter with\n");
-  }
+  //if (!ncp_ctx.baud_found) {
+  //  serialSetBaudRate(ncpSerialHandle, 115200);
+  //  // Send 0 to reset receiving buffer on spotter and reset our buffers just
+  //  // incase anything was sent at a different baud rate
+  //  ncpRXCurrBuff = 0;
+  //  ncpRXBuffIdx = 0;
+  //  bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
+  //  printf("Could not find a baudrate to communicate to spotter with\n");
+  //}
 
-  // Prevent race condition with semaphore usage in other tasks
-  SemaphoreHandle_t tmp_sem = ncp_baud_rate_discovery_lock;
-  ncp_baud_rate_discovery_lock = NULL;
-  vSemaphoreDelete(tmp_sem);
+  //// Prevent race condition with semaphore usage in other tasks
+  //SemaphoreHandle_t tmp_sem = ncp_baud_rate_discovery_lock;
+  //ncp_baud_rate_discovery_lock = NULL;
+  //vSemaphoreDelete(tmp_sem);
 }
 
 // NCP USART rx irq
