@@ -327,7 +327,7 @@ void serialPutcharUnbuffered(SerialHandle_t *handle, char character) {
   xQueueSend( serialTxQueue, &singleCharMessage, 10 );
 }
 
-static void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len, void *arg) {
+void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len, void *arg) {
   // Print out message in any connected interface
   configASSERT(handle != NULL);
 
