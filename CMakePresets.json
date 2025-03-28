@@ -63,6 +63,13 @@
             }
         },
         {
+            "name": "borealis-fake",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "borealis"
+            }
+        },
+        {
             "name": "bridge",
             "inherits": "default",
             "cacheVariables": {
@@ -257,6 +264,11 @@
         {
             "configurePreset": "adin-test",
             "name": "adin-test",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "borealis-fake",
+            "name": "borealis-fake",
             "jobs": 8
         },
         {

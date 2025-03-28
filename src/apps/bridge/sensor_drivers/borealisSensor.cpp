@@ -4,10 +4,12 @@
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bristlemouth.h"
+#include "mbedtls_base64/base64.h"
 #include "messages/config.h"
 #include "pubsub.h"
 #include "semphr.h"
 #include "sensorController.h"
+#include "spectral_entropy.h"
 #include <inttypes.h>
 #include <new>
 #include <string.h>
@@ -56,6 +58,40 @@ bool BorealisSensor::subscribe() {
     bm_free(sub);
   }
   return ret;
+}
+
+static inline uint8_t unpack_nibble(const uint8_t *bytes, size_t nibble_index) {
+  const size_t byte_index = nibble_index / 2;
+  const size_t shift_bits = (nibble_index % 2) * 4;
+  return (bytes[byte_index] >> shift_bits) & 0xF;
+}
+
+static inline uint16_t unpack_12bit(const uint8_t *bytes, size_t nibble_index) {
+  return unpack_nibble(bytes, nibble_index + 0) << 0 |
+         unpack_nibble(bytes, nibble_index + 1) << 4 |
+         unpack_nibble(bytes, nibble_index + 2) << 8;
+}
+
+static void parse_borealis_levels(float *spl_db, const char *levels_as_base64,
+                                  size_t levels_length) {
+  size_t out_len = 0;
+  mbedtls_base64_decode(NULL, 0, &out_len, reinterpret_cast<const uint8_t *>(levels_as_base64),
+                        levels_length);
+  uint8_t raw_bytes[out_len];
+  int err =
+      mbedtls_base64_decode(raw_bytes, sizeof(raw_bytes), &out_len,
+                            reinterpret_cast<const uint8_t *>(levels_as_base64), levels_length);
+  if (err != 0) {
+    bm_debug("Failed to decode base64 levels: %d\n", err);
+    return;
+  }
+
+  const float cstep = 0.046875f;                  // dB
+  const float clow = -4096.0f * cstep + 185.642f; // dB
+  uint32_t num_bands = out_len * 2U / 3U;         // 3 bytes -> 2 12-bit values
+  for (uint32_t i = 0; i < num_bands; i++) {
+    spl_db[i] = unpack_12bit(raw_bytes, i * 3) * cstep + clow;
+  }
 }
 
 /*!
@@ -118,6 +154,13 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
               d.dt, d.first_band_index, d.levels_length, d.levels);
+
+          // Compute spectral entropy
+          float spl_db[NUM_BANDS];
+          parse_borealis_levels(spl_db, d.levels, d.levels_length);
+          const float entropy = compute_spectral_entropy(spl_db);
+          bm_debug("Spectral entropy: %f\n", entropy);
+
           bm_free(d.levels);
         }
       } break;

@@ -85,6 +85,7 @@ set(LIB_FILES
     ${LIB_DIR}/drivers/TSYS01.cpp
     ${LIB_DIR}/drivers/w25.cpp
     ${LIB_DIR}/drivers/tca9546a.cpp
+    ${LIB_DIR}/dsp/spectral_entropy.c
     ${LIB_DIR}/lwip/lwip_support.c
     ${LIB_DIR}/mcuboot/mcuboot_cli.c
     ${LIB_DIR}/mcuboot/port_flash.c
@@ -154,6 +155,7 @@ set(LIB_INCLUDES
     ${LIB_DIR}/drivers/adin2111/include
     ${LIB_DIR}/drivers/include
     ${LIB_DIR}/drivers/protected
+    ${LIB_DIR}/dsp
     ${LIB_DIR}/lwip
     ${LIB_DIR}/mcuboot
     ${LIB_DIR}/memfault
