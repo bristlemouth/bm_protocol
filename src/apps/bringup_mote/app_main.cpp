@@ -215,11 +215,12 @@ static INA::INA232 *debugIna[NUM_INA232_DEV] = {
     &debugIna2,
 };
 
-static BQ::BQ25820 debugCharger(&i2c1, I2C_
+
 static MS5803 debugPressure(&i2c1, MS5803_ADDR);
 static Bme280 debugPHTU(&i2c1, Bme280::I2C_ADDR);
 static HTU21D debugHTU(&i2c1);
 static Bristlefin bristlefin(debugPressure, debugHTU, debugPHTU, bristlefinTCA, debugIna2);
+static BQ::BQ25820 Charger(&i2c1);
 
 extern "C" int main(void) {
 
