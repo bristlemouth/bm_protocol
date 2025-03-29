@@ -6,6 +6,7 @@ using namespace BQ;
 
 #define PN_REV 0x1A
 #define BQ_RST (1 << 7)
+#define POWERPATH_REG_DEF 0x20
 
 static const uint16_t inaAvgCounts[] = {1, 4, 16, 64, 128, 256, 512, 1024};
 static const uint16_t inaConvTimes[] = {140, 203, 332, 588, 1100, 2116, 4156, 8244};
@@ -23,13 +24,13 @@ BQ25820::BQ25820(I2CInterface_t * interface, uint8_t address)
 */
 bool BQ25820::init() {
   bool rval = false;
-  uint16_t reg = 0;
-  printf("INA232 Init\n");
+  uint8_t reg = 0;
+  printf("BQ25820 init\n");
 
   uint8_t retriesRemaining = 3;
   while (!rval && retriesRemaining--) {
     printf("Retries remaining %u\n", retriesRemaining);
-    if(!readReg(PART_INFO_REG, &reg)) {
+    if(!read8(PART_INFO_REG, &reg)) {
       continue;
     }
     printf("MFG_ID: %04X\n", reg);
@@ -45,11 +46,15 @@ bool BQ25820::init() {
       continue;
     }
 
+    reg = 0x00;
     if(!read8(POWER_PATH_REG, &reg)) {
       continue;
     }
-
-
+    
+    if(reg != POWERPATH_REG_DEF) {
+        printf("Wrong powerpath reg value after reset!\n");
+        continue;
+    }
     rval = true;
   };
 
@@ -98,7 +103,7 @@ bool BQ25820::readReg(Reg_t reg, uint16_t *value) {
   \param[out] *value register value
   \return true if successfull false otherwise
 */
-bool BQ25820::read8(Reg_t reg, uint16_t *value) {
+bool BQ25820::read8(Reg_t reg, uint8_t *value) {
   bool rval = false;
   uint8_t regByte = reg;
   uint8_t regVal = 0;
@@ -117,7 +122,7 @@ bool BQ25820::read8(Reg_t reg, uint16_t *value) {
     }
 
     if(value != NULL) {
-      *value = __builtin_bswap16(regVal);
+      *value = regVal;
     }
 
     rval = true;
@@ -171,7 +176,7 @@ bool BQ25820::disablePfm() {
     // Clear pfm bit (the 5th bit)
     tmpreg &= 0x1 << 4;
 
-    if(!write8(REG_CFG, tmpreg)) {
+    if(!write8(POWER_PATH_REG, tmpreg)) {
       break;
     }
 
