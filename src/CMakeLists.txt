@@ -330,6 +330,8 @@ add_link_options(
         -T${CMAKE_CURRENT_BINARY_DIR}/${LINKER_FILE}.lds
         ${BSP_CPU_FLAGS}
 				-Wl,--build-id
+                -Wl,--wrap=malloc
+                -Wl,--wrap=free
         # -specs=nano.specs
         # -lc
         # -lm
