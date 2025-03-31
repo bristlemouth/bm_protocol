@@ -332,6 +332,7 @@ add_link_options(
 				-Wl,--build-id
                 -Wl,--wrap=malloc
                 -Wl,--wrap=free
+                -Wl,--wrap=calloc
         # -specs=nano.specs
         # -lc
         # -lm
