@@ -118,6 +118,7 @@ void startSerial();
 void serialSetBaudRate(SerialHandle_t *handle, uint32_t baud);
 uint32_t serialGetBaudRate(SerialHandle_t *handle);
 
+void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len, void *arg);
 void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len, void *arg);
 void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len, void *arg);
 
