@@ -452,6 +452,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.cfg_status_response_fn = NULL;
   bm_serial_callbacks.cfg_key_del_request_fn = ncp_cfg_key_del_request_cb;
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
+  bm_serial_callbacks.cfg_clear_request_fn = ncp_cfg_clear_request_cb;
+  bm_serial_callbacks.cfg_clear_response_fn = NULL;
   bm_serial_callbacks.reboot_info_fn = NULL;
   bm_serial_callbacks.network_info_fn = NULL;
   bm_serial_callbacks.bcmp_info_request_fn = bcmp_info_request_cb;

@@ -22,6 +22,7 @@ static const CLI_Command_Definition_t cmdConfiguration = {
     " * cfg <usr/hw/sys> set <key> <type:uint,int,float,str,bytestr> <value>\n"
     " * cfg <usr/hw/sys> get <key> <type>\n"
     " * cfg <usr/hw/sys> del <key>\n"
+    " * cfg <usr/hw/sys> clear\n"
     " * cfg <usr/hw/sys> save\n"
     " * cfg <usr/hw/sys> listkeys\n",
     // Command function
@@ -215,6 +216,13 @@ static BaseType_t configurationCommand(char *writeBuffer, size_t writeBufferLen,
       } else {
         printf("Failed to remove key %s\n", keystr);
       }
+    } else if (strncmp("clear", parameter, parameterStringLength) == 0) {
+      if (!clear_partition(partition)) {
+        printf("Failed to clear config partition.\n");
+      } else {
+        printf("Successfully cleared config partition.\n");
+      }
+      // Succesfull "save" will reset the system.
     } else if (strncmp("save", parameter, parameterStringLength) == 0) {
       if (!save_config(partition, true)) {
         printf("Failed to save config.\n");
