@@ -40,19 +40,25 @@ bool BQ25820::init() {
       continue;
     }
 
+    vTaskDelay(pdMS_TO_TICKS(2));
+
     // Reset to defaults
     reg = BQ_RST;
     if(!write8(POWER_PATH_REG, reg)) {
       continue;
     }
 
+    vTaskDelay(pdMS_TO_TICKS(2));
+
     reg = 0x00;
     if(!read8(POWER_PATH_REG, &reg)) {
       continue;
     }
     
-    if(reg != POWERPATH_REG_DEF) {
+    if((reg == POWERPATH_REG_DEF || reg == (POWERPATH_REG_DEF | 0x2))) {
         printf("Wrong powerpath reg value after reset!\n");
+        printf("reg_val: %04X\n", reg);
+        vTaskDelay(pdMS_TO_TICKS(2));
         continue;
     }
     rval = true;
@@ -174,11 +180,17 @@ bool BQ25820::disablePfm() {
     }
 
     // Clear pfm bit (the 5th bit)
-    tmpreg &= 0x1 << 4;
+    tmpreg &= ~(0x1 << 5);
 
     if(!write8(POWER_PATH_REG, tmpreg)) {
       break;
     }
+    
+    tmpreg = 0;
+    if(!read8(POWER_PATH_REG, &tmpreg)) {
+        break;
+    }
+    printf("PowerPathReg: %04X\n", tmpreg);
 
     rval = true;
   } while (0);
