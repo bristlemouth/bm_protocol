@@ -39,6 +39,7 @@ set(LIB_FILES
     ${LIB_DIR}/common/reset_reason.c
     ${LIB_DIR}/common/serial.c
     ${LIB_DIR}/common/sensorWatchdog.cpp
+    ${LIB_DIR}/common/malloc.c
     ${LIB_DIR}/common/serial_console_u5.cpp
     ${LIB_DIR}/common/stress.c
     ${LIB_DIR}/common/tokenize.c
