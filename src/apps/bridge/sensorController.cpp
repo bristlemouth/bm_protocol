@@ -323,15 +323,24 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS_SPECTRUM)) {
           Borealis_t *borealis_spectrum_sub =
               createBorealisSensorSub(SENSOR_TYPE_BOREALIS_SPECTRUM, reply.node_id);
-          if (borealis_spectrum_sub) {
-            Borealis_t *borealis_levels_sub =
-                createBorealisSensorSub(SENSOR_TYPE_BOREALIS_LEVELS, reply.node_id);
-            if (borealis_levels_sub) {
-              abstractSensorAddSensorSub(borealis_spectrum_sub);
-              abstractSensorAddSensorSub(borealis_levels_sub);
-            } else {
-              bm_free(borealis_spectrum_sub);
-            }
+          Borealis_t *borealis_levels_sub =
+              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_LEVELS, reply.node_id);
+          Borealis_t *borealis_levels_statistics_sub =
+              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS, reply.node_id);
+          Borealis_t *borealis_recording_status_sub =
+              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_RECORDING_STATUS, reply.node_id);
+
+          if (borealis_spectrum_sub && borealis_levels_sub && borealis_levels_statistics_sub &&
+              borealis_recording_status_sub) {
+            abstractSensorAddSensorSub(borealis_spectrum_sub);
+            abstractSensorAddSensorSub(borealis_levels_sub);
+            abstractSensorAddSensorSub(borealis_levels_statistics_sub);
+            abstractSensorAddSensorSub(borealis_recording_status_sub);
+          } else {
+            bm_free(borealis_spectrum_sub);
+            bm_free(borealis_levels_sub);
+            bm_free(borealis_levels_statistics_sub);
+            bm_free(borealis_recording_status_sub);
           }
         }
       }
