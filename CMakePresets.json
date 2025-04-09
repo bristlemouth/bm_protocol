@@ -231,6 +231,13 @@
             "cacheVariables": {
                 "APP": "sub_example"
             }
+        },
+        {
+            "name": "urchin-cam-bristleback",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "urchin_cam"
+            }
         }
     ],
     "buildPresets": [
@@ -372,6 +379,11 @@
         {
             "configurePreset": "sub-example",
             "name": "sub-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "urchin-cam-bristleback",
+            "name": "urchin-cam-bristleback",
             "jobs": 8
         }
     ]
