@@ -10,7 +10,7 @@
 #define DEFAULT_BAUD_RATE 9600
 #define DEFAULT_LINE_TERM 10 // newline, '\n', 0x0A
 #define MAX_READINGS_TO_TX 64
-#define SPOTTER_TX_SECONDS 30
+#define SPOTTER_TX_MS 30000
 
 #define BAUD_CFG_KEY "plUartBaudRate"
 #define LINE_TERM_CFG_KEY "plUartLineTerm"
@@ -28,9 +28,10 @@ static size_t reading_index = 0;
 
 static void handle_spotter_tx(void) {
   uint64_t now = uptimeGetMs();
-  const bool been_long_enough = now - last_spotter_tx_uptime >= SPOTTER_TX_SECONDS;
+  const bool been_long_enough = now - last_spotter_tx_uptime >= SPOTTER_TX_MS;
   const bool buffer_is_full = reading_index >= MAX_READINGS_TO_TX;
-  const bool should_tx = been_long_enough || buffer_is_full;
+  const bool anything_to_send = reading_index != 0;
+  const bool should_tx = anything_to_send && (been_long_enough || buffer_is_full);
   if (should_tx) {
     BmErr err = spotter_tx_data(&readings[0], reading_index, BmNetworkTypeCellularOnly);
     if (err == BmOK) {
