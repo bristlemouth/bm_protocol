@@ -2,6 +2,8 @@
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bsp.h"
+#include "powerSampler.h"
+#include "sensorSampler.h"
 #include "stm32u5xx_hal.h"
 #include "stm32u5xx_hal_tim.h"
 #include "tim.h"
@@ -14,14 +16,17 @@
 #define DELAY_TIME_MS ((uint32_t)((float)RAMP_TIME_MS / (float)NUMBER_OF_ITERATIONS))
 #define MOTOR_SEMAPHORE_MAX_DELAY_MS (1000)
 
+#define POWER_MONITOR_TASK_UPDATE_TIME_MS (100)
+
 #define CALCULATE_DUTY(tim, duty) (duty != 0 ? (((tim->ARR + 1) * duty) / 100) : 0)
 
 static struct {
   MotorState_t state;
   BmSemaphore sem;
+  BmTimer timer;
 } motor_ctx = {};
 
-static void motor_process_task(void *arg) {
+static void motor_control_task(void *arg) {
   (void)arg;
   uint8_t speed = STARTING_FREQUENCY;
   IOPinHandle_t *handle_on = NULL;
@@ -65,10 +70,32 @@ static void motor_process_task(void *arg) {
   }
 }
 
+static void power_monitor_task(void *args) {
+  (void)args;
+  float voltage;
+  float current;
+
+  while (1) {
+
+    if (powerSamplerGetLatest(I2C_INA_MAIN_ADDR, voltage, current)) {
+      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", voltage, current);
+    }
+    if (powerSamplerGetLatest(I2C_INA_PODL_ADDR, voltage, current)) {
+      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", voltage, current);
+    }
+
+    bm_delay(POWER_MONITOR_TASK_UPDATE_TIME_MS);
+  }
+}
+
 void motor_init(void) {
+  // Sample current monitor at a higher rate
+  sensorSamplerChangeSamplingPeriodMs(POWER_SAMPLER_NAME, 100);
+
   motor_ctx.sem = bm_semaphore_create();
   bm_semaphore_give(motor_ctx.sem);
-  bm_task_create(motor_process_task, "motor control task", 1024, NULL, 10, NULL);
+  bm_task_create(motor_control_task, "motor control task", 512, NULL, 10, NULL);
+  bm_task_create(power_monitor_task, "power monitor task", 512, NULL, 12, NULL);
 }
 
 bool set_pwm_duty(uint8_t duty, IOPinHandle_t *handle) {
@@ -104,4 +131,14 @@ void set_motor_state(MotorState_t state) {
   bm_semaphore_take(motor_ctx.sem, MOTOR_SEMAPHORE_MAX_DELAY_MS);
   motor_ctx.state = state;
   bm_semaphore_give(motor_ctx.sem);
+}
+
+MotorState_t get_motor_state(void) {
+  MotorState_t ret = MOTOR_OFF;
+
+  bm_semaphore_take(motor_ctx.sem, MOTOR_SEMAPHORE_MAX_DELAY_MS);
+  ret = motor_ctx.state;
+  bm_semaphore_give(motor_ctx.sem);
+
+  return ret;
 }

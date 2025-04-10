@@ -2,7 +2,7 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/motor_process.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/motor_process.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/pwm_debug.c
 )
 

@@ -2,13 +2,14 @@
   Power sensor(s) sampling functions
 */
 
-#include "spotter.h"
-#include "pubsub.h"
+#include "powerSampler.h"
 #include "bsp.h"
 #include "debug.h"
 #include "ina232.h"
+#include "pubsub.h"
 #include "sensorSampler.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -54,14 +55,15 @@ static bool powerSample() {
 
         char rtcTimeBuffer[32];
         rtcPrint(rtcTimeBuffer, &time_and_date);
-        printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n", uptimeGetMs(),
-               rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
-        spotter_log(0, "power.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n",
-                   uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
-                   _powerData.current);
-        spotter_log_console(0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f",
-                  uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
-                  _powerData.current);
+        printf("power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f\n",
+               uptimeGetMs(), rtcTimeBuffer, _powerData.address, _powerData.voltage,
+               _powerData.current);
+        spotter_log(0, "power.log", USE_TIMESTAMP,
+                    "tick: %llu, rtc: %s, addr: %lu, voltage: %f, current: %f\n", uptimeGetMs(),
+                    rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
+        spotter_log_console(
+            0, "power | tick: %llu, rtc: %s, addr: %u, voltage: %f, current: %f", uptimeGetMs(),
+            rtcTimeBuffer, _powerData.address, _powerData.voltage, _powerData.current);
 
         taskENTER_CRITICAL();
         _newPowerDataAvailable[dev_num] = true;
@@ -71,7 +73,8 @@ static bool powerSample() {
       } else {
         printf("ERR Failed to sample power monitor %u!\n", dev_num);
         spotter_log_console(0, "ERR Failed to sample power monitor %u!", dev_num);
-        spotter_log(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!", dev_num);
+        spotter_log(0, "power.log", USE_TIMESTAMP, "ERR Failed to sample power monitor %u!",
+                    dev_num);
       }
       rval &= success;
     }
@@ -102,14 +105,14 @@ static bool powerInit() {
 }
 
 static sensor_t powerSensors = {
-  .initFn = powerInit,
-  .sampleFn = powerSample,
-  .checkFn = NULL
+    .initFn = powerInit,
+    .sampleFn = powerSample,
+    .checkFn = NULL,
 };
 
 void powerSamplerInit(INA::INA232 **sensors) {
   _inaSensors = sensors;
-  sensorSamplerAdd(&powerSensors, "PWR");
+  sensorSamplerAdd(&powerSensors, POWER_SAMPLER_NAME);
 }
 
 bool powerSamplerGetLatest(uint8_t power_monitor_address, float &voltage, float &current) {
