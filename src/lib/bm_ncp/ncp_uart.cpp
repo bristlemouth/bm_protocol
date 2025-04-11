@@ -30,7 +30,8 @@ extern "C" {
 
 #define NCP_NOTIFY_BUFF_MASK (1 << 0)
 #define NCP_NOTIFY (1 << 1)
-#define NCP_PROCESSOR_QUEUE_DEPTH (16)
+#define NCP_PROCESSOR_RX_QUEUE_DEPTH (16)
+#define NCP_PROCESSOR_TX_QUEUE_DEPTH (16)
 #define NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS (10)
 
 static uint32_t ncpRXBuffIdx = 0;
@@ -38,6 +39,7 @@ static uint8_t ncpRXCurrBuff = 0;
 static uint8_t ncpRXBuff[2][NCP_BUFF_LEN];
 static uint32_t ncpRXBuffLen[2];
 static uint8_t ncpRXBuffDecoded[NCP_BUFF_LEN];
+static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
@@ -82,7 +84,7 @@ static NCPNegotiatingContext_t ncp_ctx = {};
 static const uint32_t acceptable_bauds[] = {
     57600,
     115200,
-    921600,
+    1000000,
 };
 
 // Send out cobs encoded message over serial port
@@ -90,6 +92,7 @@ static bool queue_tx(const uint8_t *buff, size_t len, bm_serial_message_t messag
   bool rval = false;
   configASSERT(buff);
   configASSERT(len);
+
   uint8_t *tmp_buf = (uint8_t *)pvPortMalloc(len);
   ProcessorQueueItem_t q_msg = {
       .buffer = tmp_buf,
@@ -359,8 +362,13 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
 
   if (value) {
     lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+    xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
+    ncp_rx = false;
   } else {
+    xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
+    ncpRXBuffIdx = 0;
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
+    ncp_rx = true;
   }
 
   return xHigherPriorityTaskWoken;
@@ -393,15 +401,15 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   ncp_dfu_init(dfu_partition, power_controller);
   ncp_cfg_init();
   ncp_processor_queue_handle =
-      xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
+      xQueueCreate(NCP_PROCESSOR_RX_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
   configASSERT(ncp_processor_queue_handle);
 
-  ncp_tx_queue_handle = xQueueCreate(NCP_PROCESSOR_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
+  ncp_tx_queue_handle =
+      xQueueCreate(NCP_PROCESSOR_TX_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
   configASSERT(ncp_tx_queue_handle);
 
   ncp_serial_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_serial_lock);
-  xSemaphoreGive(ncp_serial_lock);
 
   ncp_ctx.negotiating_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_ctx.negotiating_lock);
@@ -444,6 +452,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.cfg_status_response_fn = NULL;
   bm_serial_callbacks.cfg_key_del_request_fn = ncp_cfg_key_del_request_cb;
   bm_serial_callbacks.cfg_key_del_response_fn = NULL;
+  bm_serial_callbacks.cfg_clear_request_fn = ncp_cfg_clear_request_cb;
+  bm_serial_callbacks.cfg_clear_response_fn = NULL;
   bm_serial_callbacks.reboot_info_fn = NULL;
   bm_serial_callbacks.network_info_fn = NULL;
   bm_serial_callbacks.bcmp_info_request_fn = bcmp_info_request_cb;
@@ -491,8 +501,7 @@ void ncpTxTask(void *parameters) {
     negotiate_event = NULL;
 
     if (res == pdPASS) {
-      if (xSemaphoreTake(ncp_serial_lock, portMAX_DELAY) == pdPASS &&
-          xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS) {
+      if (xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS) {
         // reset the whole buff to zero
         memset(&ncp_tx_buff, 0, NCP_BUFF_LEN);
 
@@ -505,8 +514,8 @@ void ncpTxTask(void *parameters) {
             cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, q_item.buffer, q_item.len);
 
         if (cobs_result.status == COBS_ENCODE_OK) {
-          // then we send the buffer out!
-          serialWrite(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1, negotiate_event);
+          serialGenericTx(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1,
+                          negotiate_event);
         }
       } else {
         printf("Could not take serial lock to transmit message");
@@ -573,7 +582,7 @@ static void ncpBaudRateDiscovery(void) {
     ncpRXBuffIdx = 0;
     serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
     bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
-    ncp_negotiate_baud_rate(921600);
+    ncp_negotiate_baud_rate(1000000);
     if (xSemaphoreTake(ncp_baud_rate_discovery_lock, portMAX_DELAY) != pdTRUE) {
       printf("Could not take baud rate discovery semaphore\n");
       break;
@@ -618,10 +627,6 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
   configASSERT(len == 1);
 
-  if (ncpRXBuffIdx == 0) {
-    xSemaphoreTakeFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-  }
-
   // but the byte into the current buffer
   ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
 
@@ -629,7 +634,6 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
     if (ncpRXBuffIdx >= NCP_BUFF_LEN) {
       // too much data so lets reset the current buffer
       ncpRXBuffIdx = 0;
-      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
       break;
     }
 
@@ -641,7 +645,6 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
     if (ncpRXBuffIdx <= sizeof(bm_serial_packet_t)) {
       // Empty packet, reset current buffer
       ncpRXBuffIdx = 0;
-      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
       break;
     }
 
@@ -660,7 +663,6 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
       // switch ncp buffers
       ncpRXCurrBuff ^= 1;
     }
-    xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
   } while (0);
 
   return higherPriorityTaskWoken;
@@ -691,6 +693,9 @@ static inline BaseType_t postTxEventHandle(SerialHandle_t *handle,
 
 static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
   configASSERT(handle);
+  if (ncp_rx) {
+    xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
+  }
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
   lpmPeripheralActive(LPM_USART3);
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
@@ -699,11 +704,13 @@ static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
 }
 
 static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
+  BaseType_t higherPriorityTaskEventHandle = pdFALSE;
   BaseType_t higherPriorityTaskWoken = pdFALSE;
   configASSERT(handle);
 
   if (handle->arg) {
-    higherPriorityTaskWoken = postTxEventHandle(handle, *(NCPNegotiatingEvent_t *)handle->arg);
+    higherPriorityTaskEventHandle =
+        postTxEventHandle(handle, *(NCPNegotiatingEvent_t *)handle->arg);
   } else {
     xSemaphoreGiveFromISR(ncp_ctx.negotiating_lock, NULL);
   }
@@ -712,6 +719,7 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
   LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
   // LPM_USART3_RX will get set on the next rising edge
   lpmPeripheralInactiveFromISR(LPM_USART3_TX);
-  xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-  portYIELD_FROM_ISR(higherPriorityTaskWoken);
+  portYIELD_FROM_ISR(
+      higherPriorityTaskWoken == pdTRUE || higherPriorityTaskEventHandle == pdTRUE ? pdTRUE
+                                                                                   : pdFALSE);
 }
