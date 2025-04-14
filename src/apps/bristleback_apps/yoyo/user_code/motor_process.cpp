@@ -8,11 +8,13 @@
 #include "stm32u5xx_hal_tim.h"
 #include "tim.h"
 
-#define STARTING_FREQUENCY (30)
+#define STARTING_SPEED_PERCENT (30)
+#define MAX_SPEED_PERCENT (100)
 #define RAMP_TIME_MS (5000)
 #define SPEED_PER_ITERATION (1)
 
-#define NUMBER_OF_ITERATIONS ((100.0 - (float)STARTING_FREQUENCY) / (float)SPEED_PER_ITERATION)
+#define NUMBER_OF_ITERATIONS                                                                   \
+  (((float)MAX_SPEED_PERCENT - (float)STARTING_SPEED_PERCENT) / (float)SPEED_PER_ITERATION)
 #define DELAY_TIME_MS ((uint32_t)((float)RAMP_TIME_MS / (float)NUMBER_OF_ITERATIONS))
 #define MOTOR_SEMAPHORE_MAX_DELAY_MS (1000)
 
@@ -28,7 +30,7 @@ static struct {
 
 static void motor_control_task(void *arg) {
   (void)arg;
-  uint8_t speed = STARTING_FREQUENCY;
+  uint8_t speed = STARTING_SPEED_PERCENT;
   IOPinHandle_t *handle_on = NULL;
   IOPinHandle_t *handle_off = NULL;
   MotorState_t prev_state = MOTOR_OFF;
@@ -36,7 +38,7 @@ static void motor_control_task(void *arg) {
   while (1) {
     bm_semaphore_take(motor_ctx.sem, MOTOR_SEMAPHORE_MAX_DELAY_MS);
     if (prev_state != motor_ctx.state) {
-      speed = STARTING_FREQUENCY;
+      speed = STARTING_SPEED_PERCENT;
       prev_state = motor_ctx.state;
     }
 
@@ -61,7 +63,7 @@ static void motor_control_task(void *arg) {
       set_pwm_duty(0, handle_off);
       speed += SPEED_PER_ITERATION;
     } else if (motor_ctx.state == MOTOR_OFF) {
-      speed = STARTING_FREQUENCY;
+      speed = STARTING_SPEED_PERCENT;
       set_pwm_duty(0, &MOTOR_SPEED1);
       set_pwm_duty(0, &MOTOR_SPEED2);
     }
