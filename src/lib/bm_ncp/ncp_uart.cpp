@@ -389,11 +389,6 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   ncpSerialHandle->txStreamBuffer = xStreamBufferCreate(ncpSerialHandle->txBufferSize, 1);
   configASSERT(ncpSerialHandle->txStreamBuffer != NULL);
 
-  // ncpSerialHandle->rxStreamBuffer = xStreamBufferCreate(ncpSerialHandle->rxBufferSize, 1);
-  // configASSERT(ncpSerialHandle->rxStreamBuffer != NULL);
-
-  // Set the rxBytesFromISR to the custom NCP one
-  // ncpSerialHandle->rxBytesFromISR = ncpRXBytesFromISR;
   ncpSerialHandle->interruptPin = &BM_INT;
 
   ncpSerialHandle->preTxCb = ncpPreTxCb;
@@ -624,8 +619,6 @@ extern "C" void USART3_IRQHandler(void) {
 }
 #endif
 
-// cppcheck-suppress constParameter
-// static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   (void)huart;
 
