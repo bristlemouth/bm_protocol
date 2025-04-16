@@ -32,23 +32,20 @@ extern "C" {
 #include "usart.h"
 #include "stm32u5xx_hal_uart.h"
 
-#define NCP_NOTIFY (1 << 1)
-#define NCP_PROCESSOR_RX_QUEUE_DEPTH (16)
-#define NCP_PROCESSOR_TX_QUEUE_DEPTH (16)
-#define NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS (10)
-
-static uint8_t ncpRXCurrBuff = 0;
-static uint8_t ncpRXBuff[2][NCP_BUFF_LEN];
-static uint32_t ncpRXBuffLen[2];
-static uint8_t ncpRXBuffDecoded[NCP_BUFF_LEN];
+static constexpr uint8_t NCP_PROCESSOR_RX_QUEUE_DEPTH = 16;
+static constexpr uint8_t NCP_PROCESSOR_TX_QUEUE_DEPTH = 16;
+static constexpr uint8_t NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS = 10;
+static constexpr uint8_t NCP_RX_BUFF_COUNT = 2;
+static constexpr uint16_t NCP_BUFF_LEN = 2048;
+static volatile uint8_t ncpRXCurrBuff = 0;
+static uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
+static uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
 static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
 static SemaphoreHandle_t ncp_serial_lock;
 static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
-
-// static const NCPConfig_t *_config;
 
 static TaskHandle_t ncpRXTaskHandle;
 
@@ -58,7 +55,6 @@ static void ncpTxTask(void *parameters);
 static void ncpRXTask(void *parameters);
 static void ncpRXProcessor(void *parameters);
 static void ncpBaudRateDiscovery(void);
-// static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len);
 static void ncpPreTxCb(SerialHandle_t *handle);
 static void ncpPostTxCb(SerialHandle_t *handle);
 
@@ -526,6 +522,8 @@ void ncpTxTask(void *parameters) {
 void ncpRXTask(void *parameters) {
   (void)parameters;
 
+  static uint8_t ncpRXBuffDecoded[NCP_BUFF_LEN];
+
   for (;;) {
     uint32_t taskNotifyValue = 0;
     BaseType_t res = xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, portMAX_DELAY);
@@ -547,6 +545,7 @@ void ncpRXTask(void *parameters) {
       uint8_t *processor_buffer = static_cast<uint8_t *>(pvPortMalloc(cobs_result.out_len));
       configASSERT(processor_buffer);
       memcpy(processor_buffer, ncpRXBuffDecoded, cobs_result.out_len);
+      memset(ncpRXBuffDecoded, 0, NCP_BUFF_LEN);
       ProcessorQueueItem_t q_msg = {
           .buffer = processor_buffer,
           .len = cobs_result.out_len,
