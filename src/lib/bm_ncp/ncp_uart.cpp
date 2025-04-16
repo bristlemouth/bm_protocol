@@ -625,12 +625,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
-  do {
+  if (len > 0) {
     // set the length of the current buff to the idx - 1 since we don't need the 0x00
     ncpRXBuffLen[ncpRXCurrBuff] = len - 1;
 
     BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff),
-                                         eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
+                                        eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
     if (rval == pdFALSE) {
       // previous packet still pending, 😬
       // TODO - track dropped packets?
@@ -639,7 +639,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
       // switch ncp buffers
       ncpRXCurrBuff ^= 1;
     }
-  } while (0);
+  }
 
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
 
