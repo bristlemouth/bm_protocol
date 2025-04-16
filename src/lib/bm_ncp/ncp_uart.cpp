@@ -32,7 +32,6 @@ extern "C" {
 #include "usart.h"
 #include "stm32u5xx_hal_uart.h"
 
-#define NCP_NOTIFY_BUFF_MASK (1 << 0)
 #define NCP_NOTIFY (1 << 1)
 #define NCP_PROCESSOR_RX_QUEUE_DEPTH (16)
 #define NCP_PROCESSOR_TX_QUEUE_DEPTH (16)
@@ -390,8 +389,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   ncpSerialHandle->txStreamBuffer = xStreamBufferCreate(ncpSerialHandle->txBufferSize, 1);
   configASSERT(ncpSerialHandle->txStreamBuffer != NULL);
 
-  ncpSerialHandle->rxStreamBuffer = xStreamBufferCreate(ncpSerialHandle->rxBufferSize, 1);
-  configASSERT(ncpSerialHandle->rxStreamBuffer != NULL);
+  // ncpSerialHandle->rxStreamBuffer = xStreamBufferCreate(ncpSerialHandle->rxBufferSize, 1);
+  // configASSERT(ncpSerialHandle->rxStreamBuffer != NULL);
 
   // Set the rxBytesFromISR to the custom NCP one
   // ncpSerialHandle->rxBytesFromISR = ncpRXBytesFromISR;
@@ -542,22 +541,24 @@ void ncpRXTask(void *parameters) {
     }
 
     // this is used to determine which static buffer to read from
-    uint8_t bufferIdx = taskNotifyValue & NCP_NOTIFY_BUFF_MASK;
-
+    uint8_t bufferIdx = taskNotifyValue;
     // Decode the COBS
     cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN,
-                                                 ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
-    // Allocate a buffer for the ncpRXProcessor to process the data.
-    // Note that ncpRXProcessor will be in charge of freeing that data.
-    uint8_t *processor_buffer = static_cast<uint8_t *>(pvPortMalloc(cobs_result.out_len));
-    configASSERT(processor_buffer);
-    memcpy(processor_buffer, ncpRXBuffDecoded, cobs_result.out_len);
-    ProcessorQueueItem_t q_msg = {
-        .buffer = processor_buffer,
-        .len = cobs_result.out_len,
-        .negotiate_event = false,
-    };
-    configASSERT(xQueueSend(ncp_processor_queue_handle, &q_msg, pdMS_TO_TICKS(10)) == pdTRUE);
+      ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
+      memset(ncpRXBuff[bufferIdx], 0, NCP_BUFF_LEN);
+      // Allocate a buffer for the ncpRXProcessor to process the data.
+      // Note that ncpRXProcessor will be in charge of freeing that data.
+    if (cobs_result.out_len > 0) {
+      uint8_t *processor_buffer = static_cast<uint8_t *>(pvPortMalloc(cobs_result.out_len));
+      configASSERT(processor_buffer);
+      memcpy(processor_buffer, ncpRXBuffDecoded, cobs_result.out_len);
+      ProcessorQueueItem_t q_msg = {
+          .buffer = processor_buffer,
+          .len = cobs_result.out_len,
+          .negotiate_event = false,
+      };
+      configASSERT(xQueueSend(ncp_processor_queue_handle, &q_msg, pdMS_TO_TICKS(10)) == pdTRUE);
+    }
   }
 }
 
@@ -615,7 +616,7 @@ extern "C" void USART3_IRQHandler(void) {
   serialGenericUartIRQHandler(ncpSerialHandle);
 
   HAL_UART_IRQHandler(&huart3);
-  if (HAL_UART_GetError(&huart3) != HAL_UART_ERROR_NONE) {
+  if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
     // TODO - handle error
     HAL_UART_DMAStop(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, ncpRXBuff[ncpRXCurrBuff], NCP_BUFF_LEN);
@@ -625,7 +626,7 @@ extern "C" void USART3_IRQHandler(void) {
 
 // cppcheck-suppress constParameter
 // static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, size_t len) {
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   (void)huart;
 
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
@@ -633,9 +634,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, size_t len) {
 
   do {
     // set the length of the current buff to the idx - 1 since we don't need the 0x00
-    ncpRXBuffLen[ncpRXCurrBuff] = len;
+    ncpRXBuffLen[ncpRXCurrBuff] = len - 1;
 
-    BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
+    BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff),
                                          eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
     if (rval == pdFALSE) {
       // previous packet still pending, 😬
@@ -646,6 +647,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, size_t len) {
       ncpRXCurrBuff ^= 1;
     }
   } while (0);
+
+  lpmPeripheralInactiveFromISR(LPM_USART3_RX);
 
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }

@@ -229,9 +229,10 @@ void serialEnable(SerialHandle_t *handle) {
     // Clear any data that might be in the rx buffer
     (void)usart_ReceiveData8((USART_TypeDef *)handle->device);
 
-
-    // Enable Uart RX interrupt
-    usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
+    if (handle->rxStreamBuffer) {
+      // Enable Uart RX interrupt
+      usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
+    }
   }
 #endif
 
