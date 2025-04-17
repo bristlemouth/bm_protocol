@@ -26,6 +26,7 @@
 
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef handle_GPDMA1_Channel11;
+DMA_HandleTypeDef handle_GPDMA1_Channel10;
 
 /* USART1 init function */
 
@@ -200,6 +201,33 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       Error_Handler();
     }
 
+    /* GPDMA1_REQUEST_USART3_TX Init */
+    handle_GPDMA1_Channel10.Instance = GPDMA1_Channel10;
+    handle_GPDMA1_Channel10.Init.Request = GPDMA1_REQUEST_USART3_TX;
+    handle_GPDMA1_Channel10.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+    handle_GPDMA1_Channel10.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    handle_GPDMA1_Channel10.Init.SrcInc = DMA_SINC_INCREMENTED;
+    handle_GPDMA1_Channel10.Init.DestInc = DMA_DINC_FIXED;
+    handle_GPDMA1_Channel10.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+    handle_GPDMA1_Channel10.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+    handle_GPDMA1_Channel10.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+    handle_GPDMA1_Channel10.Init.SrcBurstLength = 1;
+    handle_GPDMA1_Channel10.Init.DestBurstLength = 1;
+    handle_GPDMA1_Channel10.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0|DMA_DEST_ALLOCATED_PORT0;
+    handle_GPDMA1_Channel10.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    handle_GPDMA1_Channel10.Init.Mode = DMA_NORMAL;
+    if (HAL_DMA_Init(&handle_GPDMA1_Channel10) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(uartHandle, hdmatx, handle_GPDMA1_Channel10);
+
+    if (HAL_DMA_ConfigChannelAttributes(&handle_GPDMA1_Channel10, DMA_CHANNEL_NPRIV) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
     /* USART3 interrupt Init */
     HAL_NVIC_SetPriority(USART3_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
@@ -228,6 +256,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
     /* USART3 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
+    HAL_DMA_DeInit(uartHandle->hdmatx);
 
     /* USART3 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART3_IRQn);

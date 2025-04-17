@@ -44,8 +44,9 @@ static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
-static SemaphoreHandle_t ncp_serial_lock;
+static SemaphoreHandle_t ncp_serial_lock = NULL;
 static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
+static SemaphoreHandle_t tx_complete_lock = NULL;
 
 static TaskHandle_t ncpRXTaskHandle;
 
@@ -106,12 +107,12 @@ static bool queue_tx(const uint8_t *buff, size_t len, bm_serial_message_t messag
     memcpy(tmp_buf, buff, len);
     if (xQueueSend(ncp_tx_queue_handle, &q_msg, pdMS_TO_TICKS(10)) != pdTRUE) {
       vPortFree(tmp_buf);
-      printf("Could not queue buffer for NCP message transmission");
+      printf("Could not queue buffer for NCP message transmission\n");
     } else {
       rval = true;
     }
   } else {
-    printf("Could not allocate memory for NCP message transmission");
+    printf("Could not allocate memory for NCP message transmission\n");
   }
 
   return rval;
@@ -359,7 +360,8 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (value) {
-    lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+    // I think this one needs to go
+    // lpmPeripheralInactiveFromISR(LPM_USART3_RX);
     xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     ncp_rx = false;
   } else {
@@ -382,13 +384,13 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   configASSERT(ncpUartHandle);
   ncpSerialHandle = ncpUartHandle;
 
-  ncpSerialHandle->txStreamBuffer = xStreamBufferCreate(ncpSerialHandle->txBufferSize, 1);
-  configASSERT(ncpSerialHandle->txStreamBuffer != NULL);
+  // ncpSerialHandle->txStreamBuffer = xStreamBufferCreate(ncpSerialHandle->txBufferSize, 1);
+  // configASSERT(ncpSerialHandle->txStreamBuffer != NULL);
 
   ncpSerialHandle->interruptPin = &BM_INT;
 
-  ncpSerialHandle->preTxCb = ncpPreTxCb;
-  ncpSerialHandle->postTxCb = ncpPostTxCb;
+  // ncpSerialHandle->preTxCb = ncpPreTxCb;
+  // ncpSerialHandle->postTxCb = ncpPostTxCb;
 
   configASSERT(dfu_partition);
   configASSERT(power_controller);
@@ -404,6 +406,10 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
 
   ncp_serial_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_serial_lock);
+
+  tx_complete_lock = xSemaphoreCreateBinary();
+  configASSERT(tx_complete_lock);
+  xSemaphoreGive(tx_complete_lock);
 
   ncp_ctx.negotiating_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_ctx.negotiating_lock);
@@ -495,24 +501,30 @@ void ncpTxTask(void *parameters) {
     negotiate_event = NULL;
 
     if (res == pdPASS) {
-      if (xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS) {
+      if (xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS &&
+          xSemaphoreTake(tx_complete_lock, portMAX_DELAY) == pdPASS) {
         // reset the whole buff to zero
         memset(&ncp_tx_buff, 0, NCP_BUFF_LEN);
-
-        if (q_item.negotiate_event) {
-          negotiate_event = &ncp_ctx.event;
-        }
 
         // we then need to convert the whole thing to cobs!
         cobs_encode_result cobs_result =
             cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, q_item.buffer, q_item.len);
 
+
         if (cobs_result.status == COBS_ENCODE_OK) {
-          serialGenericTx(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1,
-                          negotiate_event);
+
+          if (q_item.negotiate_event) {
+            negotiate_event = &ncp_ctx.event;
+          }
+
+          ncpSerialHandle->arg = negotiate_event;
+          ncpPreTxCb(ncpSerialHandle);
+          HAL_UART_Transmit_DMA(&huart3, ncp_tx_buff, cobs_result.out_len + 1);
+        } else {
+          xSemaphoreGive(tx_complete_lock);
         }
       } else {
-        printf("Could not take serial lock to transmit message");
+        printf("Could not take serial lock to transmit message\n");
       }
     }
     vPortFree(q_item.buffer);
@@ -606,8 +618,8 @@ static void ncpBaudRateDiscovery(void) {
 // TODO - make this not USART3 dependent?
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
-  configASSERT(ncpSerialHandle);
-  serialGenericUartIRQHandler(ncpSerialHandle);
+  // configASSERT(ncpSerialHandle);
+  // serialGenericUartIRQHandler(ncpSerialHandle);
 
   HAL_UART_IRQHandler(&huart3);
   if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
@@ -643,6 +655,18 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   }
 
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+  portYIELD_FROM_ISR(higherPriorityTaskWoken);
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  (void)huart;
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
+  ncpPostTxCb(ncpSerialHandle);
+
+  // We are done transmitting, so we can give the semaphore to the task
+  xSemaphoreGiveFromISR(tx_complete_lock, &higherPriorityTaskWoken);
+  IOWrite(&TP10, 0);
+
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
