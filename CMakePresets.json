@@ -70,6 +70,13 @@
             }
         },
         {
+            "name": "borealis",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "../../../aos/borealis"
+            }
+        },
+        {
             "name": "bridge",
             "inherits": "default",
             "cacheVariables": {
@@ -90,7 +97,7 @@
             "cacheVariables": {
                 "APP": "bringup_bridge",
                 "BSP": "bridge_v1_0"
-                }
+            }
         },
         {
             "name": "bringup-mote",
@@ -269,6 +276,11 @@
         {
             "configurePreset": "borealis-fake",
             "name": "borealis-fake",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "borealis",
+            "name": "borealis",
             "jobs": 8
         },
         {

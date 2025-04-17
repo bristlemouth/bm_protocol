@@ -7,6 +7,7 @@
 
 #define SENSOR_TOPIC_PREFIX "sensor/"
 #define PSPL_TOPIC_SUFFIX "/aos/borealis/levels"
+#define PSPLS_TOPIC_SUFFIX "/aos/borealis/level_statistics"
 
 const char b64_hdr[][53] = {"ocd6ocd6ocd6ocd6ocd6ocd6ocd6ocd6ocd6ocd6ocd6ocd6ocd6",
                             "ocd6ocd6ocd6ocd6ocd6ocd6ocd67777ocd6ocd6ocd6ocd6ocd6",
@@ -54,12 +55,19 @@ static uint8_t cbor_buffer[1024];
 static uint64_t lastHdrPub = 0;
 static uint64_t lastLdrPub = 0;
 static bool firstRtc = false;
-static char topic[44];
+static char topic_hdr[44];
+static char topic_ldr[54];
 
 void setup(void) {
-  if (snprintf(topic, sizeof(topic), SENSOR_TOPIC_PREFIX "%016" PRIx64 PSPL_TOPIC_SUFFIX,
-               getNodeId()) >= (ssize_t)sizeof(topic)) {
-    printf("error: %s: could not construct topic string\n", __func__);
+  if (snprintf(topic_hdr, sizeof(topic_hdr),
+               SENSOR_TOPIC_PREFIX "%016" PRIx64 PSPL_TOPIC_SUFFIX,
+               getNodeId()) >= (ssize_t)sizeof(topic_hdr)) {
+    printf("error: %s: could not construct hdr pspl topic string\n", __func__);
+  }
+  if (snprintf(topic_ldr, sizeof(topic_ldr),
+               SENSOR_TOPIC_PREFIX "%016" PRIx64 PSPLS_TOPIC_SUFFIX,
+               getNodeId()) >= (ssize_t)sizeof(topic_ldr)) {
+    printf("error: %s: could not construct ldr pspls topic string\n", __func__);
   }
 }
 
@@ -70,9 +78,8 @@ static void publish_hdr(void) {
                                          .reading_uptime_millis = uptimeGetMs(),
                                          .sensor_reading_time_ms = 0},
                               .dt = 0.983f,
-                              .dt_report = 0.983f,
                               .first_band_index = 16,
-                              .levels_as_base64 = (char *)b64_hdr[hdr_message_counter++ % 18],
+                              .levels = (char *)b64_hdr[hdr_message_counter++ % 18],
                               .levels_length = 52};
 
   size_t encoded_len = 0;
@@ -83,7 +90,7 @@ static void publish_hdr(void) {
     return;
   }
 
-  BmErr b_err = bm_pub(topic, cbor_buffer, encoded_len, 0, 1);
+  BmErr b_err = bm_pub(topic_hdr, cbor_buffer, encoded_len, 0, 1);
   if (b_err != BmOK) {
     printf("%s: %llu: sending hdr pspl cbor message of length %u, bm_pub returns %d\r\n",
            __func__, uptimeGetMs(), (unsigned)encoded_len, b_err);
@@ -92,25 +99,26 @@ static void publish_hdr(void) {
 
 static void publish_ldr(void) {
   static uint8_t ldr_message_counter = 0;
-  struct borealis_levels d = {.header = {.version = 0,
-                                         .reading_time_utc_ms = 0,
-                                         .reading_uptime_millis = uptimeGetMs(),
-                                         .sensor_reading_time_ms = 0},
-                              .dt = 0.983f,
-                              .dt_report = 299.8f,
-                              .first_band_index = 16,
-                              .levels_as_base64 = (char *)b64_ldr[ldr_message_counter++ % 4],
-                              .levels_length = 260};
+  struct borealis_level_statistics d = {.header = {.version = 0,
+                                                   .reading_time_utc_ms = 0,
+                                                   .reading_uptime_millis = uptimeGetMs(),
+                                                   .sensor_reading_time_ms = 0},
+                                        .dt = 0.983f,
+                                        .dt_report = 299.8272f,
+                                        .first_band_index = 16,
+                                        .levels = (char *)b64_ldr[ldr_message_counter++ % 4],
+                                        .levels_length = 260,
+                                        .max_iqr = 0.1337f};
 
   size_t encoded_len = 0;
   CborError c_err;
-  if ((c_err = borealis_levels_encode(&d, cbor_buffer, sizeof(cbor_buffer), &encoded_len)) !=
-      CborNoError) {
-    printf("error: %s: borealis_levels_encode returns %d\r\n", __func__, c_err);
+  if ((c_err = borealis_levels_statistics_encode(&d, cbor_buffer, sizeof(cbor_buffer),
+                                                 &encoded_len)) != CborNoError) {
+    printf("error: %s: borealis_levels_statistics_encode returns %d\r\n", __func__, c_err);
     return;
   }
 
-  BmErr b_err = bm_pub(topic, cbor_buffer, encoded_len, 0, 1);
+  BmErr b_err = bm_pub(topic_ldr, cbor_buffer, encoded_len, 0, 1);
   if (b_err != BmOK) {
     printf("%s: %llu: sending ldr pspls cbor message of length %u, bm_pub returns %d\r\n",
            __func__, uptimeGetMs(), (unsigned)encoded_len, b_err);
