@@ -8,7 +8,6 @@
 
 #include "bsp.h"
 
-// #include "log.h"
 #include "bm_usart.h"
 #include "serial.h"
 #include "stm32_io.h"
