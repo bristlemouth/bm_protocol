@@ -220,6 +220,10 @@ void serialEnable(SerialHandle_t *handle) {
       usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
     }
 
+    if (handle->txStreamBuffer) {
+      xStreamBufferReset(handle->txStreamBuffer);
+    }
+
     if(handle->txPin) {
       STM32Pin_t *pin = (STM32Pin_t *)handle->txPin->pin;
       LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
@@ -229,6 +233,7 @@ void serialEnable(SerialHandle_t *handle) {
     (void)usart_ReceiveData8((USART_TypeDef *)handle->device);
 
     if (handle->rxStreamBuffer) {
+      xStreamBufferReset(handle->rxStreamBuffer);
       // Enable Uart RX interrupt
       usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
     }

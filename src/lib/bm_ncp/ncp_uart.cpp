@@ -25,10 +25,7 @@ extern "C" {
 #include "pubsub.h"
 #include "reset_reason.h"
 #include "stm32_rtc.h"
-#include "stm32u5xx_ll_usart.h"
 #include "task_priorities.h"
-
-// TODO - do I include these here or in another file?
 #include "usart.h"
 #include "stm32u5xx_hal_uart.h"
 
@@ -360,15 +357,13 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (value) {
-    // I think this one needs to go
-    // lpmPeripheralInactiveFromISR(LPM_USART3_RX);
     xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     ncp_rx = false;
   } else {
     xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
     ncp_rx = true;
-    HAL_UART_DMAStop(&huart3);
+    HAL_UART_AbortReceive(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, ncpRXBuff[ncpRXCurrBuff], NCP_BUFF_LEN);
   }
 
@@ -618,9 +613,6 @@ static void ncpBaudRateDiscovery(void) {
 // TODO - make this not USART3 dependent?
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
-  // configASSERT(ncpSerialHandle);
-  // serialGenericUartIRQHandler(ncpSerialHandle);
-
   HAL_UART_IRQHandler(&huart3);
   if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
     HAL_UART_DMAStop(&huart3);
@@ -654,10 +646,14 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
     }
   }
 
+  // Exit low power mode once the RX is complete
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
+// HAL_UART_TxCpltCallback is called when the transmission is complete.
+// This is called from the HAL_UART_IRQHandler function, which is called
+// above in the USART3_IRQHandler function.
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   (void)huart;
   BaseType_t higherPriorityTaskWoken = pdFALSE;
@@ -665,7 +661,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 
   // We are done transmitting, so we can give the semaphore to the task
   xSemaphoreGiveFromISR(tx_complete_lock, &higherPriorityTaskWoken);
-  IOWrite(&TP10, 0);
 
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
