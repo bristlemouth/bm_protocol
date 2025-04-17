@@ -611,16 +611,18 @@ extern "C" void USART3_IRQHandler(void) {
 
   HAL_UART_IRQHandler(&huart3);
   if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
-    // TODO - handle error
     HAL_UART_DMAStop(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, ncpRXBuff[ncpRXCurrBuff], NCP_BUFF_LEN);
   }
 }
 #endif
 
+// HAL_UARTEx_RxEventCallback is a weakly defined function in the STM32 UART HAL.
+// Here we are overriding the weak function to handle the RX event.
+// This function called from within HAL_UART_IRQHandler function,
+// which is called above in the USART3_IRQHandler function.
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   (void)huart;
-
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
@@ -641,7 +643,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   }
 
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
-
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
