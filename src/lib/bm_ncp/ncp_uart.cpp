@@ -595,7 +595,7 @@ static void ncpBaudRateDiscovery(void) {
   }
 
   if (!ncp_ctx.baud_found) {
-    serialSetBaudRate(ncpSerialHandle, 1000000);
+    serialSetBaudRate(ncpSerialHandle, 115200);
     // Send 0 to reset receiving buffer on spotter and reset our buffers just
     // incase anything was sent at a different baud rate
     ncpRXCurrBuff = 0;
