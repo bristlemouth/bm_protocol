@@ -379,13 +379,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   configASSERT(ncpUartHandle);
   ncpSerialHandle = ncpUartHandle;
 
-  // ncpSerialHandle->txStreamBuffer = xStreamBufferCreate(ncpSerialHandle->txBufferSize, 1);
-  // configASSERT(ncpSerialHandle->txStreamBuffer != NULL);
-
   ncpSerialHandle->interruptPin = &BM_INT;
-
-  // ncpSerialHandle->preTxCb = ncpPreTxCb;
-  // ncpSerialHandle->postTxCb = ncpPostTxCb;
 
   configASSERT(dfu_partition);
   configASSERT(power_controller);
