@@ -417,7 +417,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
 
   // Create the task
   BaseType_t rval = xTaskCreate(ncpTxTask, "NCP_TX", configMINIMAL_STACK_SIZE * 3, NULL,
-                                NCP_TASK_PRIORITY, &ncpRXTaskHandle);
+                                NCP_TASK_PRIORITY, NULL);
   configASSERT(rval == pdTRUE);
 
   rval = xTaskCreate(ncpRXTask, "NCP_RX", configMINIMAL_STACK_SIZE * 3, NULL, NCP_TASK_PRIORITY,
@@ -642,7 +642,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
       configASSERT(0);
     } else {
       // switch ncp buffers
-      ncpRXCurrBuff ^= 1;
+      ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     }
   }
 
