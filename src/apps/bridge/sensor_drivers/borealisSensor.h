@@ -14,6 +14,8 @@ private:
                                   uint8_t version);
   static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
   static constexpr char subtag_levels[] = "/aos/borealis/levels";
+  static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
+  static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 } Borealis_t;
 
 Borealis_t *createBorealisSensorSub(abstractSensorType_e type, uint64_t node_id);

@@ -43,6 +43,7 @@ static const CLI_Command_Definition_t cmd_bcmp = {
     " * bm ping <node_id>\n"
     " * bm cfg get <node_id> <partition(u/s)> <key>\n"
     " * bm cfg set <node_id> <partition(u/s)> <type(u/i/f/s/b)> <key> <value>\n"
+    " * bm cfg clear <node_id> <partition(u/s)>\n"
     " * bm cfg commit <node_id> <partition(u/s)>\n"
     " * bm cfg status <node_id> <partition(u/s)>\n"
     " * bm cfg del <node_id> <partition(u/s)> <key>\n"
@@ -70,6 +71,33 @@ static void updateSuccessCallback(bool success, BmDfuErr err, uint64_t node_id) 
   } else {
     printf("Update failed, err: %d\n", err);
   }
+}
+
+static inline bool get_command_values(const char *commandString, uint64_t *node_id,
+                                      BmConfigPartition *partition) {
+  const char *node_id_str;
+  BaseType_t node_id_str_len = 0;
+  const char *part_str;
+  BaseType_t part_str_len = 0;
+  bool ret = true;
+
+  node_id_str = FreeRTOS_CLIGetParameter(commandString, 3, &node_id_str_len);
+  part_str = FreeRTOS_CLIGetParameter(commandString, 4, &part_str_len);
+  if (!part_str || !node_id_str) {
+    printf("Invalid arguments\n");
+    ret = false;
+  }
+  *node_id = strtoull(node_id_str, NULL, 16);
+  if (strncmp("u", part_str, part_str_len) == 0) {
+    *partition = BM_CFG_PARTITION_USER;
+  } else if (strncmp("s", part_str, part_str_len) == 0) {
+    *partition = BM_CFG_PARTITION_SYSTEM;
+  } else {
+    printf("Invalid arguments\n");
+    ret = false;
+  }
+
+  return ret;
 }
 
 static void print_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -284,54 +312,41 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
         }
         vPortFree(cbor_buf);
       } else if (strncmp("commit", cmd_id_str, cmd_id_str_len) == 0) {
-        const char *node_id_str;
-        BaseType_t node_id_str_len = 0;
-        node_id_str = FreeRTOS_CLIGetParameter(commandString, 3, &node_id_str_len);
-        const char *part_str;
-        BaseType_t part_str_len = 0;
-        part_str = FreeRTOS_CLIGetParameter(commandString, 4, &part_str_len);
-        if (!part_str || !node_id_str) {
-          printf("Invalid arguments\n");
-          break;
-        }
-        uint64_t node_id = strtoull(node_id_str, NULL, 16);
+        uint64_t node_id;
         BmConfigPartition partition;
-        if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_CFG_PARTITION_USER;
-        } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_CFG_PARTITION_SYSTEM;
-        } else {
-          printf("Invalid arguments\n");
+        BmErr err;
+
+        if (!get_command_values(commandString, &node_id, &partition)) {
           break;
         }
-        BmErr err;
+
         if (bcmp_config_commit(node_id, partition, &err)) {
           printf("Successfully sent config commit msg\n");
         } else {
           printf("Failed to send config commit\n");
         }
-      } else if (strncmp("status", cmd_id_str, cmd_id_str_len) == 0) {
-        const char *node_id_str;
-        BaseType_t node_id_str_len = 0;
-        node_id_str = FreeRTOS_CLIGetParameter(commandString, 3, &node_id_str_len);
-        const char *part_str;
-        BaseType_t part_str_len = 0;
-        part_str = FreeRTOS_CLIGetParameter(commandString, 4, &part_str_len);
-        if (!part_str || !node_id_str) {
-          printf("Invalid arguments\n");
-          break;
-        }
-        uint64_t node_id = strtoull(node_id_str, NULL, 16);
+      } else if (strncmp("clear", cmd_id_str, cmd_id_str_len) == 0) {
+        uint64_t node_id;
         BmConfigPartition partition;
-        if (strncmp("u", part_str, part_str_len) == 0) {
-          partition = BM_CFG_PARTITION_USER;
-        } else if (strncmp("s", part_str, part_str_len) == 0) {
-          partition = BM_CFG_PARTITION_SYSTEM;
-        } else {
-          printf("Invalid arguments\n");
+
+        if (!get_command_values(commandString, &node_id, &partition)) {
           break;
         }
+
+        if (bcmp_config_clear_partition(node_id, partition, NULL)) {
+          printf("Successfully sent config clear partition msg\n");
+        } else {
+          printf("Failed to send config clear partition\n");
+        }
+      } else if (strncmp("status", cmd_id_str, cmd_id_str_len) == 0) {
+        uint64_t node_id;
+        BmConfigPartition partition;
         BmErr err;
+
+        if (!get_command_values(commandString, &node_id, &partition)) {
+          break;
+        }
+
         if (bcmp_config_status_request(node_id, partition, &err, NULL)) {
           printf("Successfully sent status request msg\n");
         } else {

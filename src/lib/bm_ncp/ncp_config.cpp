@@ -13,6 +13,7 @@ BmErr _cfg_get_bcmp_cb(uint8_t *payload);
 BmErr _cfg_set_bcmp_cb(uint8_t *payload);
 BmErr _cfg_status_request_bcmp_cb(uint8_t *payload);
 BmErr _cfg_key_del_bcmp_cb(uint8_t *payload);
+BmErr _cfg_clear_bcmp_cb(uint8_t *payload);
 
 bool ncp_cfg_get_cb(uint64_t node_id, BmConfigPartition partition, size_t key_len,
                     const char *key) {
@@ -66,7 +67,7 @@ bool ncp_cfg_set_cb(uint64_t node_id, BmConfigPartition partition, size_t key_le
     } else {
       BmErr err = BmOK;
       if (!bcmp_config_set(node_id, (BmConfigPartition)partition, key_len, key, value_size, val,
-                           &err, _cfg_get_bcmp_cb)) {
+                           &err, _cfg_set_bcmp_cb)) {
         bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                        "Failed to issue bcmp cfg set, err: %" PRIi8 "\n", err);
         break;
@@ -154,6 +155,28 @@ bool ncp_cfg_key_del_request_cb(uint64_t node_id, BmConfigPartition partition, s
   return rval;
 }
 
+bool ncp_cfg_clear_request_cb(uint64_t node_id, BmConfigPartition partition) {
+  bool rval = false;
+  do {
+    if (node_id == getNodeId() || node_id == 0) {
+      bool success = clear_partition(partition);
+      if (bm_serial_cfg_clear_response(node_id, partition, success) != BM_SERIAL_OK) {
+        printf("Failed to send key del response\n");
+        break;
+      }
+      rval = true;
+    } else {
+      if (!bcmp_config_clear_partition(node_id, partition, _cfg_clear_bcmp_cb)) {
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to issue bcmp cfg del\n");
+        break;
+      }
+    }
+    rval = true;
+  } while (0);
+  return rval;
+}
+
 void ncp_cfg_init(void) {}
 
 /* NOTE: Caller must free allocated buffer */
@@ -165,8 +188,7 @@ static uint8_t *alloc_ncp_key_buffer(uint8_t num_keys, const ConfigKey *keys, si
   }
   uint8_t *buf = reinterpret_cast<uint8_t *>(pvPortMalloc(len));
   configASSERT(buf);
-  BmConfigStatusKeyData *key_data =
-      reinterpret_cast<BmConfigStatusKeyData *>(buf);
+  BmConfigStatusKeyData *key_data = reinterpret_cast<BmConfigStatusKeyData *>(buf);
   for (int i = 0; i < num_keys; i++) {
     key_data->key_length = keys[i].key_len;
     memcpy(key_data->key, keys[i].key_buf, keys[i].key_len);
@@ -209,8 +231,7 @@ BmErr _cfg_set_bcmp_cb(uint8_t *payload) {
 BmErr _cfg_status_request_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
-    BmConfigStatusResponse *msg =
-        reinterpret_cast<BmConfigStatusResponse *>(payload);
+    BmConfigStatusResponse *msg = reinterpret_cast<BmConfigStatusResponse *>(payload);
     if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition,
                                       msg->committed, msg->num_keys,
                                       msg->keyData) != BM_SERIAL_OK) {
@@ -227,8 +248,7 @@ BmErr _cfg_status_request_bcmp_cb(uint8_t *payload) {
 BmErr _cfg_key_del_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
-    BmConfigDeleteKeyResponse *msg =
-        reinterpret_cast<BmConfigDeleteKeyResponse *>(payload);
+    BmConfigDeleteKeyResponse *msg = reinterpret_cast<BmConfigDeleteKeyResponse *>(payload);
     if (bm_serial_cfg_delete_response(msg->header.source_node_id, msg->partition,
                                       msg->key_length, msg->key,
                                       msg->success) != BM_SERIAL_OK) {
@@ -238,5 +258,22 @@ BmErr _cfg_key_del_bcmp_cb(uint8_t *payload) {
   } else {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to delete cfg\n");
   }
+  return rval;
+}
+
+BmErr _cfg_clear_bcmp_cb(uint8_t *payload) {
+  BmErr rval = BmOK;
+
+  if (payload != NULL) {
+    BmConfigClearResponse *msg = reinterpret_cast<BmConfigClearResponse *>(payload);
+    if (bm_serial_cfg_clear_response(msg->header.source_node_id, msg->partition,
+                                     msg->success) != BM_SERIAL_OK) {
+      printf("Failed to send config clear response\n");
+      rval = BmEBADMSG;
+    }
+  } else {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, "Failed to clear cfg\n");
+  }
+
   return rval;
 }
