@@ -1,6 +1,5 @@
 #include "borealisSensor.h"
 #include "FreeRTOS.h"
-#include "app_config.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
@@ -15,8 +14,32 @@
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
 
-static constexpr char READING_PERIOD_KEY[] = "bandsSampleTimeMs";
-static struct BorealisSensor *CURRENT_SUB;
+struct BorealisSensor *CURRENT_SUB = NULL;
+bool BorealisSensor::AGGREGATION_REPORTS = false;
+
+/*!
+ @brief Initialize Borealis Sensor Module
+
+ @details This will only run once to setup the borealis units on the network
+ */
+void BorealisSensor::init(void) {
+  static bool initialized = false;
+  uint32_t samples_per_report = 0;
+
+  if (!initialized) {
+    AGGREGATION_REPORTS = report_builder_get_transmit_aggregations();
+    samples_per_report = report_builder_get_samples_per_report();
+
+    if (samples_per_report > MAX_SAMPLES_PER_REPORT) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                     "Number of configured sensor reports higher than recommended for BOREALIS "
+                     "system and there may be issues upon reporting data to Sofar"
+                     " backend, Configured - %d, Recommended - %d\n",
+                     samples_per_report, MAX_SAMPLES_PER_REPORT);
+    }
+    initialized = true;
+  }
+}
 
 /*!
  @brief Subscribe To Borealis Topic
@@ -243,11 +266,10 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
         if (borealis_levels_statistics_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
           BorealisLevelsStatistics_t *level_statistics =
               reinterpret_cast<BorealisLevelsStatistics_t *>(borealis);
-          power_config_s power_cfg = getPowerConfigs();
 
           level_statistics->stats = d;
 
-          if (!power_cfg.bridgePowerControllerEnabled) {
+          if (!AGGREGATION_REPORTS) {
             // Free levels information here as it will not be aggregated
             bm_free(d.levels);
           }
@@ -329,8 +351,9 @@ Borealis_t *createBorealisSensorSub(abstractSensorType type, uint64_t node_id) {
       ret->next = nullptr;
       ret->m_reading_period_ms = BorealisSensor::DEFAULT_BOREALIS_READING_PERIOD_MS;
       CURRENT_SUB = ret;
-      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM, strlen(READING_PERIOD_KEY),
-                      READING_PERIOD_KEY, &err, borealisConfigCb);
+      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
+                      strlen(BorealisSensor::READING_PERIOD_KEY),
+                      BorealisSensor::READING_PERIOD_KEY, &err, borealisConfigCb);
     }
 
     if (!ret->_mutex || err != BmOK) {

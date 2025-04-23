@@ -324,6 +324,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "borealis",
                          MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
+        BorealisSensor::init();
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS_SPECTRUM)) {
           Borealis_t *borealis_spectrum_sub =
               createBorealisSensorSub(SENSOR_TYPE_BOREALIS_SPECTRUM, reply.node_id);

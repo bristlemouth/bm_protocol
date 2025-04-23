@@ -8,8 +8,12 @@
 
 typedef struct BorealisSensor : public AbstractSensor {
 public:
+  static void init(void);
   bool subscribe() override;
   static constexpr uint32_t DEFAULT_BOREALIS_READING_PERIOD_MS = 1000;
+  static bool AGGREGATION_REPORTS;
+  static struct BorealisSensor *CURRENT_SUB;
+  static constexpr char READING_PERIOD_KEY[] = "bandsSampleTimeMs";
 
 private:
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -19,6 +23,8 @@ private:
   static constexpr char subtag_levels[] = "/aos/borealis/levels";
   static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
   static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
+
+  static constexpr uint32_t MAX_SAMPLES_PER_REPORT = 1;
 } Borealis_t;
 
 typedef struct BorealisSensorLevelStatistics : public BorealisSensor {

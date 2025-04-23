@@ -1063,3 +1063,28 @@ uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
   }
   return rval;
 }
+
+/*!
+ @brief Obtain the number of samples per report (number of intervals)
+
+ @return Number of samples per report
+ */
+uint32_t report_builder_get_samples_per_report(void) { return _ctx._samplesPerReport; }
+
+/*!
+ @brief Determine if the report builder will transmit aggregation reports
+
+ @details Aggregated reports will only be true if the the bridge has the power
+          controller enabled as well as the configuration value set to transmit
+          aggregations
+
+ @return true if it will transmit aggregation reports, false otherwise
+ */
+bool report_builder_get_transmit_aggregations(void) {
+  bool ret = false;
+  power_config_s power_cfg = getPowerConfigs();
+
+  ret = _ctx._transmitAggregations > 0 && power_cfg.bridgePowerControllerEnabled;
+
+  return ret;
+}
