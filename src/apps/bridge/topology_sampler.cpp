@@ -68,6 +68,7 @@ static bool _send_on_boot;
 static node_list_s _node_list;
 static QueueHandle_t _sys_info_queue;
 static QueueHandle_t _config_cbor_map_queue;
+static SemaphoreHandle_t _sys_info_handshake;
 
 static void topology_timer_handler(TimerHandle_t tmr);
 static void topology_sampler_task(void *parameters);
@@ -118,14 +119,27 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
     bool exit = false;
 
     // Iterate through the entire list of nodes and request the sys info.
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Bridge topology in topology sampler:\n");
     for (cursor = networkTopology->front, counter = 0;
          (cursor != NULL) && (counter < _node_list.num_nodes);
          cursor = cursor->nextNode, counter++) {
       _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
-      if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
-                                    NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
-        printf("Failed to send sys info request to node: %" PRIu64 "\n",
-               _node_list.nodes[counter]);
+      if (xSemaphoreTake(_sys_info_handshake,
+                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) == pdTRUE) {
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
+                       _node_list.nodes[counter]);
+        if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
+                                      NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
+          printf("Failed to send sys info request to node: %" PRIu64 "\n",
+                 _node_list.nodes[counter]);
+          exit = true;
+          break;
+        }
+      } else {
+        bridgeLogPrint(
+            BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+            "Failed to take sys_info semaphore when generating config topology report\n");
         exit = true;
         break;
       }
@@ -298,6 +312,9 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
   if (!rval && reply.app_name) {
     vPortFree(reply.app_name);
   }
+
+  xSemaphoreGive(_sys_info_handshake);
+
   return rval;
 }
 
@@ -396,8 +413,7 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
         break;
       }
       // Update the network crc with all of the node crcs
-      if (xQueueReceive(_sys_info_queue, &info_reply,
-                        pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS))) {
+      if (xQueueReceive(_sys_info_queue, &info_reply, 0) == pdTRUE) {
 
         // This function will use the app name to determine the sensor type and update the _node_list.sensor_type array
         // so that the reportBuilder can pull the sensor type from the node id. The sensor type array must match the
@@ -581,6 +597,10 @@ void topology_sampler_init(BridgePowerController *power_controller) {
   _config_cbor_map_queue =
       xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(ConfigCborMapReplyData));
   configASSERT(_config_cbor_map_queue);
+  _sys_info_handshake = xSemaphoreCreateBinary();
+  configASSERT(_sys_info_handshake);
+  xSemaphoreGive(_sys_info_handshake);
+
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
                                 TOPO_SAMPLER_TASK_PRIORITY, NULL);
@@ -820,8 +840,7 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
       } else if (strncmp(app_name, "seapoint_turbidity", strlen("seapoint_turbidity")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_SEAPOINT_TURBIDITY;
         break;
-      } else if (strncmp(app_name, "pme_do_sensor", strlen("pme_do_sensor")) ==
-                 0) {
+      } else if (strncmp(app_name, "pme_do_sensor", strlen("pme_do_sensor")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_PME_DO;
         break;
       }
