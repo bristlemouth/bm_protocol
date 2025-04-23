@@ -843,6 +843,9 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
       } else if (strncmp(app_name, "pme_do_sensor", strlen("pme_do_sensor")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_PME_DO;
         break;
+      } else if (strncmp(app_name, "borealis", strlen("borealis")) == 0) {
+        _node_list.sensor_type[i] = SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS;
+        break;
       }
     }
   }

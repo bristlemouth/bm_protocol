@@ -1,8 +1,9 @@
 #include "borealisSensor.h"
 #include "FreeRTOS.h"
-#include "bm_borealis.h"
+#include "app_config.h"
 #include "bm_config.h"
 #include "bm_os.h"
+#include "bridgeLog.h"
 #include "bristlemouth.h"
 #include "messages/config.h"
 #include "pubsub.h"
@@ -56,6 +57,122 @@ bool BorealisSensor::subscribe() {
     bm_free(sub);
   }
   return ret;
+}
+
+/*!
+ @brief Aggregate Data To Send To Report Builder
+
+ @details This takes the latest level statistics messages and sends it to the SENS_AGG
+          file on spotter, calculates SPL and entropy, as well as adds the message
+          LevelStatisticsData_t to the report builder.
+ */
+void BorealisSensorLevelStatistics::aggregate(void) {
+  uint32_t count = 0;
+  BmErr err = BmOK;
+  LevelStatisticsData_t *data = NULL;
+  uint32_t data_size = sizeof(LevelStatisticsData_t) + stats.levels_length;
+
+  if (stats.dt != 0) {
+    data = reinterpret_cast<LevelStatisticsData_t *>(bm_malloc(data_size));
+    if (data) {
+      memset(data, 0, data_size);
+      count = (uint32_t)(stats.dt_report / stats.dt);
+      err = send_spotter_log_aggregate("borealis", count, "%.3f,%.3f,%.3f,%u,%.*s\n", stats.dt,
+                                       stats.dt_report, stats.max_iqr, stats.first_band_index,
+                                       stats.levels_length, stats.levels);
+
+      if (err != BmOK) {
+        bm_debug("Failed to send borealis aggregated log to spotter, reason: %d\n", err);
+      }
+
+      // TODO: logic needs to be implemented around this
+      data->is_extended = 1;
+
+      // TODO: these need calculations or updates
+      data->spl = 0;
+      data->maq_iqr_band = 0;
+      data->entropy = 0;
+
+      data->maq_iqr = stats.max_iqr;
+
+      if (data->is_extended) {
+        data->spl_band_stats_size = stats.levels_length;
+        memcpy(data->spl_bands_stats, stats.levels, stats.levels_length);
+      }
+
+      reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS, data,
+                              sizeof(LevelStatisticsData_t) + stats.levels_length,
+                              REPORT_BUILDER_SAMPLE_MESSAGE);
+      bm_free(data);
+    } else {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to allocate memory for Borealis level statistics memory in %s\n",
+                     __func__);
+    }
+  }
+
+  // Free stats levels message
+  bm_free(stats.levels);
+  stats = (struct borealis_level_statistics){};
+}
+
+/*!
+ @brief Encode A Levels Statistics Sample
+
+ @details Used by report builder to CBOR encode an aggregated sample of Borealis data.
+
+ @param data data to be encoded
+ @param sample_index index of data to be accessed
+ @param context sensor report context for the data to be encoded to
+
+ @return BmOK on success
+ @return BmErr on failure
+ */
+BmErr BorealisSensorLevelStatistics::encode_sample(void *data, uint32_t sample_index,
+                                                   sensor_report_encoder_context_t &context) {
+  BmErr err = BmOK;
+  LevelStatisticsData_t borealis_data =
+      static_cast<LevelStatisticsData_t *>(data)[sample_index];
+  uint8_t num_fields = NUM_AOS_BOREALIS_FIELDS;
+
+  if (borealis_data.is_extended) {
+    num_fields = NUM_AOS_BOREALIS_FIELDS_EXTENDED;
+  }
+
+  if (sensor_report_encoder_open_sample(context, num_fields, "bm_aos_borealis_v0") !=
+      CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to open borealis sample in %s\n", __func__);
+    err = BmEBADMSG;
+  }
+
+  if (err == BmOK &&
+      (sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+                                               &borealis_data.is_extended) != CborNoError ||
+       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+                                               &borealis_data.spl) != CborNoError ||
+       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+                                               &borealis_data.maq_iqr) != CborNoError ||
+       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+                                               &borealis_data.maq_iqr_band) != CborNoError ||
+       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+                                               &borealis_data.entropy) != CborNoError ||
+       (borealis_data.is_extended &&
+        sensor_report_encoder_add_sample_member(
+            context, encode_string_sample_member, borealis_data.spl_bands_stats,
+            borealis_data.spl_band_stats_size) != CborNoError))) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add borealis level statistics sample member in %s\n", __func__);
+    err = BmEBADMSG;
+  }
+
+  if (err == BmOK && sensor_report_encoder_close_sample(context) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to close sample in %s\n", __func__);
+    err = BmEBADMSG;
+  }
+
+  return err;
 }
 
 /*!
@@ -124,12 +241,19 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
       case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
         struct borealis_level_statistics d;
         if (borealis_levels_statistics_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
-          err = borealis->send_spotter_log_individual(
-              "borealis", d.header,
-              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
-              "%.3f,%.3f,%.3f,%u,%.*s\n", d.dt, d.dt_report, d.max_iqr, d.first_band_index,
-              d.levels_length, d.levels);
-          bm_free(d.levels);
+          BorealisLevelsStatistics_t *level_statistics =
+              reinterpret_cast<BorealisLevelsStatistics_t *>(borealis);
+          power_config_s power_cfg = getPowerConfigs();
+
+          level_statistics->stats = d;
+
+          if (!power_cfg.bridgePowerControllerEnabled) {
+            // Free levels information here as it will not be aggregated
+            bm_free(d.levels);
+          }
+          err = BmOK;
+        } else {
+          err = BmEBADMSG;
         }
       } break;
       case SENSOR_TYPE_BOREALIS_RECORDING_STATUS: {
@@ -180,12 +304,22 @@ static BmErr borealisConfigCb(uint8_t *payload) {
  @return nullptr on failure
  */
 Borealis_t *createBorealisSensorSub(abstractSensorType type, uint64_t node_id) {
-  Borealis_t *sub = static_cast<Borealis_t *>(bm_malloc(sizeof(Borealis_t)));
   Borealis_t *ret = nullptr;
   BmErr err = BmOK;
 
-  if (sub) {
-    ret = new (sub) Borealis_t();
+  if (type == SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS) {
+    Borealis_t *sub = static_cast<Borealis_t *>(bm_malloc(sizeof(BorealisLevelsStatistics_t)));
+    if (sub) {
+      ret = new (sub) BorealisLevelsStatistics_t();
+    }
+  } else {
+    Borealis_t *sub = static_cast<Borealis_t *>(bm_malloc(sizeof(Borealis_t)));
+    if (sub) {
+      ret = new (sub) Borealis_t();
+    }
+  }
+
+  if (ret) {
 
     ret->_mutex = xSemaphoreCreateMutex();
 
@@ -201,7 +335,7 @@ Borealis_t *createBorealisSensorSub(abstractSensorType type, uint64_t node_id) {
 
     if (!ret->_mutex || err != BmOK) {
       bm_debug("Failed to create borealis sensor err: %d\n", err);
-      bm_free(sub);
+      bm_free(ret);
       ret = nullptr;
     }
   } else {

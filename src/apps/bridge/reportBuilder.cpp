@@ -4,6 +4,7 @@
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bm_serial.h"
+#include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "cbor_sensor_report_encoder.h"
 #include "device_info.h"
@@ -89,7 +90,7 @@ private:
               void *sensor_data, uint32_t sensor_data_size, uint32_t samples_per_report,
               uint32_t sample_counter);
   void addSampleToElement(report_builder_element_t *element, uint8_t sensor_type,
-                          void *sensor_data, uint32_t sample_counter);
+                          void *sensor_data, uint32_t sample_counter, uint32_t size = 0);
 
   report_builder_element_t *head;
   size_t size;
@@ -161,7 +162,7 @@ ReportBuilderLinkedList::newElement(uint64_t node_id, uint8_t sensor_type, void 
   configASSERT(element->sensor_data != NULL);
   memset(element->sensor_data, 0, samples_per_report * sensor_data_size);
 
-  addSampleToElement(element, sensor_type, sensor_data, sample_counter);
+  addSampleToElement(element, sensor_type, sensor_data, sample_counter, sensor_data_size);
 
   element->next = NULL;
   element->prev = NULL;
@@ -203,121 +204,43 @@ void ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
  */
 void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *element,
                                                  uint8_t sensor_type, void *sensor_data,
-                                                 uint32_t sample_counter) {
+                                                 uint32_t sample_counter, uint32_t size) {
+  void *dst = NULL;
+  const void *nan = NULL;
   switch (sensor_type) {
   case SENSOR_TYPE_AANDERAA: {
-    if (element->sample_counter < sample_counter) {
-      // Back fill the sensor_data with NANs if we are not on the right sample counter
-      // We use the element->sample_counter to track within each element how many samples
-      // the element has received.
-      for (; element->sample_counter < sample_counter; element->sample_counter++) {
-        memcpy(&(static_cast<aanderaa_aggregations_t *>(
-                   element->sensor_data))[element->sample_counter],
-               &NAN_AGG, sizeof(aanderaa_aggregations_t));
-      }
-    }
-
-    // Copy the sensor data into the elements array in the correct location within the buffer
-    // If it is NULL then just fill it with NAN again
-    if (sensor_data != NULL) {
-      memcpy(&(static_cast<aanderaa_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             sensor_data, sizeof(aanderaa_aggregations_t));
-    } else {
-      memcpy(&(static_cast<aanderaa_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             &NAN_AGG, sizeof(aanderaa_aggregations_t));
-    }
-    element->sample_counter++;
+    nan = &NAN_AGG;
+    dst = &(
+        static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_SOFT: {
-    if (element->sample_counter < sample_counter) {
-      // Back fill the sensor_data with NANs if we are not on the right sample counter
-      // We use the element->sample_counter to track within each element how many samples
-      // the element has received.
-      for (; element->sample_counter < sample_counter; element->sample_counter++) {
-        memcpy(&(static_cast<soft_aggregations_t *>(
-                   element->sensor_data))[element->sample_counter],
-               &SOFT_NAN_AGG, sizeof(soft_aggregations_t));
-      }
-    }
-    if (sensor_data != NULL) {
-      memcpy(
-          &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter],
-          sensor_data, sizeof(soft_aggregations_t));
-    } else {
-      memcpy(
-          &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter],
-          &SOFT_NAN_AGG, sizeof(soft_aggregations_t));
-    }
-    element->sample_counter++;
+    nan = &SOFT_NAN_AGG;
+    dst = &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_RBR_CODA: {
-    if (element->sample_counter < sample_counter) {
-      // Back fill the sensor_data with NANs if we are not on the right sample counter
-      // We use the element->sample_counter to track within each element how many samples
-      // the element has received.
-      for (; element->sample_counter < sample_counter; element->sample_counter++) {
-        memcpy(&(static_cast<rbr_coda_aggregations_t *>(
-                   element->sensor_data))[element->sample_counter],
-               &RBR_CODA_NAN_AGG, sizeof(rbr_coda_aggregations_t));
-      }
-    }
-    if (sensor_data != NULL) {
-      memcpy(&(static_cast<rbr_coda_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             sensor_data, sizeof(rbr_coda_aggregations_t));
-    } else {
-      memcpy(&(static_cast<rbr_coda_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             &RBR_CODA_NAN_AGG, sizeof(rbr_coda_aggregations_t));
-    }
-    element->sample_counter++;
+    nan = &RBR_CODA_NAN_AGG;
+    dst = &(
+        static_cast<rbr_coda_aggregations_t *>(element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
-    if (element->sample_counter < sample_counter) {
-      // Back fill the sensor_data with NANs if we are not on the right sample counter
-      // We use the element->sample_counter to track within each element how many samples
-      // the element has received.
-      for (; element->sample_counter < sample_counter; element->sample_counter++) {
-        memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
-                   element->sensor_data))[element->sample_counter],
-               &seapoint_turbidity_NAN_AGG, sizeof(seapoint_turbidity_aggregations_t));
-      }
-    }
-    if (sensor_data != NULL) {
-      memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             sensor_data, sizeof(seapoint_turbidity_aggregations_t));
-    } else {
-      memcpy(&(static_cast<seapoint_turbidity_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             &seapoint_turbidity_NAN_AGG, sizeof(seapoint_turbidity_aggregations_t));
-    }
-    element->sample_counter++;
+    nan = &seapoint_turbidity_NAN_AGG;
+    dst = &(static_cast<seapoint_turbidity_aggregations_t *>(
+        element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_PME_DO: {
-    if (element->sample_counter < sample_counter) {
-      for (; element->sample_counter < sample_counter; element->sample_counter++) {
-        memcpy(&(static_cast<pme_dissolved_oxygen_aggregations_t *>(
-                   element->sensor_data))[element->sample_counter],
-               &PME_DO_NAN_AGG, sizeof(pme_dissolved_oxygen_aggregations_t));
-      }
-    }
-    if (sensor_data != NULL) {
-      memcpy(&(static_cast<pme_dissolved_oxygen_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             sensor_data, sizeof(pme_dissolved_oxygen_aggregations_t));
-    } else {
-      memcpy(&(static_cast<pme_dissolved_oxygen_aggregations_t *>(
-                 element->sensor_data))[element->sample_counter],
-             &PME_DO_NAN_AGG, sizeof(pme_dissolved_oxygen_aggregations_t));
-    }
-    element->sample_counter++;
+    nan = &PME_DO_NAN_AGG;
+    dst = &(static_cast<pme_dissolved_oxygen_aggregations_t *>(
+        element->sensor_data))[element->sample_counter];
+    break;
+  }
+  case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
+    nan = &BorealisSensorLevelStatistics::AOS_BOREALIS_NAN_AGG;
+    dst = &(static_cast<BorealisSensorLevelStatistics::LevelStatisticsData_t *>(
+        element->sensor_data))[element->sample_counter];
     break;
   }
   default: {
@@ -327,6 +250,26 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     break;
   }
   }
+
+  if (dst && nan && size) {
+    if (element->sample_counter < sample_counter) {
+      // Back fill the sensor_data with NANs if we are not on the right sample counter
+      // We use the element->sample_counter to track within each element how many samples
+      // the element has received.
+      for (; element->sample_counter < sample_counter; element->sample_counter++) {
+        memcpy(dst, nan, size);
+        dst = static_cast<uint8_t *>(dst) + size;
+      }
+    }
+    // Copy the sensor data into the elements array in the correct location within the buffer
+    // If it is NULL then just fill it with NAN again
+    if (sensor_data != NULL) {
+      memcpy(dst, sensor_data, size);
+    } else {
+      memcpy(dst, nan, size);
+    }
+    element->sample_counter++;
+  }
 }
 
 /**
@@ -335,7 +278,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
  * This function finds the element associated with the given node_id in the linked list. If the element is found, it adds the sensor data to the element. If the element is not found, it creates a new element and appends it to the linked list.
  *
  * @param node_id The ID of the node for the report.
- * @param sensor_type The type of the sensor for the report.
+ * @parem sensor_type The type of the sensor for the report.
  * @param sensor_data Pointer to the sensor data for the report.
  * @param sensor_data_size The size of the sensor data.
  * @param samples_per_report The number of samples per report.
@@ -347,7 +290,7 @@ void ReportBuilderLinkedList::findElementAndAddSampleToElement(
     uint32_t samples_per_report, uint32_t sample_counter) {
   report_builder_element_t *element = findElement(node_id);
   if (element != NULL) {
-    addSampleToElement(element, sensor_type, sensor_data, sample_counter);
+    addSampleToElement(element, sensor_type, sensor_data, sample_counter, sensor_data_size);
   } else {
     if (head == NULL && size == 0) {
       append(NULL, node_id, sensor_type, sensor_data, sensor_data_size, samples_per_report,
@@ -404,14 +347,39 @@ void ReportBuilderLinkedList::clear() {
   size = 0;
 }
 
-CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member) {
+CborError encode_string_sample_member(CborEncoder &sample_array, void *sample_member,
+                                      uint32_t size) {
+  const char *local_sample_member = (const char *)sample_member;
+  CborError err = CborNoError;
+  if (size) {
+    err = cbor_encode_text_string(&sample_array, local_sample_member, size);
+  } else {
+    err = CborErrorTooFewItems;
+  }
+  return err;
+}
+
+CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
+                                      uint32_t size) {
+  (void)size;
   double local_sample_member = *(double *)sample_member;
   CborError err = CborNoError;
   err = cbor_encode_double(&sample_array, local_sample_member);
   return err;
 }
 
-CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member) {
+CborError encode_uint8_sample_member(CborEncoder &sample_array, void *sample_member,
+                                     uint32_t size) {
+  (void)size;
+  uint8_t local_sample_member = *(uint8_t *)sample_member;
+  CborError err = CborNoError;
+  err = cbor_encode_uint(&sample_array, local_sample_member);
+  return err;
+}
+
+CborError encode_uint32_sample_member(CborEncoder &sample_array, void *sample_member,
+                                      uint32_t size) {
+  (void)size;
   uint32_t local_sample_member = *(uint32_t *)sample_member;
   CborError err = CborNoError;
   err = cbor_encode_uint(&sample_array, local_sample_member);
@@ -529,7 +497,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                      "Failed to add sample member in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
+    if (sensor_report_encoder_add_sample_member(context, encode_uint32_sample_member,
                                                 &aanderaa_sample.reading_count) !=
         CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
@@ -721,6 +689,13 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
+  case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
+    if (BorealisSensorLevelStatistics::encode_sample(sensor_data, sample_index, context) ==
+        BmOK) {
+      rval = true;
+    }
+    break;
+  }
   default: {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Received invalid sensor type in addSamplesToReport\n");
@@ -817,49 +792,34 @@ static void report_builder_task(void *parameters) {
                       _ctx._report_period_node_list[i]);
                   if (element == NULL) {
                     if (_ctx._report_period_sensor_type_list[i] > SENSOR_TYPE_UNKNOWN) {
+                      size_t size = 0;
                       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                                      "No data for node %016" PRIx64
                                      " in report period, adding it to the list\n",
                                      _ctx._report_period_node_list[i]);
                       switch (_ctx._report_period_sensor_type_list[i]) {
                       case SENSOR_TYPE_AANDERAA: {
-                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
-                            _ctx._report_period_node_list[i],
-                            _ctx._report_period_sensor_type_list[i], NULL,
-                            sizeof(aanderaa_aggregations_t), _ctx._samplesPerReport,
-                            (_ctx._sample_counter - 1));
+                        size = sizeof(aanderaa_aggregations_t);
                         break;
                       }
                       case SENSOR_TYPE_SOFT: {
-                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
-                            _ctx._report_period_node_list[i],
-                            _ctx._report_period_sensor_type_list[i], NULL,
-                            sizeof(soft_aggregations_t), _ctx._samplesPerReport,
-                            (_ctx._sample_counter - 1));
+                        size = sizeof(soft_aggregations_t);
                         break;
                       }
                       case SENSOR_TYPE_RBR_CODA: {
-                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
-                            _ctx._report_period_node_list[i],
-                            _ctx._report_period_sensor_type_list[i], NULL,
-                            sizeof(rbr_coda_aggregations_t), _ctx._samplesPerReport,
-                            (_ctx._sample_counter - 1));
+                        size = sizeof(rbr_coda_aggregations_t);
                         break;
                       }
                       case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
-                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
-                            _ctx._report_period_node_list[i],
-                            _ctx._report_period_sensor_type_list[i], NULL,
-                            sizeof(seapoint_turbidity_aggregations_t), _ctx._samplesPerReport,
-                            (_ctx._sample_counter - 1));
+                        size = sizeof(seapoint_turbidity_aggregations_t);
                         break;
                       }
                       case SENSOR_TYPE_PME_DO: {
-                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
-                            _ctx._report_period_node_list[i],
-                            _ctx._report_period_sensor_type_list[i], NULL,
-                            sizeof(pme_dissolved_oxygen_aggregations_t), _ctx._samplesPerReport,
-                            (_ctx._sample_counter - 1));
+                        size = sizeof(pme_dissolved_oxygen_aggregations_t);
+                        break;
+                      }
+                      case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
+                        size = sizeof(BorealisSensorLevelStatistics::LevelStatisticsData_t);
                         break;
                       }
                       default: {
@@ -867,6 +827,12 @@ static void report_builder_task(void *parameters) {
                                        "Invalid sensor type in report_builder_task\n");
                         break;
                       }
+                      }
+                      if (size) {
+                        _ctx._reportBuilderLinkedList.findElementAndAddSampleToElement(
+                            _ctx._report_period_node_list[i],
+                            _ctx._report_period_sensor_type_list[i], NULL, size,
+                            _ctx._samplesPerReport, (_ctx._sample_counter - 1));
                       }
                     } else {
                       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
@@ -995,7 +961,7 @@ static void report_builder_task(void *parameters) {
           if (temp_network_crc32 != _ctx._report_period_max_network_crc32) {
             bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                            "Getting topology in report builder!\n");
-            uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+            uint64_t temp_node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE] = {};
             size_t temp_node_list_size = sizeof(temp_node_list);
             uint32_t temp_num_nodes;
             if (topology_sampler_get_node_list(temp_node_list, temp_node_list_size,

@@ -183,6 +183,10 @@ static void runController(void *param) {
           } else if (curr->type == SENSOR_TYPE_PME_WIPE) {
             PmeWipeSensor *pme_wiper = static_cast<PmeWipeSensor *>(curr);
             pme_wiper->aggregate();
+          } else if (curr->type == SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS) {
+            BorealisLevelsStatistics_t *level_statistics =
+                static_cast<BorealisLevelsStatistics_t *>(curr);
+            level_statistics->aggregate();
           }
           curr = curr->next;
         }
