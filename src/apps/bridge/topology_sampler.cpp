@@ -125,18 +125,17 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
          (cursor != NULL) && (counter < _node_list.num_nodes);
          cursor = cursor->nextNode, counter++) {
       _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
+      bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
+                     _node_list.nodes[counter]);
+      if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
+                                    NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
+        printf("Failed to send sys info request to node: %" PRIu64 "\n",
+               _node_list.nodes[counter]);
+        exit = true;
+        break;
+      }
       if (xSemaphoreTake(_sys_info_handshake,
-                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) == pdTRUE) {
-        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
-                       _node_list.nodes[counter]);
-        if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
-                                      NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
-          printf("Failed to send sys info request to node: %" PRIu64 "\n",
-                 _node_list.nodes[counter]);
-          exit = true;
-          break;
-        }
-      } else {
+                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) != pdTRUE) {
         bridgeLogPrint(
             BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
             "Failed to take sys_info semaphore when generating config topology report\n");
@@ -227,7 +226,6 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
 
     // The first four inputs are not used by this message type
     reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
-
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);
 
@@ -599,7 +597,6 @@ void topology_sampler_init(BridgePowerController *power_controller) {
   configASSERT(_config_cbor_map_queue);
   _sys_info_handshake = xSemaphoreCreateBinary();
   configASSERT(_sys_info_handshake);
-  xSemaphoreGive(_sys_info_handshake);
 
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
