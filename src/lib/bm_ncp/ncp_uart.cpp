@@ -620,7 +620,15 @@ extern "C" void USART3_IRQHandler(void) {
 // This function called from within HAL_UART_IRQHandler function,
 // which is called above in the USART3_IRQHandler function.
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
-  (void)huart;
+
+
+  if (huart->hdmarx->State == HAL_DMA_STATE_BUSY) {
+    // If DMA is still busy then that means we are being called by the Half Complete interrupt callback.
+    // Since we are waiting for the idle line and our buffer can hold the whole message,
+    // lets just skip the half complete interrupt.
+    return;
+  }
+
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
