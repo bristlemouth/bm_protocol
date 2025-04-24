@@ -631,6 +631,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
   BaseType_t higherPriorityTaskWoken = pdFALSE;
 
+  // Lets only notify the task and rotate the buffers id we recieved data
   if (len > 0) {
     // set the length of the current buff to the idx - 1 since we don't need the 0x00
     ncpRXBuffLen[ncpRXCurrBuff] = len - 1;
@@ -647,7 +648,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
     }
   }
 
-  // Exit low power mode once the RX is complete
+  // Exit low power mode now that RX is complete
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
