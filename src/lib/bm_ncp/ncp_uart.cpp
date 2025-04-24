@@ -621,11 +621,10 @@ extern "C" void USART3_IRQHandler(void) {
 // which is called above in the USART3_IRQHandler function.
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
 
-
+  // If DMA is still busy then that means we are being called by the Half Complete interrupt callback.
+  // Since we are waiting for the idle line and our buffer can hold the whole message,
+  // lets just skip the half complete interrupt.
   if (huart->hdmarx->State == HAL_DMA_STATE_BUSY) {
-    // If DMA is still busy then that means we are being called by the Half Complete interrupt callback.
-    // Since we are waiting for the idle line and our buffer can hold the whole message,
-    // lets just skip the half complete interrupt.
     return;
   }
 
