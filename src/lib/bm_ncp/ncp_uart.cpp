@@ -25,9 +25,9 @@ extern "C" {
 #include "pubsub.h"
 #include "reset_reason.h"
 #include "stm32_rtc.h"
+#include "stm32u5xx_hal_uart.h"
 #include "task_priorities.h"
 #include "usart.h"
-#include "stm32u5xx_hal_uart.h"
 
 static constexpr uint8_t NCP_PROCESSOR_RX_QUEUE_DEPTH = 16;
 static constexpr uint8_t NCP_PROCESSOR_TX_QUEUE_DEPTH = 16;
@@ -364,7 +364,8 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
     ncp_rx = true;
     HAL_UART_AbortReceive(&huart3);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]), NCP_BUFF_LEN);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
+                                 NCP_BUFF_LEN);
   }
 
   return xHigherPriorityTaskWoken;
@@ -499,7 +500,6 @@ void ncpTxTask(void *parameters) {
         cobs_encode_result cobs_result =
             cobs_encode(&ncp_tx_buff, NCP_BUFF_LEN - 1, q_item.buffer, q_item.len);
 
-
         if (cobs_result.status == COBS_ENCODE_OK) {
 
           if (q_item.negotiate_event) {
@@ -537,11 +537,12 @@ void ncpRXTask(void *parameters) {
     // this is used to determine which static buffer to read from
     uint8_t bufferIdx = taskNotifyValue;
     // Decode the COBS
-    cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN,
-      (const void*)ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
-      memset(const_cast<uint8_t *>(ncpRXBuff[bufferIdx]), 0, NCP_BUFF_LEN);
-      // Allocate a buffer for the ncpRXProcessor to process the data.
-      // Note that ncpRXProcessor will be in charge of freeing that data.
+    cobs_decode_result cobs_result =
+        cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN, (const void *)ncpRXBuff[bufferIdx],
+                    ncpRXBuffLen[bufferIdx]);
+    memset(const_cast<uint8_t *>(ncpRXBuff[bufferIdx]), 0, NCP_BUFF_LEN);
+    // Allocate a buffer for the ncpRXProcessor to process the data.
+    // Note that ncpRXProcessor will be in charge of freeing that data.
     if (cobs_result.out_len > 0) {
       uint8_t *processor_buffer = static_cast<uint8_t *>(pvPortMalloc(cobs_result.out_len));
       configASSERT(processor_buffer);
@@ -610,7 +611,8 @@ extern "C" void USART3_IRQHandler(void) {
   HAL_UART_IRQHandler(&huart3);
   if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
     HAL_UART_DMAStop(&huart3);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]), NCP_BUFF_LEN);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
+                                 NCP_BUFF_LEN);
   }
 }
 #endif
@@ -639,7 +641,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
     ncpRXBuffLen[ncpRXCurrBuff] = len - 1;
 
     BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff),
-                                        eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
+                                         eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
     if (rval == pdFALSE) {
       // previous packet still pending, 😬
       // TODO - track dropped packets?
