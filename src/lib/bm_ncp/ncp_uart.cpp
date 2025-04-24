@@ -35,8 +35,8 @@ static constexpr uint8_t NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS = 10;
 static constexpr uint8_t NCP_RX_BUFF_COUNT = 2;
 static constexpr uint16_t NCP_BUFF_LEN = 2048;
 static volatile uint8_t ncpRXCurrBuff = 0;
-static uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
-static uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
+static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
+static volatile uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
 static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
@@ -364,7 +364,7 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
     ncp_rx = true;
     HAL_UART_AbortReceive(&huart3);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, ncpRXBuff[ncpRXCurrBuff], NCP_BUFF_LEN);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]), NCP_BUFF_LEN);
   }
 
   return xHigherPriorityTaskWoken;
@@ -538,8 +538,8 @@ void ncpRXTask(void *parameters) {
     uint8_t bufferIdx = taskNotifyValue;
     // Decode the COBS
     cobs_decode_result cobs_result = cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN,
-      ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
-      memset(ncpRXBuff[bufferIdx], 0, NCP_BUFF_LEN);
+      (const void*)ncpRXBuff[bufferIdx], ncpRXBuffLen[bufferIdx]);
+      memset(const_cast<uint8_t *>(ncpRXBuff[bufferIdx]), 0, NCP_BUFF_LEN);
       // Allocate a buffer for the ncpRXProcessor to process the data.
       // Note that ncpRXProcessor will be in charge of freeing that data.
     if (cobs_result.out_len > 0) {
@@ -610,7 +610,7 @@ extern "C" void USART3_IRQHandler(void) {
   HAL_UART_IRQHandler(&huart3);
   if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
     HAL_UART_DMAStop(&huart3);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, ncpRXBuff[ncpRXCurrBuff], NCP_BUFF_LEN);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]), NCP_BUFF_LEN);
   }
 }
 #endif
@@ -619,6 +619,8 @@ extern "C" void USART3_IRQHandler(void) {
 // Here we are overriding the weak function to handle the RX event.
 // This function called from within HAL_UART_IRQHandler function,
 // which is called above in the USART3_IRQHandler function.
+// It can also be called from the DMA IRQ at a half complete
+// interrupt event, and we have special handling for that case.
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
 
   // If DMA is still busy then that means we are being called by the Half Complete interrupt callback.
