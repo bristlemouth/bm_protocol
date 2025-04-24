@@ -37,6 +37,12 @@ bool BorealisSensor::subscribe() {
   case SENSOR_TYPE_BOREALIS_LEVELS:
     subtag = subtag_levels;
     break;
+  case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS:
+    subtag = subtag_level_statistics;
+    break;
+  case SENSOR_TYPE_BOREALIS_RECORDING_STATUS:
+    subtag = subtag_recstatus;
+    break;
   default:
     break;
   }
@@ -79,6 +85,10 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
     sensor_type = SENSOR_TYPE_BOREALIS_SPECTRUM;
   } else if (strstr(topic, subtag_levels) != NULL) {
     sensor_type = SENSOR_TYPE_BOREALIS_LEVELS;
+  } else if (strstr(topic, subtag_level_statistics) != NULL) {
+    sensor_type = SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS;
+  } else if (strstr(topic, subtag_recstatus) != NULL) {
+    sensor_type = SENSOR_TYPE_BOREALIS_RECORDING_STATUS;
   }
 
   if (sensor_type != SENSOR_TYPE_UNKNOWN) {
@@ -91,23 +101,46 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
     if (xSemaphoreTake(borealis->_mutex, portMAX_DELAY) == pdTRUE) {
       switch (borealis->type) {
       case SENSOR_TYPE_BOREALIS_SPECTRUM: {
-        borealis_spectrum_data d;
+        struct borealis_spectrum_data d;
         if (borealis_spectrum_data_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
           err = borealis->send_spotter_log_individual(
               "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
-              "%.3f,%.3f,%u,%s\n", d.dt, d.df, d.bands_per_octave, d.spectrum_as_base64);
+              "%.3f,%.3f,%u,%.*s\n", d.dt, d.df, d.bands_per_octave, d.spectrum_length,
+              d.spectrum_as_base64);
           bm_free(d.spectrum_as_base64);
         }
       } break;
       case SENSOR_TYPE_BOREALIS_LEVELS: {
-        borealis_levels d;
+        struct borealis_levels d;
         if (borealis_levels_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
           err = borealis->send_spotter_log_individual(
               "borealis", d.header,
+              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
+              d.dt, d.first_band_index, d.levels_length, d.levels);
+          bm_free(d.levels);
+        }
+      } break;
+      case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
+        struct borealis_level_statistics d;
+        if (borealis_levels_statistics_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
+          err = borealis->send_spotter_log_individual(
+              "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
-              "%.3f,%.3f,%u,%s\n", d.dt, d.dt_report, d.first_band_index, d.levels_as_base64);
-          bm_free(d.levels_as_base64);
+              "%.3f,%.3f,%.3f,%u,%.*s\n", d.dt, d.dt_report, d.max_iqr, d.first_band_index,
+              d.levels_length, d.levels);
+          bm_free(d.levels);
+        }
+      } break;
+      case SENSOR_TYPE_BOREALIS_RECORDING_STATUS: {
+        struct borealis_recording_status d;
+        if (borealis_recording_status_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
+          err = borealis->send_spotter_log_individual(
+              "borealis", d.header,
+              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
+              "%.u,%.3f,%.3f,%.*s\n", d.flags, d.seconds_written, d.seconds_free,
+              d.filename_length, d.filename);
+          bm_free(d.filename);
         }
       } break;
       default:
