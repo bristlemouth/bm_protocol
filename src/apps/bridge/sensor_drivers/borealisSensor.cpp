@@ -31,11 +31,12 @@ void BorealisSensor::init(void) {
     samples_per_report = report_builder_get_samples_per_report();
 
     if (samples_per_report > MAX_SAMPLES_PER_REPORT) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                     "Number of configured sensor reports higher than recommended for BOREALIS "
-                     "system and there may be issues upon reporting data to Sofar"
-                     " backend, Configured - %d, Recommended - %d\n",
-                     samples_per_report, MAX_SAMPLES_PER_REPORT);
+      bridgeLogPrint(
+          BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+          "Number of configured samplesPerReport higher than recommended for BOREALIS"
+          " system there may be issues upon reporting data to Sofar"
+          " backend, Configured - %d, Recommended - %d\n",
+          samples_per_report, MAX_SAMPLES_PER_REPORT);
     }
     initialized = true;
   }
