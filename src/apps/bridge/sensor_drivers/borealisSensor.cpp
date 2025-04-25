@@ -134,9 +134,8 @@ bool BorealisSensor::subscribe() {
 /*!
  @brief Aggregate Data To Send To Report Builder
 
- @details This takes the latest level statistics messages and sends it to the SENS_AGG
-          file on spotter, calculates SPL and entropy, as well as adds the message
-          LevelStatisticsData_t to the report builder.
+ @details This takes the latest level statistics messages calculates SPL and entropy,
+          as well as adds the message LevelStatisticsData_t to the report builder.
  */
 void BorealisSensorLevelStatistics::aggregate(void) {
   LevelStatisticsData_t *data = NULL;
