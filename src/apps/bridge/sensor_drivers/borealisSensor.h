@@ -1,19 +1,26 @@
 #pragma once
 
+#include "FreeRTOS.h"
 #include "abstractSensor.h"
 #include "bm_borealis.h"
 #include "cbor_sensor_report_encoder.h"
+#include "semphr.h"
 
 #include "util.h"
 
 typedef struct BorealisSensor : public AbstractSensor {
 public:
   static void init(void);
+  static inline bool config_handshake_give(void);
+  static inline bool config_handshake_wait(void);
   bool subscribe() override;
+  static bool s_aggregation_reports;
+  static SemaphoreHandle_t s_config_callback_handshake;
   static constexpr uint32_t DEFAULT_BOREALIS_READING_PERIOD_MS = 1000;
-  static bool AGGREGATION_REPORTS;
-  static struct BorealisSensor *CURRENT_SUB;
+  static constexpr uint32_t CALLBACK_HANDSHAKE_TIMEOUT_MS = 250;
+  static constexpr float LEVEL_STATISTICS_DEFAULT_PERIOD_S = 300.0;
   static constexpr char READING_PERIOD_KEY[] = "bandsSampleTimeMs";
+  static constexpr char LEVEL_STATISTICS_PERIOD_KEY[] = "report_interval";
 
 private:
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -24,7 +31,7 @@ private:
   static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
   static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 
-  static constexpr uint32_t MAX_SAMPLES_PER_REPORT = 1;
+  static constexpr uint32_t MAX_SAMPLES_PER_REPORT = 2;
 } Borealis_t;
 
 typedef struct BorealisSensorLevelStatistics : public BorealisSensor {
@@ -46,6 +53,8 @@ public:
                              sensor_report_encoder_context_t &context);
 
   struct borealis_level_statistics stats;
+
+  BorealisSensorLevelStatistics() : stats({}) {}
 
 private:
   static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS = 5;

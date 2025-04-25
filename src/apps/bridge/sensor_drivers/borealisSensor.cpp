@@ -1,12 +1,11 @@
 #include "borealisSensor.h"
-#include "FreeRTOS.h"
+#include "app_config.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
 #include "bristlemouth.h"
 #include "messages/config.h"
 #include "pubsub.h"
-#include "semphr.h"
 #include "sensorController.h"
 #include <inttypes.h>
 #include <new>
@@ -14,8 +13,9 @@
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
 
-struct BorealisSensor *CURRENT_SUB = NULL;
-bool BorealisSensor::AGGREGATION_REPORTS = false;
+struct BorealisSensor *s_current_sub = NULL;
+bool BorealisSensor::s_aggregation_reports = false;
+SemaphoreHandle_t BorealisSensor::s_config_callback_handshake = NULL;
 
 /*!
  @brief Initialize Borealis Sensor Module
@@ -27,7 +27,12 @@ void BorealisSensor::init(void) {
   uint32_t samples_per_report = 0;
 
   if (!initialized) {
-    AGGREGATION_REPORTS = report_builder_get_transmit_aggregations();
+
+    s_config_callback_handshake = xSemaphoreCreateBinary();
+    if (!s_config_callback_handshake) {
+      bm_debug("Failed to create borealis semaphore in %s\n", __func__);
+    }
+    s_aggregation_reports = report_builder_get_transmit_aggregations();
     samples_per_report = report_builder_get_samples_per_report();
 
     if (samples_per_report > MAX_SAMPLES_PER_REPORT) {
@@ -35,11 +40,44 @@ void BorealisSensor::init(void) {
           BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
           "Number of configured samplesPerReport higher than recommended for BOREALIS"
           " system there may be issues upon reporting data to Sofar"
-          " backend, Configured - %d, Recommended - %d\n",
+          " backend: Configured - %d, Recommended - %d\n",
           samples_per_report, MAX_SAMPLES_PER_REPORT);
     }
     initialized = true;
   }
+}
+
+/*!
+ @brief Give Config Callback Handshake Semaphore
+
+ @return true on success, false on failure
+ */
+inline bool BorealisSensor::config_handshake_give(void) {
+  bool ret = true;
+  if (xSemaphoreGive(BorealisSensor::s_config_callback_handshake) != pdTRUE) {
+    bm_debug("Failed to take give BOREALIS handshake semaphore\n");
+    ret = false;
+  }
+
+  return ret;
+}
+
+/*!
+ @brief Take Config Callback Handshake Semaphore
+
+ @return true on success, false on failure
+ */
+inline bool BorealisSensor::config_handshake_wait(void) {
+  bool ret = true;
+
+  if (xSemaphoreTake(BorealisSensor::s_config_callback_handshake,
+                     pdMS_TO_TICKS(BorealisSensor::CALLBACK_HANDSHAKE_TIMEOUT_MS)) != pdTRUE) {
+    bm_debug("Failed to take config handshake semaphore, BOREALIS may not have configuration "
+             "value set\n");
+    ret = false;
+  }
+
+  return ret;
 }
 
 /*!
@@ -91,23 +129,13 @@ bool BorealisSensor::subscribe() {
           LevelStatisticsData_t to the report builder.
  */
 void BorealisSensorLevelStatistics::aggregate(void) {
-  uint32_t count = 0;
-  BmErr err = BmOK;
   LevelStatisticsData_t *data = NULL;
   uint32_t data_size = sizeof(LevelStatisticsData_t) + stats.levels_length;
 
-  if (stats.dt != 0) {
+  if (stats.dt != 0 && xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
     data = reinterpret_cast<LevelStatisticsData_t *>(bm_malloc(data_size));
     if (data) {
       memset(data, 0, data_size);
-      count = (uint32_t)(stats.dt_report / stats.dt);
-      err = send_spotter_log_aggregate("borealis", count, "%.3f,%.3f,%.3f,%u,%.*s\n", stats.dt,
-                                       stats.dt_report, stats.max_iqr, stats.first_band_index,
-                                       stats.levels_length, stats.levels);
-
-      if (err != BmOK) {
-        bm_debug("Failed to send borealis aggregated log to spotter, reason: %d\n", err);
-      }
 
       // TODO: logic needs to be implemented around this
       data->is_extended = 1;
@@ -133,6 +161,7 @@ void BorealisSensorLevelStatistics::aggregate(void) {
                      "Failed to allocate memory for Borealis level statistics memory in %s\n",
                      __func__);
     }
+    xSemaphoreGive(_mutex);
   }
 
   // Free stats levels message
@@ -268,11 +297,27 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
           BorealisLevelsStatistics_t *level_statistics =
               reinterpret_cast<BorealisLevelsStatistics_t *>(borealis);
 
-          level_statistics->stats = d;
+          if (level_statistics->stats.levels) {
+            // This would be an indication that the user has configured BOREALIS' report_interval
+            // to be less than half of the bridge power controller's sampleDurationMs, we cannot
+            // send multiple of level stat messages yet and need to free the unused string
+            bm_free(level_statistics->stats.levels);
+          }
 
-          if (!AGGREGATION_REPORTS) {
+          // Send to aggregate report every time this is reached
+          err = borealis->send_spotter_log_aggregate(
+              "borealis", (uint32_t)(d.dt_report / d.dt), "%.3f,%.3f,%.3f,%u,%.*s\n", d.dt,
+              d.dt_report, d.max_iqr, d.first_band_index, d.levels_length, d.levels);
+
+          if (err != BmOK) {
+            bm_debug("Failed to send borealis aggregated log to spotter, reason: %d\n", err);
+          }
+
+          if (!s_aggregation_reports) {
             // Free levels information here as it will not be aggregated
             bm_free(d.levels);
+          } else {
+            level_statistics->stats = d;
           }
           err = BmOK;
         } else {
@@ -303,16 +348,120 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
   }
 }
 
-static BmErr borealisConfigCb(uint8_t *payload) {
+/*!
+ @brief Inform User If Borealis Level Statistics Report Interval Is Incorrect
+
+ @details If the report interval for level statistics is higher than 1 per sampling duration
+          (is less than half the sample duration on bridge's power controller),
+          inform the user that it is not going to work as expected. If the report interval
+          is zero (greater than the sample duration on bridge's power controller) report to
+          the user that no reports will be sent to the backend. Ensure that the report interval
+          is not set to zero as well.
+
+ @param default_config Whether to use the default period or not
+                       ref: BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S
+ @param period_s report_interval period in seconds
+ */
+static void
+borealisLevelsDurationEval(bool default_config,
+                           float period_s = BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S) {
+  power_config_s pwr_cfg = getPowerConfigs();
+  float sample_duration_ms = static_cast<float>(
+      pwr_cfg.subsampleEnabled ? pwr_cfg.subsampleDurationMs : pwr_cfg.sampleDurationMs);
+  // Subtract 20 seconds as a buffer for BOREALIS boot, time it takes to get RTC and reporting time
+  float recommended_sample_duration_s = sample_duration_ms / 1000.0 - 20.0;
+  uint8_t num_level_stats_per_duration = 0;
+
+  if (period_s == 0.0) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "BOREALIS report_interval set to zero, please reconfigure to: %f\n",
+                   recommended_sample_duration_s);
+    return;
+  }
+
+  if (recommended_sample_duration_s < 0.0) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Bridge sampleDurationMs too low for BOREALIS data reporting, please "
+                   "reconfigure to a higher value\n");
+    return;
+  }
+
+  if (default_config) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Failed to get report_interval from BOREALIS, using default value: %.3f\n",
+                   BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S);
+    period_s = BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S;
+  }
+
+  num_level_stats_per_duration = static_cast<uint8_t>(recommended_sample_duration_s / period_s);
+  if (num_level_stats_per_duration > 1) {
+    bridgeLogPrint(
+        BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+        "Number of BOREALIS level statistics messages higher than recommended, "
+        "multiple level statistics messages cannot be reported to Sofar backend"
+        " in a single sample duration, only the last level statistics message will "
+        "be reported, please change report_interval: Configured - %.3f, Recommended - %.3f\n",
+        period_s, recommended_sample_duration_s);
+  } else if (num_level_stats_per_duration == 0) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Number of BOREALIS level statistics messages is zero "
+                   "hydrophone data will not be reported to Sofar backend, please change "
+                   "report_interval: Configured - %.3f, Recommended - %.3f\n",
+                   period_s, recommended_sample_duration_s);
+  }
+}
+
+/*!
+ @brief Callback For Get Request To BOREALIS Reading Period In Milliseconds
+
+ @details Obtains the reading period for BOREALIS spectrum and levels messages
+
+ @param payload configuration value holding reading period 
+
+ @return BmOK on success, BmErr on failure
+ */
+static BmErr borealisReadingPeriodConfigCb(uint8_t *payload) {
   BmErr err = BmENODATA;
 
-  if (payload && CURRENT_SUB) {
+  if (payload && s_current_sub) {
     BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
     size_t size = sizeof(AbstractSensor::m_reading_period_ms);
     err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
-                                   &CURRENT_SUB->m_reading_period_ms, &size);
-    CURRENT_SUB = NULL;
+                                   &s_current_sub->m_reading_period_ms, &size);
   }
+
+  BorealisSensor::config_handshake_give();
+
+  return err;
+}
+
+/*!
+ @brief Callback For Get Request To BOREALIS Level Statistics Interval In Seconds
+
+ @details Obtains the level statistics calculation interval for BOREALIS
+
+ @param payload configuration value holding calculation interval 
+
+ @return BmOK on success, BmErr on failure
+ */
+static BmErr borealisLevelsStatisticsPeriodConfigCb(uint8_t *payload) {
+  BmErr err = BmENODATA;
+  float level_statistics_period_s = 0;
+  bool default_config = false;
+
+  if (payload && s_current_sub) {
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
+    size_t size = sizeof(level_statistics_period_s);
+    err = bcmp_config_decode_value(FLOAT, msg->data, msg->data_length,
+                                   &level_statistics_period_s, &size);
+    if (err != BmOK) {
+      default_config = true;
+    }
+
+    borealisLevelsDurationEval(default_config, level_statistics_period_s);
+  }
+
+  BorealisSensor::config_handshake_give();
 
   return err;
 }
@@ -351,10 +500,23 @@ Borealis_t *createBorealisSensorSub(abstractSensorType type, uint64_t node_id) {
       ret->type = type;
       ret->next = nullptr;
       ret->m_reading_period_ms = BorealisSensor::DEFAULT_BOREALIS_READING_PERIOD_MS;
-      CURRENT_SUB = ret;
-      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
-                      strlen(BorealisSensor::READING_PERIOD_KEY),
-                      BorealisSensor::READING_PERIOD_KEY, &err, borealisConfigCb);
+      s_current_sub = ret;
+      if (type == SENSOR_TYPE_BOREALIS_LEVELS || type == SENSOR_TYPE_BOREALIS_SPECTRUM) {
+        bcmp_config_get(
+            node_id, BM_CFG_PARTITION_SYSTEM, strlen(BorealisSensor::READING_PERIOD_KEY),
+            BorealisSensor::READING_PERIOD_KEY, &err, borealisReadingPeriodConfigCb);
+        BorealisSensor::config_handshake_wait();
+      }
+      if (type == SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS) {
+        bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,
+                        strlen(BorealisSensor::LEVEL_STATISTICS_PERIOD_KEY),
+                        BorealisSensor::LEVEL_STATISTICS_PERIOD_KEY, &err,
+                        borealisLevelsStatisticsPeriodConfigCb);
+        if (!BorealisSensor::config_handshake_wait()) {
+          borealisLevelsDurationEval(true);
+        }
+      }
+      s_current_sub = NULL;
     }
 
     if (!ret->_mutex || err != BmOK) {
