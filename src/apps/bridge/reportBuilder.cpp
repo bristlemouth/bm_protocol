@@ -278,7 +278,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
  * This function finds the element associated with the given node_id in the linked list. If the element is found, it adds the sensor data to the element. If the element is not found, it creates a new element and appends it to the linked list.
  *
  * @param node_id The ID of the node for the report.
- * @parem sensor_type The type of the sensor for the report.
+ * @param sensor_type The type of the sensor for the report.
  * @param sensor_data Pointer to the sensor data for the report.
  * @param sensor_data_size The size of the sensor data.
  * @param samples_per_report The number of samples per report.

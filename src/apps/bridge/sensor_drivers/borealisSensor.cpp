@@ -8,6 +8,7 @@
 #include "pubsub.h"
 #include "sensorController.h"
 #include <inttypes.h>
+#include <math.h>
 #include <new>
 #include <string.h>
 
@@ -25,6 +26,7 @@ SemaphoreHandle_t BorealisSensor::s_config_callback_handshake = NULL;
 void BorealisSensor::init(void) {
   static bool initialized = false;
   uint32_t samples_per_report = 0;
+  power_config_s pwr_cfg = {};
 
   if (!initialized) {
 
@@ -38,11 +40,19 @@ void BorealisSensor::init(void) {
     if (samples_per_report > MAX_SAMPLES_PER_REPORT) {
       bridgeLogPrint(
           BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-          "Number of configured samplesPerReport higher than recommended for BOREALIS"
-          " system there may be issues upon reporting data to Sofar"
-          " backend: Configured - %d, Recommended - %d\n",
+          "Number of configured samplesPerReport higher than recommended for BOREALIS "
+          "system, there may be issues upon reporting data remotely: "
+          "Configured - %d, Recommended - %d\n",
           samples_per_report, MAX_SAMPLES_PER_REPORT);
     }
+
+    if (pwr_cfg.subsampleEnabled) {
+      bridgeLogPrint(
+          BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+          "Subsampling enabled, be aware that BOREALIS data will only transmit last "
+          "collected level statistics message in sampleDurationsMs period remotely\n");
+    }
+
     initialized = true;
   }
 }
@@ -360,10 +370,11 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
 
  @param default_config Whether to use the default period or not
                        ref: BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S
+ @param node_id Node ID of the system being evaluated
  @param period_s report_interval period in seconds
  */
 static void
-borealisLevelsDurationEval(bool default_config,
+borealisLevelsDurationEval(bool default_config, uint64_t node_id,
                            float period_s = BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S) {
   power_config_s pwr_cfg = getPowerConfigs();
   float sample_duration_ms = static_cast<float>(
@@ -374,40 +385,44 @@ borealisLevelsDurationEval(bool default_config,
 
   if (period_s == 0.0) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "BOREALIS report_interval set to zero, please reconfigure to: %f\n",
-                   recommended_sample_duration_s);
+                   "BOREALIS report_interval set to zero on %016" PRIx64
+                   " , please reconfigure to: %f\n",
+                   node_id, recommended_sample_duration_s);
     return;
   }
 
   if (recommended_sample_duration_s < 0.0) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Bridge sampleDurationMs too low for BOREALIS data reporting, please "
+                   "Bridge sampleDurationMs too low for BOREALIS remote reporting, please "
                    "reconfigure to a higher value\n");
     return;
   }
 
   if (default_config) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Failed to get report_interval from BOREALIS, using default value: %.3f\n",
-                   BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S);
+                   "Failed to get report_interval from BOREALIS on %016" PRIx64
+                   " , using default value: %.3f\n",
+                   node_id, BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S);
     period_s = BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S;
   }
 
   num_level_stats_per_duration = static_cast<uint8_t>(recommended_sample_duration_s / period_s);
+
   if (num_level_stats_per_duration > 1) {
     bridgeLogPrint(
         BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-        "Number of BOREALIS level statistics messages higher than recommended, "
-        "multiple level statistics messages cannot be reported to Sofar backend"
-        " in a single sample duration, only the last level statistics message will "
-        "be reported, please change report_interval: Configured - %.3f, Recommended - %.3f\n",
-        period_s, recommended_sample_duration_s);
+        "Number of BOREALIS level statistics messages higher than recommended on %016" PRIx64
+        ", multiple level statistics messages cannot be reported remotely"
+        " only the last level statistics message will be reported, please change"
+        " report_interval: Configured - %.3f, Recommended - %.3f\n",
+        node_id, period_s, recommended_sample_duration_s);
   } else if (num_level_stats_per_duration == 0) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Number of BOREALIS level statistics messages is zero "
-                   "hydrophone data will not be reported to Sofar backend, please change "
+                   "Number of BOREALIS level statistics messages is zero per reporting "
+                   "interval on %016" PRIx64
+                   ", level statistics data will not be reported remotely, please change "
                    "report_interval: Configured - %.3f, Recommended - %.3f\n",
-                   period_s, recommended_sample_duration_s);
+                   node_id, period_s, recommended_sample_duration_s);
   }
 }
 
@@ -458,7 +473,8 @@ static BmErr borealisLevelsStatisticsPeriodConfigCb(uint8_t *payload) {
       default_config = true;
     }
 
-    borealisLevelsDurationEval(default_config, level_statistics_period_s);
+    borealisLevelsDurationEval(default_config, s_current_sub->node_id,
+                               level_statistics_period_s);
   }
 
   BorealisSensor::config_handshake_give();
@@ -513,7 +529,7 @@ Borealis_t *createBorealisSensorSub(abstractSensorType type, uint64_t node_id) {
                         BorealisSensor::LEVEL_STATISTICS_PERIOD_KEY, &err,
                         borealisLevelsStatisticsPeriodConfigCb);
         if (!BorealisSensor::config_handshake_wait()) {
-          borealisLevelsDurationEval(true);
+          borealisLevelsDurationEval(true, s_current_sub->node_id);
         }
       }
       s_current_sub = NULL;
