@@ -151,10 +151,10 @@ void BorealisSensorLevelStatistics::aggregate(void) {
 
       // TODO: these need calculations or updates
       data->spl = 0;
-      data->maq_iqr_band = 0;
+      data->max_iqr_band = 0
       data->entropy = 0;
 
-      data->maq_iqr = stats.max_iqr;
+      data->max_iqr = stats.max_iqr;
 
       if (data->is_extended) {
         data->spl_band_stats_size = stats.levels_length;
@@ -214,9 +214,9 @@ BmErr BorealisSensorLevelStatistics::encode_sample(void *data, uint32_t sample_i
        sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
                                                &borealis_data.spl) != CborNoError ||
        sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
-                                               &borealis_data.maq_iqr) != CborNoError ||
+                                               &borealis_data.max_iqr) != CborNoError ||
        sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
-                                               &borealis_data.maq_iqr_band) != CborNoError ||
+                                               &borealis_data.max_iqr_band) != CborNoError ||
        sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
                                                &borealis_data.entropy) != CborNoError ||
        (borealis_data.is_extended &&

@@ -39,8 +39,8 @@ public:
   typedef struct {
     uint8_t is_extended;
     uint8_t spl;
-    uint8_t maq_iqr;
-    uint8_t maq_iqr_band;
+    uint8_t max_iqr;
+    uint8_t max_iqr_band;
     uint8_t entropy;
     uint8_t spl_band_stats_size;
     uint8_t spl_bands_stats[0];
