@@ -15,9 +15,19 @@
 #include <string.h>
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
+#define NUM_TIME_SLICES 305
+#define NUM_STATS 4
 
 static constexpr char READING_PERIOD_KEY[] = "bandsSampleTimeMs";
 static struct BorealisSensor *CURRENT_SUB;
+static struct LevelsCalculationContext {
+  float spl_db[NUM_TIME_SLICES][NUM_BANDS];
+  float entropy[NUM_TIME_SLICES];
+  float stats[NUM_BANDS][NUM_STATS];
+  size_t index;
+  SemaphoreHandle_t mutex;
+  bool have_received_all_time_slices;
+} LEVELS_CALC_CTX = {{{0}}, {0}, {{0}}, 0, NULL, false};
 
 /*!
  @brief Subscribe To Borealis Topic
@@ -94,6 +104,34 @@ static void parse_borealis_levels(float *spl_db, const char *levels_as_base64,
   }
 }
 
+static void parse_borealis_level_statistics(float stats[][NUM_STATS],
+                                            const char *levels_as_base64,
+                                            size_t levels_length) {
+  size_t out_len = 0;
+  mbedtls_base64_decode(NULL, 0, &out_len, reinterpret_cast<const uint8_t *>(levels_as_base64),
+                        levels_length);
+  uint8_t raw_bytes[out_len];
+  int err =
+      mbedtls_base64_decode(raw_bytes, sizeof(raw_bytes), &out_len,
+                            reinterpret_cast<const uint8_t *>(levels_as_base64), levels_length);
+  if (err != 0) {
+    bm_debug("Failed to decode base64 level stats. err=%d, len=%lu, b64=%.*s\n", err,
+             levels_length, levels_length, levels_as_base64);
+    return;
+  }
+
+  const float cstep = 0.75f;                     // dB
+  const float clow = -256.0f * cstep + 185.642f; // dB
+  uint32_t num_bands = out_len / NUM_STATS;
+  for (size_t i = 0; i < num_bands; i++) {
+    size_t index = i * NUM_STATS;
+    stats[index][0] = raw_bytes[index + 0] * cstep + clow; // 25%
+    stats[index][1] = raw_bytes[index + 1] * cstep + clow; // 50%
+    stats[index][2] = raw_bytes[index + 2] * cstep + clow; // 75%
+    stats[index][3] = raw_bytes[index + 3] * cstep + clow; // mean
+  }
+}
+
 /*!
  @brief Subscription Callback For Borealis Topic
 
@@ -155,13 +193,34 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
               d.dt, d.first_band_index, d.levels_length, d.levels);
 
-          // Compute spectral entropy
-          float spl_db[NUM_BANDS];
-          parse_borealis_levels(spl_db, d.levels, d.levels_length);
-          const float entropy = compute_spectral_entropy(spl_db);
-          bm_debug("Spectral entropy: %f\n", entropy);
+          if (LEVELS_CALC_CTX.mutex == NULL) {
+            LEVELS_CALC_CTX.mutex = xSemaphoreCreateMutex();
+          }
+          if (LEVELS_CALC_CTX.mutex && xSemaphoreTake(LEVELS_CALC_CTX.mutex, 100)) {
+            float *spl_db = LEVELS_CALC_CTX.spl_db[LEVELS_CALC_CTX.index];
+            parse_borealis_levels(spl_db, d.levels, d.levels_length);
+            bm_free(d.levels);
 
-          bm_free(d.levels);
+            printf("Levels: ");
+            for (int i = 0; i < NUM_BANDS; i++) {
+              printf("%.3f", spl_db[i]);
+              if (i < NUM_BANDS - 1) {
+                printf(", ");
+              }
+            }
+            printf("\n");
+
+            const float entropy = compute_spectral_entropy(spl_db, NULL);
+            LEVELS_CALC_CTX.entropy[LEVELS_CALC_CTX.index] = entropy;
+            bm_debug("Spectral entropy: %f\n", entropy);
+            size_t new_index = LEVELS_CALC_CTX.index + 1;
+            if (new_index >= NUM_TIME_SLICES) {
+              LEVELS_CALC_CTX.have_received_all_time_slices = true;
+              new_index %= NUM_TIME_SLICES;
+            }
+            LEVELS_CALC_CTX.index = new_index;
+            xSemaphoreGive(LEVELS_CALC_CTX.mutex);
+          }
         }
       } break;
       case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
@@ -172,6 +231,47 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
               "%.3f,%.3f,%.3f,%u,%.*s\n", d.dt, d.dt_report, d.max_iqr, d.first_band_index,
               d.levels_length, d.levels);
+
+          if (LEVELS_CALC_CTX.mutex && xSemaphoreTake(LEVELS_CALC_CTX.mutex, 100)) {
+            parse_borealis_level_statistics(LEVELS_CALC_CTX.stats, d.levels, d.levels_length);
+            if (LEVELS_CALC_CTX.have_received_all_time_slices) {
+              float mean_db[NUM_BANDS];
+              for (int i = 0; i < NUM_BANDS; i++) {
+                mean_db[i] = LEVELS_CALC_CTX.stats[i][3];
+              }
+              double entropy_sum = 0.0;
+              float entropy_min = 0.0f;
+              printf("Spectral entropy prewhitened: ");
+              for (int i = 0; i < NUM_TIME_SLICES; i++) {
+                LEVELS_CALC_CTX.entropy[i] =
+                    compute_spectral_entropy(LEVELS_CALC_CTX.spl_db[i], mean_db);
+                printf("%.3f", LEVELS_CALC_CTX.entropy[i]);
+                if (i < NUM_TIME_SLICES - 1) {
+                  printf(", ");
+                }
+                entropy_sum += LEVELS_CALC_CTX.entropy[i];
+                if (i == 0 || LEVELS_CALC_CTX.entropy[i] < entropy_min) {
+                  entropy_min = LEVELS_CALC_CTX.entropy[i];
+                }
+              }
+              printf("\n");
+              double entropy_mean = entropy_sum / NUM_TIME_SLICES;
+              double entropy_variance = 0.0;
+              for (int i = 0; i < NUM_TIME_SLICES; i++) {
+                double diff = LEVELS_CALC_CTX.entropy[i] - entropy_mean;
+                entropy_variance += diff * diff;
+              }
+              entropy_variance /= NUM_TIME_SLICES;
+              double entropy_stddev = sqrt(entropy_variance);
+              printf("Entropy stats: mean=%f, min=%f, stddev=%f\n", entropy_mean, entropy_min,
+                     entropy_stddev);
+
+              // Reset the context for the next set of levels
+              LEVELS_CALC_CTX.have_received_all_time_slices = false;
+              LEVELS_CALC_CTX.index = 0;
+            }
+            xSemaphoreGive(LEVELS_CALC_CTX.mutex);
+          }
           bm_free(d.levels);
         }
       } break;
