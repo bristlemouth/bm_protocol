@@ -225,8 +225,7 @@ static bool bcmp_info_request_cb(uint64_t node_id) {
     configASSERT(ver_str);
     memset(ver_str, 0, VER_STR_MAX_LEN);
 
-    uint8_t ver_str_len =
-        snprintf(ver_str, VER_STR_MAX_LEN, "%s@%s", APP_NAME, getFWVersionStr());
+    uint8_t ver_str_len = snprintf(ver_str, VER_STR_MAX_LEN, "%s", getFWVersionStr());
 
     // TODO - use device name instead of UID str
     uint8_t dev_name_len = strlen(getUIDStr());
