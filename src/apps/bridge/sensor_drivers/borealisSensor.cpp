@@ -167,7 +167,7 @@ void BorealisSensorLevelStatistics::aggregate(void) {
       bm_free(data);
     } else {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to allocate memory for Borealis level statistics memory in %s\n",
+                     "Failed to allocate memory for Borealis level statistics in %s\n",
                      __func__);
     }
     xSemaphoreGive(_mutex);
@@ -209,15 +209,15 @@ BmErr BorealisSensorLevelStatistics::encode_sample(void *data, uint32_t sample_i
   }
 
   if (err == BmOK &&
-      (sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+      (sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                &borealis_data.is_extended) != CborNoError ||
-       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+       sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                &borealis_data.spl) != CborNoError ||
-       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+       sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                &borealis_data.max_iqr) != CborNoError ||
-       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+       sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                &borealis_data.max_iqr_band) != CborNoError ||
-       sensor_report_encoder_add_sample_member(context, encode_uint8_sample_member,
+       sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                &borealis_data.entropy) != CborNoError ||
        (borealis_data.is_extended &&
         sensor_report_encoder_add_sample_member(

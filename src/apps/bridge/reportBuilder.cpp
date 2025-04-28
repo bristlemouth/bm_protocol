@@ -368,17 +368,8 @@ CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_me
   return err;
 }
 
-CborError encode_uint8_sample_member(CborEncoder &sample_array, void *sample_member,
-                                     uint32_t size) {
-  (void)size;
-  uint8_t local_sample_member = *(uint8_t *)sample_member;
-  CborError err = CborNoError;
-  err = cbor_encode_uint(&sample_array, local_sample_member);
-  return err;
-}
-
-CborError encode_uint32_sample_member(CborEncoder &sample_array, void *sample_member,
-                                      uint32_t size) {
+CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
+                                    uint32_t size) {
   (void)size;
   uint32_t local_sample_member = *(uint32_t *)sample_member;
   CborError err = CborNoError;
@@ -497,7 +488,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                      "Failed to add sample member in addSamplesToReport\n");
       break;
     }
-    if (sensor_report_encoder_add_sample_member(context, encode_uint32_sample_member,
+    if (sensor_report_encoder_add_sample_member(context, encode_uint_sample_member,
                                                 &aanderaa_sample.reading_count) !=
         CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,

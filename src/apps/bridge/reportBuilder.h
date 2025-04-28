@@ -31,7 +31,5 @@ CborError encode_string_sample_member(CborEncoder &sample_array, void *sample_me
                                       uint32_t size);
 CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);
-CborError encode_uint8_sample_member(CborEncoder &sample_array, void *sample_member,
-                                     uint32_t size);
-CborError encode_uint32_sample_member(CborEncoder &sample_array, void *sample_member,
-                                      uint32_t size);
+CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
+                                    uint32_t size);

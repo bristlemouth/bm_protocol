@@ -68,7 +68,7 @@ static bool _send_on_boot;
 static node_list_s _node_list;
 static QueueHandle_t _sys_info_queue;
 static QueueHandle_t _config_cbor_map_queue;
-static SemaphoreHandle_t _sys_info_handshake;
+static SemaphoreHandle_t _sys_info_sequence_lock;
 
 static void topology_timer_handler(TimerHandle_t tmr);
 static void topology_sampler_task(void *parameters);
@@ -134,7 +134,7 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
         exit = true;
         break;
       }
-      if (xSemaphoreTake(_sys_info_handshake,
+      if (xSemaphoreTake(_sys_info_sequence_lock,
                          pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) != pdTRUE) {
         bridgeLogPrint(
             BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
@@ -311,7 +311,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
     vPortFree(reply.app_name);
   }
 
-  xSemaphoreGive(_sys_info_handshake);
+  xSemaphoreGive(_sys_info_sequence_lock);
 
   return rval;
 }
@@ -595,8 +595,8 @@ void topology_sampler_init(BridgePowerController *power_controller) {
   _config_cbor_map_queue =
       xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(ConfigCborMapReplyData));
   configASSERT(_config_cbor_map_queue);
-  _sys_info_handshake = xSemaphoreCreateBinary();
-  configASSERT(_sys_info_handshake);
+  _sys_info_sequence_lock = xSemaphoreCreateBinary();
+  configASSERT(_sys_info_sequence_lock);
 
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
