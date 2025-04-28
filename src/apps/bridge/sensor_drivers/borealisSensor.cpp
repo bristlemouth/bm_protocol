@@ -151,7 +151,7 @@ void BorealisSensorLevelStatistics::aggregate(void) {
 
       // TODO: these need calculations or updates
       data->spl = 0;
-      data->max_iqr_band = 0
+      data->max_iqr_band = 0;
       data->entropy = 0;
 
       data->max_iqr = stats.max_iqr;
