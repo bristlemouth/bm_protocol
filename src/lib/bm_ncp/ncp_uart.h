@@ -11,8 +11,6 @@
 #include "nvmPartition.h"
 #include "serial.h"
 
-#define NCP_BUFF_LEN 2048
-
 // unused for now, but will be needed for bridge power sampling/interrupt driven uart comms
 typedef struct {
   IOPinHandle_t *intPin;
