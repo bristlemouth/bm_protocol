@@ -64,12 +64,12 @@ static QueueHandle_t _report_builder_queue = NULL;
 
 static void report_builder_task(void *parameters);
 
-CborError encode_string_sample_member(CborEncoder &sample_array, void *sample_member,
+CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
-  const char *local_sample_member = (const char *)sample_member;
+  const uint8_t *local_sample_member = (const uint8_t *)sample_member;
   CborError err = CborNoError;
-  if (size) {
-    err = cbor_encode_text_string(&sample_array, local_sample_member, size);
+  if (size && local_sample_member) {
+    err = cbor_encode_byte_string(&sample_array, local_sample_member, size);
   } else {
     err = CborErrorTooFewItems;
   }

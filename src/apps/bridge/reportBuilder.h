@@ -23,7 +23,7 @@ uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
                                                   uint32_t &cbor_config_size);
 uint32_t report_builder_get_samples_per_report(void);
 bool report_builder_get_transmit_aggregations(void);
-CborError encode_string_sample_member(CborEncoder &sample_array, void *sample_member,
+CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);
 CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);

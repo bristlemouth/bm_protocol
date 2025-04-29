@@ -149,7 +149,7 @@ static void assign_info_node_ids(void) {
   }
 }
 
-static void assign_random_data(uint8_t samples_per_report) {
+static void assign_random_data(uint8_t samples_per_report, uint8_t fill_num_nan = 0) {
   rnd_gen rnd;
   uint8_t *data = NULL;
   size_t size = 0;
@@ -162,10 +162,18 @@ static void assign_random_data(uint8_t samples_per_report) {
     }
 
     if (info[i].size) {
-      size = info[i].size * samples_per_report;
+      size = info[i].size * (samples_per_report - fill_num_nan);
+      // If need to fill with nan values allocate that here
+      size += (info[i].nan_size * fill_num_nan);
       data = (uint8_t *)malloc(size);
-      rnd.rnd_array(data, size);
       info[i].data = data;
+      // Fill the data with nan values if required
+      for (uint8_t i = 0; i < fill_num_nan; i++) {
+        memcpy(data, info[i].nan_struct, info[i].nan_size);
+        data += info[i].nan_size;
+        size -= info[i].nan_size;
+      }
+      rnd.rnd_array(data, size);
     }
   }
 }
@@ -208,7 +216,7 @@ static void compare_data(ReportBuilderLinkedList &list, uint8_t samples_per_repo
 TEST(ReportBuilderLinkedList, AddingSamples) {
   rnd_gen rnd;
   ReportBuilderLinkedList list;
-  uint8_t samples_per_report = rnd.rnd_int(5, 3);
+  uint8_t samples_per_report = rnd.rnd_int(10, 3);
 
   assign_info_node_ids();
 
@@ -232,6 +240,25 @@ TEST(ReportBuilderLinkedList, AddingSamples) {
     size_t size = info[i].size;
     if (size) {
       for (uint8_t j = 0; j < samples_per_report; j++) {
+        list.findElementAndAddSampleToElement(info[i].node_id, i, info[i].data, size,
+                                              samples_per_report, j);
+      }
+    }
+  }
+
+  compare_data(list, samples_per_report, false);
+
+  list.clear();
+  free_random_data();
+
+  uint8_t rand_nans = rnd.rnd_int(samples_per_report, 2);
+  // Test with backfilled NANs
+  assign_random_data(samples_per_report, rand_nans);
+
+  for (size_t i = 0; i < SENSOR_TYPE_COUNT; i++) {
+    size_t size = info[i].size;
+    if (size) {
+      for (uint8_t j = rand_nans; j < samples_per_report; j++) {
         list.findElementAndAddSampleToElement(info[i].node_id, i, info[i].data, size,
                                               samples_per_report, j);
       }
