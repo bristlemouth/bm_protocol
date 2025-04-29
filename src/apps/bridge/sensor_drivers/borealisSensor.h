@@ -57,6 +57,7 @@ public:
   BorealisSensorLevelStatistics() : stats({}) {}
 
 private:
+  static uint32_t s_borealis_level_stats_max_size;
   static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS = 5;
   static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS_EXTENDED = 6;
 } BorealisLevelsStatistics_t;

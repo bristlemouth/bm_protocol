@@ -18,6 +18,7 @@
 struct BorealisSensor *s_current_sub = NULL;
 bool BorealisSensor::s_aggregation_reports = false;
 SemaphoreHandle_t BorealisSensor::s_config_callback_handshake = NULL;
+uint32_t BorealisSensorLevelStatistics::s_borealis_level_stats_max_size = 0;
 
 /*!
  @brief Initialize Borealis Sensor Module
@@ -151,9 +152,17 @@ void BorealisSensorLevelStatistics::aggregate(void) {
                             stats.levels_length);
     }
 
-    data = reinterpret_cast<LevelStatisticsData_t *>(bm_malloc(data_size + base_64_size));
+    // TODO: max size is dependant on borealisTxLowestBand and borealisTxHighestBand, math needs to be done to figure out when these configs are added and calculated elsewhere
+    s_borealis_level_stats_max_size = data_size + base_64_size;
+    if (s_borealis_level_stats_max_size != data_size + 104) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                     "Incorrect max stat size: %d\n", s_borealis_level_stats_max_size);
+    }
+
+    data =
+        reinterpret_cast<LevelStatisticsData_t *>(bm_malloc(s_borealis_level_stats_max_size));
     if (data) {
-      memset(data, 0, data_size);
+      memset(data, 0, s_borealis_level_stats_max_size);
 
       data->is_extended = is_extended;
 
@@ -171,8 +180,7 @@ void BorealisSensorLevelStatistics::aggregate(void) {
       }
 
       reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS, data,
-                              sizeof(LevelStatisticsData_t) + stats.levels_length,
-                              REPORT_BUILDER_SAMPLE_MESSAGE);
+                              s_borealis_level_stats_max_size, REPORT_BUILDER_SAMPLE_MESSAGE);
       bm_free(data);
     } else {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
@@ -202,8 +210,8 @@ void BorealisSensorLevelStatistics::aggregate(void) {
 BmErr BorealisSensorLevelStatistics::encode_sample(void *data, uint32_t sample_index,
                                                    sensor_report_encoder_context_t &context) {
   BmErr err = BmOK;
-  LevelStatisticsData_t borealis_data =
-      static_cast<LevelStatisticsData_t *>(data)[sample_index];
+  data = static_cast<uint8_t *>(data) + sample_index * s_borealis_level_stats_max_size;
+  LevelStatisticsData_t borealis_data = *static_cast<LevelStatisticsData_t *>(data);
   uint8_t num_fields = NUM_AOS_BOREALIS_FIELDS;
 
   if (borealis_data.is_extended) {

@@ -14,7 +14,7 @@
 
 DEFINE_FFF_GLOBALS;
 
-#define MAX_SIZE_SENSOR_PAYLOAD 256
+#define MAX_SIZE_SENSOR_PAYLOAD UINT8_MAX
 
 typedef struct {
   uint64_t node_id;
@@ -123,8 +123,19 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             &BorealisSensorLevelStatistics::AOS_BOREALIS_NAN_AGG,
             sizeof(BorealisSensorLevelStatistics::LevelStatisticsData_t),
             [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<BorealisSensorLevelStatistics::LevelStatisticsData_t *>(
-                  data))[idx];
+              void *ret = data;
+
+              for (uint8_t i = 0; i < idx; i++) {
+                if (info[SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS].size == 0) {
+                  ret = static_cast<uint8_t *>(ret) +
+                        info[SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS].nan_size;
+                } else {
+                  ret = static_cast<uint8_t *>(ret) +
+                        info[SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS].size;
+                }
+              }
+
+              return ret;
             },
             NULL,
             0,
@@ -162,16 +173,15 @@ static void assign_random_data(uint8_t samples_per_report, uint8_t fill_num_nan 
     }
 
     if (info[i].size) {
-      size = info[i].size * (samples_per_report - fill_num_nan);
-      // If need to fill with nan values allocate that here
-      size += (info[i].nan_size * fill_num_nan);
+      size = info[i].size * samples_per_report;
       data = (uint8_t *)malloc(size);
       info[i].data = data;
       // Fill the data with nan values if required
-      for (uint8_t i = 0; i < fill_num_nan; i++) {
+      for (uint8_t j = 0; j < fill_num_nan; j++) {
         memcpy(data, info[i].nan_struct, info[i].nan_size);
-        data += info[i].nan_size;
-        size -= info[i].nan_size;
+        // All items must be of the element size even if they are nans
+        data += info[i].size;
+        size -= info[i].size;
       }
       rnd.rnd_array(data, size);
     }
@@ -187,28 +197,45 @@ static void free_random_data(void) {
 }
 
 static void compare_data(ReportBuilderLinkedList &list, uint8_t samples_per_report,
-                         bool use_nan) {
+                         bool use_nan, size_t num_nans = 0) {
   const void *cmp_list_p = NULL;
   const void *cmp_raw_p = NULL;
+  void *cmp_offset_p = NULL;
   uint32_t cmp_size = 0;
   report_builder_element_t *element = NULL;
+  bool tested = false;
 
   for (size_t i = 0; i < SENSOR_TYPE_COUNT; i++) {
     element = list.findElement(info[i].node_id);
+    tested = false;
 
-    if (element && cmp_raw_p) {
-      for (size_t j = 0; j < samples_per_report; j++) {
-        cmp_list_p = info[i].converter(element->sensor_data, j);
-        if (use_nan) {
+    if (element) {
+      cmp_offset_p = static_cast<uint8_t *>(element->sensor_data) + num_nans * info[i].size;
+      if (use_nan) {
+        for (size_t j = 0; j < num_nans; j++) {
+          cmp_list_p = info[i].converter(element->sensor_data, j);
           cmp_raw_p = info[i].nan_struct;
           cmp_size = info[i].nan_size;
-        } else {
-          cmp_raw_p = info[i].converter(info[i].data, j);
-          cmp_size = info[i].size;
+          ASSERT_NE(cmp_size, 0);
+          EXPECT_EQ(memcmp(cmp_raw_p, cmp_list_p, cmp_size), 0);
         }
-        ASSERT_NE(cmp_size, 0);
-        ASSERT_EQ(memcmp(cmp_raw_p, cmp_list_p, cmp_size), 0);
+
+        if (num_nans == samples_per_report) {
+          tested = true;
+        }
       }
+
+      if (cmp_offset_p <
+          static_cast<uint8_t *>(element->sensor_data) + samples_per_report * info[i].size) {
+        cmp_list_p = cmp_offset_p;
+        cmp_raw_p = static_cast<uint8_t *>(info[i].data) + info[i].size * num_nans;
+        cmp_size = info[i].size * samples_per_report - info[i].size * num_nans;
+        ASSERT_NE(cmp_size, 0);
+        EXPECT_EQ(memcmp(cmp_raw_p, cmp_list_p, cmp_size), 0);
+        tested = true;
+      }
+
+      ASSERT_EQ(tested, true);
     }
   }
 }
@@ -229,7 +256,7 @@ TEST(ReportBuilderLinkedList, AddingSamples) {
     }
   }
 
-  compare_data(list, samples_per_report, true);
+  compare_data(list, samples_per_report, true, samples_per_report);
 
   list.clear();
 
@@ -240,7 +267,8 @@ TEST(ReportBuilderLinkedList, AddingSamples) {
     size_t size = info[i].size;
     if (size) {
       for (uint8_t j = 0; j < samples_per_report; j++) {
-        list.findElementAndAddSampleToElement(info[i].node_id, i, info[i].data, size,
+        list.findElementAndAddSampleToElement(info[i].node_id, i,
+                                              info[i].converter(info[i].data, j), size,
                                               samples_per_report, j);
       }
     }
@@ -251,7 +279,7 @@ TEST(ReportBuilderLinkedList, AddingSamples) {
   list.clear();
   free_random_data();
 
-  uint8_t rand_nans = rnd.rnd_int(samples_per_report, 2);
+  uint8_t rand_nans = rnd.rnd_int(samples_per_report - 1, 2);
   // Test with backfilled NANs
   assign_random_data(samples_per_report, rand_nans);
 
@@ -259,13 +287,14 @@ TEST(ReportBuilderLinkedList, AddingSamples) {
     size_t size = info[i].size;
     if (size) {
       for (uint8_t j = rand_nans; j < samples_per_report; j++) {
-        list.findElementAndAddSampleToElement(info[i].node_id, i, info[i].data, size,
+        list.findElementAndAddSampleToElement(info[i].node_id, i,
+                                              info[i].converter(info[i].data, j), size,
                                               samples_per_report, j);
       }
     }
   }
 
-  compare_data(list, samples_per_report, false);
+  compare_data(list, samples_per_report, true, rand_nans);
 
   list.clear();
   free_random_data();
