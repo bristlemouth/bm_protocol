@@ -7,6 +7,7 @@
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
+#include "sensorController.h"
 #include "messages/config.h"
 #include "pme_wipe_msg.h"
 #include "pubsub.h"

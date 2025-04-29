@@ -17,6 +17,7 @@ typedef enum abstractSensorType : uint8_t {
   SENSOR_TYPE_PME_WIPE = 8,
   SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS = 9,
   SENSOR_TYPE_BOREALIS_RECORDING_STATUS = 10,
+  SENSOR_TYPE_COUNT = 11,
 } abstractSensorType_e;
 
 struct AbstractSensor {

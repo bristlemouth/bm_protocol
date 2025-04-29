@@ -1,10 +1,6 @@
 #pragma once
 
-#include "FreeRTOS.h"
-#include "aanderaaSensor.h"
-#include "configuration.h"
-#include "queue.h"
-#include "softSensor.h"
+#include "abstractSensor.h"
 
 typedef enum {
   REPORT_BUILDER_INCREMENT_SAMPLE_COUNT,

@@ -18,6 +18,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cbor_sensor_report_encoder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/reportBuilder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/reportBuilderList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/network_config_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/topology_sampler.cpp
 )

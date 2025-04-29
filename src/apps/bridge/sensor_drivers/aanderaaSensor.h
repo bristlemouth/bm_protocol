@@ -1,16 +1,17 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
-#include <stdint.h>
-#include <stdlib.h>
 #include "avgSampler.h"
 #include "sensorController.h"
+#include <cmath>
+#include <stdint.h>
+#include <stdlib.h>
 
 #define AANDERAA_NUM_SAMPLE_MEMBERS 8
 
 // Clang doesn't have M_TWOPI defined in math.h so for CI tests we define it here.
 #ifdef CI_TEST
-#define M_TWOPI 2*M_PI
+#define M_TWOPI 2 * M_PI
 #endif
 
 typedef struct aanderaa_aggregations_s {
@@ -50,6 +51,16 @@ typedef struct AanderaaSensor : public AbstractSensor {
 public:
   bool subscribe() override;
   void aggregate(void);
+  static constexpr aanderaa_aggregations_t NAN_AGG = {
+      .abs_speed_mean_cm_s = NAN,
+      .abs_speed_std_cm_s = NAN,
+      .direction_circ_mean_rad = NAN,
+      .direction_circ_std_rad = NAN,
+      .temp_mean_deg_c = NAN,
+      .abs_tilt_mean_rad = NAN,
+      .std_tilt_mean_rad = NAN,
+      .reading_count = 0,
+  };
 
 private:
   static void aanderaSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -60,4 +71,5 @@ private:
   static constexpr char subtag[] = "/sofar/aanderaa";
 } Aanderaa_t;
 
-Aanderaa_t* createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms, uint32_t averager_max_samples);
+Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms,
+                              uint32_t averager_max_samples);
