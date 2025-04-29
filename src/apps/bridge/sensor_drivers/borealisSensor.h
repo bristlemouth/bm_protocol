@@ -42,7 +42,7 @@ public:
     uint8_t max_iqr;
     uint8_t max_iqr_band;
     uint8_t entropy;
-    uint8_t spl_band_stats_size;
+    uint32_t spl_band_stats_size;
     uint8_t spl_bands_stats[0];
   } LevelStatisticsData_t;
 

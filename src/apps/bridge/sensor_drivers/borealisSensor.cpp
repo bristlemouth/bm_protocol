@@ -4,6 +4,7 @@
 #include "bm_os.h"
 #include "bridgeLog.h"
 #include "bristlemouth.h"
+#include "mbedtls_base64/base64.h"
 #include "messages/config.h"
 #include "pubsub.h"
 #include "sensorController.h"
@@ -139,15 +140,22 @@ bool BorealisSensor::subscribe() {
  */
 void BorealisSensorLevelStatistics::aggregate(void) {
   LevelStatisticsData_t *data = NULL;
-  uint32_t data_size = sizeof(LevelStatisticsData_t) + stats.levels_length;
+  uint32_t data_size = sizeof(LevelStatisticsData_t);
+  bool is_extended = true;
+  size_t base_64_size = 0;
 
   if (stats.dt != 0 && xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
-    data = reinterpret_cast<LevelStatisticsData_t *>(bm_malloc(data_size));
+    // TODO: logic needs to be implemented around if this is going to be extended
+    if (is_extended) {
+      mbedtls_base64_decode(NULL, 0, &base_64_size, (const unsigned char *)stats.levels,
+                            stats.levels_length);
+    }
+
+    data = reinterpret_cast<LevelStatisticsData_t *>(bm_malloc(data_size + base_64_size));
     if (data) {
       memset(data, 0, data_size);
 
-      // TODO: logic needs to be implemented around this
-      data->is_extended = 1;
+      data->is_extended = is_extended;
 
       // TODO: these need calculations or updates
       data->spl = 0;
@@ -156,9 +164,10 @@ void BorealisSensorLevelStatistics::aggregate(void) {
 
       data->max_iqr = stats.max_iqr;
 
-      if (data->is_extended) {
-        data->spl_band_stats_size = stats.levels_length;
-        memcpy(data->spl_bands_stats, stats.levels, stats.levels_length);
+      if (is_extended) {
+        mbedtls_base64_decode(data->spl_bands_stats, base_64_size,
+                              (size_t *)&data->spl_band_stats_size,
+                              (const unsigned char *)stats.levels, stats.levels_length);
       }
 
       reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS, data,
