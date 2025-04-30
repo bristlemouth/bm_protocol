@@ -21,6 +21,7 @@
 //#define WIPE_INTERVAL_KEY "WipeInterval"
 
 extern uint32_t pmeLogEnable;
+extern uint32_t sensorDebugTxEnable;
 
 uint32_t lastWipeEpochS = 0;
 //uint32_t DOTinterval = 600;
@@ -168,8 +169,9 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
     }
     spotter_log_console(0, "DOT | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
                         rtc_time_str, do_read_len, _DOTpayload_buffer);
-
-    spotter_tx_data(_DOTpayload_buffer, do_read_len, BmNetworkTypeCellularIriFallback);
+    if (sensorDebugTxEnable) {
+      spotter_tx_data(_DOTpayload_buffer, do_read_len, BmNetworkTypeCellularIriFallback);
+    }
 
     printf("#  DOT | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
            do_read_len, _DOTpayload_buffer);
@@ -246,7 +248,9 @@ bool PmeSensor::getWipeData(PmeWipeMsg::Data &w) {
     }
     spotter_log_console(0, "WIPE | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
                         rtc_time_str, wipe_read_len, _WIPEpayload_buffer);
-    spotter_tx_data(_WIPEpayload_buffer, wipe_read_len, BmNetworkTypeCellularIriFallback);
+    if (sensorDebugTxEnable) {
+      spotter_tx_data(_WIPEpayload_buffer, wipe_read_len, BmNetworkTypeCellularIriFallback);
+    }
     printf("Wipe | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
            wipe_read_len, _WIPEpayload_buffer);
 
