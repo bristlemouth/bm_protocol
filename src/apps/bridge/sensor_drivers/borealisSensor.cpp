@@ -174,7 +174,7 @@ void BorealisSensorLevelStatistics::aggregate(void) {
       data->max_iqr = stats.max_iqr;
 
       if (is_extended) {
-        mbedtls_base64_decode(data->spl_bands_stats, base_64_size,
+        mbedtls_base64_decode(data->spl_band_stats, base_64_size,
                               (size_t *)&data->spl_band_stats_size,
                               (const unsigned char *)stats.levels, stats.levels_length);
       }
@@ -238,7 +238,7 @@ BmErr BorealisSensorLevelStatistics::encode_sample(void *data, uint32_t sample_i
                                                &borealis_data.entropy) != CborNoError ||
        (borealis_data.is_extended &&
         sensor_report_encoder_add_sample_member(
-            context, encode_buffer_sample_member, borealis_data.spl_bands_stats,
+            context, encode_buffer_sample_member, borealis_data.spl_band_stats,
             borealis_data.spl_band_stats_size) != CborNoError))) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Failed to add borealis level statistics sample member in %s\n", __func__);

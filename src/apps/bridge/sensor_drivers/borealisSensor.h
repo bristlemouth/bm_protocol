@@ -43,10 +43,18 @@ public:
     uint8_t max_iqr_band;
     uint8_t entropy;
     uint32_t spl_band_stats_size;
-    uint8_t spl_bands_stats[0];
+    uint8_t spl_band_stats[0];
   } LevelStatisticsData_t;
 
-  static constexpr LevelStatisticsData_t AOS_BOREALIS_NAN_AGG = {};
+  static constexpr LevelStatisticsData_t AOS_BOREALIS_NAN_AGG = {
+      .is_extended = 0,
+      .spl = 0xFF,
+      .max_iqr = 0xFF,
+      .max_iqr_band = 0xFF,
+      .entropy = 0xFF,
+      .spl_band_stats_size = 0,
+      {},
+  };
 
   void aggregate(void);
   static BmErr encode_sample(void *data, uint32_t sample_index,
