@@ -6,6 +6,7 @@
 #include "FreeRTOS_CLI.h"
 
 #include "bm_adin2111.h"
+#include "adin2111.h"
 #include "bm_config.h"
 #include "debug.h"
 #include "debug_adin_raw.h"
@@ -21,7 +22,8 @@ static const CLI_Command_Definition_t cmdGpio = {
     // Help string
     "adin:\n"
     " * adin init\n"
-    " * adin tx <port> <data>\n",
+    " * adin tx <port> <data>\n"
+    " * adin tm2\n",
     // Command function
     adinCommand,
     // Number of parameters (variable)
@@ -87,6 +89,8 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
       } else {
         printf("ERR %d\n", err);
       }
+    } else if (strncmp("tm2", parameter, parameterStringLength) == 0) {
+        adin2111_settestmode();
     } else {
       printf("ERR Invalid paramters\n");
       break;
