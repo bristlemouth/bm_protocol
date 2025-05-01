@@ -79,26 +79,6 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             NULL,
             sizeof(seapoint_turbidity_aggregations_t),
         },
-    [SENSOR_TYPE_PME_DO] =
-        {
-            0,
-            &PmeDissolvedOxygenSensor::PME_DO_NAN_AGG,
-            sizeof(pme_dissolved_oxygen_aggregations_t),
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<pme_dissolved_oxygen_aggregations_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(pme_dissolved_oxygen_aggregations_t),
-        },
-    [SENSOR_TYPE_PME_WIPE] =
-        {
-            0,
-            NULL,
-            0,
-            NULL,
-            NULL,
-            0,
-        },
     [SENSOR_TYPE_BOREALIS] =
         {
             0,
@@ -117,6 +97,26 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
 
               return ret;
             },
+            NULL,
+            0,
+        },
+    [SENSOR_TYPE_PME_DO] =
+        {
+            0,
+            &PmeDissolvedOxygenSensor::PME_DO_NAN_AGG,
+            sizeof(pme_dissolved_oxygen_aggregations_t),
+            [](void *data, uint8_t idx) -> void * {
+              return &(static_cast<pme_dissolved_oxygen_aggregations_t *>(data))[idx];
+            },
+            NULL,
+            sizeof(pme_dissolved_oxygen_aggregations_t),
+        },
+    [SENSOR_TYPE_PME_WIPE] =
+        {
+            0,
+            NULL,
+            0,
+            NULL,
             NULL,
             0,
         },
