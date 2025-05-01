@@ -15,10 +15,6 @@
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
 
-// TODO: this needs to be calculated based on the largest size of all Borealis sensor's min/max borealisTxLowestBand and borealisTxHighestBand
-uint32_t BorealisSensor::s_borealis_level_stats_max_size =
-    sizeof(BorealisLevelStatisticsData_t) + 104;
-
 static struct BorealisSensor *s_current_sub = NULL;
 static SemaphoreHandle_t s_config_callback_handshake = NULL;
 
@@ -109,8 +105,7 @@ bool BorealisSensor::subscribe() {
           as well as adds the message BorealisLevelStatisticsData_t to the report builder.
  */
 void BorealisSensor::aggregate(void) {
-  BorealisLevelStatisticsData_t *data = NULL;
-  uint32_t data_size = sizeof(BorealisLevelStatisticsData_t);
+  BorealisLevelStatisticsData_t data = {};
   bool is_extended = true;
   size_t base_64_size = 0;
 
@@ -121,36 +116,26 @@ void BorealisSensor::aggregate(void) {
                             stats.levels_length);
     }
 
-    // TODO: max size is dependant on borealisTxLowestBand and borealisTxHighestBand, math needs to be done to figure out when these configs are added and calculated elsewhere
-    s_borealis_level_stats_max_size = data_size + base_64_size;
-    if (s_borealis_level_stats_max_size != data_size + 104) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                     "Incorrect max stat size: %d\n", s_borealis_level_stats_max_size);
-    }
-
-    data = reinterpret_cast<BorealisLevelStatisticsData_t *>(
-        bm_malloc(s_borealis_level_stats_max_size));
-    if (data) {
-      memset(data, 0, s_borealis_level_stats_max_size);
-
-      data->is_extended = is_extended;
+    data.spl_band_stats = static_cast<uint8_t *>(bm_malloc(base_64_size));
+    if (data.spl_band_stats) {
+      data.is_extended = is_extended;
 
       // TODO: these need calculations or updates
-      data->spl = 0;
-      data->max_iqr_band = 0;
-      data->entropy = 0;
+      data.spl = 0;
+      data.max_iqr_band = 0;
+      data.entropy = 0;
 
-      data->max_iqr = stats.max_iqr;
+      data.max_iqr = stats.max_iqr;
 
       if (is_extended) {
-        mbedtls_base64_decode(data->spl_band_stats, base_64_size,
-                              (size_t *)&data->spl_band_stats_size,
+        mbedtls_base64_decode(data.spl_band_stats, base_64_size,
+                              (size_t *)&data.spl_band_stats_size,
                               (const unsigned char *)stats.levels, stats.levels_length);
       }
 
-      reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS, data,
-                              s_borealis_level_stats_max_size, REPORT_BUILDER_SAMPLE_MESSAGE);
-      bm_free(data);
+      reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS, &data,
+                              sizeof(BorealisLevelStatisticsData_t),
+                              REPORT_BUILDER_SAMPLE_MESSAGE);
     } else {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to allocate memory for Borealis level statistics in %s\n",
@@ -181,9 +166,8 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
   static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS = 5;
   static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS_EXTENDED = 6;
   BmErr err = BmOK;
-  data = static_cast<uint8_t *>(data) + sample_index * s_borealis_level_stats_max_size;
   BorealisLevelStatisticsData_t borealis_data =
-      *static_cast<BorealisLevelStatisticsData_t *>(data);
+      (static_cast<BorealisLevelStatisticsData_t *>(data))[sample_index];
   uint8_t num_fields = NUM_AOS_BOREALIS_FIELDS;
 
   if (borealis_data.is_extended) {
@@ -222,6 +206,9 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
                    "Failed to close sample in %s\n", __func__);
     err = BmEBADMSG;
   }
+
+  // Free band stats
+  bm_free(borealis_data.spl_band_stats);
 
   return err;
 }

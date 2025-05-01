@@ -526,7 +526,7 @@ static void report_builder_task(void *parameters) {
                         break;
                       }
                       case SENSOR_TYPE_BOREALIS: {
-                        size = BorealisSensor::s_borealis_level_stats_max_size;
+                        size = sizeof(BorealisLevelStatisticsData_t);
                         break;
                       }
                       default: {

@@ -15,7 +15,7 @@ typedef struct {
   uint8_t max_iqr_band;
   uint8_t entropy;
   uint32_t spl_band_stats_size;
-  uint8_t spl_band_stats[0];
+  uint8_t *spl_band_stats;
 } BorealisLevelStatisticsData_t;
 
 typedef enum {
@@ -34,7 +34,6 @@ public:
   static BmErr encode_sample(void *data, uint32_t sample_index,
                              sensor_report_encoder_context_t &context);
   bool m_aggregation_reports;
-  static uint32_t s_borealis_level_stats_max_size;
   static constexpr BorealisLevelStatisticsData_t AOS_BOREALIS_NAN_AGG = {
       .is_extended = 0,
       .spl = 0xFF,
@@ -42,7 +41,7 @@ public:
       .max_iqr_band = 0xFF,
       .entropy = 0xFF,
       .spl_band_stats_size = 0,
-      {},
+      .spl_band_stats = NULL,
   };
 
 private:
