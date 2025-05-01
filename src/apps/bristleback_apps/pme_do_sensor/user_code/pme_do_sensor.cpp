@@ -190,6 +190,9 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
         d.temperature_deg_c = temp_signal.data.double_val;
         d.do_mg_per_l = do_signal.data.double_val;
         d.quality = q_signal.data.double_val;
+
+        // TODO: Use d.salinity_ppt to calculate d.do_salinity_corrected_mg_per_l
+
         // DO Sat% not available at this time; setting to NULL causes error (converting NULL to double)
         //d.do_saturation_pct = 0;
         success = true;
