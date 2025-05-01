@@ -79,24 +79,6 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             NULL,
             sizeof(seapoint_turbidity_aggregations_t),
         },
-    [SENSOR_TYPE_BOREALIS_SPECTRUM] =
-        {
-            0,
-            NULL,
-            0,
-            NULL,
-            NULL,
-            0,
-        },
-    [SENSOR_TYPE_BOREALIS_LEVELS] =
-        {
-            0,
-            NULL,
-            0,
-            NULL,
-            NULL,
-            0,
-        },
     [SENSOR_TYPE_PME_DO] =
         {
             0,
@@ -117,35 +99,24 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             NULL,
             0,
         },
-    [SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS] =
+    [SENSOR_TYPE_BOREALIS] =
         {
             0,
-            &BorealisSensorLevelStatistics::AOS_BOREALIS_NAN_AGG,
-            sizeof(BorealisSensorLevelStatistics::LevelStatisticsData_t),
+            &BorealisSensor::AOS_BOREALIS_NAN_AGG,
+            sizeof(BorealisLevelStatisticsData_t),
             [](void *data, uint8_t idx) -> void * {
               void *ret = data;
 
               for (uint8_t i = 0; i < idx; i++) {
-                if (info[SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS].size == 0) {
-                  ret = static_cast<uint8_t *>(ret) +
-                        info[SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS].nan_size;
+                if (info[SENSOR_TYPE_BOREALIS].size == 0) {
+                  ret = static_cast<uint8_t *>(ret) + info[SENSOR_TYPE_BOREALIS].nan_size;
                 } else {
-                  ret = static_cast<uint8_t *>(ret) +
-                        info[SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS].size;
+                  ret = static_cast<uint8_t *>(ret) + info[SENSOR_TYPE_BOREALIS].size;
                 }
               }
 
               return ret;
             },
-            NULL,
-            0,
-        },
-    [SENSOR_TYPE_BOREALIS_RECORDING_STATUS] =
-        {
-            0,
-            NULL,
-            0,
-            NULL,
             NULL,
             0,
         },

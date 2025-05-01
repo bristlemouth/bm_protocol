@@ -397,8 +397,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
-  case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
-    if (BorealisSensorLevelStatistics::encode_sample(sensor_data, sample_index, context) ==
+  case SENSOR_TYPE_BOREALIS: {
+    if (BorealisSensor::encode_sample(sensor_data, sample_index, context) ==
         BmOK) {
       rval = true;
     }
@@ -526,8 +526,8 @@ static void report_builder_task(void *parameters) {
                         size = sizeof(pme_dissolved_oxygen_aggregations_t);
                         break;
                       }
-                      case SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS: {
-                        size = sizeof(BorealisSensorLevelStatistics::LevelStatisticsData_t);
+                      case SENSOR_TYPE_BOREALIS: {
+                        size = sizeof(BorealisLevelStatisticsData_t);
                         break;
                       }
                       default: {
