@@ -91,46 +91,39 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
                                                  uint32_t sample_counter) {
   void *dst = NULL;
   const void *nan_sample = NULL;
-  uint32_t nan_size = 0;
 
   switch (sensor_type) {
   case SENSOR_TYPE_AANDERAA: {
     nan_sample = &AanderaaSensor::NAN_AGG;
-    nan_size = sizeof(AanderaaSensor::NAN_AGG);
     dst = &(
         static_cast<aanderaa_aggregations_t *>(element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_SOFT: {
     nan_sample = &SoftSensor::SOFT_NAN_AGG;
-    nan_size = sizeof(SoftSensor::SOFT_NAN_AGG);
     dst = &(static_cast<soft_aggregations_t *>(element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_RBR_CODA: {
     nan_sample = &RbrCodaSensor::RBR_CODA_NAN_AGG;
-    nan_size = sizeof(RbrCodaSensor::RBR_CODA_NAN_AGG);
     dst = &(
         static_cast<rbr_coda_aggregations_t *>(element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
     nan_sample = &SeapointTurbiditySensor::seapoint_turbidity_NAN_AGG;
-    nan_size = sizeof(SeapointTurbiditySensor::seapoint_turbidity_NAN_AGG);
     dst = &(static_cast<seapoint_turbidity_aggregations_t *>(
         element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_PME_DO: {
     nan_sample = &PmeDissolvedOxygenSensor::PME_DO_NAN_AGG;
-    nan_size = sizeof(PmeDissolvedOxygenSensor::PME_DO_NAN_AGG);
     dst = &(static_cast<pme_dissolved_oxygen_aggregations_t *>(
         element->sensor_data))[element->sample_counter];
     break;
   }
   case SENSOR_TYPE_BOREALIS: {
     nan_sample = &BorealisSensor::AOS_BOREALIS_NAN_AGG;
-    nan_size = sizeof(BorealisSensor::AOS_BOREALIS_NAN_AGG);
     dst = static_cast<BorealisLevelStatisticsData_t *>(element->sensor_data);
     dst = static_cast<uint8_t *>(dst) + element->size * element->sample_counter;
     break;
@@ -149,7 +142,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
       // We use the element->sample_counter to track within each element how many samples
       // the element has received.
       for (; element->sample_counter < sample_counter; element->sample_counter++) {
-        memcpy(dst, nan_sample, nan_size);
+        memcpy(dst, nan_sample, element->size);
         dst = static_cast<uint8_t *>(dst) + element->size;
       }
     }
@@ -158,7 +151,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     if (sensor_data != NULL) {
       memcpy(dst, sensor_data, element->size);
     } else {
-      memcpy(dst, nan_sample, nan_size);
+      memcpy(dst, nan_sample, element->size);
     }
     element->sample_counter++;
   }
