@@ -15,7 +15,10 @@
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
 
-uint32_t BorealisSensor::s_borealis_level_stats_max_size;
+// TODO: this needs to be calculated based on the largest size of all Borealis sensor's min/max borealisTxLowestBand and borealisTxHighestBand
+uint32_t BorealisSensor::s_borealis_level_stats_max_size =
+    sizeof(BorealisLevelStatisticsData_t) + 104;
+
 static struct BorealisSensor *s_current_sub = NULL;
 static SemaphoreHandle_t s_config_callback_handshake = NULL;
 
@@ -357,13 +360,13 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
           is not set to zero as well.
 
  @param default_config Whether to use the default period or not
-                       ref: BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S
+                       ref: level_statistics_default_period_s
  @param node_id Node ID of the system being evaluated
  @param period_s report_interval period in seconds
  */
-static void
-borealisLevelsDurationEval(bool default_config, uint64_t node_id,
-                           float period_s = BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S) {
+static void borealisLevelsDurationEval(bool default_config, uint64_t node_id,
+                                       float period_s = 300.0) {
+  static constexpr float level_statistics_default_period_s = 300.0;
   power_config_s pwr_cfg = getPowerConfigs();
   float sample_duration_ms = static_cast<float>(
       pwr_cfg.subsampleEnabled ? pwr_cfg.subsampleDurationMs : pwr_cfg.sampleDurationMs);
@@ -390,8 +393,8 @@ borealisLevelsDurationEval(bool default_config, uint64_t node_id,
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                    "Failed to get report_interval from BOREALIS on %016" PRIx64
                    " , using default value: %.3f\n",
-                   node_id, BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S);
-    period_s = BorealisSensor::LEVEL_STATISTICS_DEFAULT_PERIOD_S;
+                   node_id, level_statistics_default_period_s);
+    period_s = level_statistics_default_period_s;
   }
 
   num_level_stats_per_duration = static_cast<uint8_t>(recommended_sample_duration_s / period_s);
