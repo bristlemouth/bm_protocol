@@ -47,6 +47,8 @@ uint32_t pmeDOTIntervalS = 600;
 bool pmeDOTIntervalSCfg = false;
 uint32_t pmeWipeIntervalS = 14400;
 bool pmeWipeIntervalSCfg = false;
+uint32_t sensorDebugTxEnable = 0;
+bool sensorDebugTxEnableCfg = false;
 
 static PmeSensor pmeSensor;
 
@@ -63,6 +65,7 @@ static constexpr uint32_t pmeSensorDataMsgMaxSize = 256;
 static constexpr char SENSOR_BM_LOG_ENABLE[] = "pmeLogEnable";
 static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
+static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
 
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
@@ -96,6 +99,9 @@ void setup(void) {
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S, strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS)) {
     pmeWipeIntervalSCfg = true;
   }
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_DEBUG_TX_ENABLE, strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
+    sensorDebugTxEnableCfg = true;
+  }
 
   pmeSensor.init();
   pmeDoTopicStrLen = createPmeDoMeasurementDataTopic();
@@ -120,8 +126,16 @@ void setup(void) {
     printf("User-defined pmeWipeIntervalS found: %" PRIu32 " seconds.\n", pmeWipeIntervalS);
   }
   else {
-    printf("No user-defined pmeWipeIntervalS - defaulting to: %" PRIu32 " seconds.\n\n", pmeWipeIntervalS);
+    printf("No user-defined pmeWipeIntervalS - defaulting to: %" PRIu32 " seconds.\n", pmeWipeIntervalS);
   }
+
+  if (sensorDebugTxEnableCfg == true) {
+    printf("User-defined sensorDebugTxEnable found: %" PRIu32 "\n", sensorDebugTxEnable);
+  }
+  else {
+    printf("No user-defined sensorDebugTxEnable - defaulting to: %" PRIu32 "\n", sensorDebugTxEnable);
+  }
+
   // Ensure Vbus stable before enabling Vout
   IOWrite(&BB_VBUS_EN, 0);
   bm_delay(50);
@@ -135,7 +149,7 @@ void loop(void) {
   bool rtcIsSet = rtcGet(&time_and_date);
   uint64_t epochTimeSec = (rtcGetMicroSeconds(&time_and_date) / 1000000);
   uint64_t currentUptimeSec = uptimeGetMs() / 1000;
- 
+
   //////////
   // Wipe //
   //////////
@@ -158,7 +172,7 @@ void loop(void) {
           bm_pub_wl(pmeWipeTopic, pmeWipeTopicStrLen, cborBuf, encodedLen, 0,
                     BM_COMMON_PUB_SUB_VERSION);
           printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %d, \n", pmeWipeTopic,
-                 cborBuf); 
+                 cborBuf);
         } else {
           printf("!  Failed to encode WIPE data message\n");
         }
