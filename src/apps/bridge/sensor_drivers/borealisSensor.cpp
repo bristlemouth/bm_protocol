@@ -17,6 +17,10 @@
 
 static struct BorealisSensor *s_current_sub = NULL;
 static SemaphoreHandle_t s_config_callback_handshake = NULL;
+static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
+static constexpr char subtag_levels[] = "/aos/borealis/levels";
+static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
+static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 
 /*!
  @brief Initialize Borealis Sensor Module
@@ -58,10 +62,6 @@ bool BorealisSensor::subscribe() {
   bool ret = false;
   char *sub = static_cast<char *>(bm_malloc(BM_TOPIC_MAX_LEN));
   const char *subtag = NULL;
-  static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
-  static constexpr char subtag_levels[] = "/aos/borealis/levels";
-  static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
-  static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 
   if (sub) {
     for (uint32_t i = 0; i < BOREALIS_SUB_COUNT; i++) {
@@ -109,7 +109,7 @@ void BorealisSensor::aggregate(void) {
   bool is_extended = true;
   size_t base_64_size = 0;
 
-  if (stats.dt != 0 && xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
+  if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
     // TODO: logic needs to be implemented around if this is going to be extended
     if (is_extended) {
       mbedtls_base64_decode(NULL, 0, &base_64_size, (const unsigned char *)stats.levels,
@@ -235,10 +235,6 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
   BmErr err = BmEINVAL;
   Borealis_t *borealis = NULL;
   BorealisSubscriptions_t sub_type = BOREALIS_SUB_COUNT;
-  static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
-  static constexpr char subtag_levels[] = "/aos/borealis/levels";
-  static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
-  static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 
   if (strstr(topic, subtag_spectrum) != NULL) {
     sub_type = BOREALIS_SPECTRUM;
@@ -284,6 +280,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
       case BOREALIS_LEVEL_STATISTICS: {
         struct borealis_level_statistics d;
         if (borealis_levels_statistics_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
+          uint32_t count = 0;
 
           if (borealis->stats.levels) {
             // This would be an indication that the user has configured BOREALIS' report_interval
@@ -292,10 +289,16 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
             bm_free(borealis->stats.levels);
           }
 
+          if (d.dt == 0) {
+            count = 1;
+          } else {
+            count = (uint32_t)(d.dt_report / d.dt);
+          }
+
           // Send to aggregate report every time this is reached
           err = borealis->send_spotter_log_aggregate(
-              "borealis", (uint32_t)(d.dt_report / d.dt), "%.3f,%.3f,%.3f,%u,%.*s\n", d.dt,
-              d.dt_report, d.max_iqr, d.first_band_index, d.levels_length, d.levels);
+              "borealis", count, "%.3f,%.3f,%.3f,%u,%.*s\n", d.dt, d.dt_report, d.max_iqr,
+              d.first_band_index, d.levels_length, d.levels);
 
           if (err != BmOK) {
             bm_debug("Failed to send borealis aggregated log to spotter, reason: %d\n", err);
