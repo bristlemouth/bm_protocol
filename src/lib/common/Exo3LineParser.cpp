@@ -32,7 +32,7 @@ bool Exo3DataLineParser::parseValueFromToken(const char* token, size_t index, ch
     printf("ERR - token too large!\n");
     return false;
   }
-  char token_copy[2 + token_len];  // 1 for separator + token_len + 1 for null terminator
+  char token_copy[256];  // 1 for separator + token_len + 1 for null terminator
   // Insert the '+' or '-' separator at start. `strto` functions in parent
   //  OrderedSeparatorLineParser::parseValueFromToken know how to handle those.
   token_copy[0] = foundSeparator;
