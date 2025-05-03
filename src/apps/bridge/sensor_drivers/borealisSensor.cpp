@@ -107,9 +107,9 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
     return BmEINVAL;
   }
 
-  const float db_step = 0.75f;            // dB
-  const float db_min = -256.0f * db_step; // dB
-  const unsigned int num_stats = 4;       // 25%, 50%, 75%, mean
+  const float db_step = 0.75f;
+  const float db_min = -256.0f * db_step;
+  const unsigned int num_stats = 4; // 25%, 50%, 75%, mean
   const unsigned int num_bands = band_stats_len / num_stats;
 
   float max_iqr_so_far = 0.0f;
