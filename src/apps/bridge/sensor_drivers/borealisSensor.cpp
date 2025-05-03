@@ -169,6 +169,7 @@ void BorealisSensor::aggregate(void) {
       } else {
         calculateQuantizedSpl(report.spl_band_stats, report.spl_band_stats_size, report.spl,
                               report.max_iqr_band);
+        report.max_iqr_band += stats.first_band_index;
       }
     }
 
