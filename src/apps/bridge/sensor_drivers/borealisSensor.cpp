@@ -116,6 +116,8 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
   float spl_linear_sum = 0.0f;
   for (size_t band_index = 0; band_index < num_bands; band_index++) {
     size_t offset = band_index * num_stats;
+
+    // Search for the band with the maximum interquartile range (IQR)
     float q25 = band_stats[offset + 0] * db_step + db_min;
     float q75 = band_stats[offset + 2] * db_step + db_min;
     float iqr = q75 - q25;
@@ -123,6 +125,8 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
       max_iqr_so_far = iqr;
       max_iqr_band = band_index;
     }
+
+    // Sum mean SPL for all bands in linear units
     float mean_db = band_stats[offset + 3] * db_step + db_min;
     spl_linear_sum += powf(10.0f, mean_db / 10.0f);
   }
