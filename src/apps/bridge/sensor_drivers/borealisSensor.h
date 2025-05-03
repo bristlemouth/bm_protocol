@@ -28,27 +28,41 @@ typedef enum {
 
 typedef struct BorealisSensor : public AbstractSensor {
 public:
+  // public instance methods
   void init(void);
   bool subscribe() override;
   void aggregate(void);
+
+  // public static methods
   static BmErr encode_sample(void *data, uint32_t sample_index,
                              sensor_report_encoder_context_t &context);
+
+  // public instance variables
   bool m_aggregation_reports;
+
+  // public static constants
+  static constexpr uint8_t REPORT_NAN_ERROR_VALUE = 0xFF;
   static constexpr BorealisLevelStatisticsData_t AOS_BOREALIS_NAN_AGG = {
       .is_extended = 0,
-      .spl = 0xFF,
-      .max_iqr = 0xFF,
-      .max_iqr_band = 0xFF,
-      .entropy = 0xFF,
+      .spl = REPORT_NAN_ERROR_VALUE,
+      .max_iqr = REPORT_NAN_ERROR_VALUE,
+      .max_iqr_band = REPORT_NAN_ERROR_VALUE,
+      .entropy = REPORT_NAN_ERROR_VALUE,
       .spl_band_stats_size = 0,
       .spl_band_stats = NULL,
   };
 
 private:
+  // private instance variables
   struct borealis_level_statistics stats;
+
+  // private static methods
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                   const uint8_t *data, uint16_t data_len, uint8_t type,
                                   uint8_t version);
+  static BmErr calculateQuantizedSpl(uint8_t const *const band_stats,
+                                     const size_t band_stats_len, uint8_t &spl,
+                                     uint8_t &max_iqr_band);
 } Borealis_t;
 
 Borealis_t *createBorealisSensorSub(uint64_t node_id);
