@@ -106,6 +106,7 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
     max_iqr_band = REPORT_NAN_ERROR_VALUE;
     return BmEINVAL;
   }
+
   const float db_step = 0.75f;            // dB
   const float db_min = -256.0f * db_step; // dB
   const unsigned int num_stats = 4;       // 25%, 50%, 75%, mean
@@ -125,10 +126,10 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
     float mean_db = band_stats[offset + 3] * db_step + db_min;
     spl_linear_sum += powf(10.0f, mean_db / 10.0f);
   }
+
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
-  uint8_t quantized_spl =
-      fmaxf(0.0f, fminf(255.0f, broadband_spl_db - db_min) / db_step) + 0.5f;
-  spl = quantized_spl;
+  spl = fmaxf(0.0f, fminf(255.0f, broadband_spl_db - db_min) / db_step) + 0.5f;
+
   return BmOK;
 }
 
