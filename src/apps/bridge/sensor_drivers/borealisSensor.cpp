@@ -98,6 +98,45 @@ bool BorealisSensor::subscribe() {
   return ret;
 }
 
+BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
+                                            const size_t band_stats_len, uint8_t &spl,
+                                            uint8_t &max_iqr_band) {
+  if (band_stats == NULL || band_stats_len == 0) {
+    spl = REPORT_NAN_ERROR_VALUE;
+    max_iqr_band = REPORT_NAN_ERROR_VALUE;
+    return BmEINVAL;
+  }
+
+  const float db_step = 0.75f;
+  const float db_min = -256.0f * db_step;
+  const unsigned int num_stats = 4; // 25%, 50%, 75%, mean
+  const unsigned int num_bands = band_stats_len / num_stats;
+
+  uint8_t max_iqr_so_far = 0;
+  float spl_linear_sum = 0.0f;
+  for (size_t band_index = 0; band_index < num_bands; band_index++) {
+    size_t offset = band_index * num_stats;
+
+    // Search for the band with the maximum interquartile range (IQR)
+    uint8_t q25 = band_stats[offset + 0];
+    uint8_t q75 = band_stats[offset + 2];
+    uint8_t iqr = q75 - q25;
+    if (iqr > max_iqr_so_far) {
+      max_iqr_so_far = iqr;
+      max_iqr_band = band_index;
+    }
+
+    // Sum mean SPL for all bands in linear units
+    float mean_db = band_stats[offset + 3] * db_step + db_min;
+    spl_linear_sum += powf(10.0f, mean_db / 10.0f);
+  }
+
+  float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
+  spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min) / db_step + 0.5f));
+
+  return BmOK;
+}
+
 /*!
  @brief Aggregate Data To Send To Report Builder
 
@@ -105,44 +144,46 @@ bool BorealisSensor::subscribe() {
           as well as adds the message BorealisLevelStatisticsData_t to the report builder.
  */
 void BorealisSensor::aggregate(void) {
-  BorealisLevelStatisticsData_t data = {};
-  bool is_extended = true;
-  size_t base_64_size = 0;
-
   if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
     // TODO: logic needs to be implemented around if this is going to be extended
-    if (is_extended) {
-      mbedtls_base64_decode(NULL, 0, &base_64_size, (const unsigned char *)stats.levels,
-                            stats.levels_length);
-    }
+    bool is_extended = true;
+    size_t decoded_byte_len = 0;
+    BorealisLevelStatisticsData_t report = {};
+    report.max_iqr = stats.max_iqr;
 
-    data.spl_band_stats = static_cast<uint8_t *>(bm_malloc(base_64_size));
-    if (data.spl_band_stats) {
-      data.is_extended = is_extended;
+    mbedtls_base64_decode(NULL, 0, &decoded_byte_len, (const unsigned char *)stats.levels,
+                          stats.levels_length);
 
-      // TODO: these need calculations or updates
-      data.spl = 0;
-      data.max_iqr_band = 0;
-      data.entropy = 0;
+    report.spl_band_stats = static_cast<uint8_t *>(bm_malloc(decoded_byte_len));
+    if (report.spl_band_stats) {
+      report.is_extended = is_extended;
 
-      data.max_iqr = stats.max_iqr;
-
-      if (is_extended) {
-        mbedtls_base64_decode(data.spl_band_stats, base_64_size,
-                              (size_t *)&data.spl_band_stats_size,
-                              (const unsigned char *)stats.levels, stats.levels_length);
+      int err = mbedtls_base64_decode(report.spl_band_stats, decoded_byte_len,
+                                      (size_t *)&report.spl_band_stats_size,
+                                      (const unsigned char *)stats.levels, stats.levels_length);
+      if (err != 0) {
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to base64 decode Borealis level statistics. "
+                       "Probably invalid character. err=%d, len=%lu, b64=%.*s\n",
+                       err, stats.levels_length, stats.levels_length, stats.levels);
+      } else {
+        calculateQuantizedSpl(report.spl_band_stats, report.spl_band_stats_size, report.spl,
+                              report.max_iqr_band);
+        report.max_iqr_band += stats.first_band_index;
       }
-
-      reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS, &data,
-                              sizeof(BorealisLevelStatisticsData_t),
-                              REPORT_BUILDER_SAMPLE_MESSAGE);
-    } else {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to allocate memory for Borealis level statistics in %s\n",
-                     __func__);
     }
-    xSemaphoreGive(_mutex);
+
+    // TODO: calculate entropy
+    report.entropy = REPORT_NAN_ERROR_VALUE;
+
+    reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS, &report,
+                            sizeof(BorealisLevelStatisticsData_t),
+                            REPORT_BUILDER_SAMPLE_MESSAGE);
+  } else {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to allocate memory for Borealis level statistics in %s\n", __func__);
   }
+  xSemaphoreGive(_mutex);
 
   // Free stats levels message
   bm_free(stats.levels);
