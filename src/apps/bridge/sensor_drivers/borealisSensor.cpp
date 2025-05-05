@@ -132,7 +132,7 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
   }
 
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
-  spl = fmaxf(0.0f, fminf(255.0f, broadband_spl_db - db_min) / db_step) + 0.5f;
+  spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min) / db_step + 0.5f));
 
   return BmOK;
 }
