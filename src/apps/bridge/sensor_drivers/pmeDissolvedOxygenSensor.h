@@ -3,6 +3,7 @@
 #include "abstractSensor.h"
 #include "avgSampler.h"
 
+#include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -38,10 +39,16 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   static constexpr double DO_SATURATION_SAMPLE_MEMBER_MIN = 0.0;
   static constexpr double DO_SATURATION_SAMPLE_MEMBER_MAX = 150.0;
 
-
 public:
   bool subscribe() override;
   void aggregate(void);
+  static constexpr pme_dissolved_oxygen_aggregations_t PME_DO_NAN_AGG = {
+      .temperature_deg_c_mean = NAN,
+      .do_mg_per_l_mean = NAN,
+      .quality_mean = NAN,
+      .do_saturation_pct_mean = NAN,
+      .reading_count = 0,
+  };
 
 private:
   static void pmeDissolvedOxygenSubCallback(uint64_t node_id, const char *topic,

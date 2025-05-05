@@ -183,6 +183,9 @@ static void runController(void *param) {
           } else if (curr->type == SENSOR_TYPE_PME_WIPE) {
             PmeWipeSensor *pme_wiper = static_cast<PmeWipeSensor *>(curr);
             pme_wiper->aggregate();
+          } else if (curr->type == SENSOR_TYPE_BOREALIS) {
+            BorealisSensor *level_statistics = static_cast<BorealisSensor *>(curr);
+            level_statistics->aggregate();
           }
           curr = curr->next;
         }
@@ -320,27 +323,13 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         }
       } else if (strncmp(reply.app_name, "borealis",
                          MIN(reply.app_name_strlen, strlen("borealis"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS_SPECTRUM)) {
-          Borealis_t *borealis_spectrum_sub =
-              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_SPECTRUM, reply.node_id);
-          Borealis_t *borealis_levels_sub =
-              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_LEVELS, reply.node_id);
-          Borealis_t *borealis_levels_statistics_sub =
-              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_LEVEL_STATISTICS, reply.node_id);
-          Borealis_t *borealis_recording_status_sub =
-              createBorealisSensorSub(SENSOR_TYPE_BOREALIS_RECORDING_STATUS, reply.node_id);
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_BOREALIS)) {
+          Borealis_t *borealis_sub = createBorealisSensorSub(reply.node_id);
 
-          if (borealis_spectrum_sub && borealis_levels_sub && borealis_levels_statistics_sub &&
-              borealis_recording_status_sub) {
-            abstractSensorAddSensorSub(borealis_spectrum_sub);
-            abstractSensorAddSensorSub(borealis_levels_sub);
-            abstractSensorAddSensorSub(borealis_levels_statistics_sub);
-            abstractSensorAddSensorSub(borealis_recording_status_sub);
+          if (borealis_sub) {
+            abstractSensorAddSensorSub(borealis_sub);
           } else {
-            bm_free(borealis_spectrum_sub);
-            bm_free(borealis_levels_sub);
-            bm_free(borealis_levels_statistics_sub);
-            bm_free(borealis_recording_status_sub);
+            bm_free(borealis_sub);
           }
         }
       }

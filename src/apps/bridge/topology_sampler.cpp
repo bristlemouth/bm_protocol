@@ -68,7 +68,7 @@ static bool _send_on_boot;
 static node_list_s _node_list;
 static QueueHandle_t _sys_info_queue;
 static QueueHandle_t _config_cbor_map_queue;
-static SemaphoreHandle_t _sys_info_handshake;
+static SemaphoreHandle_t _sys_info_sequence_lock;
 
 static void topology_timer_handler(TimerHandle_t tmr);
 static void topology_sampler_task(void *parameters);
@@ -125,18 +125,17 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
          (cursor != NULL) && (counter < _node_list.num_nodes);
          cursor = cursor->nextNode, counter++) {
       _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
-      if (xSemaphoreTake(_sys_info_handshake,
-                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) == pdTRUE) {
-        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
-                       _node_list.nodes[counter]);
-        if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
-                                      NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
-          printf("Failed to send sys info request to node: %" PRIu64 "\n",
-                 _node_list.nodes[counter]);
-          exit = true;
-          break;
-        }
-      } else {
+      bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
+                     _node_list.nodes[counter]);
+      if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
+                                    NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
+        printf("Failed to send sys info request to node: %" PRIu64 "\n",
+               _node_list.nodes[counter]);
+        exit = true;
+        break;
+      }
+      if (xSemaphoreTake(_sys_info_sequence_lock,
+                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) != pdTRUE) {
         bridgeLogPrint(
             BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
             "Failed to take sys_info semaphore when generating config topology report\n");
@@ -227,7 +226,6 @@ static void topology_sample_cb(NetworkTopology *networkTopology) {
 
     // The first four inputs are not used by this message type
     reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
-
   } while (0);
   xSemaphoreGive(_node_list.node_list_mutex);
 
@@ -313,7 +311,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
     vPortFree(reply.app_name);
   }
 
-  xSemaphoreGive(_sys_info_handshake);
+  xSemaphoreGive(_sys_info_sequence_lock);
 
   return rval;
 }
@@ -597,9 +595,8 @@ void topology_sampler_init(BridgePowerController *power_controller) {
   _config_cbor_map_queue =
       xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(ConfigCborMapReplyData));
   configASSERT(_config_cbor_map_queue);
-  _sys_info_handshake = xSemaphoreCreateBinary();
-  configASSERT(_sys_info_handshake);
-  xSemaphoreGive(_sys_info_handshake);
+  _sys_info_sequence_lock = xSemaphoreCreateBinary();
+  configASSERT(_sys_info_sequence_lock);
 
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
@@ -842,6 +839,9 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
         break;
       } else if (strncmp(app_name, "pme_do_sensor", strlen("pme_do_sensor")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_PME_DO;
+        break;
+      } else if (strncmp(app_name, "borealis", strlen("borealis")) == 0) {
+        _node_list.sensor_type[i] = SENSOR_TYPE_BOREALIS;
         break;
       }
     }

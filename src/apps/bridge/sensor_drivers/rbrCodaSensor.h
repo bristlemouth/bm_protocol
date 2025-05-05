@@ -5,6 +5,7 @@
 #include "bm_rbr_data_msg.h"
 #include "sensorController.h"
 
+#include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -43,6 +44,13 @@ typedef struct RbrCodaSensor : public AbstractSensor {
 public:
   bool subscribe() override;
   void aggregate(void);
+  static constexpr rbr_coda_aggregations_t RBR_CODA_NAN_AGG = {
+      .temp_mean_deg_c = NAN,
+      .pressure_mean_deci_bar = NAN,
+      .pressure_stdev_deci_bar = NAN,
+      .reading_count = 0,
+      .sensor_type = BmRbrDataMsg::SensorType::UNKNOWN,
+  };
 
 private:
   static void rbrCodaSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -55,4 +63,5 @@ private:
 } RbrCoda_t;
 
 RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
-                            uint32_t averager_max_samples, uint32_t configured_reading_period_ms);
+                            uint32_t averager_max_samples,
+                            uint32_t configured_reading_period_ms);

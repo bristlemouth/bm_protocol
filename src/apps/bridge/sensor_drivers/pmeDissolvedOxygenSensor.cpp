@@ -3,6 +3,7 @@
 #include "app_config.h"
 #include "avgSampler.h"
 #include "bm_config.h"
+#include "sensorController.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
 #include "cbor.h"

@@ -1,21 +1,54 @@
 #pragma once
 
+#include "FreeRTOS.h"
 #include "abstractSensor.h"
+#include "bm_borealis.h"
+#include "cbor_sensor_report_encoder.h"
+#include "semphr.h"
+
 #include "util.h"
+
+typedef struct {
+  uint8_t is_extended;
+  uint8_t spl;
+  uint8_t max_iqr;
+  uint8_t max_iqr_band;
+  uint8_t entropy;
+  uint32_t spl_band_stats_size;
+  uint8_t *spl_band_stats;
+} BorealisLevelStatisticsData_t;
+
+typedef enum {
+  BOREALIS_SPECTRUM,
+  BOREALIS_LEVELS,
+  BOREALIS_LEVEL_STATISTICS,
+  BOREALIS_RECORDING_STATUS,
+  BOREALIS_SUB_COUNT,
+} BorealisSubscriptions_t;
 
 typedef struct BorealisSensor : public AbstractSensor {
 public:
-  static constexpr uint32_t DEFAULT_BOREALIS_READING_PERIOD_MS = 1000;
+  void init(void);
   bool subscribe() override;
+  void aggregate(void);
+  static BmErr encode_sample(void *data, uint32_t sample_index,
+                             sensor_report_encoder_context_t &context);
+  bool m_aggregation_reports;
+  static constexpr BorealisLevelStatisticsData_t AOS_BOREALIS_NAN_AGG = {
+      .is_extended = 0,
+      .spl = 0xFF,
+      .max_iqr = 0xFF,
+      .max_iqr_band = 0xFF,
+      .entropy = 0xFF,
+      .spl_band_stats_size = 0,
+      .spl_band_stats = NULL,
+  };
 
 private:
+  struct borealis_level_statistics stats;
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                   const uint8_t *data, uint16_t data_len, uint8_t type,
                                   uint8_t version);
-  static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
-  static constexpr char subtag_levels[] = "/aos/borealis/levels";
-  static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
-  static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 } Borealis_t;
 
-Borealis_t *createBorealisSensorSub(abstractSensorType_e type, uint64_t node_id);
+Borealis_t *createBorealisSensorSub(uint64_t node_id);
