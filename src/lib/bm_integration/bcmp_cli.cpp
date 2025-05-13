@@ -510,7 +510,7 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       data[dataStrLen] = 0;
 
       if (bm_pub(topic, data, dataStrLen, type, version) == BmOK) {
-        printf("Successfully published message to topic: %s of %d bytes\n", topic, dataStrLen);
+        printf("Successfully published message to topic: %s of %ld bytes\n", topic, dataStrLen);
       } else {
         printf("Could not publish message to topic: %s\n", topic);
       }
@@ -573,14 +573,14 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
           data = (uint8_t)strtoul(data_str, NULL, 0);
           rb_buf[idx++] = data;
           if (idx >= CHUNK_SIZE_DFU) {
-            printf("Adding to queue at: %d\n", idx);
+            printf("Adding to queue at: %" PRIu32 "\n", idx);
             bm_dfu_host_queue_data(rb_buf, sizeof(rb_buf));
             idx = 0;
           }
         }
         printf("DFU Byte Added\n");
       } else if (strncmp("finish", sub_command, command_str_len) == 0) {
-        printf("Adding to queue at: %d\n", idx);
+        printf("Adding to queue at: %" PRIu32 "\n", idx);
         bm_dfu_host_queue_data(rb_buf, sizeof(rb_buf));
         idx = 0;
         printf("DFU Finish\n");

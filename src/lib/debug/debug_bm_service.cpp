@@ -37,7 +37,7 @@ static bool reply_cb(bool ack, uint32_t msg_id, size_t service_strlen, const cha
                      size_t reply_len, uint8_t *reply_data) {
   printf("Msg id: %" PRIu32 "\n", msg_id);
   if (ack) {
-    printf("Service: %.*s\n", service_strlen, service);
+    printf("Service: %.*s\n", (int)service_strlen, service);
     printf("Reply: ");
     for (size_t i = 0; i < reply_len; i++) {
       printf("%02x ", reply_data[i]);
@@ -63,12 +63,12 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
         printf("Failed to decode sys info reply\n");
         break;
       }
-      printf("Service: %.*s\n", service_strlen, service);
+      printf("Service: %.*s\n", (int)service_strlen, service);
       printf("Reply: \n");
       printf(" * Node id: %016" PRIx64 "\n", reply.node_id);
       printf(" * Git SHA: 0x%08" PRIx32 "\n", reply.git_sha);
       printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply.sys_config_crc);
-      printf(" * App name: %.*s\n", reply.app_name_strlen, reply.app_name);
+      printf(" * App name: %.*s\n", (int)reply.app_name_strlen, reply.app_name);
     } else {
       printf("NACK\n");
     }
@@ -91,7 +91,7 @@ static bool config_map_callback(bool ack, uint32_t msg_id, size_t service_strlen
         printf("Failed to decode sys info reply\n");
         break;
       }
-      printf("Service: %.*s\n", service_strlen, service);
+      printf("Service: %.*s\n", (int)service_strlen, service);
       printf("Reply: \n");
       printf(" * Node id: %016" PRIx64 "\n", reply.node_id);
       printf(" * Partition: %" PRIu32 "\n", reply.partition_id);

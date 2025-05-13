@@ -90,16 +90,20 @@ void debugTx(void) {}
 
 void setup(void) {
   // Load system configuration & initialize if not configured by user
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE), &pmeLogEnable)) {
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE,
+                      strlen(SENSOR_BM_LOG_ENABLE), &pmeLogEnable)) {
     pmeLogEnableCfg = true;
   }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S, strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS)) {
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S,
+                      strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS)) {
     pmeDOTIntervalSCfg = true;
   }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S, strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS)) {
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S,
+                      strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS)) {
     pmeWipeIntervalSCfg = true;
   }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_DEBUG_TX_ENABLE, strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_DEBUG_TX_ENABLE,
+                      strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
     sensorDebugTxEnableCfg = true;
   }
 
@@ -110,30 +114,29 @@ void setup(void) {
   printf("Last wipe time: %lu\n", lastWipeEpochS);
   if (pmeLogEnableCfg == true) {
     printf("User-defined pmeLogEnable found: %" PRIu32 "\n", pmeLogEnable);
-  }
-  else {
+  } else {
     printf("No user-defined pmeLogEnable - defaulting to: %" PRIu32 "\n", pmeLogEnable);
   }
 
   if (pmeDOTIntervalSCfg == true) {
     printf("User-defined pmeDOTIntervalS found: %" PRIu32 " seconds.\n", pmeDOTIntervalS);
-  }
-  else {
-    printf("No user-defined pmeDOTIntervalS - defaulting to: %" PRIu32 " seconds.\n", pmeDOTIntervalS);
+  } else {
+    printf("No user-defined pmeDOTIntervalS - defaulting to: %" PRIu32 " seconds.\n",
+           pmeDOTIntervalS);
   }
 
   if (pmeWipeIntervalSCfg == true) {
     printf("User-defined pmeWipeIntervalS found: %" PRIu32 " seconds.\n", pmeWipeIntervalS);
-  }
-  else {
-    printf("No user-defined pmeWipeIntervalS - defaulting to: %" PRIu32 " seconds.\n", pmeWipeIntervalS);
+  } else {
+    printf("No user-defined pmeWipeIntervalS - defaulting to: %" PRIu32 " seconds.\n",
+           pmeWipeIntervalS);
   }
 
   if (sensorDebugTxEnableCfg == true) {
     printf("User-defined sensorDebugTxEnable found: %" PRIu32 "\n", sensorDebugTxEnable);
-  }
-  else {
-    printf("No user-defined sensorDebugTxEnable - defaulting to: %" PRIu32 "\n", sensorDebugTxEnable);
+  } else {
+    printf("No user-defined sensorDebugTxEnable - defaulting to: %" PRIu32 "\n",
+           sensorDebugTxEnable);
   }
 
   // Ensure Vbus stable before enabling Vout
@@ -171,15 +174,16 @@ void loop(void) {
         if (PmeWipeMsg::encode(w, cborBuf, sizeof(cborBuf), &encodedLen) == CborNoError) {
           bm_pub_wl(pmeWipeTopic, pmeWipeTopicStrLen, cborBuf, encodedLen, 0,
                     BM_COMMON_PUB_SUB_VERSION);
-          printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %d, \n", pmeWipeTopic,
-                 cborBuf);
+          printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
+                 "...\n",
+                 pmeWipeTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         } else {
           printf("!  Failed to encode WIPE data message\n");
         }
       }
     } else {
       if (elapsedWipe % 10 == 0) {
-        printf("Wipe timer: %llu of %i seconds\n", elapsedWipe, pmeWipeIntervalS);
+        printf("Wipe timer: %llu of %lu seconds\n", elapsedWipe, pmeWipeIntervalS);
       }
     }
   } else {
@@ -204,8 +208,9 @@ void loop(void) {
       size_t encodedLen = 0;
       if (PmeDissolvedOxygenMsg::encode(d, cborBuf, sizeof(cborBuf), &encodedLen) ==
           CborNoError) {
-        printf("#  DOT Encoding success! | Topic: %s, cborBuf: %d, \n", pmeDoTopic,
-               cborBuf);
+        printf("#  DOT Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
+               "...\n",
+               pmeDoTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         bm_pub_wl(pmeDoTopic, pmeDoTopicStrLen, cborBuf, encodedLen, 0,
                   BM_COMMON_PUB_SUB_VERSION);
         if (true) {
@@ -220,7 +225,7 @@ void loop(void) {
     lastDoMeasurementUptimeSec = currentUptimeSec;
   } else {
     if (elapsedDoSec % 10 == 0) {
-    printf("DOT timer: %llu of %i seconds\n", elapsedDoSec, pmeDOTIntervalS);
+      printf("DOT timer: %llu of %lu seconds\n", elapsedDoSec, pmeDOTIntervalS);
     }
   }
   bm_delay(1000);

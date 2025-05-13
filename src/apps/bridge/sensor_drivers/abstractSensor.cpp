@@ -77,9 +77,9 @@ BmErr AbstractSensor::send_spotter_log_individual(const char *app_name,
           "%s,"             // node_app_name
           "%" PRIu64 ","    // reading_uptime_millis
           "%" PRIu64 "."    // reading_time_utc_ms seconds part
-          "%03" PRIu32 ","  // reading_time_utc_ms millis part
+          "%03" PRIu64 ","  // reading_time_utc_ms millis part
           "%" PRIu64 "."    // sensor_reading_time_ms seconds part
-          "%03" PRIu32 ",", // sensor_reading_time_ms millis part
+          "%03" PRIu64 ",", // sensor_reading_time_ms millis part
           node_id, update_node_position(max_reading_period_ms), app_name,
           header.reading_uptime_millis, GET_S_FROM_MS(header.reading_time_utc_ms),
           GET_MS_LEFT(header.reading_time_utc_ms), GET_S_FROM_MS(header.sensor_reading_time_ms),

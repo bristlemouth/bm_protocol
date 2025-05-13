@@ -92,7 +92,7 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
     sdi_transmit("0I!");
     result = sdi_receive();
     if (result) {
-      printf("received data: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      printf("received data: %.*s\n", (int)sizeof(rxBuffer), rxBuffer);
     }
     /* Response --- 013YSIIWQSGEXOSND100
        * 0 sdi-12 sensor address
@@ -113,7 +113,7 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
     sdi_transmit("0M!");
     result = sdi_receive();
     if (result) {
-      printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+      printf("%.*s\n", (int)sizeof(rxBuffer), rxBuffer);
       // get time it takes for the measurement to be done
       delay = abs((rxBuffer[5] - '0') * 10 + (rxBuffer[6] - '0'));
       printf("wait %d seconds for measurement to complete\n", delay);
@@ -127,22 +127,22 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
     vTaskDelay(pdMS_TO_TICKS(delay * 1000)); //62 seconds delay
     result = sdi_receive();
     if (result) {
-      printf("measuring done: %.*s\n", sizeof(rxBuffer), rxBuffer);
+      printf("measuring done: %.*s\n", (int)sizeof(rxBuffer), rxBuffer);
     }
     vTaskDelay(pdMS_TO_TICKS(1000));
     sdi_transmit("0D0!");
     result = sdi_receive();
     if (result) {
-      printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+      printf("%.*s\n", (int)sizeof(rxBuffer), rxBuffer);
       if (d0_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
         const Value d0_0 = d0_parser.getValue(1);
         const Value d0_1 = d0_parser.getValue(2);
         const Value d0_2 = d0_parser.getValue(3);
         const Value d0_3 = d0_parser.getValue(4);
-        printf("temp_sensor:  %.3f C\n", d0_0.data);
-        printf("sp_cond:      %.3f uS/cm\n", d0_1.data);
-        printf("pH:           %.3f\n", d0_2.data);
-        printf("pH:           %.3f mV\n", d0_3.data);
+        printf("temp_sensor:  %.3f C\n", d0_0.data.double_val);
+        printf("sp_cond:      %.3f uS/cm\n", d0_1.data.double_val);
+        printf("pH:           %.3f\n", d0_2.data.double_val);
+        printf("pH:           %.3f mV\n", d0_3.data.double_val);
         _latest_sample.temp_sensor = (float)d0_0.data.double_val;
         _latest_sample.sp_cond = (float)d0_1.data.double_val;
         _latest_sample.pH = (float)d0_2.data.double_val;
@@ -153,16 +153,16 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
     sdi_transmit("0D1!");
     result = sdi_receive();
     if (result) {
-      printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+      printf("%.*s\n", (int)sizeof(rxBuffer), rxBuffer);
       if (d1_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
         const Value d1_0 = d1_parser.getValue(1);
         const Value d1_1 = d1_parser.getValue(2);
         const Value d1_2 = d1_parser.getValue(3);
         const Value d1_3 = d1_parser.getValue(4);
-        printf("DO:           %.3f Percent Sat\n", d1_0.data);
-        printf("DO:           %.3f mg/L\n", d1_1.data);
-        printf("turbidity:    %.3f NTU\n", d1_2.data);
-        printf("wiper pos:    %.3f V\n", d1_3.data);
+        printf("DO:           %.3f Percent Sat\n", d1_0.data.double_val);
+        printf("DO:           %.3f mg/L\n", d1_1.data.double_val);
+        printf("turbidity:    %.3f NTU\n", d1_2.data.double_val);
+        printf("wiper pos:    %.3f V\n", d1_3.data.double_val);
         _latest_sample.dis_oxy = (float)d1_0.data.double_val;
         _latest_sample.dis_oxy_mg = (float)d1_1.data.double_val;
         _latest_sample.turbidity = (float)d1_2.data.double_val;
@@ -173,12 +173,12 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
     sdi_transmit("0D2!");
     result = sdi_receive();
     if (result) {
-      printf("%.*s\n", sizeof(rxBuffer), rxBuffer);
+      printf("%.*s\n", (int)sizeof(rxBuffer), rxBuffer);
       if (d2_parser.parseLine(reinterpret_cast<const char *>(rxBuffer), sizeof(rxBuffer))) {
         const Value d2_0 = d2_parser.getValue(1);
         const Value d2_1 = d2_parser.getValue(2);
-        printf("depth:        %.3f m\n", d2_0.data);
-        printf("power supply: %.3f V\n", d2_1.data);
+        printf("depth:        %.3f m\n", d2_0.data.double_val);
+        printf("power supply: %.3f V\n", d2_1.data.double_val);
         _latest_sample.depth = (float)d2_0.data.double_val;
         _latest_sample.power = (float)d2_1.data.double_val;
       }

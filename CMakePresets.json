@@ -146,6 +146,13 @@
             }
         },
         {
+            "name": "pme-do-sensor",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "pme_do_sensor"
+            }
+        },
+        {
             "name": "pub-example",
             "inherits": "hello-world",
             "cacheVariables": {
@@ -178,6 +185,13 @@
             "inherits": "hello-world",
             "cacheVariables": {
                 "APP": "rx_live_example"
+            }
+        },
+        {
+            "name": "sdi12-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sdi12_example"
             }
         },
         {
@@ -315,6 +329,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "pme-do-sensor",
+            "name": "pme-do-sensor",
+            "jobs": 8
+        },
+        {
             "configurePreset": "pub-example",
             "name": "pub-example",
             "jobs": 8
@@ -337,6 +356,11 @@
         {
             "configurePreset": "rx-live-example",
             "name": "rx-live-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sdi12-example",
+            "name": "sdi12-example",
             "jobs": 8
         },
         {
