@@ -199,3 +199,34 @@ bool BQ25820::disablePfm() {
 
 }
 
+bool BQ25820::readSensors() {
+  bool rval = false;
+  bool quit = false;
+  int16_t iac_val;
+  int16_t ibat_val;
+  uint16_t vac_val;
+  uint16_t vbat_val;
+  uint16_t vsys_val;
+  uint16_t ts_val;
+
+  uint8_t tmpreg;
+  do {
+    if(!write8(ADC_CTRL_REG, 0xE0)) {
+      break;
+    }
+    for (uint16_t i = 0; i < 1000; i++) {
+      if(!read8(CHARGER_FLAG_1, &tmpreg)) {
+        quit = true;
+        break; // Exit this polling loop
+      }
+      if (tmpreg & 0x80) {
+        // ADC is done
+        readReg(IAC_ADC_REG, )
+      }
+    }
+    if (quit) {
+      break;
+    }
+  } while(0)
+}
+
