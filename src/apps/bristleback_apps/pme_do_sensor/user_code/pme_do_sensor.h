@@ -14,7 +14,7 @@ public:
       : _DOTparser(",", 256, DOT_PARSER_VALUE_TYPE, 5),
         _WIPEparser(",", 256, WIPE_PARSER_VALUE_TYPE, 6) {};
   void init();
-  bool getDoData(PmeDissolvedOxygenMsg::Data &d);
+  bool getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt);
   bool getWipeData(PmeWipeMsg::Data &w);
   bool getSN(PmeDissolvedOxygenMsg::Data &s);
   void flush();

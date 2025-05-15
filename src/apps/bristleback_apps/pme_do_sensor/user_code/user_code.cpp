@@ -50,7 +50,8 @@ uint32_t pmeWipeIntervalS = 14400;
 bool pmeWipeIntervalSCfg = false;
 uint32_t sensorDebugTxEnable = 0;
 bool sensorDebugTxEnableCfg = false;
-float salinityPpt = 35.0;
+
+static float salinityPpt = 35.0;
 
 static PmeSensor pmeSensor;
 
@@ -103,7 +104,7 @@ static void handle_barometric_pressure(uint64_t node_id, const char *topic, uint
   if (err == CborNoError) {
     // TODO: Use d.barometric_pressure_mbar to calculate DO saturation
   } else {
-    printf("Failed to decode barometric pressure data message. err=%u\n", err);
+    printf("Failed to decode barometric pressure data message. err=%d\n", err);
   }
 }
 
@@ -235,7 +236,7 @@ void loop(void) {
     // Longer term, salinity could be updated from a subscribed conductivity/salinity sensor
     // d.salinity_ppt = salinityPpt;
 
-    if (pmeSensor.getDoData(d)) {
+    if (pmeSensor.getDoData(d, salinityPpt)) {
       static uint8_t cborBuf[pmeSensorDataMsgMaxSize];
       size_t encodedLen = 0;
       if (PmeDissolvedOxygenMsg::encode(d, cborBuf, sizeof(cborBuf), &encodedLen) ==

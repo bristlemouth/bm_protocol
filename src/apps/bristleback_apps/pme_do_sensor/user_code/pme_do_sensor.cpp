@@ -3,6 +3,7 @@
 #include "bm_os.h"
 #include "bm_printf.h"
 #include "configuration.h"
+#include "do_calc.h"
 #include "payload_uart.h"
 #include "serial.h"
 #include "spotter.h"
@@ -145,7 +146,7 @@ void PmeSensor::init() {
  * @param d Reference to a PmeDissolvedOxygenMsg::Data structure where the parsed data will be stored.
  * @return Returns true if data was successfully retrieved and parsed, false otherwise.
  */
-bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
+bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
   bool success = false;
 
   RTCTimeAndDate_t time_and_date = {};
@@ -185,13 +186,17 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
           q_signal.type != TYPE_DOUBLE) {
         printf("!  Parsed invalid DOT data");
       } else {
+        d.header.version = PmeDissolvedOxygenMsg::VERSION;
         d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
         d.header.reading_uptime_millis = uptimeGetMs();
+        d.header.sensor_reading_time_ms = 0;
         d.temperature_deg_c = temp_signal.data.double_val;
-        d.do_mg_per_l = do_signal.data.double_val;
+        d.do_mg_per_l =
+            do_signal.data.double_val * salinityFactor(d.temperature_deg_c, salinityPpt);
         d.quality = q_signal.data.double_val;
-
-        // TODO: Use d.salinity_ppt to calculate d.do_salinity_corrected_mg_per_l
+        // TODO: update PmeDissolvedOxygenMsg::Data to include salinity
+        //       which requires updating bm_common_messages and bm_core submodules
+        // d.salinity_ppt = salinityPpt;
 
         // DO Sat% not available at this time; setting to NULL causes error (converting NULL to double)
         //d.do_saturation_pct = 0;
