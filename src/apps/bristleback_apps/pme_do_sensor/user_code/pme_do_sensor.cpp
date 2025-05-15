@@ -194,9 +194,7 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
         d.do_mg_per_l =
             do_signal.data.double_val * salinityFactor(d.temperature_deg_c, salinityPpt);
         d.quality = q_signal.data.double_val;
-        // TODO: update PmeDissolvedOxygenMsg::Data to include salinity
-        //       which requires updating bm_common_messages and bm_core submodules
-        // d.salinity_ppt = salinityPpt;
+        d.salinity_ppt = salinityPpt;
 
         // DO Sat% not available at this time; setting to NULL causes error (converting NULL to double)
         //d.do_saturation_pct = 0;
