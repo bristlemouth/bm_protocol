@@ -64,7 +64,7 @@ static bool loadCellSample() {
   while ((!successful_lc_read) &&
          (((uptimeGetMicroSeconds() / 1000) - read_start_time) < read_attempt_duration)) {
     if (_loadCell->available()) {
-      printf("%llu | reading: %d\n", uptimeGetMicroSeconds() / 1000, reading);
+      printf("%llu | reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, reading);
       // printf("%llu | reading corrs: %d\n", uptimeGetMicroSeconds()/1000, reading-333900);
       _loadCell->getInternalOffsetCal();
 
@@ -82,7 +82,7 @@ static bool loadCellSample() {
                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
       printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
       printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
-      printf("%llu | zeroOffset: %d\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
+      printf("%llu | zeroOffset: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
       successful_lc_read = true;
     } else {
       vTaskDelay(pdMS_TO_TICKS(10));
@@ -139,7 +139,7 @@ static bool loadCellInit() {
       negative_factor = true;
   }
 
-  printf("loadCell init rval: %u\n", rval);
+  printf("loadCell init rval: %d\n", rval);
   return rval;
 
   // initial vals for force averaging.

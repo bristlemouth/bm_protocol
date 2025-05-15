@@ -130,9 +130,9 @@ void tally_detection(const TagID &latest_detection) {
         tag_detections[i].detection_count++;
       } else {
         // Print an error for debugging
-        printf(
-            "Error: Detection count for tag serial no %u has reached its maximum value (%u).\n",
-            tag_detections[i].tag_serial_no, UINT16_MAX);
+        printf("Error: Detection count for tag serial no %lu has reached its maximum value "
+               "(%" PRIu16 ").\n",
+               tag_detections[i].tag_serial_no, UINT16_MAX);
       }
       found = true;
       break;
@@ -158,7 +158,7 @@ void tally_detection(const TagID &latest_detection) {
          "Freq", "Chan", "Detections");
   printf("---------------------------------------------------------\n");
   for (uint32_t i = 0; i < unique_tag_ids; ++i) {
-    printf("| %-5u | %-10u | %-6c | %-8u | %-5u | %-10u |\n", i,
+    printf("| %-5lu | %-10lu | %-6c | %-8u | %-5u | %-10u |\n", i,
            tag_detections[i].tag_serial_no, tag_detections[i].code_char,
            tag_detections[i].code_freq, tag_detections[i].code_channel,
            tag_detections[i].detection_count);

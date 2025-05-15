@@ -270,13 +270,13 @@ void setup(void) {
   printf("App configs:\n");
   printf("\tcurrent_agg_period_min: %f\n", current_agg_period_min);
   printf("\tCURRENT_AGG_PERIOD_MS: %f\n", CURRENT_AGG_PERIOD_MS);
-  printf("\tn_skip_readings: %u\n", n_skip_readings);
-  printf("\treading_interval_ms: %u\n", reading_interval_ms);
+  printf("\tn_skip_readings: %lu\n", n_skip_readings);
+  printf("\treading_interval_ms: %lu\n", reading_interval_ms);
   printf("\tmax_readings_in_agg: %llu\n", max_readings_in_agg);
-  printf("\tpayload_wd_to_s: %u\n", payload_wd_to_s);
-  printf("\tbaud_rate: %u\n", baud_rate);
-  printf("\tmfg_tx_test_enable: %u\n", mfg_tx_test_enable);
-  printf("\tsensorBmLogEnable: %u\n", sensorBmLogEnable);
+  printf("\tpayload_wd_to_s: %lu\n", payload_wd_to_s);
+  printf("\tbaud_rate: %lu\n", baud_rate);
+  printf("\tmfg_tx_test_enable: %lu\n", mfg_tx_test_enable);
+  printf("\tsensorBmLogEnable: %lu\n", sensorBmLogEnable);
 
   SensorWatchdog::SensorWatchdogAdd(AANDERAA_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     aanderaaSensorWatchdogHandler,
@@ -325,7 +325,7 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &statsEndRtc);
     uint32_t statsEndTick = uptimeGetMs();
     int buffer_offset =
-        sprintf(stats_print_buffer, "rtc_end: %s, tick_start: %u, tick_end: %u | ",
+        sprintf(stats_print_buffer, "rtc_end: %s, tick_start: %lu, tick_end: %lu | ",
                 rtcTimeBuffer, statsStartTick, statsEndTick);
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       buffer_offset +=
@@ -386,11 +386,12 @@ void loop(void) {
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
     if (sensorBmLogEnable) {
-      spotter_log(0, AANDERAA_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
-                 uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+      spotter_log(0, AANDERAA_RAW_LOG, USE_TIMESTAMP,
+                  "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+                  read_len, payload_buffer);
     }
     spotter_log_console(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
-              rtcTimeBuffer, read_len, payload_buffer);
+                        rtcTimeBuffer, read_len, payload_buffer);
     printf("[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
            rtcTimeBuffer, read_len, payload_buffer);
 
@@ -442,7 +443,8 @@ void loop(void) {
     // Now let's aggregate those values into statistics
     if (current_data[0].getNumSamples() >= max_readings_in_agg &&
         max_readings_in_agg > N_SAMPLES_PAD) {
-      printf("ERR - No more room in current reading buffer, already have %d readings!\n",
+      printf("ERR - No more room in current reading buffer, already have %" PRIu64
+             " readings!\n",
              max_readings_in_agg);
       return;
     }
@@ -451,7 +453,7 @@ void loop(void) {
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       double param_reading = parser.getValue(i).data.double_val;
       current_data[i].addSample(param_reading);
-      printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[i], param_reading,
+      printf("\t%s | value: %f, count: %lu/%llu, min: %f, max: %f\n", keys[i], param_reading,
              current_data[i].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
              current_data[i].getMin(), current_data[i].getMax());
     }

@@ -166,7 +166,6 @@ set(COMPILE_FLAGS
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
-	-Wno-format
 	-Wno-narrowing
 
 	-Werror

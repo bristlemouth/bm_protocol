@@ -283,7 +283,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                               const char *service, size_t reply_len, uint8_t *reply_data) {
   bool rval = false;
   SysInfoReplyData reply = {0, 0, 0, 0, NULL};
-  printf("Service: %.*s\n", service_strlen, service);
+  printf("Service: %.*s\n", (int)service_strlen, service);
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
     if (ack) {
@@ -296,7 +296,7 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       printf(" * Node id: %016" PRIx64 "\n", reply.node_id);
       printf(" * Git SHA: 0x%08" PRIx32 "\n", reply.git_sha);
       printf(" * Sys config CRC: 0x%08" PRIx32 "\n", reply.sys_config_crc);
-      printf(" * App name: %.*s\n", reply.app_name_strlen, reply.app_name);
+      printf(" * App name: %.*s\n", (int)reply.app_name_strlen, reply.app_name);
       if (xQueueSend(_sys_info_queue, &reply, 0) != pdTRUE) {
         printf("Failed to send sys info\n");
         break;
@@ -332,7 +332,7 @@ static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_s
                                      uint8_t *reply_data) {
   bool rval = false;
   ConfigCborMapReplyData reply = {0, 0, 0, 0, NULL};
-  printf("Service: %.*s\n", service_strlen, service);
+  printf("Service: %.*s\n", (int)service_strlen, service);
   printf("Reply: %" PRIu32 "\n", msg_id);
   do {
     if (ack) {
@@ -343,9 +343,9 @@ static bool cbor_config_map_reply_cb(bool ack, uint32_t msg_id, size_t service_s
         break;
       }
       printf(" * Node id: %016" PRIx64 "\n", reply.node_id);
-      printf(" * Partition: %" PRId32 "\n", reply.partition_id);
+      printf(" * Partition: %" PRIu32 "\n", reply.partition_id);
       printf(" * Cbor map len: %" PRIu32 "\n", reply.cbor_encoded_map_len);
-      printf(" * Success: %" PRId32 "\n", reply.success);
+      printf(" * Success: %d\n", reply.success);
       if (reply.success) {
         for (uint32_t i = 0; i < reply.cbor_encoded_map_len; i++) {
           if (!reply.cbor_data) {

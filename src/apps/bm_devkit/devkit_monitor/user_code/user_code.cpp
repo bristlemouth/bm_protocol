@@ -114,7 +114,7 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &statsStartRtc);
     uint32_t statsEndTick = uptimeGetMs();
     sprintf(stats_print_buffer,
-            "rtc_start: %s, tick_start: %u, tick_end: %u, "
+            "rtc_start: %s, tick_start: %lu, tick_end: %lu, "
             "temp_n: %u, temp_min: %.4f, temp_max: %.4f, temp_mean: %.4f, "
             "temp_std: %.4f, "
             "hum_n: %u, hum_min: %.4f, hum_max: %.4f, hum_mean: %.4f, hum_std: "
@@ -165,27 +165,27 @@ void loop(void) {
   }
 
   if (pressure_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    printf("ERR - No more room in pressure stats buffer, already have %lu readings!\n",
+    printf("ERR - No more room in pressure stats buffer, already have %" PRIu64 " readings!\n",
            MAX_SENSOR_SAMPLES);
   } else {
     float temperature, pressure = 0.0;
     if (pressureSamplerGetLatest(pressure, temperature)) {
       pressure_stats.addSample(pressure);
-      printf("pressure stats | count: %u/%lu, min: %f, max: %f\n",
+      printf("pressure stats | count: %lu/%llu, min: %f, max: %f\n",
              pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, pressure_stats.getMin(),
              pressure_stats.getMax());
     }
   }
 
   if (hum_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    printf("ERR - No more room in hum/temp stats buffer, already have %lu readings!\n",
+    printf("ERR - No more room in hum/temp stats buffer, already have %" PRIu64 " readings!\n",
            MAX_SENSOR_SAMPLES);
   } else {
     float temperature, humidity = 0.0;
     if (htuSamplerGetLatest(humidity, temperature)) {
       hum_stats.addSample(humidity);
       temp_stats.addSample(temperature);
-      printf("hum-temp stats | count: %u/%lu, min_T: %f, max_T: %f, min_H: %f, "
+      printf("hum-temp stats | count: %lu/%llu, min_T: %f, max_T: %f, min_H: %f, "
              "max_H: %f\n",
              hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
              temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
@@ -193,8 +193,7 @@ void loop(void) {
   }
 
   if (power_voltage_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    printf("ERR - No more room in power stats buffer, already have %lu "
-           "readings!\n",
+    printf("ERR - No more room in power stats buffer, already have %" PRIu64 " readings!\n",
            MAX_SENSOR_SAMPLES);
   } else {
     float voltage_mote, current_mote = 0.0;
@@ -203,7 +202,7 @@ void loop(void) {
       power_voltage_stats.addSample(voltage_mote);
       power_current_stats.addSample(current_mote);
 
-      printf("power stats | count: %u/%lu, min_V: %f, max_V: %f, min_I: %f, max_I: "
+      printf("power stats | count: %lu/%llu, min_V: %f, max_V: %f, min_I: %f, max_I: "
              "%f\n",
              power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
              power_voltage_stats.getMin(), power_voltage_stats.getMax(),

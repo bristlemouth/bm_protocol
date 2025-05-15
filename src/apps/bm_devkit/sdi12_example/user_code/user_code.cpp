@@ -75,7 +75,7 @@ void setup(void) {
   // samples per send
   get_config_uint(BM_CFG_PARTITION_USER, "sampleCount", strlen("sampleCount"), &sample_count);
   if (sample_count * SAMPLE_SIZE > MAX_TX_BUFFER_SIZE) {
-    printf("sampleCount value is larger than max buffer size: %d, limiting sampleCount to: %d",
+    printf("sampleCount value is larger than max buffer size: %d, limiting sampleCount to: %u",
            MAX_TX_BUFFER_SIZE, MAX_TX_BUFFER_SIZE / SAMPLE_SIZE);
     sample_count = MAX_TX_BUFFER_SIZE / SAMPLE_SIZE;
   }

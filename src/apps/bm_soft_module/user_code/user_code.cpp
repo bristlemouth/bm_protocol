@@ -87,7 +87,7 @@ static void getConfigs() {
                       strlen(soft_cfg_reading_period_ms), &soft_delay_ms)) {
     printf("SOFT Delay: %" PRIu32 "ms\n", soft_delay_ms);
   } else {
-    printf("SOFT Delay: Using default % " PRIu32 "ms\n", soft_delay_ms);
+    printf("SOFT Delay: Using default %" PRIu32 "ms\n", soft_delay_ms);
   }
 
   get_config_uint(BM_CFG_PARTITION_SYSTEM, sensor_bm_log_enable, strlen(sensor_bm_log_enable),
