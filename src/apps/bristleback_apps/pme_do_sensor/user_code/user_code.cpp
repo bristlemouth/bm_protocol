@@ -4,6 +4,7 @@
 #include "app_pub_sub.h"
 #include "array_utils.h"
 #include "avgSampler.h"
+#include "barometric_pressure_data_msg.h"
 #include "bm_os.h"
 #include "bm_printf.h"
 #include "bsp.h"
@@ -38,7 +39,6 @@
 - Comment code
 - Remove or comment out debugging printf's
 - Follow as bm_pub_wl is developed
-- Pull barometric pressure from spotter to use for DOsat% calc
 */
 
 uint32_t pmeLogEnable = 1;
@@ -49,6 +49,8 @@ uint32_t pmeWipeIntervalS = 14400;
 bool pmeWipeIntervalSCfg = false;
 uint32_t sensorDebugTxEnable = 0;
 bool sensorDebugTxEnableCfg = false;
+
+static float salinityPpt = 35.0;
 
 static PmeSensor pmeSensor;
 
@@ -66,6 +68,7 @@ static constexpr char SENSOR_BM_LOG_ENABLE[] = "pmeLogEnable";
 static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
 static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
+static constexpr char SALINITY_PPT[] = "salinityPpt";
 
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
@@ -84,6 +87,24 @@ static int createPmeWipeDataTopic(void) { // Wipe
                              "sensor/%016" PRIx64 "/pme/wipe_data", getNodeId());
   configASSERT(topicStrLen > 0 && topicStrLen < BM_TOPIC_MAX_LEN);
   return topicStrLen;
+}
+
+static void handle_barometric_pressure(uint64_t node_id, const char *topic, uint16_t topic_len,
+                                       const uint8_t *data, uint16_t data_len, uint8_t type,
+                                       uint8_t version) {
+  (void)node_id;
+  (void)topic;
+  (void)topic_len;
+  (void)type;
+  (void)version;
+
+  BarometricPressureDataMsg::Data d;
+  CborError err = BarometricPressureDataMsg::decode(d, data, data_len);
+  if (err == CborNoError) {
+    pmeSensor.setBarometricPressure(d.barometric_pressure_mbar);
+  } else {
+    printf("Failed to decode barometric pressure data message. err=%d\n", err);
+  }
 }
 
 void debugTx(void) {}
@@ -106,6 +127,13 @@ void setup(void) {
                       strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
     sensorDebugTxEnableCfg = true;
   }
+  get_config_float(BM_CFG_PARTITION_SYSTEM, SALINITY_PPT, strlen(SALINITY_PPT), &salinityPpt);
+  printf("Salinity PPT: %f\n", salinityPpt);
+
+  // Subscribe to barometric pressure
+  bm_sub("sensor/*/barometric_pressure", handle_barometric_pressure);
+  // Possibly longer term, subscribe to salinity
+  // bm_sub("sensor/*/salinity", handle_salinity);
 
   pmeSensor.init();
   pmeDoTopicStrLen = createPmeDoMeasurementDataTopic();
@@ -203,7 +231,7 @@ void loop(void) {
       firstDo = false; //Turn off initial DO flag
     }
 
-    if (pmeSensor.getDoData(d)) {
+    if (pmeSensor.getDoData(d, salinityPpt)) {
       static uint8_t cborBuf[pmeSensorDataMsgMaxSize];
       size_t encodedLen = 0;
       if (PmeDissolvedOxygenMsg::encode(d, cborBuf, sizeof(cborBuf), &encodedLen) ==
@@ -213,7 +241,7 @@ void loop(void) {
                pmeDoTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         bm_pub_wl(pmeDoTopic, pmeDoTopicStrLen, cborBuf, encodedLen, 0,
                   BM_COMMON_PUB_SUB_VERSION);
-        if (true) {
+        if (false) {
           debugTx();
         }
       } else {

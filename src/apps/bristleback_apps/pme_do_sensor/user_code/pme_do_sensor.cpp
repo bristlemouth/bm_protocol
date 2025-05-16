@@ -3,6 +3,7 @@
 #include "bm_os.h"
 #include "bm_printf.h"
 #include "configuration.h"
+#include "do_calc.h"
 #include "payload_uart.h"
 #include "serial.h"
 #include "spotter.h"
@@ -17,15 +18,14 @@
 #include <cstring>
 
 #define LAST_WIPE_EPOCH_KEY "lastWipeEpochS"
-//#define DOT_INTERVAL_KEY "DOTinterval"
-//#define WIPE_INTERVAL_KEY "WipeInterval"
 
 extern uint32_t pmeLogEnable;
 extern uint32_t sensorDebugTxEnable;
 
 uint32_t lastWipeEpochS = 0;
-//uint32_t DOTinterval = 600;
-//uint32_t WipeInterval = 14400;
+
+static constexpr uint32_t BAUD_RATE = 9600;
+static constexpr char LINE_TERM = '\r';
 
 //Function to request a DO measurement from the microDOT sensor
 static constexpr char queryMDOT[] = "MDOT\r";
@@ -145,7 +145,7 @@ void PmeSensor::init() {
  * @param d Reference to a PmeDissolvedOxygenMsg::Data structure where the parsed data will be stored.
  * @return Returns true if data was successfully retrieved and parsed, false otherwise.
  */
-bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
+bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
   bool success = false;
 
   RTCTimeAndDate_t time_and_date = {};
@@ -185,13 +185,22 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d) {
           q_signal.type != TYPE_DOUBLE) {
         printf("!  Parsed invalid DOT data");
       } else {
+        d.header.version = PmeDissolvedOxygenMsg::VERSION;
         d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
         d.header.reading_uptime_millis = uptimeGetMs();
+        d.header.sensor_reading_time_ms = 0;
         d.temperature_deg_c = temp_signal.data.double_val;
-        d.do_mg_per_l = do_signal.data.double_val;
+        d.do_mg_per_l =
+            do_signal.data.double_val * salinityFactor(d.temperature_deg_c, salinityPpt);
         d.quality = q_signal.data.double_val;
-        // DO Sat% not available at this time; setting to NULL causes error (converting NULL to double)
-        //d.do_saturation_pct = 0;
+        if (_is_baro_valid) {
+          d.do_saturation_pct = do_signal.data.double_val /
+                                doConcMg(d.temperature_deg_c, _barometric_pressure_mbar, 0.0) *
+                                100.0;
+        } else {
+          d.do_saturation_pct = NAN;
+        }
+        d.salinity_ppt = salinityPpt;
         success = true;
       }
     } else {
@@ -298,3 +307,8 @@ bool PmeSensor::getWipeData(PmeWipeMsg::Data &w) {
  * @brief Flushes the data from the sensor driver.
  */
 void PmeSensor::flush(void) { PLUART::reset(); }
+
+void PmeSensor::setBarometricPressure(double pressure) {
+  _barometric_pressure_mbar = pressure;
+  _is_baro_valid = true;
+}
