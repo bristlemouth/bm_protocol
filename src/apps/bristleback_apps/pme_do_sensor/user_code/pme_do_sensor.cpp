@@ -198,7 +198,7 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
                                 doConcMg(d.temperature_deg_c, _barometric_pressure_mbar, 0.0) *
                                 100.0;
         } else {
-          d.do_saturation_pct = 0.0;
+          d.do_saturation_pct = NAN;
         }
         d.salinity_ppt = salinityPpt;
         success = true;
