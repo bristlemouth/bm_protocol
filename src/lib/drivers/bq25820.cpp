@@ -74,7 +74,7 @@ bool BQ25820::init() {
   \param[out] *value register value
   \return true if successfull false otherwise
 */
-bool BQ25820::readReg(Reg_t reg, uint16_t *value) {
+bool BQ25820::readReg(Reg_t reg, int16_t *value) {
   bool rval = false;
   uint8_t regByte = reg;
   uint16_t regVal = 0;
@@ -92,9 +92,10 @@ bool BQ25820::readReg(Reg_t reg, uint16_t *value) {
       break;
     }
 
-    if(value != NULL) {
-      *value = __builtin_bswap16(regVal);
-    }
+    //if(value != NULL) {
+    //  *value = __builtin_bswap16(regVal);
+    //}
+    *value = regVal;
 
     rval = true;
   } while (0);
@@ -202,31 +203,76 @@ bool BQ25820::disablePfm() {
 bool BQ25820::readSensors() {
   bool rval = false;
   bool quit = false;
+  
   int16_t iac_val;
+  int16_t iac;
+
   int16_t ibat_val;
-  uint16_t vac_val;
-  uint16_t vbat_val;
-  uint16_t vsys_val;
-  uint16_t ts_val;
+  int16_t ibat;
+  
+  int16_t vac_val;
+  float vac;
+  
+  int16_t vbat_val;
+  float vbat;
+  
+  int16_t vsys_val;
+  float vsys;
+  
+  int16_t ts_val;
+  float ts;
 
   uint8_t tmpreg;
+
+  uint16_t i;
   do {
-    if(!write8(ADC_CTRL_REG, 0xE0)) {
+    if(!write8(ADC_CTRL_REG, 0xA8)) {
       break;
     }
-    for (uint16_t i = 0; i < 1000; i++) {
-      if(!read8(CHARGER_FLAG_1, &tmpreg)) {
-        quit = true;
+    for (i = 0; i < 1000; i++) {
+      if(!read8(CHARGER_FLAG_1, &tmpreg)) { 
+        quit = true; // Tell the outer do while to exit
         break; // Exit this polling loop
       }
-      if (tmpreg & 0x80) {
+      //if (tmpreg & 0x80) {
+      if (true) {
+        vTaskDelay(pdMS_TO_TICKS(150));
+        printf("loops: %d\n", i);
         // ADC is done
-        readReg(IAC_ADC_REG, )
+        vTaskDelay(pdMS_TO_TICKS(5));
+
+        readReg(IAC_ADC_REG, &iac_val);
+        iac = iac_val * 2;
+        printf("%d,", iac);
+
+        readReg(IBAT_ADC_REG, &ibat_val);
+        ibat = ibat_val * 2;
+        printf("%d,", ibat);
+        
+        readReg(VAC_ADC_REG, &vac_val);
+        vac = vac_val * 0.002f;
+        printf("%.3f,", vac);
+        
+        readReg(VBAT_ADC_REG, &vbat_val);
+        vbat = vbat_val * 0.002f;
+        printf("%.3f,", vbat);
+        
+        readReg(VSYS_ADC_REG, &vsys_val);
+        vsys = vsys_val * 0.002f;
+        printf("%.3f,", vsys);
+        
+        readReg(TS_ADC_REG, &ts_val);
+        ts = ts_val * 0.09765625f;
+        printf("%.3f\n", ts);
       }
+      vTaskDelay(pdMS_TO_TICKS(5));
+      break;
     }
     if (quit) {
       break;
     }
-  } while(0)
+    rval = true;
+  } while(0);
+  return rval;
 }
 

@@ -384,5 +384,6 @@ static void defaultTask(void *parameters) {
   }
   while (1) {
     vTaskDelay(1000);
+    Charger.readSensors();
   }
 }

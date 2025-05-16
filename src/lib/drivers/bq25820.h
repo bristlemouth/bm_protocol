@@ -11,6 +11,7 @@ typedef enum {
     PART_INFO_REG = 0x3D,
     ADC_CTRL_REG = 0x2B,
     CHARGER_FLAG_1 = 0x25,
+    
     IAC_ADC_REG = 0x2D,
     IBAT_ADC_REG = 0x2F,
     VAC_ADC_REG = 0x31,
@@ -29,7 +30,7 @@ public:
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);
-  bool readReg(Reg_t reg, uint16_t *value);
+  bool readReg(Reg_t reg, int16_t *value);
   bool read8(Reg_t reg, uint8_t *value);
   bool writeReg(Reg_t reg, uint16_t value);
   bool write8(Reg_t reg, uint8_t value);
