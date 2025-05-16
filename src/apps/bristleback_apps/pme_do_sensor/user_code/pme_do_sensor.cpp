@@ -18,15 +18,14 @@
 #include <cstring>
 
 #define LAST_WIPE_EPOCH_KEY "lastWipeEpochS"
-//#define DOT_INTERVAL_KEY "DOTinterval"
-//#define WIPE_INTERVAL_KEY "WipeInterval"
 
 extern uint32_t pmeLogEnable;
 extern uint32_t sensorDebugTxEnable;
 
 uint32_t lastWipeEpochS = 0;
-//uint32_t DOTinterval = 600;
-//uint32_t WipeInterval = 14400;
+
+static constexpr uint32_t BAUD_RATE = 9600;
+static constexpr char LINE_TERM = '\r';
 
 //Function to request a DO measurement from the microDOT sensor
 static constexpr char queryMDOT[] = "MDOT\r";
@@ -194,10 +193,14 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
         d.do_mg_per_l =
             do_signal.data.double_val * salinityFactor(d.temperature_deg_c, salinityPpt);
         d.quality = q_signal.data.double_val;
+        if (_is_baro_valid) {
+          d.do_saturation_pct = do_signal.data.double_val /
+                                doConcMg(d.temperature_deg_c, _barometric_pressure_mbar, 0.0) *
+                                100.0;
+        } else {
+          d.do_saturation_pct = 0.0;
+        }
         d.salinity_ppt = salinityPpt;
-
-        // DO Sat% not available at this time; setting to NULL causes error (converting NULL to double)
-        //d.do_saturation_pct = 0;
         success = true;
       }
     } else {
@@ -304,3 +307,8 @@ bool PmeSensor::getWipeData(PmeWipeMsg::Data &w) {
  * @brief Flushes the data from the sensor driver.
  */
 void PmeSensor::flush(void) { PLUART::reset(); }
+
+void PmeSensor::setBarometricPressure(double pressure) {
+  _barometric_pressure_mbar = pressure;
+  _is_baro_valid = true;
+}

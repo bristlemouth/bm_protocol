@@ -39,7 +39,6 @@
 - Comment code
 - Remove or comment out debugging printf's
 - Follow as bm_pub_wl is developed
-- Pull barometric pressure from spotter to use for DOsat% calc
 */
 
 uint32_t pmeLogEnable = 1;
@@ -102,7 +101,7 @@ static void handle_barometric_pressure(uint64_t node_id, const char *topic, uint
   BarometricPressureDataMsg::Data d;
   CborError err = BarometricPressureDataMsg::decode(d, data, data_len);
   if (err == CborNoError) {
-    // TODO: Use d.barometric_pressure_mbar to calculate DO saturation
+    pmeSensor.setBarometricPressure(d.barometric_pressure_mbar);
   } else {
     printf("Failed to decode barometric pressure data message. err=%d\n", err);
   }
@@ -232,10 +231,6 @@ void loop(void) {
       firstDo = false; //Turn off initial DO flag
     }
 
-    // TODO: update PmeDissolvedOxygenMsg::Data to include salinity
-    // Longer term, salinity could be updated from a subscribed conductivity/salinity sensor
-    // d.salinity_ppt = salinityPpt;
-
     if (pmeSensor.getDoData(d, salinityPpt)) {
       static uint8_t cborBuf[pmeSensorDataMsgMaxSize];
       size_t encodedLen = 0;
@@ -246,7 +241,7 @@ void loop(void) {
                pmeDoTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         bm_pub_wl(pmeDoTopic, pmeDoTopicStrLen, cborBuf, encodedLen, 0,
                   BM_COMMON_PUB_SUB_VERSION);
-        if (true) {
+        if (false) {
           debugTx();
         }
       } else {
