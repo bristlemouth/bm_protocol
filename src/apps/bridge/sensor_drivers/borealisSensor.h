@@ -9,6 +9,11 @@
 #include "util.h"
 
 typedef struct {
+  uint32_t size;
+  uint8_t *buf;
+} HydrotwinLdrData_t;
+
+typedef struct {
   uint8_t is_extended;
   uint8_t spl;
   uint8_t max_iqr;
@@ -16,13 +21,15 @@ typedef struct {
   uint8_t entropy;
   uint32_t spl_band_stats_size;
   uint8_t *spl_band_stats;
-} BorealisLevelStatisticsData_t;
+  HydrotwinLdrData_t hydrotwin_ldr;
+} BorealisAggregationData_t;
 
 typedef enum {
   BOREALIS_SPECTRUM,
   BOREALIS_LEVELS,
   BOREALIS_LEVEL_STATISTICS,
   BOREALIS_RECORDING_STATUS,
+  HYDROTWIN_LDR,
   BOREALIS_SUB_COUNT,
 } BorealisSubscriptions_t;
 
@@ -42,7 +49,7 @@ public:
 
   // public static constants
   static constexpr uint8_t REPORT_NAN_ERROR_VALUE = 0xFF;
-  static constexpr BorealisLevelStatisticsData_t AOS_BOREALIS_NAN_AGG = {
+  static constexpr BorealisAggregationData_t AOS_BOREALIS_NAN_AGG = {
       .is_extended = 0,
       .spl = REPORT_NAN_ERROR_VALUE,
       .max_iqr = REPORT_NAN_ERROR_VALUE,
@@ -50,11 +57,15 @@ public:
       .entropy = REPORT_NAN_ERROR_VALUE,
       .spl_band_stats_size = 0,
       .spl_band_stats = NULL,
+      .hydrotwin_ldr = {.size = 0, .buf = NULL},
   };
 
 private:
   // private instance variables
-  struct borealis_level_statistics stats;
+  struct AggregateTrackingData {
+    struct borealis_level_statistics stats;
+    HydrotwinLdrData_t ldr;
+  } tracking_data;
 
   // private static methods
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,

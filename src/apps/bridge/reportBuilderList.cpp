@@ -124,7 +124,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
   }
   case SENSOR_TYPE_BOREALIS: {
     nan_sample = &BorealisSensor::AOS_BOREALIS_NAN_AGG;
-    dst = static_cast<BorealisLevelStatisticsData_t *>(element->sensor_data);
+    dst = static_cast<BorealisAggregationData_t *>(element->sensor_data);
     dst = static_cast<uint8_t *>(dst) + element->size * element->sample_counter;
     break;
   }
