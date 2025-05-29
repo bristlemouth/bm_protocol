@@ -1,11 +1,15 @@
-#include "borealisSensor.h"
+extern "C" {
+#include "util.h"
+}
 #include "app_config.h"
 #include "bm_config.h"
 #include "bm_os.h"
+#include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "bristlemouth.h"
 #include "mbedtls_base64/base64.h"
 #include "messages/config.h"
+
 #include "pubsub.h"
 #include "sensorController.h"
 #include <inttypes.h>
@@ -60,12 +64,12 @@ void BorealisSensor::init(void) {
  @return false on failure
  */
 bool BorealisSensor::subscribe() {
-  bool ret = false;
+  bool ret = true;
   char *sub = static_cast<char *>(bm_malloc(BM_TOPIC_MAX_LEN));
   const char *subtag = NULL;
 
   if (sub) {
-    for (uint32_t i = 0; i < BOREALIS_SUB_COUNT; i++) {
+    for (uint32_t i = 0; i < BOREALIS_SUB_COUNT && ret == true; i++) {
       switch (i) {
       case BOREALIS_SPECTRUM:
         subtag = subtag_spectrum;
@@ -229,10 +233,12 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
       (static_cast<BorealisAggregationData_t *>(data))[sample_index];
   uint8_t num_fields = NUM_AOS_BOREALIS_FIELDS_MIN;
 
+  // If data is extended increase number of fields
   if (borealis_data.is_extended) {
     num_fields++;
   }
 
+  // If hydrotwin data is available increase number of fields
   if (borealis_data.hydrotwin_ldr.size) {
     num_fields++;
   }
@@ -274,7 +280,7 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
     err = BmEBADMSG;
   }
 
-  // Free band stats
+  // Free band stats and hydrotwin data
   bm_free(borealis_data.spl_band_stats);
   bm_free(borealis_data.hydrotwin_ldr.buf);
 
@@ -401,13 +407,16 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
         if (borealis->tracking_data.ldr.buf) {
           bm_free(borealis->tracking_data.ldr.buf);
           borealis->tracking_data.ldr.buf = NULL;
+          borealis->tracking_data.ldr.size = 0;
         }
 
         if (borealis->m_aggregation_reports) {
           borealis->tracking_data.ldr.buf = static_cast<uint8_t *>(bm_malloc(data_len));
 
           if (borealis->tracking_data.ldr.buf) {
+            memcpy(borealis->tracking_data.ldr.buf, data, data_len);
             borealis->tracking_data.ldr.size = data_len;
+            err = BmOK;
           } else {
             err = BmENOMEM;
           }
