@@ -1,5 +1,3 @@
-set(LIB_DIR ${CMAKE_CURRENT_LIST_DIR})
-
 # Include TinyUSB
 add_subdirectory(${LIB_DIR}/usb)
 
@@ -100,6 +98,12 @@ set(LIB_FILES
     ${BM_INTEGRATION_FILES}
 )
 
+if(BM_RTOS MATCHES "freertos")
+    list(APPEND LIB_FILES
+        ${LIB_DIR}/bm_osal/bm_osal_freertos.c
+    )
+endif()
+
 if(APP_NAME MATCHES "bridge" AND
    NOT APP_NAME MATCHES "bringup" AND
    NOT APP_NAME MATCHES "serial")
@@ -145,6 +149,7 @@ endif()
 set(LIB_INCLUDES
     ${LIB_DIR}/bristlefin
     ${LIB_DIR}/bm_integration
+    ${LIB_DIR}/bm_osal
     ${LIB_DIR}/bridge
     ${LIB_DIR}/cli
     ${LIB_DIR}/common

@@ -32,6 +32,12 @@ if (NOT DEFINED APP)
 	return()
 endif()
 
+if (NOT DEFINED BM_RTOS)
+#	message(SEND_ERROR "APP is not defined")
+#	return()
+	set(BM_RTOS "freertos")
+endif()
+
 # Default to USE_BOOTLOADER unless otherwise set
 if (NOT USE_BOOTLOADER STREQUAL 0 AND NOT APP STREQUAL "bootloader")
 set(USE_BOOTLOADER 1)
