@@ -8,6 +8,7 @@
 
 #include "bsp.h"
 
+#include "bm_osal.h"
 #include "bm_usart.h"
 #include "serial.h"
 #include "stm32_io.h"
@@ -33,7 +34,7 @@ void startSerial() {
   serialTxQueue = xQueueCreate(SERIAL_TX_QUEUE_SIZE, sizeof(SerialMessage_t));
   configASSERT(serialTxQueue != NULL);
 
-  rval = xTaskCreate(
+  rval = bm_osal_task_create(
               serialTxTask,
               "SerialTxTask",
               // TODO - verify stack size

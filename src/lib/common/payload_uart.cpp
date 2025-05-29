@@ -1,3 +1,4 @@
+#include "bm_osal.h"
 #include "payload_uart.h"
 #include "spotter.h"
 #include "stm32_io.h"
@@ -349,7 +350,7 @@ BaseType_t init(uint8_t task_priority) {
   configASSERT(uart_handle.txStreamBuffer != NULL);
   uart_handle.rxStreamBuffer = xStreamBufferCreate(uart_handle.rxBufferSize, 1);
   configASSERT(uart_handle.rxStreamBuffer != NULL);
-  BaseType_t rval = xTaskCreate(serialGenericRxTask, "LPUartRx",
+  BaseType_t rval = bm_osal_task_create(serialGenericRxTask, "LPUartRx",
                                 // TODO - verify stack size
                                 2048, &PLUART::uart_handle, task_priority, NULL);
   configASSERT(rval == pdTRUE);

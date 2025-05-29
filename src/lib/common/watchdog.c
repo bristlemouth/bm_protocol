@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
 #include "task.h"
+#include "bm_osal.h"
 #include "iwdg.h"
 #include "task_priorities.h"
 
@@ -16,7 +17,9 @@ static void iWDGTask( void *parameters );
 void startIWDGTask() {
   // memfault_software_watchdog_enable();
   BaseType_t rval;
-  rval = xTaskCreate(
+  // bool bm_osal_task_create(bm_osal_task_func_t task_func, const char* name, void* arg, uint32_t stack_size, uint32_t priority);
+
+  rval = bm_osal_task_create(
               iWDGTask,
               "IWDG",
               configMINIMAL_STACK_SIZE,

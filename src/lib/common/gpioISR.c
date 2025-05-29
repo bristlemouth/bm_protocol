@@ -2,6 +2,7 @@
 #include "task.h"
 #include "queue.h"
 
+#include "bm_osal.h"
 #include "bsp.h"
 #include "debug.h"
 #include "gpioISR.h"
@@ -84,7 +85,7 @@ void gpioISRStartTask() {
   gpioISRQueue = xQueueCreate(MAX_GPIO_ISRS, sizeof(GPIOISR_t));
   configASSERT(gpioISRQueue);
 
-  bool rval = xTaskCreate(
+  bool rval = bm_osal_task_create(
               gpioISRTask,
               "GPIO_ISR",
               128 * 2,

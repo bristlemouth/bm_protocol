@@ -7,6 +7,7 @@
 // FreeRTOS+CLI includes.
 #include "FreeRTOS_CLI.h"
 
+#include "bm_osal.h"
 #include "bm_adin2111.h"
 #include "bm_ip.h"
 #include "l2.h"
@@ -132,7 +133,7 @@ void stress_test_init(NetworkDevice network_device, uint16_t udp_port) {
 
   FreeRTOS_CLIRegisterCommand(&cmd_stress);
 
-  rval = xTaskCreate(stress_test_task, "stress",
+  rval = bm_osal_task_create(stress_test_task, "stress",
                      // TODO - verify stack size
                      configMINIMAL_STACK_SIZE * 4, NULL, STRESS_TASK_PRIORITY, &_ctx.task);
 
