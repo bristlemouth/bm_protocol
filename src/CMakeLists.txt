@@ -1,3 +1,5 @@
+SET(CMAKE_ALL_ERRORS_FATAL TRUE)
+
 # If we are on windows (CMAKE uses win32 for both win32 and win64), we need to set the python executable to python
 # even though we are using python3.
 if(CMAKE_HOST_WIN32)

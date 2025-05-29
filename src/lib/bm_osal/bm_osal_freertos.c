@@ -7,6 +7,8 @@
 #include "queue.h"
 #include "timers.h"
 
+#include "iwdg.h"
+
 // Mutex
 bool bm_osal_mutex_create(bm_osal_mutex_t* mutex) {
     *mutex = xSemaphoreCreateMutex();
@@ -55,6 +57,14 @@ bool bm_osal_task_delete(void) {
     return true;
 }
 
+uint16_t bm_osal_task_get_min_stack_size() {
+    return configMINIMAL_STACK_SIZE;
+}
+
+void bm_osal_task_delay(bm_osal_tick_type_t delay) {
+    vTaskDelay(delay);
+}
+
 // Timer
 bool bm_osal_timer_create(bm_osal_timer_t* timer, const char* name, uint32_t period_ms, bool auto_reload, bm_osal_timer_callback_t callback, void* arg) {
     *timer = xTimerCreate(name, pdMS_TO_TICKS(period_ms), auto_reload ? pdTRUE : pdFALSE, arg, (TimerCallbackFunction_t)callback);
@@ -76,4 +86,26 @@ bool bm_osal_timer_delete(bm_osal_timer_t timer) {
 // Delay
 void bm_osal_delay_ms(uint32_t ms) {
     vTaskDelay(pdMS_TO_TICKS(ms));
+}
+
+void bm_hal_wd_reload_counter() {
+    LL_IWDG_ReloadCounter(IWDG);
+}
+
+// void* bm_hal_wd_get_handle(void) {
+//     return IWDG;
+// }
+
+void IWDG_IRQHandler(void) {
+  LL_IWDG_EnableWriteAccess(IWDG);
+  while (LL_IWDG_IsReady(IWDG) != 1)
+  {
+  }
+  LL_IWDG_SetPrescaler(IWDG, LL_IWDG_PRESCALER_1024);
+  LL_IWDG_ReloadCounter(IWDG);
+  MEMFAULT_ASSERT_EXTRA_AND_REASON(0, kMfltRebootReason_HardwareWatchdog);
+}
+
+void bm_hal_wd_log() {
+//   memfault_software_watchdog_feed();
 }

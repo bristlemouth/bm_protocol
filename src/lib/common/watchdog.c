@@ -1,10 +1,10 @@
 
 /* FreeRTOS includes. */
-#include "FreeRTOS.h"
-#include "FreeRTOSConfig.h"
-#include "task.h"
+// #include "FreeRTOS.h"
+// #include "FreeRTOSConfig.h"
+// #include "task.h"
 #include "bm_osal.h"
-#include "iwdg.h"
+// #include "iwdg.h"
 #include "task_priorities.h"
 
 // If you want to use the memfault watchdog, uncomment the following include,
@@ -14,24 +14,34 @@
 
 static void iWDGTask( void *parameters );
 
+#define NULL 0
+
 void startIWDGTask() {
   // memfault_software_watchdog_enable();
-  BaseType_t rval;
-  // bool bm_osal_task_create(bm_osal_task_func_t task_func, const char* name, void* arg, uint32_t stack_size, uint32_t priority);
+  bm_osal_base_t rval;
 
   rval = bm_osal_task_create(
               iWDGTask,
               "IWDG",
-              configMINIMAL_STACK_SIZE,
+              bm_osal_task_get_min_stack_size(),
               NULL,
               IWDG_TASK_PRIORITY,
               NULL);
 
-  configASSERT(rval == pdTRUE);
+  // configASSERT(rval == pdTRUE);
+  if (rval == 1) {
+    return;
+  }
+  // bm_osal_assert()
 }
 
 void watchdogFeed() {
-  LL_IWDG_ReloadCounter(IWDG);
+  // void* watchdog = bm_hal_wd_get_handle();
+  // bm_hal_wd_reload_counter(watchdog);
+  bm_hal_wd_reload_counter();
+  // bm_hal_wd_log();
+  // LL_IWDG_ReloadCounter(IWDG);
+  bm_hal_wd_log();
   // memfault_software_watchdog_feed();
 }
 
@@ -56,16 +66,6 @@ static void iWDGTask( void *parameters ) {
 
   for(;;) {
     watchdogFeed();
-    vTaskDelay(2 * 1000);
+    bm_osal_task_delay(2 * 1000);
   }
-}
-
-void IWDG_IRQHandler(void) {
-  LL_IWDG_EnableWriteAccess(IWDG);
-  while (LL_IWDG_IsReady(IWDG) != 1)
-  {
-  }
-  LL_IWDG_SetPrescaler(IWDG, LL_IWDG_PRESCALER_1024);
-  LL_IWDG_ReloadCounter(IWDG);
-  MEMFAULT_ASSERT_EXTRA_AND_REASON(0, kMfltRebootReason_HardwareWatchdog);
 }
