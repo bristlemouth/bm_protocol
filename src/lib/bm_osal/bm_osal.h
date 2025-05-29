@@ -26,9 +26,9 @@ bool bm_osal_queue_receive(bm_osal_queue_t queue, void* item, uint32_t timeout_m
 bool bm_osal_queue_delete(bm_osal_queue_t queue);
 
 // Task
-typedef void * bm_task_handle_t;
+typedef void * bm_osal_task_handle_t;
 typedef void (*bm_osal_task_func_t)(void* arg);
-bool bm_osal_task_create(bm_osal_task_func_t task_func, const char* name, uint16_t stack_size, void* arg,  uint32_t priority, bm_task_handle_t task_handle);
+bool bm_osal_task_create(bm_osal_task_func_t task_func, const char* name, uint16_t stack_size, void* arg,  uint32_t priority, bm_osal_task_handle_t* task_handle);
 bool bm_osal_task_delete(void);
 uint16_t bm_osal_task_get_min_stack_size();
 void bm_osal_task_delay(bm_osal_tick_type_t delay);

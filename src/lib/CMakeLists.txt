@@ -100,9 +100,15 @@ set(LIB_FILES
     ${BM_INTEGRATION_FILES}
 )
 
-if(BM_RTOS MATCHES "freertos")
+if(BM_OSAL MATCHES "freertos")
     list(APPEND LIB_FILES
         ${LIB_DIR}/bm_osal/bm_osal_freertos.c
+    )
+endif()
+
+if(BM_HAL_TARGET MATCHES "stm32h5xx")
+    list(APPEND LIB_FILES
+        ${LIB_DIR}/bm_hal/bm_hal_stm32h5xx.c
     )
 endif()
 
@@ -151,6 +157,7 @@ endif()
 set(LIB_INCLUDES
     ${LIB_DIR}/bristlefin
     ${LIB_DIR}/bm_integration
+    ${LIB_DIR}/bm_hal
     ${LIB_DIR}/bm_osal
     ${LIB_DIR}/bridge
     ${LIB_DIR}/cli

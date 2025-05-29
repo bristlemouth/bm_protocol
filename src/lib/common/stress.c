@@ -35,7 +35,7 @@ typedef struct {
   NetworkDevice network_device;
   struct udp_pcb *pcb;
   uint16_t udp_port;
-  TaskHandle_t task;
+  bm_osal_task_handle_t task;
   xQueueHandle evt_queue;
   TimerHandle_t tx_timer;
   TimerHandle_t stats_timer;

@@ -1,5 +1,3 @@
-SET(CMAKE_ALL_ERRORS_FATAL TRUE)
-
 # If we are on windows (CMAKE uses win32 for both win32 and win64), we need to set the python executable to python
 # even though we are using python3.
 if(CMAKE_HOST_WIN32)
@@ -34,10 +32,12 @@ if (NOT DEFINED APP)
 	return()
 endif()
 
-if (NOT DEFINED BM_RTOS)
-#	message(SEND_ERROR "APP is not defined")
-#	return()
-	set(BM_RTOS "freertos")
+if (NOT DEFINED BM_OSAL)
+	set(BM_OSAL "freertos")
+endif()
+
+if (NOT DEFINED BM_HAL_TARGET)
+	set(BM_HAL_TARGET "stm32h5xx")
 endif()
 
 # Default to USE_BOOTLOADER unless otherwise set

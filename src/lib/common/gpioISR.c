@@ -10,7 +10,7 @@
 
 #define MAX_GPIO_ISRS 16
 
-static TaskHandle_t GPIOISRTaskHandle = NULL;
+static bm_osal_task_handle_t GPIOISRTaskHandle = NULL;
 static xQueueHandle gpioISRQueue = NULL;
 
 typedef struct {

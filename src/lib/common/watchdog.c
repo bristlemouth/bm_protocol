@@ -1,10 +1,6 @@
 
-/* FreeRTOS includes. */
-// #include "FreeRTOS.h"
-// #include "FreeRTOSConfig.h"
-// #include "task.h"
 #include "bm_osal.h"
-// #include "iwdg.h"
+#include "bm_hal.h"
 #include "task_priorities.h"
 
 // If you want to use the memfault watchdog, uncomment the following include,
@@ -36,11 +32,7 @@ void startIWDGTask() {
 }
 
 void watchdogFeed() {
-  // void* watchdog = bm_hal_wd_get_handle();
-  // bm_hal_wd_reload_counter(watchdog);
   bm_hal_wd_reload_counter();
-  // bm_hal_wd_log();
-  // LL_IWDG_ReloadCounter(IWDG);
   bm_hal_wd_log();
   // memfault_software_watchdog_feed();
 }
