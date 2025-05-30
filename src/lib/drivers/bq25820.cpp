@@ -173,6 +173,8 @@ bool BQ25820::write8(Reg_t reg, uint8_t value) {
 bool BQ25820::disablePfm() {
   bool rval = false;
 
+  return true;
+
   uint8_t tmpreg;
   do {
 
@@ -196,6 +198,7 @@ bool BQ25820::disablePfm() {
     rval = true;
   } while (0);
 
+  //writeReg(CC_LIM_REG, 0x0040);
   return rval;
 
 }
@@ -222,6 +225,8 @@ bool BQ25820::readSensors() {
   int16_t ts_val;
   float ts;
 
+  uint8_t ppreg = 0x00;
+
   uint8_t tmpreg;
 
   uint16_t i;
@@ -237,9 +242,9 @@ bool BQ25820::readSensors() {
       //if (tmpreg & 0x80) {
       if (true) {
         vTaskDelay(pdMS_TO_TICKS(150));
-        printf("loops: %d\n", i);
+        //printf("loops: %d\n", i);
         // ADC is done
-        vTaskDelay(pdMS_TO_TICKS(5));
+        //vTaskDelay(pdMS_TO_TICKS(5));
 
         readReg(IAC_ADC_REG, &iac_val);
         iac = iac_val * 2;
@@ -257,6 +262,10 @@ bool BQ25820::readSensors() {
         vbat = vbat_val * 0.002f;
         printf("%.3f,", vbat);
         
+        //readReg(VFB_ADC_REG, &vbat_val);
+        //vbat = vbat_val * 0.008691f;
+        //printf("%.3f,", vbat);
+        
         readReg(VSYS_ADC_REG, &vsys_val);
         vsys = vsys_val * 0.002f;
         printf("%.3f,", vsys);
@@ -264,6 +273,9 @@ bool BQ25820::readSensors() {
         readReg(TS_ADC_REG, &ts_val);
         ts = ts_val * 0.09765625f;
         printf("%.3f\n", ts);
+
+        read8(POWER_PATH_REG, &ppreg);
+        //printf("0x%X\n", ppreg);
       }
       vTaskDelay(pdMS_TO_TICKS(5));
       break;
@@ -276,3 +288,21 @@ bool BQ25820::readSensors() {
   return rval;
 }
 
+
+bool BQ25820::readFaults() {
+  uint8_t faults = 0x00;
+  
+  char names[8][30] = {"RESERVED", "DRV_OKZ_FLAG", "CHG_TMR_FLAG", "TSHUT_FLAG", "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG", "VAC_UV_FLAG"};
+  read8(FAULT_FLAG_REG, &faults);
+  
+  printf("%b:\t", faults);
+
+  for (uint8_t i=0; i < 8; i++) {
+    //printf("%u, ", i);
+    if (faults & (1 << i)) {
+      printf("%s, ", names[i]);
+    }
+  }
+  printf("\n");
+  return true;
+}

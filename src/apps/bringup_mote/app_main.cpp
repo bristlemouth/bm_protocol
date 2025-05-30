@@ -382,8 +382,13 @@ static void defaultTask(void *parameters) {
       printf("BQ25820 Initialized\n");
       Charger.disablePfm();
   }
+  else {
+      printf("Failed to init BQ25820.\n");
+  }
+
   while (1) {
-    vTaskDelay(1000);
+    vTaskDelay(100);
     Charger.readSensors();
+    Charger.readFaults();
   }
 }

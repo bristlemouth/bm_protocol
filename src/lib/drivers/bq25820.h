@@ -7,8 +7,10 @@ namespace BQ {
 constexpr uint8_t I2C_DEFAULT_ADDR = 0x6B;
 
 typedef enum {
+    CC_LIM_REG = 0x02,
     POWER_PATH_REG = 0x19,
     PART_INFO_REG = 0x3D,
+    FAULT_FLAG_REG = 0x27,
     ADC_CTRL_REG = 0x2B,
     CHARGER_FLAG_1 = 0x25,
     
@@ -17,7 +19,8 @@ typedef enum {
     VAC_ADC_REG = 0x31,
     VBAT_ADC_REG = 0x33,
     VSYS_ADC_REG = 0x35,
-    TS_ADC_REG = 0x37
+    TS_ADC_REG = 0x37,
+    VFB_ADC_REG = 0x39
 
 } Reg_t;
 
@@ -27,6 +30,7 @@ public:
   bool init();
   bool disablePfm();
   bool readSensors();
+  bool readFaults();
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);
