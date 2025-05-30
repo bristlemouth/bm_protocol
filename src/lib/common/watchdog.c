@@ -1,3 +1,4 @@
+#include <stddef.h>
 
 #include "bm_osal.h"
 #include "bm_hal.h"
@@ -10,12 +11,22 @@
 
 static void iWDGTask( void *parameters );
 
-#define NULL 0
+// Opaque pointer to the hardware watchdog instance.
+static bm_hal_wd_t wd = NULL;
 
 void startIWDGTask() {
   // memfault_software_watchdog_enable();
+
   bm_osal_base_t rval;
 
+  // Set the hardware watchdog handle
+  wd = bm_hal_wd_get_handle();
+  if (wd == NULL) {
+    // Handle error: watchdog not available
+    return;
+  }
+
+  // Create a task for the watchdog
   rval = bm_osal_task_create(
               iWDGTask,
               "IWDG",
@@ -24,7 +35,7 @@ void startIWDGTask() {
               IWDG_TASK_PRIORITY,
               NULL);
 
-  // configASSERT(rval == pdTRUE);
+  bm_osal_assert(rval == BM_OSAL_TRUE);
   if (rval == 1) {
     return;
   }
@@ -32,9 +43,8 @@ void startIWDGTask() {
 }
 
 void watchdogFeed() {
-  bm_hal_wd_reload_counter();
+  bm_hal_wd_reload_counter(wd);
   bm_hal_wd_log();
-  // memfault_software_watchdog_feed();
 }
 
 //
