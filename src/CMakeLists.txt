@@ -37,7 +37,7 @@ if (NOT DEFINED BM_OSAL)
 endif()
 
 if (NOT DEFINED BM_HAL_TARGET)
-	set(BM_HAL_TARGET "stm32h5xx")
+	set(BM_HAL_TARGET "stm32u5xx")
 endif()
 
 # Default to USE_BOOTLOADER unless otherwise set

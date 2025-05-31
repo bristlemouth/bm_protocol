@@ -113,13 +113,13 @@ elseif(BM_OSAL MATCHES "mock")
         ${LIB_DIR}/bm_osal/bm_osal_mock.c
     )
 else()
-    message(SEND_ERROR "HAL Target is not specified via environment variable BM_OSAL")
+    message(SEND_ERROR "OSAL Target is not specified via environment variable BM_OSAL")
     return()
 endif()
 
-if(BM_HAL_TARGET MATCHES "stm32h5xx")
+if(BM_HAL_TARGET MATCHES "stm32u5xx")
     list(APPEND LIB_FILES
-        ${LIB_DIR}/bm_hal/bm_hal_stm32h5xx.c
+        ${LIB_DIR}/bm_hal/bm_hal_stm32u5xx.c
     )
 endif()
 

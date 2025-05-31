@@ -24,14 +24,14 @@ The HAL currently defines a simple Watchdog API:
 
 # Supported Targets
 
-* `stm32h5xx` – STM32 HAL-based implementation using IWDG
+* `stm32u5xx` – STM32 HAL-based implementation using IWDG
 
 # Directory Structure
 
 ```
 bm_hal/
 ├── bm_hal.h               # Public HAL interface
-└── bm_hal_stm32h5xx.c     # STM32H5xx watchdog implementation
+└── bm_hal_stm32u5xx.c     # stm32u5xx watchdog implementation
 ```
 
 # CMake Configuration
@@ -39,10 +39,10 @@ bm_hal/
 Specify the hardware target using:
 
 ```
-cmake -DBM_HAL_TARGET=stm32h5xx ..
+cmake -DBM_HAL_TARGET=stm32u5xx ..
 ```
 
-If this parameter is not specified, the default will be `stm32h5xx`.
+If this parameter is not specified, the default will be `stm32u5xx`.
 
 # Usage Example
 

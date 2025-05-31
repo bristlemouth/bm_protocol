@@ -74,7 +74,7 @@ This layer is intended to expand to other peripherals such as GPIO or UART.
 
 ### Implementations
 
-* bm_hal_stm32h5xx.c – STM32 IWDG-based watchdog
+* bm_hal_stm32u5xx.c – STM32 IWDG-based watchdog
 
 # Build Configuration
 
@@ -82,7 +82,7 @@ The following CMake variables determine which implementation to use:
 
 ```
 cmake -D BM_OSAL=freertos    # or mock, posix
-cmake -D BM_HAL_TARGET=stm32h5xx
+cmake -D BM_HAL_TARGET=stm32u5xx
 ```
 
 # Usage Example
