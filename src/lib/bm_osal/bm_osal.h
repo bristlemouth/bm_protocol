@@ -36,11 +36,11 @@ typedef uint32_t bm_osal_tick_type_t;
 /** @brief Result type returned by most OSAL APIs. */
 typedef bm_osal_base_t bm_osal_result_t;
 
-/** @brief Constant return value indicating success (maps to pdTRUE). */
-extern const bm_osal_result_t BM_OSAL_TRUE;
+/** @brief Constant return value indicating success. */
+#define BM_OSAL_TRUE ((bm_osal_result_t)1)
 
-/** @brief Constant return value indicating failure (maps to pdFALSE). */
-extern const bm_osal_result_t BM_OSAL_FALSE;
+/** @brief Constant return value indicating failure. */
+#define BM_OSAL_FALSE ((bm_osal_result_t)0)
 
 // ====================================================
 // @name Opaque Handle Types for OS Primitives

@@ -53,13 +53,6 @@ _Static_assert(sizeof(bm_osal_task_handle_t) == sizeof(TaskHandle_t),
                "bm_osal_task_handle_t must match size of TaskHandle_t");
 
 // ====================================================
-// Set result constants to freeRTOS equivalents
-// ====================================================
-
-const bm_osal_result_t BM_OSAL_TRUE  = pdTRUE;
-const bm_osal_result_t BM_OSAL_FALSE = pdFALSE;
-
-// ====================================================
 // Mutex API
 // ====================================================
 

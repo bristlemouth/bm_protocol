@@ -9,16 +9,12 @@
 // ====================================================
 
 TEST(OSALMockTest, TaskCreateAndDestroy) {
-    bm_osal_task_t task;
     bm_osal_task_handle_t handle = NULL;
-
     auto dummy_fn = [](void* arg) -> void { *(int*)arg = 123; };
     int arg = 0;
 
-    EXPECT_TRUE(bm_osal_task_create(&task, dummy_fn, &arg, "dummy", 128, &handle));
+    EXPECT_TRUE(bm_osal_task_create(dummy_fn, "dummy", 128, &arg, 1, &handle));
     EXPECT_EQ(handle, BM_OSAL_DUMMY_TASK_HANDLE);
-
     EXPECT_EQ(bm_osal_task_get_min_stack_size(), 128);
-
-    EXPECT_TRUE(bm_osal_task_destroy(&task));
+    EXPECT_TRUE(bm_osal_task_delete());
 }
