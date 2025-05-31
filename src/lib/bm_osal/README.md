@@ -79,6 +79,12 @@ TBD -- currently not functional.
 
 * Currently, the API's mirror FreeRTOS. This is a good first step to break dependencies. But these apis' would likely need to change to accomodate other RTOS's in the future.
 
+* To truly port other RTOS, there would be more work thank just implementing the OSAL api's
+    * FreeRTOS requires FreeRTOSConfig.h, others would have similar configuration files
+    * eg Zephyr uses Kconfig and CMake
+    * Would need to investigate startup sequence, task priorities, and interrupt handling
+    * Default sizes for heap, task stack, etc may be different
+
 # Contributing
 
 When writing new Bristlemouth code, prefer using bm_osal_* APIs instead of direct FreeRTOS calls. This ensures portability and testability.

@@ -66,6 +66,14 @@ if (wd) {
 
 * Currently, the API's mirror the ST hal. This is a good first step to break dependencies. But these apis' would likely need to change to accomodate other targets in the future.
 
+* To truly port other targets, there would be more work thank just implementing the HAL api's
+
+    * for other ST chips: there would need to update src/CMakeLists.txt file to set linker files, memory layout, etc
+
+    * for other chips: would additionaly need to update compiler and tool chain
+
+    * ideally, this could all be specified in a configuration file
+
 # Notes
 
 * HAL implementations should avoid leaking vendor-specific types in the public API.
