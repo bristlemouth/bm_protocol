@@ -526,7 +526,7 @@ static void report_builder_task(void *parameters) {
                         break;
                       }
                       case SENSOR_TYPE_BOREALIS: {
-                        size = sizeof(BorealisLevelStatisticsData_t);
+                        size = sizeof(BorealisAggregationData_t);
                         break;
                       }
                       default: {

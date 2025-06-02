@@ -1,11 +1,15 @@
-#include "borealisSensor.h"
+extern "C" {
+#include "util.h"
+}
 #include "app_config.h"
 #include "bm_config.h"
 #include "bm_os.h"
+#include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "bristlemouth.h"
 #include "mbedtls_base64/base64.h"
 #include "messages/config.h"
+
 #include "pubsub.h"
 #include "sensorController.h"
 #include <inttypes.h>
@@ -21,6 +25,7 @@ static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
 static constexpr char subtag_levels[] = "/aos/borealis/levels";
 static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
 static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
+static constexpr char subtag_hydrotwin_ldr[] = "/hydrotwin/ai/low-data-rate";
 
 /*!
  @brief Initialize Borealis Sensor Module
@@ -59,12 +64,12 @@ void BorealisSensor::init(void) {
  @return false on failure
  */
 bool BorealisSensor::subscribe() {
-  bool ret = false;
+  bool ret = true;
   char *sub = static_cast<char *>(bm_malloc(BM_TOPIC_MAX_LEN));
   const char *subtag = NULL;
 
   if (sub) {
-    for (uint32_t i = 0; i < BOREALIS_SUB_COUNT; i++) {
+    for (uint32_t i = 0; i < BOREALIS_SUB_COUNT && ret == true; i++) {
       switch (i) {
       case BOREALIS_SPECTRUM:
         subtag = subtag_spectrum;
@@ -77,6 +82,9 @@ bool BorealisSensor::subscribe() {
         break;
       case BOREALIS_RECORDING_STATUS:
         subtag = subtag_recstatus;
+        break;
+      case HYDROTWIN_LDR:
+        subtag = subtag_hydrotwin_ldr;
         break;
       default:
         subtag = NULL;
@@ -141,53 +149,68 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
  @brief Aggregate Data To Send To Report Builder
 
  @details This takes the latest level statistics messages calculates SPL and entropy,
-          as well as adds the message BorealisLevelStatisticsData_t to the report builder.
+          as well as adds the message BorealisAggregationData_t to the report builder.
  */
 void BorealisSensor::aggregate(void) {
   if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
     // TODO: logic needs to be implemented around if this is going to be extended
     bool is_extended = true;
     size_t decoded_byte_len = 0;
-    BorealisLevelStatisticsData_t report = {};
-    report.max_iqr = stats.max_iqr;
+    BorealisAggregationData_t report = {};
+    report.max_iqr = tracking_data.stats.max_iqr;
 
-    mbedtls_base64_decode(NULL, 0, &decoded_byte_len, (const unsigned char *)stats.levels,
-                          stats.levels_length);
+    mbedtls_base64_decode(NULL, 0, &decoded_byte_len,
+                          (const unsigned char *)tracking_data.stats.levels,
+                          tracking_data.stats.levels_length);
 
     report.spl_band_stats = static_cast<uint8_t *>(bm_malloc(decoded_byte_len));
     if (report.spl_band_stats) {
       report.is_extended = is_extended;
 
-      int err = mbedtls_base64_decode(report.spl_band_stats, decoded_byte_len,
-                                      (size_t *)&report.spl_band_stats_size,
-                                      (const unsigned char *)stats.levels, stats.levels_length);
+      int err = mbedtls_base64_decode(
+          report.spl_band_stats, decoded_byte_len, (size_t *)&report.spl_band_stats_size,
+          (const unsigned char *)tracking_data.stats.levels, tracking_data.stats.levels_length);
       if (err != 0) {
         bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                        "Failed to base64 decode Borealis level statistics. "
                        "Probably invalid character. err=%d, len=%lu, b64=%.*s\n",
-                       err, stats.levels_length, stats.levels_length, stats.levels);
+                       err, tracking_data.stats.levels_length,
+                       tracking_data.stats.levels_length, tracking_data.stats.levels);
       } else {
         calculateQuantizedSpl(report.spl_band_stats, report.spl_band_stats_size, report.spl,
                               report.max_iqr_band);
-        report.max_iqr_band += stats.first_band_index;
+        report.max_iqr_band += tracking_data.stats.first_band_index;
       }
     }
 
     // TODO: calculate entropy
     report.entropy = REPORT_NAN_ERROR_VALUE;
 
+    // Add hydrotwin LDR
+    if (tracking_data.ldr.size) {
+      report.hydrotwin_ldr.buf = static_cast<uint8_t *>(bm_malloc(tracking_data.ldr.size));
+      if (report.hydrotwin_ldr.buf) {
+        memcpy(report.hydrotwin_ldr.buf, tracking_data.ldr.buf, tracking_data.ldr.size);
+        report.hydrotwin_ldr.size = tracking_data.ldr.size;
+      } else {
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                       "Failed to allocate memory for Hydrotwin LDR buffer in %s\n", __func__);
+      }
+    }
+
     reportBuilderAddToQueue(node_id, SENSOR_TYPE_BOREALIS, &report,
-                            sizeof(BorealisLevelStatisticsData_t),
-                            REPORT_BUILDER_SAMPLE_MESSAGE);
+                            sizeof(BorealisAggregationData_t), REPORT_BUILDER_SAMPLE_MESSAGE);
   } else {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Failed to allocate memory for Borealis level statistics in %s\n", __func__);
   }
-  xSemaphoreGive(_mutex);
 
-  // Free stats levels message
-  bm_free(stats.levels);
-  stats = (struct borealis_level_statistics){};
+  // Free data
+  bm_free(tracking_data.stats.levels);
+  bm_free(tracking_data.ldr.buf);
+  tracking_data = (struct AggregateTrackingData){};
+
+  xSemaphoreGive(_mutex);
 }
 
 /*!
@@ -204,15 +227,20 @@ void BorealisSensor::aggregate(void) {
  */
 BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
                                     sensor_report_encoder_context_t &context) {
-  static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS = 5;
-  static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS_EXTENDED = 6;
+  static constexpr uint8_t NUM_AOS_BOREALIS_FIELDS_MIN = 5;
   BmErr err = BmOK;
-  BorealisLevelStatisticsData_t borealis_data =
-      (static_cast<BorealisLevelStatisticsData_t *>(data))[sample_index];
-  uint8_t num_fields = NUM_AOS_BOREALIS_FIELDS;
+  BorealisAggregationData_t borealis_data =
+      (static_cast<BorealisAggregationData_t *>(data))[sample_index];
+  uint8_t num_fields = NUM_AOS_BOREALIS_FIELDS_MIN;
 
+  // If data is extended increase number of fields
   if (borealis_data.is_extended) {
-    num_fields = NUM_AOS_BOREALIS_FIELDS_EXTENDED;
+    num_fields++;
+  }
+
+  // If hydrotwin data is available increase number of fields
+  if (borealis_data.hydrotwin_ldr.size) {
+    num_fields++;
   }
 
   if (sensor_report_encoder_open_sample(context, num_fields, "bm_aos_borealis_v0") !=
@@ -236,7 +264,11 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
        (borealis_data.is_extended &&
         sensor_report_encoder_add_sample_member(
             context, encode_buffer_sample_member, borealis_data.spl_band_stats,
-            borealis_data.spl_band_stats_size) != CborNoError))) {
+            borealis_data.spl_band_stats_size) != CborNoError) ||
+       (borealis_data.hydrotwin_ldr.size &&
+        sensor_report_encoder_add_sample_member(
+            context, encode_buffer_sample_member, borealis_data.hydrotwin_ldr.buf,
+            borealis_data.hydrotwin_ldr.size) != CborNoError))) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Failed to add borealis level statistics sample member in %s\n", __func__);
     err = BmEBADMSG;
@@ -248,8 +280,9 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
     err = BmEBADMSG;
   }
 
-  // Free band stats
+  // Free band stats and hydrotwin data
   bm_free(borealis_data.spl_band_stats);
+  bm_free(borealis_data.hydrotwin_ldr.buf);
 
   return err;
 }
@@ -285,6 +318,8 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
     sub_type = BOREALIS_LEVEL_STATISTICS;
   } else if (strstr(topic, subtag_recstatus) != NULL) {
     sub_type = BOREALIS_RECORDING_STATUS;
+  } else if (strstr(topic, subtag_hydrotwin_ldr) != NULL) {
+    sub_type = HYDROTWIN_LDR;
   }
 
   if (sub_type < BOREALIS_SUB_COUNT) {
@@ -323,11 +358,11 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
         if (borealis_levels_statistics_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
           uint32_t count = 0;
 
-          if (borealis->stats.levels) {
+          if (borealis->tracking_data.stats.levels) {
             // This would be an indication that the user has configured BOREALIS' report_interval
             // to be less than half of the bridge power controller's sampleDurationMs, we cannot
             // send multiple of level stat messages yet and need to free the unused string
-            bm_free(borealis->stats.levels);
+            bm_free(borealis->tracking_data.stats.levels);
           }
 
           if (d.dt == 0) {
@@ -349,7 +384,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
             // Free levels information here as it will not be aggregated
             bm_free(d.levels);
           } else {
-            borealis->stats = d;
+            borealis->tracking_data.stats = d;
           }
           err = BmOK;
         } else {
@@ -367,11 +402,31 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
           bm_free(d.filename);
         }
       } break;
+      case HYDROTWIN_LDR: {
+        // Clear the last buffer if it has not been consumed
+        if (borealis->tracking_data.ldr.buf) {
+          bm_free(borealis->tracking_data.ldr.buf);
+          borealis->tracking_data.ldr.buf = NULL;
+          borealis->tracking_data.ldr.size = 0;
+        }
+
+        if (borealis->m_aggregation_reports) {
+          borealis->tracking_data.ldr.buf = static_cast<uint8_t *>(bm_malloc(data_len));
+
+          if (borealis->tracking_data.ldr.buf) {
+            memcpy(borealis->tracking_data.ldr.buf, data, data_len);
+            borealis->tracking_data.ldr.size = data_len;
+            err = BmOK;
+          } else {
+            err = BmENOMEM;
+          }
+        }
+      } break;
       default:
         break;
       }
       if (err != BmOK) {
-        bm_debug("Failed to send borealis individual log to spotter, reason: %d\n", err);
+        bm_debug("Failed to handle Borealis subscription, reason: %d\n", err);
       }
       xSemaphoreGive(borealis->_mutex);
     } else {

@@ -78,10 +78,10 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             0,
             &BorealisSensor::AOS_BOREALIS_NAN_AGG,
             [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<BorealisLevelStatisticsData_t *>(data))[idx];
+              return &(static_cast<BorealisAggregationData_t *>(data))[idx];
             },
             NULL,
-            sizeof(BorealisLevelStatisticsData_t),
+            sizeof(BorealisAggregationData_t),
         },
     [SENSOR_TYPE_PME_DO] =
         {
