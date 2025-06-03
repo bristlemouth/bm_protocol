@@ -2,6 +2,7 @@ extern "C" {
 #include "util.h"
 }
 #include "app_config.h"
+#include "app_util.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "borealisSensor.h"
@@ -13,6 +14,7 @@ extern "C" {
 #include "pubsub.h"
 #include "sensorController.h"
 #include "spectral_entropy.h"
+#include "uptime.h"
 #include <inttypes.h>
 #include <math.h>
 #include <new>
@@ -27,6 +29,7 @@ static constexpr char subtag_levels[] = "/aos/borealis/levels";
 static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistics";
 static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 static constexpr char subtag_hydrotwin_ldr[] = "/hydrotwin/ai/low-data-rate";
+static constexpr char subtag_hydrotwin_hdr[] = "/hydrotwin/ai/high-data-rate";
 
 /*!
  @brief Initialize Borealis Sensor Module
@@ -86,6 +89,9 @@ bool BorealisSensor::subscribe() {
         break;
       case HYDROTWIN_LDR:
         subtag = subtag_hydrotwin_ldr;
+        break;
+      case HYDROTWIN_HDR:
+        subtag = subtag_hydrotwin_hdr;
         break;
       default:
         subtag = NULL;
@@ -299,6 +305,58 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
 }
 
 /*!
+ @brief Log Hydrotwin Data To Spotter SD Card
+
+ @param data Data to log to SD card
+ @param data_len Length of data
+ @param type BorealisSubscription_t, must be HYDROTWIN_LDR or HYDROTWIN_HDR
+
+ @return BmOK on success, BMErr on failure
+ */
+BmErr BorealisSensor::hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data_len,
+                                              BorealisSubscriptions_t type) {
+  BmErr err = BmEINVAL;
+  size_t encoded_data_len = 0;
+
+  mbedtls_base64_encode(NULL, 0, &encoded_data_len, (const unsigned char *)data, data_len);
+
+  // Base64 encoded data
+  if (encoded_data_len) {
+    uint8_t *encoded_data = static_cast<uint8_t *>(bm_malloc(encoded_data_len));
+
+    err = BmENODEV;
+    mbedtls_base64_encode(encoded_data, encoded_data_len, &encoded_data_len,
+                          (const unsigned char *)data, data_len);
+
+    if (encoded_data) {
+      if (type == HYDROTWIN_LDR) {
+        err = send_spotter_log_aggregate("hydrotwin", m_hydrotwin_ldr_minute, "%.*s\n",
+                                         encoded_data_len, encoded_data);
+      } else if (type == HYDROTWIN_HDR) {
+        static constexpr uint8_t hydrotwin_message_version = 1;
+        SensorHeaderMsg::Data header = {
+            hydrotwin_message_version,
+            uptimeGetMs(),
+            bm_ticks_to_ms(bm_get_tick_count()),
+            0,
+        };
+        err = send_spotter_log_individual(
+            "hydrotwin", header,
+            MAX_BOREALIS_READING_PERIOD_MS(MIN_TO_MS(m_hydrotwin_hdr_minute)), "%.*s\n",
+            encoded_data_len, encoded_data);
+      }
+      bm_free(encoded_data);
+    }
+  }
+
+  if (err != BmOK) {
+    bm_debug("Failed to send hydrotwin log %d to spotter, reason: %d\n", type, err);
+  }
+
+  return err;
+}
+
+/*!
  @brief Subscription Callback For Borealis Topic
 
  @details This function decodes the subscribed borealis message and sends
@@ -331,6 +389,8 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
     sub_type = BOREALIS_RECORDING_STATUS;
   } else if (strstr(topic, subtag_hydrotwin_ldr) != NULL) {
     sub_type = HYDROTWIN_LDR;
+  } else if (strstr(topic, subtag_hydrotwin_hdr) != NULL) {
+    sub_type = HYDROTWIN_HDR;
   }
 
   if (sub_type < BOREALIS_SUB_COUNT) {
@@ -435,6 +495,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
           borealis->tracking_data.ldr.size = 0;
         }
 
+        err = borealis->hydrotwinSendSpotterLog(data, data_len, sub_type);
         if (borealis->m_aggregation_reports) {
           borealis->tracking_data.ldr.buf = static_cast<uint8_t *>(bm_malloc(data_len));
 
@@ -446,6 +507,9 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
             err = BmENOMEM;
           }
         }
+      } break;
+      case HYDROTWIN_HDR: {
+        err = borealis->hydrotwinSendSpotterLog(data, data_len, sub_type);
       } break;
       default:
         break;
@@ -563,6 +627,50 @@ static inline bool config_handshake_wait(void) {
 }
 
 /*!
+ @brief Callback For Get Request To BOREALIS Hydrotwin HDR Frequency Config
+
+ @param payload configuration value holding reading period
+
+ @return BmOK on success, BmErr on failure
+ */
+static BmErr hydrotwinHdrConfigCb(uint8_t *payload) {
+  BmErr err = BmENODATA;
+
+  if (payload && s_current_sub) {
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
+    size_t size = sizeof(BorealisSensor::m_hydrotwin_hdr_minute);
+    err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
+                                   &s_current_sub->m_hydrotwin_hdr_minute, &size);
+  }
+
+  config_handshake_give();
+
+  return err;
+}
+
+/*!
+ @brief Callback For Get Request To BOREALIS Hydrotwin LDR Frequency Config
+
+ @param payload configuration value holding reading period
+
+ @return BmOK on success, BmErr on failure
+ */
+static BmErr hydrotwinLdrConfigCb(uint8_t *payload) {
+  BmErr err = BmENODATA;
+
+  if (payload && s_current_sub) {
+    BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
+    size_t size = sizeof(BorealisSensor::m_hydrotwin_ldr_minute);
+    err = bcmp_config_decode_value(UINT32, msg->data, msg->data_length,
+                                   &s_current_sub->m_hydrotwin_ldr_minute, &size);
+  }
+
+  config_handshake_give();
+
+  return err;
+}
+
+/*!
  @brief Callback For Get Request To BOREALIS Reading Period In Milliseconds
 
  @details Obtains the reading period for BOREALIS spectrum and levels messages
@@ -633,6 +741,10 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id) {
   static constexpr uint32_t default_borealis_reading_period_ms = 1000;
   static constexpr char reading_period_key[] = "bandsSampleTimeMs";
   static constexpr char level_statistics_period_key[] = "report_interval";
+  static constexpr char hydrotwin_ldr_key[] = "hydrotwin_ldr";
+  static constexpr char hydrotwin_hdr_key[] = "hydrotwin_hdr";
+  static constexpr uint32_t hydrotwin_ldr_minute_default = 5;
+  static constexpr uint32_t hydrotwin_hdr_minute_default = 1;
 
   if (!s_config_callback_handshake) {
     s_config_callback_handshake = xSemaphoreCreateBinary();
@@ -649,6 +761,8 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id) {
       ret->type = SENSOR_TYPE_BOREALIS;
       ret->next = nullptr;
       ret->m_reading_period_ms = default_borealis_reading_period_ms;
+      ret->m_hydrotwin_ldr_minute = hydrotwin_ldr_minute_default;
+      ret->m_hydrotwin_hdr_minute = hydrotwin_hdr_minute_default;
       s_current_sub = ret;
       bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM, strlen(reading_period_key),
                       reading_period_key, &err, borealisReadingPeriodConfigCb);
@@ -659,6 +773,12 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id) {
       if (!config_handshake_wait()) {
         borealisLevelsDurationEval(true, s_current_sub->node_id);
       }
+      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM, strlen(hydrotwin_ldr_key),
+                      hydrotwin_ldr_key, &err, hydrotwinLdrConfigCb);
+      config_handshake_wait();
+      bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM, strlen(hydrotwin_hdr_key),
+                      hydrotwin_hdr_key, &err, hydrotwinHdrConfigCb);
+      config_handshake_wait();
       s_current_sub = NULL;
     }
 
