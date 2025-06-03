@@ -376,7 +376,7 @@ static void defaultTask(void *parameters) {
   // lpmPeripheralInactive(LPM_BOOT);
 
   bristlefin.enableVbus();
-  vTaskDelay(pdMS_TO_TICKS(1000)); // Complete SWAG on how long we need to wait before talking to the BQ25820
+  vTaskDelay(pdMS_TO_TICKS(10)); // Complete SWAG on how long we need to wait before talking to the BQ25820
   
   if(Charger.init()) {
       printf("BQ25820 Initialized\n");

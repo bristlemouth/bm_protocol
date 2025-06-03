@@ -198,7 +198,7 @@ bool BQ25820::disablePfm() {
     rval = true;
   } while (0);
 
-  //writeReg(CC_LIM_REG, 0x0040);
+  //writeReg(CC_LIM_REG, 0x0010);
   return rval;
 
 }
