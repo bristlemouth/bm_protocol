@@ -323,12 +323,11 @@ BmErr BorealisSensor::hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data
   // Base64 encoded data
   if (encoded_data_len) {
     uint8_t *encoded_data = static_cast<uint8_t *>(bm_malloc(encoded_data_len));
-
-    err = BmENODEV;
-    mbedtls_base64_encode(encoded_data, encoded_data_len, &encoded_data_len,
-                          (const unsigned char *)data, data_len);
+    err = BmENOMEM;
 
     if (encoded_data) {
+      mbedtls_base64_encode(encoded_data, encoded_data_len, &encoded_data_len,
+                            (const unsigned char *)data, data_len);
       if (type == HYDROTWIN_LDR) {
         err = send_spotter_log_aggregate("hydrotwin", m_hydrotwin_ldr_minute, "%.*s\n",
                                          encoded_data_len, encoded_data);

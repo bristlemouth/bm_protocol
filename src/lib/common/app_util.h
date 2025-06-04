@@ -41,7 +41,8 @@ double degToRad(double deg);
   pdTICKS_TO_MS(timeRemainingGeneric(pdMS_TO_TICKS(startTimeMs), xTaskGetTickCountFromISR(),   \
                                      pdMS_TO_TICKS(timeoutMs)))
 
-#define MIN_TO_MS(minute) (minute * 1000)
+#define MIN_TO_S(minute) (minute * 60)
+#define MIN_TO_MS(minute) (MIN_TO_S(minute) * 1000)
 
 // Handle float/double to integer conversion nicely, without this, there will
 // be off-by-one errors.
