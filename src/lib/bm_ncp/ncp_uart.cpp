@@ -37,11 +37,9 @@ static constexpr uint16_t NCP_BUFF_LEN = 2048;
 static volatile uint8_t ncpRXCurrBuff = 0;
 static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
 static volatile uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
-static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
-static SemaphoreHandle_t ncp_serial_lock = NULL;
 static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
 static SemaphoreHandle_t tx_complete_lock = NULL;
 
@@ -355,13 +353,8 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  if (value) {
-    xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
-    ncp_rx = false;
-  } else {
-    xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
+  if (!value) {
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
-    ncp_rx = true;
     HAL_UART_AbortReceive(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
                                  NCP_BUFF_LEN);
@@ -392,9 +385,6 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   ncp_tx_queue_handle =
       xQueueCreate(NCP_PROCESSOR_TX_QUEUE_DEPTH, sizeof(ProcessorQueueItem_t));
   configASSERT(ncp_tx_queue_handle);
-
-  ncp_serial_lock = xSemaphoreCreateBinary();
-  configASSERT(ncp_serial_lock);
 
   tx_complete_lock = xSemaphoreCreateBinary();
   configASSERT(tx_complete_lock);
@@ -608,7 +598,7 @@ static void ncpBaudRateDiscovery(void) {
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
   HAL_UART_IRQHandler(&huart3);
-  if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
+  if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE) {
     HAL_UART_DMAStop(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
                                  NCP_BUFF_LEN);
@@ -695,9 +685,6 @@ static inline BaseType_t postTxEventHandle(SerialHandle_t *handle,
 
 static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
   configASSERT(handle);
-  if (ncp_rx) {
-    xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
-  }
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
   lpmPeripheralActive(LPM_USART3);
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
