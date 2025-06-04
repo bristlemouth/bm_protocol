@@ -15,7 +15,7 @@ import time
 
 def get_project_root():
     git_repo = git.Repo(os.path.abspath(__file__), search_parent_directories=True)
-    return os.path.realpath(git_repo.git.rev_parst("--show-toplevel"))
+    return os.path.realpath(git_repo.git.rev_parse("--show-toplevel"))
 
 
 # Don't close python script with Ctrl+C since GDB uses it
