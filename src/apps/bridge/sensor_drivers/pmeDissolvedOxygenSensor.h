@@ -7,13 +7,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define PME_DISSOLVED_OXYGEN_NUM_SAMPLE_MEMBERS 4
+#define PME_DISSOLVED_OXYGEN_NUM_SAMPLE_MEMBERS 5
 
 typedef struct pme_dissolved_oxygen_aggregations_s {
   double temperature_deg_c_mean;
   double do_mg_per_l_mean;
   double quality_mean;
   double do_saturation_pct_mean;
+  double salinity_ppt_mean;
   uint32_t reading_count;
 } pme_dissolved_oxygen_aggregations_t;
 
@@ -22,6 +23,7 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   AveragingSampler do_mg_per_l;
   AveragingSampler quality;
   AveragingSampler do_saturation_pct;
+  AveragingSampler salinity_ppt;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;
@@ -38,6 +40,9 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   static constexpr double QUALITY_SAMPLE_MEMBER_MAX = 1.0;
   static constexpr double DO_SATURATION_SAMPLE_MEMBER_MIN = 0.0;
   static constexpr double DO_SATURATION_SAMPLE_MEMBER_MAX = 150.0;
+  static constexpr double SALINITY_PPT_MEMBER_MIN = 0.0;
+  static constexpr double SALINITY_PPT_MEMBER_MAX = 500.0;
+
 
 public:
   bool subscribe() override;
@@ -47,6 +52,7 @@ public:
       .do_mg_per_l_mean = NAN,
       .quality_mean = NAN,
       .do_saturation_pct_mean = NAN,
+      .salinity_ppt_mean = NAN,
       .reading_count = 0,
   };
 
