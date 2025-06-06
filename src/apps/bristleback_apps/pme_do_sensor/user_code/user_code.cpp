@@ -166,7 +166,8 @@ void setup(void) {
     printf("No user-defined sensorDebugTxEnable - defaulting to: %" PRIu32 "\n",
            sensorDebugTxEnable);
   }
-
+  IOWrite(&BB_PL_BUCK_EN, 1);
+  IOWrite(&BB_VBUS_EN, 1);
   ledAllOff();
   //Set first DO measurement flag to true to trigger startup DO measurement
   firstDo = true;
