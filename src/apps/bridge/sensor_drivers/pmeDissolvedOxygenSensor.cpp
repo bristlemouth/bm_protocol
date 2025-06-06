@@ -57,6 +57,8 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
         dissolved_oxygen_sensor->quality.addSample(dissolved_oxygen_data.quality);
         dissolved_oxygen_sensor->do_saturation_pct.addSample(
             dissolved_oxygen_data.do_saturation_pct);
+        dissolved_oxygen_sensor->salinity_ppt.addSample(
+            dissolved_oxygen_data.salinity_ppt);
         dissolved_oxygen_sensor->reading_count++;
 
         BmErr err = dissolved_oxygen_sensor->send_spotter_log_individual(
@@ -65,9 +67,11 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
             "%.4f,"   // temperature_deg_c
             "%.3f,"   // do_mg_per_l
             "%.3f,"   // quality
-            "%.1f\n", // do_saturation_pct
+            "%.1f,"   // do_saturation_pct
+            "%.2f\n", // salinity_ppt
             dissolved_oxygen_data.temperature_deg_c, dissolved_oxygen_data.do_mg_per_l,
-            dissolved_oxygen_data.quality, dissolved_oxygen_data.do_saturation_pct);
+            dissolved_oxygen_data.quality, dissolved_oxygen_data.do_saturation_pct,
+            dissolved_oxygen_data.salinity_ppt);
         if (err != BmOK) {
           bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to IND log, err: %d\n",
                    err);
@@ -89,6 +93,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
                                                                  .do_mg_per_l_mean = NAN,
                                                                  .quality_mean = NAN,
                                                                  .do_saturation_pct_mean = NAN,
+                                                                 .salinity_ppt_mean = NAN,
                                                                  .reading_count = 0};
 
     if (temperature_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
@@ -96,6 +101,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
       dissolved_oxygen_aggs.do_mg_per_l_mean = do_mg_per_l.getMean();
       dissolved_oxygen_aggs.quality_mean = quality.getMean();
       dissolved_oxygen_aggs.do_saturation_pct_mean = do_saturation_pct.getMean();
+      dissolved_oxygen_aggs.salinity_ppt_mean = salinity_ppt.getMean();
       dissolved_oxygen_aggs.reading_count = reading_count;
 
       if (dissolved_oxygen_aggs.temperature_deg_c_mean < TEMP_SAMPLE_MEMBER_MIN ||
@@ -114,6 +120,10 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
           dissolved_oxygen_aggs.do_saturation_pct_mean > DO_SATURATION_SAMPLE_MEMBER_MAX) {
         dissolved_oxygen_aggs.do_saturation_pct_mean = NAN;
       }
+      if (dissolved_oxygen_aggs.salinity_ppt_mean < SALINITY_PPT_MEMBER_MIN ||
+          dissolved_oxygen_aggs.salinity_ppt_mean > SALINITY_PPT_MEMBER_MAX) {
+        dissolved_oxygen_aggs.salinity_ppt_mean = NAN;
+      }
     }
 
     BmErr err = send_spotter_log_aggregate(
@@ -121,9 +131,11 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
         "%.4f,"   // temperature_deg_c
         "%.3f,"   // do_mg_per_l
         "%.3f,"   // quality
-        "%.1f\n", // do_saturation_pct
+        "%.1f"    // do_saturation_pct
+        "%.2f\n", // salinity_ppt_mean
         dissolved_oxygen_aggs.temperature_deg_c_mean, dissolved_oxygen_aggs.do_mg_per_l_mean,
-        dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean);
+        dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean,
+        dissolved_oxygen_aggs.salinity_ppt_mean);
     if (err != BmOK) {
       bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to AGG log, err: %d\n", err);
     }
@@ -138,6 +150,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     do_mg_per_l.clear();
     quality.clear();
     do_saturation_pct.clear();
+    salinity_ppt.clear();
     reading_count = 0;
     bm_semaphore_give(_mutex);
   } else {
@@ -232,6 +245,7 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
       new_sub->do_mg_per_l.initBuffer(averager_max_samples);
       new_sub->quality.initBuffer(averager_max_samples);
       new_sub->do_saturation_pct.initBuffer(averager_max_samples);
+      new_sub->salinity_ppt.initBuffer(averager_max_samples);
       new_sub->reading_count = 0;
 
       CURRENT_SUB = new_sub;
