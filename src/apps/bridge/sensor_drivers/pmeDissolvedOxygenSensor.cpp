@@ -130,7 +130,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
         "%.4f,"   // temperature_deg_c
         "%.3f,"   // do_mg_per_l
         "%.3f,"   // quality
-        "%.1f"    // do_saturation_pct
+        "%.1f,"    // do_saturation_pct
         "%.1f\n", // salinity_ppt_mean
         dissolved_oxygen_aggs.temperature_deg_c_mean, dissolved_oxygen_aggs.do_mg_per_l_mean,
         dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean,

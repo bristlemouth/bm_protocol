@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define PME_DISSOLVED_OXYGEN_NUM_SAMPLE_MEMBERS 4
+#define PME_DISSOLVED_OXYGEN_NUM_SAMPLE_MEMBERS 5
 
 typedef struct pme_dissolved_oxygen_aggregations_s {
   double temperature_deg_c_mean;
