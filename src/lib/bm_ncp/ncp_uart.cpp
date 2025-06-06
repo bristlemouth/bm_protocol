@@ -687,11 +687,15 @@ static inline BaseType_t postTxEventHandle(SerialHandle_t *handle,
 
 static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
   configASSERT(handle);
-  LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
-  lpmPeripheralActive(LPM_USART3);
-  LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
-  IOWrite(&BM_INT, 0);
-  vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
+  uint8_t pin_level = 0;
+  IORead(&BM_INT, &pin_level);
+  if (pin_level) {
+    LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
+    lpmPeripheralActive(LPM_USART3);
+    LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
+    IOWrite(&BM_INT, 0);
+    vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
+  }
 }
 
 static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
@@ -705,9 +709,11 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
   } else {
     xSemaphoreGiveFromISR(ncp_ctx.negotiating_lock, NULL);
   }
-  LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
-  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
-  LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
+  if (LL_GPIO_GetPinMode(BM_INT_GPIO_Port, BM_INT_Pin) == LL_GPIO_MODE_OUTPUT) {
+    LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
+    LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
+    LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
+  }
   // LPM_USART3_RX will get set on the next rising edge
   lpmPeripheralInactiveFromISR(LPM_USART3_TX);
   portYIELD_FROM_ISR(
