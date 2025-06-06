@@ -3,7 +3,6 @@
 #include "app_config.h"
 #include "avgSampler.h"
 #include "bm_config.h"
-#include "sensorController.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
 #include "cbor.h"
@@ -13,6 +12,7 @@
 #include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "sensorController.h"
 #include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
@@ -57,8 +57,7 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
         dissolved_oxygen_sensor->quality.addSample(dissolved_oxygen_data.quality);
         dissolved_oxygen_sensor->do_saturation_pct.addSample(
             dissolved_oxygen_data.do_saturation_pct);
-        dissolved_oxygen_sensor->salinity_ppt.addSample(
-            dissolved_oxygen_data.salinity_ppt);
+        dissolved_oxygen_sensor->salinity_ppt.addSample(dissolved_oxygen_data.salinity_ppt);
         dissolved_oxygen_sensor->reading_count++;
 
         BmErr err = dissolved_oxygen_sensor->send_spotter_log_individual(
