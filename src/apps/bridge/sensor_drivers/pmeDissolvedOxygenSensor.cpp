@@ -68,7 +68,7 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
             "%.3f,"   // do_mg_per_l
             "%.3f,"   // quality
             "%.1f,"   // do_saturation_pct
-            "%.2f\n", // salinity_ppt
+            "%.1f\n", // salinity_ppt
             dissolved_oxygen_data.temperature_deg_c, dissolved_oxygen_data.do_mg_per_l,
             dissolved_oxygen_data.quality, dissolved_oxygen_data.do_saturation_pct,
             dissolved_oxygen_data.salinity_ppt);
@@ -132,7 +132,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
         "%.3f,"   // do_mg_per_l
         "%.3f,"   // quality
         "%.1f"    // do_saturation_pct
-        "%.2f\n", // salinity_ppt_mean
+        "%.1f\n", // salinity_ppt_mean
         dissolved_oxygen_aggs.temperature_deg_c_mean, dissolved_oxygen_aggs.do_mg_per_l_mean,
         dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean,
         dissolved_oxygen_aggs.salinity_ppt_mean);
