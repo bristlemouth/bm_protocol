@@ -328,7 +328,7 @@ BmErr BorealisSensor::hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data
 
     if (encoded_data) {
       size_t encoded_data_len = 0;
-      mbedtls_base64_encode(encoded_data, encoded_data_len, &encoded_data_len,
+      mbedtls_base64_encode(encoded_data, encoded_data_len_check, &encoded_data_len,
                             (const unsigned char *)data, data_len);
       if (type == HYDROTWIN_LDR) {
         err = send_spotter_log_aggregate("hydrotwin", m_hydrotwin_ldr_minute, "%.*s\n",
