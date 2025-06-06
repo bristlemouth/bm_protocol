@@ -167,9 +167,6 @@ void setup(void) {
            sensorDebugTxEnable);
   }
 
-  // Ensure Vbus stable before enabling Vout
-  IOWrite(&BB_VBUS_EN, 0);
-  bm_delay(50);
   ledAllOff();
   //Set first DO measurement flag to true to trigger startup DO measurement
   firstDo = true;
