@@ -316,16 +316,18 @@ BmErr BorealisSensor::encode_sample(void *data, uint32_t sample_index,
 BmErr BorealisSensor::hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data_len,
                                               BorealisSubscriptions_t type) {
   BmErr err = BmEINVAL;
-  size_t encoded_data_len = 0;
+  size_t encoded_data_len_check = 0;
 
-  mbedtls_base64_encode(NULL, 0, &encoded_data_len, (const unsigned char *)data, data_len);
+  mbedtls_base64_encode(NULL, 0, &encoded_data_len_check, (const unsigned char *)data,
+                        data_len);
 
   // Base64 encoded data
-  if (encoded_data_len) {
-    uint8_t *encoded_data = static_cast<uint8_t *>(bm_malloc(encoded_data_len));
+  if (encoded_data_len_check) {
+    uint8_t *encoded_data = static_cast<uint8_t *>(bm_malloc(encoded_data_len_check));
     err = BmENOMEM;
 
     if (encoded_data) {
+      size_t encoded_data_len = 0;
       mbedtls_base64_encode(encoded_data, encoded_data_len, &encoded_data_len,
                             (const unsigned char *)data, data_len);
       if (type == HYDROTWIN_LDR) {
@@ -742,7 +744,7 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id) {
   static constexpr char level_statistics_period_key[] = "report_interval";
   static constexpr char hydrotwin_ldr_key[] = "hydrotwin_ldr";
   static constexpr char hydrotwin_hdr_key[] = "hydrotwin_hdr";
-  static constexpr uint32_t hydrotwin_ldr_minute_default = 5;
+  static constexpr uint32_t hydrotwin_ldr_minute_default = 12;
   static constexpr uint32_t hydrotwin_hdr_minute_default = 1;
 
   if (!s_config_callback_handshake) {
