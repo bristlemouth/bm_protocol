@@ -355,9 +355,6 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
 
   if (!value) {
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
-    HAL_UART_AbortReceive(&huart3);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
-                                 NCP_BUFF_LEN);
   }
 
   return xHigherPriorityTaskWoken;
@@ -447,6 +444,9 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
   serialEnable(ncpSerialHandle);
+  HAL_UART_AbortReceive(&huart3);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
+                               NCP_BUFF_LEN);
   ncpBaudRateDiscovery();
   ncp_dfu_check_for_update();
   bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(),
@@ -598,7 +598,7 @@ static void ncpBaudRateDiscovery(void) {
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
   HAL_UART_IRQHandler(&huart3);
-  if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE) {
+  if (HAL_UART_GetError(&huart3) != HAL_UART_ERROR_NONE) {
     HAL_UART_DMAStop(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
                                  NCP_BUFF_LEN);
@@ -641,6 +641,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
     }
   }
 
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
+                               NCP_BUFF_LEN);
   // Exit low power mode now that RX is complete
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
