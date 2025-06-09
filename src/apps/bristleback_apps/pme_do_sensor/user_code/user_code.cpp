@@ -131,8 +131,8 @@ void setup(void) {
                       strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
     sensorDebugTxEnableCfg = true;
   }
-  if (get_config_float(BM_CFG_PARTITION_SYSTEM, SALINITY_PPT,
-                   strlen(SALINITY_PPT), &salinityPpt)) {
+  if (get_config_float(BM_CFG_PARTITION_SYSTEM, SALINITY_PPT, strlen(SALINITY_PPT),
+                       &salinityPpt)) {
     salinityPptCfg = true;
   }
 
