@@ -34,6 +34,7 @@ private:
   char _DOTpayload_buffer[2048];
   char _WIPEpayload_buffer[2048];
   char _SNpayload_buffer[2048];
+  char _OSpayload_buffer[2048];
   bool _is_baro_valid = false;
   double _barometric_pressure_mbar = 1013.25;
 };
