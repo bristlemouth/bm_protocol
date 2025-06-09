@@ -53,7 +53,6 @@ static void sensorTimerCallback(TimerHandle_t timer);
   be re-enabled.
 */
 void checkSensors() {
-  // logPrint(SYSLog, LOG_LEVEL_DEBUG, "Running sensor checks.\n");
   printf("%llu | Running sensor checks.\n", uptimeGetMicroSeconds()/1000);
 
   // Check all sensors to see if they are due for a sample update
@@ -67,12 +66,10 @@ void checkSensors() {
         // and start again
         if (!xTimerIsTimerActive(sensorItem->timer) && sensorItem->sensor->initFn()) {
           xTimerStart(sensorItem->timer, 10);
-          // logPrint(SYSLog, LOG_LEVEL_INFO, "%s Re-enabled\n", sensorItem->name);
           printf("%llu | %s Re-enabled\n", uptimeGetMicroSeconds()/1000, sensorItem->name);
         }
       } else if (xTimerIsTimerActive(sensorItem->timer)) {
         xTimerStop(sensorItem->timer, 10);
-        // logPrint(SYSLog, LOG_LEVEL_ERROR, "%s Check Failed - Disabling\n", sensorItem->name);
         printf("%llu | %s Check Failed - Disabling\n", uptimeGetMicroSeconds()/1000, sensorItem->name);
       }
       // Otherwise, try to re-init if not initted
@@ -91,7 +88,6 @@ void checkSensors() {
         // Start sample timer
         configASSERT(xTimerStart(sensorItem->timer, 10));
       } else {
-        // logPrint(SYSLog, LOG_LEVEL_INFO, "Error initializing %s\n", name);
         printf("%llu | Error initializing %s\n", uptimeGetMicroSeconds() / 1000, sensorItem->name);
       }
     }
@@ -308,7 +304,6 @@ static void sensorSampleTask( void *parameters ) {
     configASSERT(sensorCheckTimer != NULL);
     xTimerStart(sensorCheckTimer, 10);
   } else {
-    // logPrint(SYSLog, LOG_LEVEL_INFO, "Sensor Checks Disabled\n");
     printf("Sensor Checks Disabled\n");
   }
 
@@ -317,7 +312,6 @@ static void sensorSampleTask( void *parameters ) {
     BaseType_t res = xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, portMAX_DELAY);
     if(res != pdTRUE) {
       // Error
-      // logPrint(SYSLog, LOG_LEVEL_ERROR, "Error waiting for sensor task notification\n");
       printf("Error waiting for sensor task notification\n");
       continue;
     }

@@ -389,6 +389,13 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
                      "Failed to add pme_do sample member in addSamplesToReport\n");
       break;
     }
+    if (sensor_report_encoder_add_sample_member(context, encode_double_sample_member,
+                                                &pme_do_sample.salinity_ppt_mean) !=
+        CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add pme_do sample member in addSamplesToReport\n");
+      break;
+    }
     if (sensor_report_encoder_close_sample(context) != CborNoError) {
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                      "Failed to close sample in addSamplesToReport\n");

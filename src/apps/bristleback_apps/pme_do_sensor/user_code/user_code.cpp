@@ -167,9 +167,9 @@ void setup(void) {
            sensorDebugTxEnable);
   }
 
-  // Ensure Vbus stable before enabling Vout
-  IOWrite(&BB_VBUS_EN, 0);
-  bm_delay(50);
+  // VBUS and 9V are not used in microDOT so we can turn these both off (they are active when LOW)
+  IOWrite(&BB_PL_BUCK_EN, 1);
+  IOWrite(&BB_VBUS_EN, 1);
   ledAllOff();
   //Set first DO measurement flag to true to trigger startup DO measurement
   firstDo = true;
