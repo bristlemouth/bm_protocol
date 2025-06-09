@@ -51,6 +51,7 @@ uint32_t sensorDebugTxEnable = 0;
 bool sensorDebugTxEnableCfg = false;
 
 static float salinityPpt = 35.0;
+bool salinityPptCfg = false;
 
 static PmeSensor pmeSensor;
 
@@ -69,6 +70,9 @@ static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
 static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
 static constexpr char SALINITY_PPT[] = "salinityPpt";
+
+// Make this sys cfg available when supported by backend
+// static constexpr char fwVersion = "0.13.0-rc.7";
 
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
@@ -127,8 +131,10 @@ void setup(void) {
                       strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
     sensorDebugTxEnableCfg = true;
   }
-  get_config_float(BM_CFG_PARTITION_SYSTEM, SALINITY_PPT, strlen(SALINITY_PPT), &salinityPpt);
-  printf("Salinity PPT: %f\n", salinityPpt);
+  if (get_config_float(BM_CFG_PARTITION_SYSTEM, SALINITY_PPT, strlen(SALINITY_PPT),
+                       &salinityPpt)) {
+    salinityPptCfg = true;
+  }
 
   // Subscribe to barometric pressure
   bm_sub("sensor/*/barometric_pressure", handle_barometric_pressure);
@@ -167,6 +173,14 @@ void setup(void) {
            sensorDebugTxEnable);
   }
 
+  if (salinityPptCfg == true) {
+    printf("User-defined salinityPpt found: %f\n", salinityPpt);
+  } else {
+    printf("No user-defined salinityPpt - defaulting to: %f\n", salinityPpt);
+  }
+
+  printf("\n");
+
   // VBUS and 9V are not used in microDOT so we can turn these both off (they are active when LOW)
   IOWrite(&BB_PL_BUCK_EN, 1);
   IOWrite(&BB_VBUS_EN, 1);
@@ -202,9 +216,8 @@ void loop(void) {
         if (PmeWipeMsg::encode(w, cborBuf, sizeof(cborBuf), &encodedLen) == CborNoError) {
           bm_pub_wl(pmeWipeTopic, pmeWipeTopicStrLen, cborBuf, encodedLen, 0,
                     BM_COMMON_PUB_SUB_VERSION);
-          printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
-                 "...\n",
-                 pmeWipeTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
+          //printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
+          //       "...\n", pmeWipeTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         } else {
           printf("!  Failed to encode WIPE data message\n");
         }
@@ -236,9 +249,8 @@ void loop(void) {
       size_t encodedLen = 0;
       if (PmeDissolvedOxygenMsg::encode(d, cborBuf, sizeof(cborBuf), &encodedLen) ==
           CborNoError) {
-        printf("#  DOT Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
-               "...\n",
-               pmeDoTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
+        //printf("#  DOT Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
+        //       "...\n", pmeDoTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         bm_pub_wl(pmeDoTopic, pmeDoTopicStrLen, cborBuf, encodedLen, 0,
                   BM_COMMON_PUB_SUB_VERSION);
         if (false) {
