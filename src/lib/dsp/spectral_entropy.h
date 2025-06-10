@@ -1,0 +1,14 @@
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void insert_spectrum_into_list(const unsigned int num_bands, float *const spl_db);
+
+float calc_min_spectral_entropy_and_clear_list(const unsigned int num_bands,
+                                               float const *const means);
+
+#ifdef __cplusplus
+}
+#endif

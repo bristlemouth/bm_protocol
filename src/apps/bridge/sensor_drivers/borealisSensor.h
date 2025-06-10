@@ -71,9 +71,14 @@ private:
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                   const uint8_t *data, uint16_t data_len, uint8_t type,
                                   uint8_t version);
-  static BmErr calculateQuantizedSpl(uint8_t const *const band_stats,
-                                     const size_t band_stats_len, uint8_t &spl,
-                                     uint8_t &max_iqr_band);
+  static BmErr calculateQuantizedSplAndEntropy(uint8_t const *const band_stats,
+                                               const size_t band_stats_len, uint8_t &spl,
+                                               uint8_t &max_iqr_band, uint8_t &entropy);
+  static inline uint8_t unpack_nibble(const uint8_t *bytes, size_t nibble_index);
+  static inline uint16_t unpack_12bit(const uint8_t *bytes, size_t nibble_index);
+  static void parse_levels(float *spl_db, const char *levels_as_base64, size_t levels_length);
+  static void parse_level_statistics(float *stats_db, const char *stats_as_base64,
+                                     size_t b64_length);
 } Borealis_t;
 
 Borealis_t *createBorealisSensorSub(uint64_t node_id);
