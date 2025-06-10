@@ -83,15 +83,17 @@ static BmErr compute_entropies_and_find_minimum(void *data, void *arg) {
   return BmOK;
 }
 
-float calc_min_spectral_entropy_and_clear_list(const unsigned int num_bands,
-                                               float const *const means) {
-  min_entropy = 1.0;
-  SpectralEntropyArgs arg = {.num_bands = num_bands, .means = means};
-  ll_traverse(&spectra, compute_entropies_and_find_minimum, &arg);
-
+void clear_spectral_entropy_list(void) {
   while (spectra.head != NULL) {
     ll_remove(&spectra, spectra.head->id);
   }
+}
 
+float calc_min_spectral_entropy_and_clear_list(const unsigned int num_bands,
+                                               float const *const means) {
+  min_entropy = 1.0f;
+  SpectralEntropyArgs arg = {.num_bands = num_bands, .means = means};
+  ll_traverse(&spectra, compute_entropies_and_find_minimum, &arg);
+  clear_spectral_entropy_list();
   return min_entropy;
 }

@@ -114,6 +114,7 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
     spl = REPORT_NAN_ERROR_VALUE;
     max_iqr_band = REPORT_NAN_ERROR_VALUE;
     entropy = REPORT_NAN_ERROR_VALUE;
+    clear_spectral_entropy_list();
     return BmEINVAL;
   }
 
