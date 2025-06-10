@@ -190,9 +190,6 @@ void BorealisSensor::aggregate(void) {
       }
     }
 
-    // TODO: calculate entropy
-    report.entropy = REPORT_NAN_ERROR_VALUE;
-
     // Add hydrotwin LDR
     if (tracking_data.ldr.size) {
       report.hydrotwin_ldr.buf = static_cast<uint8_t *>(bm_malloc(tracking_data.ldr.size));
