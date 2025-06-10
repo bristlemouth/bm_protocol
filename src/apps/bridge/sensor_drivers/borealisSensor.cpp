@@ -702,31 +702,3 @@ void BorealisSensor::parse_levels(float *spl_db, const char *levels_as_base64,
     spl_db[i] = unpack_12bit(raw_bytes, i * 3) * cstep + clow;
   }
 }
-
-void BorealisSensor::parse_level_statistics(float *stats_db, const char *stats_as_base64,
-                                            size_t b64_length) {
-  size_t out_len = 0;
-  mbedtls_base64_decode(NULL, 0, &out_len, reinterpret_cast<const uint8_t *>(stats_as_base64),
-                        b64_length);
-  uint8_t raw_bytes[out_len];
-  int err =
-      mbedtls_base64_decode(raw_bytes, sizeof(raw_bytes), &out_len,
-                            reinterpret_cast<const uint8_t *>(stats_as_base64), b64_length);
-  if (err != 0) {
-    bm_debug("Failed to decode base64 level stats. err=%d, len=%zu, b64=%.*s\n", err,
-             b64_length, (int)b64_length, stats_as_base64);
-    return;
-  }
-
-  constexpr float cstep = 0.75f;                     // dB
-  constexpr float clow = -256.0f * cstep + 185.642f; // dB
-  constexpr uint8_t num_stats = 4;                   // 25%, 50%, 75%, mean
-  uint32_t num_bands = out_len / num_stats;
-  for (size_t i = 0; i < num_bands; i++) {
-    size_t index = i * num_stats;
-    stats_db[index + 0] = raw_bytes[index + 0] * cstep + clow; // 25%
-    stats_db[index + 1] = raw_bytes[index + 1] * cstep + clow; // 50%
-    stats_db[index + 2] = raw_bytes[index + 2] * cstep + clow; // 75%
-    stats_db[index + 3] = raw_bytes[index + 3] * cstep + clow; // mean
-  }
-}
