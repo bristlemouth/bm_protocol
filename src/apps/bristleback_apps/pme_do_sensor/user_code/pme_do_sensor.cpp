@@ -33,6 +33,8 @@ static constexpr char queryMDOT[] = "MDOT\r";
 static constexpr char queryWIPE[] = "WDOT\r";
 //Function to request a serial number of the microdot
 static constexpr char querySN[] = "SN\r";
+//Function to request microDOT OS version
+static constexpr char queryOS[] = "OSREV\r";
 
 void ledBlinkBoot() {
   for (int i = 0; i < 5; i++) {
@@ -121,14 +123,19 @@ void PmeSensor::init() {
   PLUART::enable();
   PLUART::write((uint8_t *)querySN, sizeof(querySN));
   bm_delay(250);
+  PLUART::readLine(_SNpayload_buffer, sizeof(_SNpayload_buffer));
+  bm_delay(250);
+  PLUART::write((uint8_t *)queryOS, sizeof(queryOS));
+  bm_delay(250);
   if (PLUART::lineAvailable()) {
-    PLUART::readLine(_SNpayload_buffer, sizeof(_SNpayload_buffer));
+    PLUART::readLine(_OSpayload_buffer, sizeof(_OSpayload_buffer));
     printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
            "~~~ Communication with microDOT established! ~~~\n"
            "~~~             S/N: %s             ~~~\n",
            _SNpayload_buffer);
+    printf("~~~                 OS: %s                 ~~~\n", _OSpayload_buffer);
     printf("~~~            Begin transmission            ~~~\n"
-           "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+           "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n");
   } else {
     printf("!!! No microDOT S/N received - is the device connected?\n");
   }
@@ -162,19 +169,6 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
   if (PLUART::lineAvailable()) {
     uint16_t do_read_len = PLUART::readLine(_DOTpayload_buffer, sizeof(_DOTpayload_buffer));
     ledBlinkOnce(&LED_GREEN);
-    // Make spotter_log conditional on system config
-    if (pmeLogEnable == 1) {
-      spotter_log(0, PME_DO_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
-                  uptimeGetMs(), rtc_time_str, do_read_len, _DOTpayload_buffer);
-    }
-    spotter_log_console(0, "DOT | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
-                        rtc_time_str, do_read_len, _DOTpayload_buffer);
-    if (sensorDebugTxEnable) {
-      spotter_tx_data(_DOTpayload_buffer, do_read_len, BmNetworkTypeCellularIriFallback);
-    }
-
-    printf("#  DOT | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
-           do_read_len, _DOTpayload_buffer);
 
     if (_DOTparser.parseLine(_DOTpayload_buffer, do_read_len)) {
       rtcGet(&time_and_date);
@@ -190,6 +184,10 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
         d.header.reading_uptime_millis = uptimeGetMs();
         d.header.sensor_reading_time_ms = 0;
         d.temperature_deg_c = temp_signal.data.double_val;
+        // printf("Temperature: %.3f C\n", d.temperature_deg_c);
+        // printf("Salinity ppt: %f\n", salinityPpt);
+        // printf("Salinity factor: %f\n", salinityFactor(d.temperature_deg_c, salinityPpt));
+        // printf("do_signal_data: %f\n", do_signal.data.double_val);
         d.do_mg_per_l =
             do_signal.data.double_val * salinityFactor(d.temperature_deg_c, salinityPpt);
         d.quality = q_signal.data.double_val;
@@ -202,6 +200,23 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
         }
         d.salinity_ppt = salinityPpt;
         success = true;
+        char DOT_stats[4300];
+        // Output is: tick (uptime ms), SN, Raw DO mg/L, Corrected DO mg/L, Saturated DO %, Temp C, Salinity ppt, Salinity factor, Quality
+        sprintf(DOT_stats, "tick: %" PRIu64 ", %s | %.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f\n",
+                uptimeGetMs(), _SNpayload_buffer, do_signal.data.double_val, d.do_mg_per_l,
+                d.do_saturation_pct, d.temperature_deg_c, salinityPpt,
+                salinityFactor(d.temperature_deg_c, salinityPpt), d.quality);
+        // Make spotter_log conditional on system config
+        if (pmeLogEnable == 1) {
+          // Modified for new data output
+          spotter_log(0, PME_DO_RAW_LOG, USE_TIMESTAMP, DOT_stats);
+        }
+        // This has not been modified for new data output; it uses line read from microDOT without transformation
+        spotter_log_console(0, DOT_stats);
+        if (sensorDebugTxEnable) {
+          spotter_tx_data(_DOTpayload_buffer, do_read_len, BmNetworkTypeCellularIriFallback);
+        }
+        printf("%s", DOT_stats);
       }
     } else {
       printf("!  Failed to parse DOT data\n");
@@ -244,28 +259,26 @@ bool PmeSensor::getWipeData(PmeWipeMsg::Data &w) {
   if (PLUART::lineAvailable()) {
     uint16_t wipe_read_len = PLUART::readLine(_WIPEpayload_buffer, sizeof(_WIPEpayload_buffer));
     ledBlinkTwice(&LED_GREEN);
-    printf("Wipe Read line: %s\n", _WIPEpayload_buffer);
+    //printf("Wipe Read line: %s\n", _WIPEpayload_buffer);
     RTCTimeAndDate_t time_and_date = {};
     rtcGet(&time_and_date);
     char rtc_time_str[32] = {};
     rtcPrint(rtc_time_str, NULL);
 
     if (pmeLogEnable) {
-      spotter_log(0, PME_WIPE_RAW_LOG, USE_TIMESTAMP,
-                  "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
-                  wipe_read_len, _WIPEpayload_buffer);
+      spotter_log(0, PME_WIPE_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", %s, line: %.*s\n",
+                  uptimeGetMs(), _SNpayload_buffer, wipe_read_len, _WIPEpayload_buffer);
     }
-    spotter_log_console(0, "WIPE | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
-                        rtc_time_str, wipe_read_len, _WIPEpayload_buffer);
+    spotter_log_console(0, "WIPE | tick: %" PRIu64 ", %s, rtc: %s, line: %.*s", uptimeGetMs(),
+                        _SNpayload_buffer, rtc_time_str, wipe_read_len, _WIPEpayload_buffer);
     if (sensorDebugTxEnable) {
       spotter_tx_data(_WIPEpayload_buffer, wipe_read_len, BmNetworkTypeCellularIriFallback);
     }
-    printf("Wipe | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
-           wipe_read_len, _WIPEpayload_buffer);
+    printf("Wipe | tick: %" PRIu64 ", %s, rtc: %s, line: %.*s\n", uptimeGetMs(),
+           _SNpayload_buffer, rtc_time_str, wipe_read_len, _WIPEpayload_buffer);
 
     if (_WIPEparser.parseLine(_WIPEpayload_buffer, wipe_read_len)) {
-      printf("Parsed WIPE line: %.*s\n", wipe_read_len,
-             _WIPEpayload_buffer); // Debugging; remove later
+      //printf("Parsed WIPE line: %.*s\n", wipe_read_len, _WIPEpayload_buffer);
       rtcGet(&time_and_date);
       Value wipe_time = _WIPEparser.getValue(0);
       Value start1_mA = _WIPEparser.getValue(1);
@@ -286,10 +299,11 @@ bool PmeSensor::getWipeData(PmeWipeMsg::Data &w) {
         w.start2_mA = start2_mA.data.double_val;
         w.final_mA = final_mA.data.double_val;
         w.rsource = rsource.data.double_val;
-        printf("#  Wipe Parse Success  >>  Epoch time: %llu, Uptime: %llu  |  Wipe time: "
+        /*printf("#  Wipe Parse Success  >>  Epoch time: %llu, Uptime: %llu  |  Wipe time: "
                "%.1f, Start1: %.1f, Avg: %.1f, Start2: %.1f, Final: %.1f, Rsource: %.1f\n",
                w.header.reading_time_utc_ms, w.header.reading_uptime_millis, w.wipe_time_sec,
                w.start1_mA, w.avg_mA, w.start2_mA, w.final_mA, w.rsource);
+        */
         success = true;
       }
     } else {
