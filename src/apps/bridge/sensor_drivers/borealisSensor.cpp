@@ -110,10 +110,10 @@ bool BorealisSensor::subscribe() {
 BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_stats,
                                                       const size_t band_stats_len, uint8_t &spl,
                                                       uint8_t &max_iqr_band, uint8_t &entropy) {
+  spl = REPORT_NAN_ERROR_VALUE;
+  max_iqr_band = REPORT_NAN_ERROR_VALUE;
+  entropy = REPORT_NAN_ERROR_VALUE;
   if (band_stats == NULL || band_stats_len == 0) {
-    spl = REPORT_NAN_ERROR_VALUE;
-    max_iqr_band = REPORT_NAN_ERROR_VALUE;
-    entropy = REPORT_NAN_ERROR_VALUE;
     clear_spectral_entropy_list();
     return BmEINVAL;
   }
@@ -125,7 +125,13 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
 
   uint8_t max_iqr_so_far = 0;
   float spl_linear_sum = 0.0f;
-  float means[num_bands] = {0.0f};
+  float *means = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
+  if (means == NULL) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to allocate for Borealis level stats means\n");
+    clear_spectral_entropy_list();
+    return BmENOMEM;
+  }
   for (size_t band_index = 0; band_index < num_bands; band_index++) {
     size_t offset = band_index * num_stats;
 
@@ -149,6 +155,7 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   float min_entropy = calc_min_spectral_entropy_and_clear_list(num_bands, means);
   entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
 
+  bm_free(means);
   return BmOK;
 }
 
