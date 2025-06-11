@@ -30,6 +30,7 @@ typedef enum {
   BOREALIS_LEVEL_STATISTICS,
   BOREALIS_RECORDING_STATUS,
   HYDROTWIN_LDR,
+  HYDROTWIN_HDR,
   BOREALIS_SUB_COUNT,
 } BorealisSubscriptions_t;
 
@@ -46,6 +47,8 @@ public:
 
   // public instance variables
   bool m_aggregation_reports;
+  uint32_t m_hydrotwin_ldr_minute;
+  uint32_t m_hydrotwin_hdr_minute;
 
   // public static constants
   static constexpr uint8_t REPORT_NAN_ERROR_VALUE = 0xFF;
@@ -61,6 +64,10 @@ public:
   };
 
 private:
+  // private instance methods
+  BmErr hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data_len,
+                                BorealisSubscriptions_t type);
+
   // private instance variables
   struct AggregateTrackingData {
     struct borealis_level_statistics stats;
