@@ -120,7 +120,7 @@ static bm_serial_callbacks_t bm_serial_callbacks;
 static void ncp_uart_pub_cb(uint64_t node_id, const char *topic, uint16_t topic_len,
                             const uint8_t *data, uint16_t data_len, uint8_t type,
                             uint8_t version) {
-  printf("Publishing To Topic: %s\n", topic);
+  printf("Publishing To Topic: %.*s\n", topic_len, topic);
   bm_serial_pub(node_id, topic, topic_len, data, data_len, type, version);
 }
 
