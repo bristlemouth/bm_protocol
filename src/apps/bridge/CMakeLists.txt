@@ -21,12 +21,14 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/reportBuilderList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/network_config_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/topology_sampler.cpp
+    ${SRC_DIR}/lib/dsp/spectral_entropy.c
 )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor_drivers
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors
+    ${SRC_DIR}/lib/dsp
 )
 
 set(APP_LIBS

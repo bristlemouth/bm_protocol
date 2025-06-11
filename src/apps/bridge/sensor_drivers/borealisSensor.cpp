@@ -7,11 +7,12 @@ extern "C" {
 #include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "bristlemouth.h"
+#include "ll.h"
 #include "mbedtls_base64/base64.h"
 #include "messages/config.h"
-
 #include "pubsub.h"
 #include "sensorController.h"
+#include "spectral_entropy.h"
 #include <inttypes.h>
 #include <math.h>
 #include <new>
@@ -106,22 +107,31 @@ bool BorealisSensor::subscribe() {
   return ret;
 }
 
-BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
-                                            const size_t band_stats_len, uint8_t &spl,
-                                            uint8_t &max_iqr_band) {
+BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_stats,
+                                                      const size_t band_stats_len, uint8_t &spl,
+                                                      uint8_t &max_iqr_band, uint8_t &entropy) {
+  spl = REPORT_NAN_ERROR_VALUE;
+  max_iqr_band = REPORT_NAN_ERROR_VALUE;
+  entropy = REPORT_NAN_ERROR_VALUE;
   if (band_stats == NULL || band_stats_len == 0) {
-    spl = REPORT_NAN_ERROR_VALUE;
-    max_iqr_band = REPORT_NAN_ERROR_VALUE;
+    clear_spectral_entropy_list();
     return BmEINVAL;
   }
 
-  const float db_step = 0.75f;
-  const float db_min = -256.0f * db_step;
-  const unsigned int num_stats = 4; // 25%, 50%, 75%, mean
+  constexpr float db_step = 0.75f;
+  constexpr float db_min = -256.0f * db_step;
+  constexpr unsigned int num_stats = 4; // 25%, 50%, 75%, mean
   const unsigned int num_bands = band_stats_len / num_stats;
 
   uint8_t max_iqr_so_far = 0;
   float spl_linear_sum = 0.0f;
+  float *means = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
+  if (means == NULL) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to allocate for Borealis level stats means\n");
+    clear_spectral_entropy_list();
+    return BmENOMEM;
+  }
   for (size_t band_index = 0; band_index < num_bands; band_index++) {
     size_t offset = band_index * num_stats;
 
@@ -135,13 +145,17 @@ BmErr BorealisSensor::calculateQuantizedSpl(uint8_t const *const band_stats,
     }
 
     // Sum mean SPL for all bands in linear units
-    float mean_db = band_stats[offset + 3] * db_step + db_min;
-    spl_linear_sum += powf(10.0f, mean_db / 10.0f);
+    means[band_index] = band_stats[offset + 3] * db_step + db_min;
+    spl_linear_sum += powf(10.0f, means[band_index] / 10.0f);
   }
 
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
   spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min) / db_step + 0.5f));
 
+  float min_entropy = calc_min_spectral_entropy_and_clear_list(num_bands, means);
+  entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
+
+  bm_free(means);
   return BmOK;
 }
 
@@ -177,14 +191,11 @@ void BorealisSensor::aggregate(void) {
                        err, tracking_data.stats.levels_length,
                        tracking_data.stats.levels_length, tracking_data.stats.levels);
       } else {
-        calculateQuantizedSpl(report.spl_band_stats, report.spl_band_stats_size, report.spl,
-                              report.max_iqr_band);
+        calculateQuantizedSplAndEntropy(report.spl_band_stats, report.spl_band_stats_size,
+                                        report.spl, report.max_iqr_band, report.entropy);
         report.max_iqr_band += tracking_data.stats.first_band_index;
       }
     }
-
-    // TODO: calculate entropy
-    report.entropy = REPORT_NAN_ERROR_VALUE;
 
     // Add hydrotwin LDR
     if (tracking_data.ldr.size) {
@@ -350,7 +361,21 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
               d.dt, d.first_band_index, d.levels_length, d.levels);
+          // Base64 decodes to 3/4 of input size.
+          // There are two 12-bit band values per 3 bytes.
+          // 3/4 * 2/3 = 1/2
+          size_t num_bands = d.levels_length / 2;
+          float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
+          if (!spl_db) {
+            bm_debug("Failed to allocate memory for Borealis levels data\n");
+            err = BmENOMEM;
+            bm_free(d.levels);
+            break;
+          }
+          parse_levels(spl_db, d.levels, d.levels_length);
           bm_free(d.levels);
+          insert_spectrum_into_list(num_bands, spl_db);
+          bm_free(spl_db);
         }
       } break;
       case BOREALIS_LEVEL_STATISTICS: {
@@ -647,4 +672,38 @@ Borealis_t *createBorealisSensorSub(uint64_t node_id) {
   }
 
   return ret;
+}
+
+inline uint8_t BorealisSensor::unpack_nibble(const uint8_t *bytes, size_t nibble_index) {
+  const size_t byte_index = nibble_index / 2;
+  const size_t shift_bits = (nibble_index % 2) * 4;
+  return (bytes[byte_index] >> shift_bits) & 0xF;
+}
+
+inline uint16_t BorealisSensor::unpack_12bit(const uint8_t *bytes, size_t nibble_index) {
+  return unpack_nibble(bytes, nibble_index + 0) << 0 |
+         unpack_nibble(bytes, nibble_index + 1) << 4 |
+         unpack_nibble(bytes, nibble_index + 2) << 8;
+}
+
+void BorealisSensor::parse_levels(float *spl_db, const char *levels_as_base64,
+                                  size_t levels_length) {
+  size_t out_len = 0;
+  mbedtls_base64_decode(NULL, 0, &out_len, reinterpret_cast<const uint8_t *>(levels_as_base64),
+                        levels_length);
+  uint8_t raw_bytes[out_len];
+  int err =
+      mbedtls_base64_decode(raw_bytes, sizeof(raw_bytes), &out_len,
+                            reinterpret_cast<const uint8_t *>(levels_as_base64), levels_length);
+  if (err != 0) {
+    bm_debug("Failed to decode base64 levels: %d\n", err);
+    return;
+  }
+
+  constexpr float cstep = 0.046875f;                  // dB
+  constexpr float clow = -4096.0f * cstep + 185.642f; // dB
+  uint32_t num_bands = out_len * 2U / 3U;             // 3 bytes -> 2 12-bit values
+  for (uint32_t i = 0; i < num_bands; i++) {
+    spl_db[i] = unpack_12bit(raw_bytes, i * 3) * cstep + clow;
+  }
 }
