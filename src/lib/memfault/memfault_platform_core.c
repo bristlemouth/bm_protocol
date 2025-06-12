@@ -42,7 +42,7 @@ static SemaphoreHandle_t s_memfault_packetizer_mutex;
 
 // Note: reboot tracking needs to be placed in a noinit region
 // because metadata across resets is tracked
-MEMFAULT_PUT_IN_SECTION(".noinit")
+MEMFAULT_PUT_IN_SECTION(".noinit.s_reboot_tracking")
 static uint8_t s_reboot_tracking[MEMFAULT_REBOOT_TRACKING_REGION_SIZE];
 
 void memfault_platform_log(eMemfaultPlatformLogLevel level, const char *fmt, ...) {
