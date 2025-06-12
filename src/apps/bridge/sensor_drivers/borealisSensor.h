@@ -78,6 +78,7 @@ private:
   static void borealisSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                   const uint8_t *data, uint16_t data_len, uint8_t type,
                                   uint8_t version);
+  static bool exceedsConfiguredThresholds(uint8_t spl, uint8_t max_iqr, uint8_t entropy);
   static BmErr calculateQuantizedSplAndEntropy(uint8_t const *const band_stats,
                                                const size_t band_stats_len, uint8_t &spl,
                                                uint8_t &max_iqr_band, uint8_t &entropy);

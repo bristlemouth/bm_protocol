@@ -1,6 +1,7 @@
 #include "spectral_entropy.h"
 #include "bm_os.h"
 #include "ll.h"
+#include <float.h>
 #include <math.h>
 
 typedef struct _SpectralEntropyArgs {
@@ -23,13 +24,13 @@ static float min_entropy = 1.0;
  * @param mean_db Array of mean dB SPL for a sample duration.
  *                If NULL, do not prewhiten the spectra.
  * @return Normalized spectral entropy (range 0 to 1).
- *         If there's an error return NAN.
+ *         If there's an error return FLT_MAX.
  */
 static float compute_spectral_entropy(const unsigned int num_bands, float const *const spl_db,
                                       float const *const mean_db) {
   float *linear_power = bm_malloc(num_bands * sizeof(float));
   if (linear_power == NULL) {
-    return NAN;
+    return FLT_MAX;
   }
   float sum_power = 0.0f;
 
@@ -47,7 +48,7 @@ static float compute_spectral_entropy(const unsigned int num_bands, float const 
   // Protect against division by zero
   if (sum_power <= 0.0f) {
     bm_free(linear_power);
-    return NAN;
+    return FLT_MAX;
   }
 
   // Compute the entropy: H = -sum(p * log(p))

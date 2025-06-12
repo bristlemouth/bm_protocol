@@ -102,7 +102,7 @@ uint32_t loadLastWipeEpoch() {
  * - Enables the PLUART, effectively turning on the UART.
  */
 void PmeSensor::init() {
-  bm_delay(10000); //boot delay to allow for user to connect for viewing
+  bm_delay(12000); //boot delay to allow for user to connect for viewing
   _DOTparser.init();
   _WIPEparser.init();
   lastWipeEpochS = loadLastWipeEpoch();
