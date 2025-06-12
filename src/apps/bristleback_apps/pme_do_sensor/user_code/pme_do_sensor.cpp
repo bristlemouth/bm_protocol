@@ -136,6 +136,8 @@ void PmeSensor::init() {
     printf("~~~                 OS: %s                 ~~~\n", _OSpayload_buffer);
     printf("~~~            Begin transmission            ~~~\n"
            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n");
+    spotter_log(0, PME_SYS_LOG, USE_TIMESTAMP, "S/N: %s, microDOT OS version: %s\n",
+                _SNpayload_buffer, _OSpayload_buffer);
   } else {
     printf("!!! No microDOT S/N received - is the device connected?\n");
   }

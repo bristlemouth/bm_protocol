@@ -65,7 +65,7 @@ bool firstDo;
 
 // Defines the max buffer size for the pme sensor message
 static constexpr uint32_t pmeSensorDataMsgMaxSize = 256;
-static constexpr char SENSOR_BM_LOG_ENABLE[] = "pmeLogEnable";
+static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
 static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
 static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
