@@ -22,6 +22,11 @@ extern "C" {
 
 #define MAX_BOREALIS_READING_PERIOD_MS(period) (period + 1000U)
 
+// Only for 8-bit values in levels statistics, NOT for 12-bit values in levels
+static constexpr float db_step_8bit = 0.75f;
+static constexpr float db_min_8bit = -256.0f * db_step_8bit;
+
+static constexpr float borealis_db_offset = 185.642f;
 static struct BorealisSensor *s_current_sub = NULL;
 static SemaphoreHandle_t s_config_callback_handshake = NULL;
 static constexpr char subtag_spectrum[] = "/aos/borealis/spectrum";
@@ -30,6 +35,10 @@ static constexpr char subtag_level_statistics[] = "/aos/borealis/level_statistic
 static constexpr char subtag_recstatus[] = "/aos/borealis/recstatus";
 static constexpr char subtag_hydrotwin_ldr[] = "/hydrotwin/ai/low-data-rate";
 static constexpr char subtag_hydrotwin_hdr[] = "/hydrotwin/ai/high-data-rate";
+static constexpr char config_borealis_tx_spl_threshold[] = "borealisTxSplThreshold";
+static constexpr char config_borealis_tx_max_iqr_threshold[] = "borealisTxMaxIqrThreshold";
+static constexpr char config_borealis_tx_entropy_threshold[] = "borealisTxEntropyThreshold";
+
 
 /*!
  @brief Initialize Borealis Sensor Module
@@ -124,8 +133,6 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
     return BmEINVAL;
   }
 
-  constexpr float db_step = 0.75f;
-  constexpr float db_min = -256.0f * db_step;
   constexpr unsigned int num_stats = 4; // 25%, 50%, 75%, mean
   const unsigned int num_bands = band_stats_len / num_stats;
 
@@ -151,18 +158,40 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
     }
 
     // Sum mean SPL for all bands in linear units
-    means[band_index] = band_stats[offset + 3] * db_step + db_min;
+    means[band_index] = band_stats[offset + 3] * db_step_8bit + db_min_8bit;
     spl_linear_sum += powf(10.0f, means[band_index] / 10.0f);
   }
 
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
-  spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min) / db_step + 0.5f));
+  spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min_8bit) / db_step_8bit + 0.5f));
 
   float min_entropy = calc_min_spectral_entropy_and_clear_list(num_bands, means);
   entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
 
   bm_free(means);
   return BmOK;
+}
+
+/*!
+  @brief Determine whether to send extended data based on configured thresholds
+  @return true if the data exceeds configured thresholds, false otherwise
+*/
+bool BorealisSensor::exceedsConfiguredThresholds(uint8_t spl, uint8_t max_iqr,
+                                                 uint8_t entropy) {
+  float spl_threshold = 0.0f;
+  get_config_float(BM_CFG_PARTITION_SYSTEM, config_borealis_tx_spl_threshold,
+                   strlen(config_borealis_tx_spl_threshold), &spl_threshold);
+  float max_iqr_threshold = 0.0f;
+  get_config_float(BM_CFG_PARTITION_SYSTEM, config_borealis_tx_max_iqr_threshold,
+                   strlen(config_borealis_tx_max_iqr_threshold), &max_iqr_threshold);
+  float entropy_threshold = 1.0f;
+  get_config_float(BM_CFG_PARTITION_SYSTEM, config_borealis_tx_entropy_threshold,
+                   strlen(config_borealis_tx_entropy_threshold), &entropy_threshold);
+
+  bool spl_exceeds = spl * db_step_8bit + db_min_8bit + borealis_db_offset >= spl_threshold;
+  bool max_iqr_exceeds = max_iqr * db_step_8bit >= max_iqr_threshold;
+  bool entropy_exceeds = entropy <= entropy_threshold * 255.0f;
+  return (spl_exceeds || max_iqr_exceeds || entropy_exceeds);
 }
 
 /*!
@@ -173,8 +202,6 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
  */
 void BorealisSensor::aggregate(void) {
   if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE) {
-    // TODO: logic needs to be implemented around if this is going to be extended
-    bool is_extended = true;
     size_t decoded_byte_len = 0;
     BorealisAggregationData_t report = {};
     report.max_iqr = tracking_data.stats.max_iqr;
@@ -183,10 +210,9 @@ void BorealisSensor::aggregate(void) {
                           (const unsigned char *)tracking_data.stats.levels,
                           tracking_data.stats.levels_length);
 
+    report.is_extended = false;
     report.spl_band_stats = static_cast<uint8_t *>(bm_malloc(decoded_byte_len));
     if (report.spl_band_stats) {
-      report.is_extended = is_extended;
-
       int err = mbedtls_base64_decode(
           report.spl_band_stats, decoded_byte_len, (size_t *)&report.spl_band_stats_size,
           (const unsigned char *)tracking_data.stats.levels, tracking_data.stats.levels_length);
@@ -200,6 +226,8 @@ void BorealisSensor::aggregate(void) {
         calculateQuantizedSplAndEntropy(report.spl_band_stats, report.spl_band_stats_size,
                                         report.spl, report.max_iqr_band, report.entropy);
         report.max_iqr_band += tracking_data.stats.first_band_index;
+        report.is_extended =
+            exceedsConfiguredThresholds(report.spl, report.max_iqr, report.entropy);
       }
     }
 
@@ -821,9 +849,10 @@ void BorealisSensor::parse_levels(float *spl_db, const char *levels_as_base64,
     return;
   }
 
-  constexpr float cstep = 0.046875f;                  // dB
-  constexpr float clow = -4096.0f * cstep + 185.642f; // dB
-  uint32_t num_bands = out_len * 2U / 3U;             // 3 bytes -> 2 12-bit values
+  // These constants are for 12-bit values, unlike the 8-bit ones at the top of this file.
+  constexpr float cstep = 0.046875f;                            // dB
+  constexpr float clow = -4096.0f * cstep + borealis_db_offset; // dB
+  uint32_t num_bands = out_len * 2U / 3U;                       // 3 bytes -> 2 12-bit values
   for (uint32_t i = 0; i < num_bands; i++) {
     spl_db[i] = unpack_12bit(raw_bytes, i * 3) * cstep + clow;
   }
