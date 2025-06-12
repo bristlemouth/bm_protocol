@@ -10,7 +10,7 @@ double doConcMg(double t, double p, double s) {
 }
 
 double doConcUmol(double t, double p, double s) {
-  double Ptotal = p / 101325.0; // convert Pa to atm
+  double Ptotal = p / 1013.25; // convert mbar to atm
   double pWSat = saturatedWaterVaporPressure(t, s);
   double pO2measured = pO2(Ptotal - pWSat);
   double pO2reference = pO2(1.0 - pWSat);
