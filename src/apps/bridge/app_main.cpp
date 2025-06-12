@@ -157,14 +157,16 @@ SerialHandle_t usbPcap = {
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
-static IOPinHandle_t *usb_io = &LED_G;
+static IOPinHandle_t *usb_io = NULL;
 
 static bool usb_is_connected() {
   uint8_t vusb = 0;
+  uint8_t vusb2 = 0;
 
-  IORead(usb_io, &vusb);
+  IORead(&VUSB_DETECT, &vusb);
+  IORead(&LED_G, &vusb2);
 
-  return (bool)vusb;
+  return (bool)(vusb | vusb2);
 }
 
 extern "C" int main(void) {
