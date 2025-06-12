@@ -225,7 +225,12 @@ SECTIONS
   .noinit (NOLOAD):
   {
     /* place all symbols in input sections that start with .noinit */
-    KEEP(*(*.noinit*))
+    KEEP(*(.noinit.ulBootloaderMagic))
+    KEEP(*(.noinit.resetReason))
+    KEEP(*(.noinit.s_reboot_tracking))
+    KEEP(*(.noinit.client_update_reboot_info))
+    KEEP(*(.noinit))
+    KEEP(*(.noinit._reboot_info))
   } > NOINIT
 }
 

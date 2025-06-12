@@ -38,7 +38,7 @@ typedef struct {
 } ncp_dfu_ctx_t;
 
 static ncp_dfu_ctx_t _ctx;
-static NcpReboootUpdateInfo_t _reboot_info __attribute__((section(".noinit")));
+static NcpReboootUpdateInfo_t _reboot_info __attribute__((section(".noinit._reboot_info")));
 
 static void _ncp_dfu_finish(bool success, BmDfuErr err, uint64_t node_id) {
   memset(&_reboot_info, 0, sizeof(_reboot_info));
