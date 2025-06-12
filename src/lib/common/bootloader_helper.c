@@ -10,7 +10,7 @@
 typedef void (*functionPointer_t)(void);
 
 // Make sure the crash info is not re-initialized on reboot
-uint32_t ulBootloaderMagic __attribute__ ((section (".noinit")));
+uint32_t ulBootloaderMagic __attribute__ ((section (".noinit.ulBootloaderMagic")));
 
 void rebootIntoROMBootloader() {
   // Set magic value so we'll know to enter bootloader after reset
