@@ -165,7 +165,7 @@ NvmPartition *userConfigurationPartition = NULL;
 NvmPartition *systemConfigurationPartition = NULL;
 NvmPartition *hardwareConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
-static IOPinHandle_t *usb_io = &NULL;
+static IOPinHandle_t *usb_io = NULL;
 
 static bool usb_is_connected() {
   uint8_t vusb = 0;
@@ -174,7 +174,7 @@ static bool usb_is_connected() {
   IORead(&VUSB_DETECT, &vusb);
   IORead(&LED_G, &vusb2);
 
-  return (bool)vusb;
+  return (bool)(vusb | vusb2);
 }
 
 extern "C" int main(void) {
