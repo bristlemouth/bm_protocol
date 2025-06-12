@@ -25,6 +25,8 @@ public:
   static constexpr char PME_WIPE_RAW_LOG[] = "pme_wipe_raw.log";
 
 private:
+  static void saveFirmwareVersion(const char *version);
+
   static constexpr ValueType DOT_PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
                                                         TYPE_DOUBLE, TYPE_DOUBLE};
   static constexpr ValueType WIPE_PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE,
