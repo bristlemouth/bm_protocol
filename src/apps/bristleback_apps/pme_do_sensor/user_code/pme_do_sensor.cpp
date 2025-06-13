@@ -18,6 +18,7 @@
 #include <cstring>
 
 #define LAST_WIPE_EPOCH_KEY "lastWipeEpochS"
+#define FW_VERSION_KEY "fwVersion"
 
 extern uint32_t pmeLogEnable;
 extern uint32_t sensorDebugTxEnable;
@@ -86,6 +87,28 @@ uint32_t loadLastWipeEpoch() {
   return lastWipeEpochS;
 }
 
+// Update the saved firmware version config if the microDOT OS version has changed
+void PmeSensor::saveFirmwareVersion(const char *os_version) {
+  size_t fw_version_len = MAX_STR_LEN_BYTES;
+  char fw_version[MAX_STR_LEN_BYTES + 1] = {0};
+  get_config_string(BM_CFG_PARTITION_SYSTEM, FW_VERSION_KEY, strlen(FW_VERSION_KEY), fw_version,
+                    &fw_version_len);
+  size_t os_version_len = strnlen(os_version, MAX_STR_LEN_BYTES);
+  if (os_version_len > MAX_STR_LEN_BYTES) {
+    os_version_len = MAX_STR_LEN_BYTES;
+  }
+  if (os_version_len != fw_version_len ||
+      strncmp(fw_version, os_version, os_version_len) != 0) {
+    printf("microDOT OS version does not match fwVersion config (%s), updating config\n",
+           fw_version);
+    set_config_string(BM_CFG_PARTITION_SYSTEM, FW_VERSION_KEY, strlen(FW_VERSION_KEY),
+                      os_version, os_version_len);
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  } else {
+    printf("microDOT OS version matches fwVersion config\n");
+  }
+}
+
 /**
  * @brief Initializes the PME DOT Sensor and wiper
  *
@@ -136,6 +159,9 @@ void PmeSensor::init() {
     printf("~~~                 OS: %s                 ~~~\n", _OSpayload_buffer);
     printf("~~~            Begin transmission            ~~~\n"
            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n");
+    spotter_log(0, PME_SYS_LOG, USE_TIMESTAMP, "S/N: %s, microDOT OS version: %s\n",
+                _SNpayload_buffer, _OSpayload_buffer);
+    saveFirmwareVersion(_OSpayload_buffer);
   } else {
     printf("!!! No microDOT S/N received - is the device connected?\n");
   }

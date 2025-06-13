@@ -48,8 +48,8 @@ static void port_monitor_timer_handler(BmTimer timer) {
       if (port_num != 1) {
         const char *fmt_disable_str =
             "Disabling network port %d on node: %" PRIx64 ", it never came online\n";
-        spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_disable_str, port_num);
-        spotter_log_console(0, fmt_disable_str, node_id(), port_num);
+        spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_disable_str, port_num, node_id());
+        spotter_log_console(0, fmt_disable_str, port_num, node_id());
         bm_l2_netif_enable_disable_port(port_num, false);
       } else {
         // Port 1 cannot be solely disabled, it will also disable port 2 please
@@ -57,8 +57,8 @@ static void port_monitor_timer_handler(BmTimer timer) {
         // https://www.analog.com/media/en/technical-documentation/data-sheets/adin2111.pdf
         const char *fmt_err_str = "Could not disable network port %d on node: %" PRIx64
                                   ", unable to disable due to hardware restrictions\n";
-        spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_err_str, node_id(), port_num);
-        spotter_log_console(0, fmt_err_str, port_num);
+        spotter_log(0, port_monitor_log, USE_TIMESTAMP, fmt_err_str, port_num, node_id());
+        spotter_log_console(0, fmt_err_str, port_num, node_id());
       }
     }
   }
