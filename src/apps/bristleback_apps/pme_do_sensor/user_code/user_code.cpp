@@ -65,14 +65,11 @@ bool firstDo;
 
 // Defines the max buffer size for the pme sensor message
 static constexpr uint32_t pmeSensorDataMsgMaxSize = 256;
-static constexpr char SENSOR_BM_LOG_ENABLE[] = "pmeLogEnable";
+static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
 static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
 static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
 static constexpr char SALINITY_PPT[] = "salinityPpt";
-
-// Make this sys cfg available when supported by backend
-// static constexpr char fwVersion = "0.13.0-rc.7";
 
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
