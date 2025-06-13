@@ -71,9 +71,6 @@ static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
 static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
 static constexpr char SALINITY_PPT[] = "salinityPpt";
 
-// Make this sys cfg available when supported by backend
-// static constexpr char fwVersion = "0.13.0-rc.7";
-
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
 static uint64_t lastDoMeasurementUptimeSec = 0;
