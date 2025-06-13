@@ -515,7 +515,7 @@ add_custom_target(eng-release
 endif()
 
 add_custom_target(test
-	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/test/did_i_break_something.py ${CMAKE_SOURCE_DIR}/tools/scripts/test/configs
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/test/did_i_break_something.py ${CMAKE_SOURCE_DIR}/tools/scripts/test/configs --verbose
 )
 
 add_custom_target(cppcheck
