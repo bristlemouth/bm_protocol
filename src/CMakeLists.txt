@@ -204,6 +204,7 @@ set(MICROPY_COMPILER_FLAGS
 
 	-Wno-unused-parameter
 	-Wno-dangling-pointer
+	-Wno-error=dangling-pointer
 
 	# GRRRR
 	# -Werror
