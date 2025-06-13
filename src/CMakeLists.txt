@@ -204,7 +204,7 @@ set(MICROPY_COMPILER_FLAGS
 
 	-Wno-unused-parameter
 	-Wno-dangling-pointer
-	-Wno-error=dangling-pointer
+	-Wno-sign-compare
 
 	# GRRRR
 	# -Werror
@@ -515,7 +515,7 @@ add_custom_target(eng-release
 endif()
 
 add_custom_target(test
-	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/test/did_i_break_something.py ${CMAKE_SOURCE_DIR}/tools/scripts/test/configs --verbose
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/tools/scripts/test/did_i_break_something.py ${CMAKE_SOURCE_DIR}/tools/scripts/test/configs
 )
 
 add_custom_target(cppcheck
