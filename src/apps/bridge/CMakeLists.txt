@@ -349,7 +349,7 @@ set_source_files_properties(
     DIRECTORY ${SRC_DIR}
 
     PROPERTIES
-    COMPILE_FLAGS -Wno-unused-parameter
+    COMPILE_FLAGS "-Wno-unused-parameter -Wno-dangling-pointer"
     )
 
 endif()
