@@ -86,7 +86,6 @@ set(MICROPY_DEFINITIONS
 
 set(MICROPY_CROSS_FLAGS -march=armv7m)
 set(MICROPY_FROZEN_MANIFEST ${MICROPY_PORT_DIR}/manifest.py)
-
 add_library(micropython EXCLUDE_FROM_ALL ${MICROPY_SOURCE_QSTR})
 target_compile_options(micropython PRIVATE ${MICROPY_COMPILER_FLAGS})
 target_compile_definitions(micropython PRIVATE ${MICROPY_DEFINITIONS})

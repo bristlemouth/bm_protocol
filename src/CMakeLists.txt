@@ -203,6 +203,8 @@ set(MICROPY_COMPILER_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
 	-Wno-unused-parameter
+	-Wno-dangling-pointer
+	-Wno-sign-compare
 
 	# GRRRR
 	# -Werror

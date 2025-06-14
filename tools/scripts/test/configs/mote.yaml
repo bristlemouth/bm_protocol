@@ -6,14 +6,14 @@
     build_type: Release
     use_bootloader: True
 
-- name: mote_bristlefin w/upy on bm_mote_v1.0
-  type: build_fw
-  args:
-    app: mote_bristlefin
-    bsp: bm_mote_v1.0
-    build_type: Release
-    use_bootloader: True
-    defines: -DUSE_MICROPYTHON=1
+# - name: mote_bristlefin w/upy on bm_mote_v1.0
+#   type: build_fw
+#   args:
+#     app: mote_bristlefin
+#     bsp: bm_mote_v1.0
+#     build_type: Release
+#     use_bootloader: True
+#     defines: -DUSE_MICROPYTHON=1
 
 - name: hello_world on bm_mote_v1.0
   type: build_fw
@@ -159,4 +159,3 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=rs232_expander
              -DCMAKE_AANDERAA_TYPE=4830
-             
