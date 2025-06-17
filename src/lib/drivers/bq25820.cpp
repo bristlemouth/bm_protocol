@@ -173,7 +173,8 @@ bool BQ25820::write8(Reg_t reg, uint8_t value) {
 bool BQ25820::disablePfm() {
   bool rval = false;
 
-  return true;
+  //return true;
+  printf("Disabling PulseFrequencyModulation\n");
 
   uint8_t tmpreg;
   do {
@@ -188,7 +189,8 @@ bool BQ25820::disablePfm() {
     if(!write8(POWER_PATH_REG, tmpreg)) {
       break;
     }
-    
+    printf("power path reg updated\n");
+
     tmpreg = 0;
     if(!read8(POWER_PATH_REG, &tmpreg)) {
         break;
@@ -199,8 +201,12 @@ bool BQ25820::disablePfm() {
   } while (0);
 
   //writeReg(CC_LIM_REG, 0x0010);
-  return rval;
 
+  // Default value is 0x1D
+  // Setting the top off timer to 15m = 0x5D
+  //write8(TIMER_CTRL_REG, 0x5D);
+  
+  return rval;
 }
 
 bool BQ25820::readSensors() {
@@ -272,7 +278,8 @@ bool BQ25820::readSensors() {
         
         readReg(TS_ADC_REG, &ts_val);
         ts = ts_val * 0.09765625f;
-        printf("%.3f\n", ts);
+        //printf("%.3f\n", ts);
+        printf("%.3f,", ts);
 
         read8(POWER_PATH_REG, &ppreg);
         //printf("0x%X\n", ppreg);
@@ -285,6 +292,16 @@ bool BQ25820::readSensors() {
     }
     rval = true;
   } while(0);
+  //write8(TIMER_CTRL_REG, 0x5D);
+  
+  read8(CHARGER_CTRL_REG, &tmpreg);
+  printf("0x%X\n", tmpreg);
+  // Default is 0xC9
+  // Setting the threshold to 93% = 0x09
+  //write8(CHARGER_CTRL_REG, 0x09);
+  write8(CHARGER_CTRL_REG, 0xC9);
+  
+  //writeReg(CHARGE_VLIM_REG, 0x00);
   return rval;
 }
 
@@ -295,12 +312,12 @@ bool BQ25820::readFaults() {
   char names[8][30] = {"RESERVED", "DRV_OKZ_FLAG", "CHG_TMR_FLAG", "TSHUT_FLAG", "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG", "VAC_UV_FLAG"};
   read8(FAULT_FLAG_REG, &faults);
   
-  printf("%b:\t", faults);
+  //printf("%b:\t", faults);
 
   for (uint8_t i=0; i < 8; i++) {
     //printf("%u, ", i);
     if (faults & (1 << i)) {
-      printf("%s, ", names[i]);
+      printf("%s ", names[i]);
     }
   }
   printf("\n");

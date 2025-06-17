@@ -7,7 +7,10 @@ namespace BQ {
 constexpr uint8_t I2C_DEFAULT_ADDR = 0x6B;
 
 typedef enum {
+    CHARGE_VLIM_REG = 0x00,
     CC_LIM_REG = 0x02,
+    TIMER_CTRL_REG = 0x15,
+    CHARGER_CTRL_REG = 0x17,
     POWER_PATH_REG = 0x19,
     PART_INFO_REG = 0x3D,
     FAULT_FLAG_REG = 0x27,
