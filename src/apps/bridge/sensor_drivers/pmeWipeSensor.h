@@ -37,7 +37,6 @@ typedef struct PmeWipeSensor : public AbstractSensor {
 
 public:
   bool subscribe() override;
-  void aggregate(void);
 
 private:
   static void pmeWipeSubCallback(uint64_t node_id, const char *topic,
@@ -48,4 +47,4 @@ private:
   static constexpr char subtag[] = "/pme/wipe_data";
 } PmeWipe_t;
 
-PmeWipe_t *createPmeWipeSub(uint64_t node_id, uint32_t sample_duration_ms);
+PmeWipe_t *createPmeWipeSub(uint64_t node_id);
