@@ -32,8 +32,8 @@ public:
   BQ25820(I2CInterface_t* interface, uint8_t address=I2C_DEFAULT_ADDR);
   bool init();
   bool disablePfm();
-  bool readSensors();
-  bool readFaults();
+  bool readSensors(char *buffer, size_t len);
+  bool readFaults(char *buffer, size_t len);
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);

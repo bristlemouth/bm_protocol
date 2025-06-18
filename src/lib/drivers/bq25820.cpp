@@ -209,7 +209,7 @@ bool BQ25820::disablePfm() {
   return rval;
 }
 
-bool BQ25820::readSensors() {
+bool BQ25820::readSensors(char *buffer, size_t len) {
   bool rval = false;
   bool quit = false;
   
@@ -283,6 +283,9 @@ bool BQ25820::readSensors() {
 
         read8(POWER_PATH_REG, &ppreg);
         //printf("0x%X\n", ppreg);
+
+        snprintf(buffer, len, "%d,%d,%.3f,%.3f,%.3f,%.3f,", iac, ibat,
+            vac, vbat, vsys, ts);
       }
       vTaskDelay(pdMS_TO_TICKS(5));
       break;
@@ -299,16 +302,17 @@ bool BQ25820::readSensors() {
   // Default is 0xC9
   // Setting the threshold to 93% = 0x09
   //write8(CHARGER_CTRL_REG, 0x09);
-  write8(CHARGER_CTRL_REG, 0xC9);
+  //write8(CHARGER_CTRL_REG, 0xC9);
   
   //writeReg(CHARGE_VLIM_REG, 0x00);
   return rval;
 }
 
 
-bool BQ25820::readFaults() {
+bool BQ25820::readFaults(char *buffer, size_t len) {
   uint8_t faults = 0x00;
-  
+  int cx = 0;
+
   char names[8][30] = {"RESERVED", "DRV_OKZ_FLAG", "CHG_TMR_FLAG", "TSHUT_FLAG", "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG", "VAC_UV_FLAG"};
   read8(FAULT_FLAG_REG, &faults);
   
@@ -318,6 +322,11 @@ bool BQ25820::readFaults() {
     //printf("%u, ", i);
     if (faults & (1 << i)) {
       printf("%s ", names[i]);
+      cx = snprintf(buffer+cx, len-cx, "%s ", names[i]);
+      if (cx<0 || cx>=(int)len) {
+        printf("String length error!!\n");
+        break;
+      }
     }
   }
   printf("\n");
