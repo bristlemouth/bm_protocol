@@ -46,12 +46,6 @@ void PmeWipeSensor::pmeWipeSubCallback(uint64_t node_id, const char *topic, uint
     if (bm_semaphore_take(wipe_sensor->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
       static PmeWipeMsg::Data wipe_data;
       if (PmeWipeMsg::decode(wipe_data, data, data_len) == CborNoError) {
-        wipe_sensor->wipe_time_sec.addSample(wipe_data.wipe_time_sec);
-        wipe_sensor->start1_mA.addSample(wipe_data.start1_mA);
-        wipe_sensor->avg_mA.addSample(wipe_data.avg_mA);
-        wipe_sensor->start2_mA.addSample(wipe_data.start2_mA);
-        wipe_sensor->final_mA.addSample(wipe_data.final_mA);
-        wipe_sensor->rsource.addSample(wipe_data.rsource);
 
         wipe_sensor->reading_count++;
         BmErr err = wipe_sensor->send_spotter_log_individual(

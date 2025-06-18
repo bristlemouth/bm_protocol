@@ -20,12 +20,6 @@ typedef struct pme_wipe_aggregations_s {
 
 typedef struct PmeWipeSensor : public AbstractSensor {
   uint32_t agg_period_ms;
-  AveragingSampler wipe_time_sec;
-  AveragingSampler start1_mA;
-  AveragingSampler avg_mA;
-  AveragingSampler start2_mA;
-  AveragingSampler final_mA;
-  AveragingSampler rsource;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;
