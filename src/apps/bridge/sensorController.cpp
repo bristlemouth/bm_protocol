@@ -180,9 +180,6 @@ static void runController(void *param) {
             PmeDissolvedOxygenSensor *pme_dissolved_oxygen =
                 static_cast<PmeDissolvedOxygenSensor *>(curr);
             pme_dissolved_oxygen->aggregate();
-          } else if (curr->type == SENSOR_TYPE_PME_WIPE) {
-            PmeWipeSensor *pme_wiper = static_cast<PmeWipeSensor *>(curr);
-            pme_wiper->aggregate();
           } else if (curr->type == SENSOR_TYPE_BOREALIS) {
             BorealisSensor *level_statistics = static_cast<BorealisSensor *>(curr);
             level_statistics->aggregate();
@@ -316,7 +313,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
           if (pme_dissolved_oxygen_sub) {
             abstractSensorAddSensorSub(pme_dissolved_oxygen_sub);
           }
-          PmeWipe_t *pme_wiper_sub = createPmeWipeSub(reply.node_id, sample_duration_ms);
+          PmeWipe_t *pme_wiper_sub = createPmeWipeSub(reply.node_id);
           if (pme_wiper_sub) {
             abstractSensorAddSensorSub(pme_wiper_sub);
           }
