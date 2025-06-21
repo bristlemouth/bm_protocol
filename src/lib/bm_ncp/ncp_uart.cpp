@@ -360,7 +360,6 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
     ncp_rx = false;
   } else {
     xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
-    lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
     ncp_rx = true;
     HAL_UART_AbortReceive(&huart3);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
@@ -650,9 +649,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
       ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     }
   }
-
-  // Exit low power mode now that RX is complete
-  lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
@@ -699,7 +695,7 @@ static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
     xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
   }
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
-  lpmPeripheralActive(LPM_USART3);
+  lpmPeripheralActive(LPM_USART3_TX);
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
   IOWrite(&BM_INT, 0);
   vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
@@ -719,7 +715,6 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
   LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
   LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
-  // LPM_USART3_RX will get set on the next rising edge
   lpmPeripheralInactiveFromISR(LPM_USART3_TX);
   portYIELD_FROM_ISR(
       higherPriorityTaskWoken == pdTRUE || higherPriorityTaskEventHandle == pdTRUE ? pdTRUE
