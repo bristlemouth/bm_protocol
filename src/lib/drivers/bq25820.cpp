@@ -248,7 +248,7 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
     }
     for (i = 0; i < 1000; i++) {
       //printf("%d\n", i);
-      vTaskDelay(pdMS_TO_TICKS(10));
+      vTaskDelay(pdMS_TO_TICKS(2));
       if(!read8(CHARGER_FLAG_1, &tmpreg)) { 
         quit = true; // Tell the outer do while to exit
         printf("Charger flag 1 read failed\n");
@@ -293,8 +293,8 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
         read8(POWER_PATH_REG, &ppreg);
         //printf("0x%X\n", ppreg);
 
-        snprintf(buffer, len, "%d,%d,%.3f,%.3f,%.3f,%.3f,", iac, ibat,
-            vac, vbat_fb, vsys, ts);
+        snprintf(buffer, len, "%d,%d,%.3f,%.3f,%.3f,%.3f,%.3f,", iac, ibat,
+            vac, vbat, vbat_fb, vsys, ts);
       }
       vTaskDelay(pdMS_TO_TICKS(5));
       //break;
