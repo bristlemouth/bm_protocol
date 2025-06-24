@@ -225,6 +225,9 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
   int16_t vbat_val;
   float vbat;
   
+  int16_t vbat_fb_val;
+  float vbat_fb;
+  
   int16_t vsys_val;
   float vsys;
   
@@ -236,19 +239,25 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
   uint8_t tmpreg;
 
   uint16_t i;
+
+  write8(ADC_CH_CTRL_REG, 0x00);
+
   do {
-    if(!write8(ADC_CTRL_REG, 0xA8)) {
+    if(!write8(ADC_CTRL_REG, 0xE0)) { // 0xA8 = old val
       break;
     }
     for (i = 0; i < 1000; i++) {
+      //printf("%d\n", i);
+      vTaskDelay(pdMS_TO_TICKS(10));
       if(!read8(CHARGER_FLAG_1, &tmpreg)) { 
         quit = true; // Tell the outer do while to exit
+        printf("Charger flag 1 read failed\n");
         break; // Exit this polling loop
       }
-      //if (tmpreg & 0x80) {
-      if (true) {
-        vTaskDelay(pdMS_TO_TICKS(150));
-        //printf("loops: %d\n", i);
+      if (tmpreg && 0x80) {
+        printf("Reading ADCs\n");
+        //vTaskDelay(pdMS_TO_TICKS(150));
+        printf("loops: %d\n", i);
         // ADC is done
         //vTaskDelay(pdMS_TO_TICKS(5));
 
@@ -268,9 +277,9 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
         vbat = vbat_val * 0.002f;
         printf("%.3f,", vbat);
         
-        //readReg(VFB_ADC_REG, &vbat_val);
-        //vbat = vbat_val * 0.008691f;
-        //printf("%.3f,", vbat);
+        readReg(VFB_ADC_REG, &vbat_fb_val);
+        vbat_fb = vbat_fb_val * 0.008691f;
+        printf("%.3f,", vbat_fb);
         
         readReg(VSYS_ADC_REG, &vsys_val);
         vsys = vsys_val * 0.002f;
@@ -285,10 +294,10 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
         //printf("0x%X\n", ppreg);
 
         snprintf(buffer, len, "%d,%d,%.3f,%.3f,%.3f,%.3f,", iac, ibat,
-            vac, vbat, vsys, ts);
+            vac, vbat_fb, vsys, ts);
       }
       vTaskDelay(pdMS_TO_TICKS(5));
-      break;
+      //break;
     }
     if (quit) {
       break;

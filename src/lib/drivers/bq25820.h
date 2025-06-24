@@ -15,6 +15,7 @@ typedef enum {
     PART_INFO_REG = 0x3D,
     FAULT_FLAG_REG = 0x27,
     ADC_CTRL_REG = 0x2B,
+    ADC_CH_CTRL_REG = 0x2C,
     CHARGER_FLAG_1 = 0x25,
     
     IAC_ADC_REG = 0x2D,
