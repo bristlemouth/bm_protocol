@@ -140,13 +140,13 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
         const Value d0_2 = d0_parser.getValue(3);
         const Value d0_3 = d0_parser.getValue(4);
         printf("temp_sensor:  %.3f C\n", d0_0.data);
-        printf("sp_cond:      %.3f uS/cm\n", d0_1.data);
-        printf("pH:           %.3f\n", d0_2.data);
-        printf("pH:           %.3f mV\n", d0_3.data);
+        printf("sp_cond:      %.3f μS/cm\n", d0_1.data);
+        printf("phycocyanin:  %.3f μg/L\n", d0_2.data);
+        printf("chlorophyll:  %.3f μg/L\n", d0_3.data);
         _latest_sample.temp_sensor = (float)d0_0.data.double_val;
         _latest_sample.sp_cond = (float)d0_1.data.double_val;
-        _latest_sample.pH = (float)d0_2.data.double_val;
-        _latest_sample.pH_mV = (float)d0_3.data.double_val;
+        _latest_sample.phy = (float)d0_2.data.double_val;
+        _latest_sample.chl = (float)d0_3.data.double_val;
       }
     }
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -178,9 +178,9 @@ void SondeEXO3sSensor::sdi_cmd(int cmd) {
         const Value d2_0 = d2_parser.getValue(1);
         const Value d2_1 = d2_parser.getValue(2);
         printf("depth:        %.3f m\n", d2_0.data);
-        printf("power supply: %.3f V\n", d2_1.data);
+        printf("battery:      %.3f V\n", d2_1.data);
         _latest_sample.depth = (float)d2_0.data.double_val;
-        _latest_sample.power = (float)d2_1.data.double_val;
+        _latest_sample.batt_level = (float)d2_1.data.double_val;
       }
     }
     break;

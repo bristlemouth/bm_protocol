@@ -25,15 +25,15 @@
 // 5. Central Wiper
 struct __attribute__((packed)) EXO3sample {
   float temp_sensor;    // Celcius
-  float sp_cond;        // uS/cm
-  float pH;
-  float pH_mV;          // mV
+  float sp_cond;        // μS/cm
+  float phy;            // μg/L
+  float chl;            // μg/L
   float dis_oxy;        // % Sat
   float dis_oxy_mg;     // mg/L
   float turbidity;      // NTU
   float wiper_pos;      // volt
   float depth;          // meters
-  float power;          // volt
+  float batt_level;     // volt
 };
 
 class SondeEXO3sSensor {
@@ -76,26 +76,26 @@ class SondeEXO3sSensor {
     // Response of 0D0! is collected and saved to these variables
     static constexpr ValueType D0_PARSER_VALUE_TYPES[] = {
         TYPE_INVALID,   // echo of the command and slave address
-        TYPE_DOUBLE,    // serial number
-        TYPE_DOUBLE,    // sequence number
-        TYPE_DOUBLE,    // datetime string
-        TYPE_DOUBLE     // code space
+        TYPE_DOUBLE,    // temp_sensor (Celcius)
+        TYPE_DOUBLE,    // sp_cond     (μS/cm)
+        TYPE_DOUBLE,    // Phycocyanin (μg/L)
+        TYPE_DOUBLE     // Chlorophyll (μg/L)
     };
 
     // Response of 0D1! is collected and saved to these variables
     static constexpr ValueType D1_PARSER_VALUE_TYPES[] = {
         TYPE_INVALID,   // echo of the command and slave address
-        TYPE_DOUBLE,    // serial number
-        TYPE_DOUBLE,    // sequence number
-        TYPE_DOUBLE,   // datetime string
-        TYPE_DOUBLE    // code space
+        TYPE_DOUBLE,    // DO    (% Sat)
+        TYPE_DOUBLE,    // DO    (mg/L)
+        TYPE_DOUBLE,    // Turbidity      (NTU)
+        TYPE_DOUBLE     // Wiper Position (Volt)
     };
 
     // Response of 0D2! is collected and saved to these variables
     static constexpr ValueType D2_PARSER_VALUE_TYPES[] = {
         TYPE_INVALID,   // echo of the command and slave address
-        TYPE_DOUBLE,    // serial number
-        TYPE_DOUBLE,    // sequence number
+        TYPE_DOUBLE,    // Depth (m)
+        TYPE_DOUBLE,    // Battery Level (Volt)
     };
 
 };
