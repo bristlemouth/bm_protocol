@@ -163,6 +163,8 @@ set(COMPILE_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
+    -DMEMFAULT_USE_GNU_BUILD_ID=1
+
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
