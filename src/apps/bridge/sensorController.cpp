@@ -16,12 +16,14 @@
 #include "softSensor.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
+#include "task_monitor.h"
 #include "task_priorities.h"
 
 // TODO: Once we have bcmp_config request reply, we should read this value from the modules.
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
+#define TASK_SLEEP_PERIOD_MS 1000
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -136,62 +138,69 @@ static void runController(void *param) {
   _ctx._subbed_sensors = NULL;
   _ctx._num_subbed_sensors = 0;
   _ctx._initialized = true;
+  task_monitor_add(_ctx._task_handle, "Sensor Controller", TASK_SLEEP_PERIOD_MS);
   while (true) {
     // wait for a notification from one of the timers, clear all the bits on exit
-    xTaskNotifyWait(pdFALSE, UINT32_MAX, &task_notify_bits, portMAX_DELAY);
-    if (task_notify_bits & SAMPLER_TIMER_BITS) {
-      if (_ctx._bridge_power_controller->waitForSignal(true, pdMS_TO_TICKS(TOPO_TIMEOUT_MS))) {
-        size_t size_list = sizeof(_ctx._node_list);
-        printf("Sampling for sensor nodes\n");
-        uint32_t num_nodes = 0;
-        if (topology_sampler_get_node_list(_ctx._node_list, size_list, num_nodes,
-                                           TOPO_TIMEOUT_MS)) {
-          for (size_t i = 0; i < num_nodes; i++) {
-            if (_ctx._node_list[i] != getNodeId()) {
-              if (!sys_info_service_request(_ctx._node_list[i], node_info_reply_cb,
-                                            NODE_INFO_TIMEOUT_MS)) {
-                printf("Failed to send sys_info request to node %016" PRIx64 "\n",
-                       _ctx._node_list[i]);
+    if (xTaskNotifyWait(pdFALSE, UINT32_MAX, &task_notify_bits, TASK_SLEEP_PERIOD_MS) ==
+        pdTRUE) {
+      if (task_notify_bits & SAMPLER_TIMER_BITS) {
+        task_monitor_update(_ctx._task_handle, TOPO_TIMEOUT_MS);
+        if (_ctx._bridge_power_controller->waitForSignal(true,
+                                                         pdMS_TO_TICKS(TOPO_TIMEOUT_MS))) {
+          size_t size_list = sizeof(_ctx._node_list);
+          printf("Sampling for sensor nodes\n");
+          uint32_t num_nodes = 0;
+          if (topology_sampler_get_node_list(_ctx._node_list, size_list, num_nodes,
+                                             TOPO_TIMEOUT_MS)) {
+            for (size_t i = 0; i < num_nodes; i++) {
+              if (_ctx._node_list[i] != getNodeId()) {
+                if (!sys_info_service_request(_ctx._node_list[i], node_info_reply_cb,
+                                              NODE_INFO_TIMEOUT_MS)) {
+                  printf("Failed to send sys_info request to node %016" PRIx64 "\n",
+                         _ctx._node_list[i]);
+                }
               }
             }
           }
         }
+        task_monitor_check_in(_ctx._task_handle);
       }
-    }
-    if (task_notify_bits & AGGREGATION_TIMER_BITS) {
-      printf("Aggregation period done!\n");
-      if (_ctx._subbed_sensors != NULL) {
-        AbstractSensor *curr = _ctx._subbed_sensors;
-        while (curr != NULL) {
-          if (curr->type == SENSOR_TYPE_AANDERAA) {
-            Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(curr);
-            aanderaa->aggregate();
-          } else if (curr->type == SENSOR_TYPE_SOFT) {
-            Soft_t *soft = static_cast<Soft_t *>(curr);
-            soft->aggregate();
-          } else if (curr->type == SENSOR_TYPE_RBR_CODA) {
-            RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
-            rbr_coda->aggregate();
-          } else if (curr->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
-            SeapointTurbiditySensor *seapoint_turbidity =
-                static_cast<SeapointTurbiditySensor *>(curr);
-            seapoint_turbidity->aggregate();
-          } else if (curr->type == SENSOR_TYPE_PME_DO) {
-            PmeDissolvedOxygenSensor *pme_dissolved_oxygen =
-                static_cast<PmeDissolvedOxygenSensor *>(curr);
-            pme_dissolved_oxygen->aggregate();
-          } else if (curr->type == SENSOR_TYPE_BOREALIS) {
-            BorealisSensor *level_statistics = static_cast<BorealisSensor *>(curr);
-            level_statistics->aggregate();
+      if (task_notify_bits & AGGREGATION_TIMER_BITS) {
+        printf("Aggregation period done!\n");
+        if (_ctx._subbed_sensors != NULL) {
+          AbstractSensor *curr = _ctx._subbed_sensors;
+          while (curr != NULL) {
+            if (curr->type == SENSOR_TYPE_AANDERAA) {
+              Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(curr);
+              aanderaa->aggregate();
+            } else if (curr->type == SENSOR_TYPE_SOFT) {
+              Soft_t *soft = static_cast<Soft_t *>(curr);
+              soft->aggregate();
+            } else if (curr->type == SENSOR_TYPE_RBR_CODA) {
+              RbrCoda_t *rbr_coda = static_cast<RbrCoda_t *>(curr);
+              rbr_coda->aggregate();
+            } else if (curr->type == SENSOR_TYPE_SEAPOINT_TURBIDITY) {
+              SeapointTurbiditySensor *seapoint_turbidity =
+                  static_cast<SeapointTurbiditySensor *>(curr);
+              seapoint_turbidity->aggregate();
+            } else if (curr->type == SENSOR_TYPE_PME_DO) {
+              PmeDissolvedOxygenSensor *pme_dissolved_oxygen =
+                  static_cast<PmeDissolvedOxygenSensor *>(curr);
+              pme_dissolved_oxygen->aggregate();
+            } else if (curr->type == SENSOR_TYPE_BOREALIS) {
+              BorealisSensor *level_statistics = static_cast<BorealisSensor *>(curr);
+              level_statistics->aggregate();
+            }
+            curr = curr->next;
           }
-          curr = curr->next;
+          // The first four inputs are not used by this message type
+          reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_INCREMENT_SAMPLE_COUNT);
+        } else {
+          printf("No sensor nodes to aggregate\n");
         }
-        // The first four inputs are not used by this message type
-        reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_INCREMENT_SAMPLE_COUNT);
-      } else {
-        printf("No sensor nodes to aggregate\n");
       }
     }
+    task_monitor_check_in(_ctx._task_handle);
   }
 }
 

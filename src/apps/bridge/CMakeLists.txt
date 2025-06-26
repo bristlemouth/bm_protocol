@@ -2,6 +2,7 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/task_monitor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/app_config.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sm_config_crc_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgePowerController.cpp

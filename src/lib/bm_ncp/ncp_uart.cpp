@@ -26,6 +26,7 @@ extern "C" {
 #include "reset_reason.h"
 #include "stm32_rtc.h"
 #include "stm32u5xx_hal_uart.h"
+#include "task_monitor.h"
 #include "task_priorities.h"
 #include "usart.h"
 
@@ -46,6 +47,8 @@ static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
 static SemaphoreHandle_t tx_complete_lock = NULL;
 
 static TaskHandle_t ncpRXTaskHandle;
+static TaskHandle_t ncp_tx_task_handle;
+static TaskHandle_t ncp_processor_task_handle;
 
 static SerialHandle_t *ncpSerialHandle = NULL;
 
@@ -410,7 +413,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
 
   // Create the task
   BaseType_t rval = xTaskCreate(ncpTxTask, "NCP_TX", configMINIMAL_STACK_SIZE * 3, NULL,
-                                NCP_TASK_PRIORITY, NULL);
+                                NCP_TASK_PRIORITY, &ncp_tx_task_handle);
   configASSERT(rval == pdTRUE);
 
   rval = xTaskCreate(ncpRXTask, "NCP_RX", configMINIMAL_STACK_SIZE * 3, NULL, NCP_TASK_PRIORITY,
@@ -418,7 +421,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   configASSERT(rval == pdTRUE);
 
   rval = xTaskCreate(ncpRXProcessor, "NCP_Processor", configMINIMAL_STACK_SIZE * 3, NULL,
-                     NCP_PROCESSOR_TASK_PRIORITY, NULL);
+                     NCP_PROCESSOR_TASK_PRIORITY, &ncp_processor_task_handle);
   configASSERT(rval == pdTRUE);
 
   bm_serial_callbacks.tx_fn = queue_tx;
@@ -483,9 +486,11 @@ void ncpTxTask(void *parameters) {
   BaseType_t res;
   NCPNegotiatingEvent_t *negotiate_event = NULL;
   static uint8_t ncp_tx_buff[NCP_BUFF_LEN];
+  static const uint32_t tx_task_sleep_ms = 1000;
+  task_monitor_add(ncp_tx_task_handle, "NCP TX", tx_task_sleep_ms);
 
   while (1) {
-    res = xQueueReceive(ncp_tx_queue_handle, &q_item, portMAX_DELAY);
+    res = xQueueReceive(ncp_tx_queue_handle, &q_item, pdMS_TO_TICKS(tx_task_sleep_ms));
     negotiate_event = NULL;
 
     if (res == pdPASS) {
@@ -513,8 +518,9 @@ void ncpTxTask(void *parameters) {
       } else {
         printf("Could not take serial lock to transmit message\n");
       }
+      vPortFree(q_item.buffer);
     }
-    vPortFree(q_item.buffer);
+    task_monitor_check_in(ncp_tx_task_handle);
   }
 }
 
@@ -522,13 +528,15 @@ void ncpRXTask(void *parameters) {
   (void)parameters;
 
   static uint8_t ncpRXBuffDecoded[NCP_BUFF_LEN];
+  static const uint32_t rx_task_sleep_ms = 1000;
+  task_monitor_add(ncpRXTaskHandle, "NCP RX", rx_task_sleep_ms);
 
   for (;;) {
     uint32_t taskNotifyValue = 0;
-    BaseType_t res = xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, portMAX_DELAY);
+    task_monitor_check_in(ncpRXTaskHandle);
+    BaseType_t res = xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, rx_task_sleep_ms);
 
     if (res != pdTRUE) {
-      printf("Error waiting for ncp task notification\n");
       continue;
     }
 
@@ -559,11 +567,15 @@ void ncpRXTask(void *parameters) {
 static void ncpRXProcessor(void *parameters) {
   (void)parameters;
   ProcessorQueueItem_t q_item;
+  static const uint32_t processor_task_delay_ms = 1000;
+  task_monitor_add(ncp_processor_task_handle, "NCP Processor", processor_task_delay_ms);
   for (;;) {
-    configASSERT(xQueueReceive(ncp_processor_queue_handle, &q_item, portMAX_DELAY) == pdPASS);
-    bm_serial_packet_t *packet = reinterpret_cast<bm_serial_packet_t *>(q_item.buffer);
-    bm_serial_process_packet(packet, q_item.len);
-    vPortFree(packet);
+    if (xQueueReceive(ncp_processor_queue_handle, &q_item, processor_task_delay_ms) == pdPASS) {
+      bm_serial_packet_t *packet = reinterpret_cast<bm_serial_packet_t *>(q_item.buffer);
+      bm_serial_process_packet(packet, q_item.len);
+      vPortFree(packet);
+    }
+    task_monitor_check_in(ncp_processor_task_handle);
   }
 }
 

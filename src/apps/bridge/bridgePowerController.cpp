@@ -9,6 +9,7 @@
 #include "sensorController.h"
 #include "stm32_rtc.h"
 #include "task.h"
+#include "task_monitor.h"
 #include "task_priorities.h"
 #include "uptime.h"
 #include <cinttypes>
@@ -149,11 +150,13 @@ void BridgePowerController::_update(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
   do {
     if (!_initDone) { // Initializing
+      task_monitor_add(_task_handle, "Power Controller", INIT_POWER_ON_TIMEOUT_MS);
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge State Init\n");
       // We start Bus on, no need to signal an eth up / power up event to l2 & adin
       powerBusAndSetSignal(true, false);
       // Set bus on for two minutes for init.
       vTaskDelay(INIT_POWER_ON_TIMEOUT_MS);
+      task_monitor_check_in(_task_handle);
       if (_configError) {
         bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                        "Bridge configuration error! Please check configs, using default.\n");
@@ -294,8 +297,10 @@ void BridgePowerController::_update(void) {
   }
 
 #ifndef CI_TEST
+  task_monitor_update(_task_handle, time_to_sleep_ms);
   uint32_t taskNotifyValue = 0;
   xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, pdMS_TO_TICKS(time_to_sleep_ms));
+  task_monitor_check_in(_task_handle);
 #else  // CI_TEST
   vTaskDelay(time_to_sleep_ms); // FIXME fix this in test.
 #endif // CI_TEST

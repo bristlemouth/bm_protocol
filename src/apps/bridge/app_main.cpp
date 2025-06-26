@@ -60,6 +60,7 @@
 #include "serial_console.h"
 #include "stm32_rtc.h"
 #include "sys_info_service.h"
+#include "task_monitor.h"
 #include "timer_callback_handler.h"
 #include "topology_sampler.h"
 #include "usb.h"
@@ -370,6 +371,7 @@ static void defaultTask(void *parameters) {
   debugSpotterInit();
   debugRTCInit();
 
+  task_monitor_start();
   timer_callback_handler_init();
 
   gpioISRRegisterCallback(&USER_BUTTON, buttonPress);

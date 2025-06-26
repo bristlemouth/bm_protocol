@@ -16,6 +16,7 @@
 #include "semphr.h"
 #include "softSensor.h"
 #include "task.h"
+#include "task_monitor.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
 #include "timers.h"
@@ -26,6 +27,7 @@
 #define REPORT_BUILDER_QUEUE_SIZE (16)
 #define TOPO_TIMEOUT_MS (1000)
 #define NETWORK_CONFIG_MUTEX_TIMEOUT_MS (1000)
+#define TASK_SLEEP_PERIOD_MS 1000
 
 /*
   This is the current max length the cbor buffer can be for the sensor report
@@ -61,6 +63,7 @@ typedef struct ReportBuilderContext_s {
 
 static ReportBuilderContext_t _ctx;
 static QueueHandle_t _report_builder_queue = NULL;
+static TaskHandle_t task_handle;
 
 static void report_builder_task(void *parameters);
 
@@ -456,7 +459,7 @@ void reportBuilderInit(void) {
   configASSERT(_report_builder_queue);
   // create task
   BaseType_t rval = xTaskCreate(report_builder_task, "REPORT_BUILDER", 1024, NULL,
-                                REPORT_BUILDER_TASK_PRIORITY, NULL);
+                                REPORT_BUILDER_TASK_PRIORITY, &task_handle);
   configASSERT(rval == pdPASS);
 }
 
@@ -465,9 +468,10 @@ static void report_builder_task(void *parameters) {
   (void)parameters;
 
   report_builder_queue_item_t item;
+  task_monitor_add(task_handle, "Report Builder", TASK_SLEEP_PERIOD_MS);
 
   while (1) {
-    if (xQueueReceive(_report_builder_queue, &item, portMAX_DELAY) == pdPASS) {
+    if (xQueueReceive(_report_builder_queue, &item, TASK_SLEEP_PERIOD_MS) == pdPASS) {
       switch (item.message_type) {
       case REPORT_BUILDER_INCREMENT_SAMPLE_COUNT: {
         _ctx._sample_counter++;
@@ -748,6 +752,7 @@ static void report_builder_task(void *parameters) {
         vPortFree(item.sensor_data);
       }
     }
+    task_monitor_check_in(task_handle);
   }
 }
 

@@ -3,6 +3,8 @@
 // Trying to keep them sorted by priority here
 //
 
+#define TASK_MONITOR_PRIORITY 21
+
 #define PCA9535_IRQ_TASK_PRIORITY 20
 
 #define ADIN_SPI_TASK_PRIORITY 17

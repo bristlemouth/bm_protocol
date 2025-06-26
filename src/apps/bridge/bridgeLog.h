@@ -3,9 +3,13 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-constexpr size_t SENSOR_LOG_BUF_SIZE = 512;
-constexpr bool USE_HEADER = true;
-constexpr bool NO_HEADER = false;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static const size_t SENSOR_LOG_BUF_SIZE = 512;
+static const bool USE_HEADER = true;
+static const bool NO_HEADER = false;
 
 typedef enum {
   BM_COMMON_IND,
@@ -24,3 +28,7 @@ void vBridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
 void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t len);
 #define BRIDGE_SENSOR_LOG_PRINT(type, x) bridgeSensorLogPrintf(type, x, sizeof(x))
 #define BRIDGE_SENSOR_LOG_PRINTN(type, x, n) bridgeSensorLogPrintf(type, x, n)
+
+#ifdef __cplusplus
+}
+#endif

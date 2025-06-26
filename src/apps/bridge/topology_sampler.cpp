@@ -29,6 +29,7 @@
 #include "stm32_rtc.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
+#include "task_monitor.h"
 #include "topology.h"
 #include "topology_sampler.h"
 #include "util.h"
@@ -69,6 +70,7 @@ static node_list_s _node_list;
 static QueueHandle_t _sys_info_queue;
 static QueueHandle_t _config_cbor_map_queue;
 static SemaphoreHandle_t _sys_info_sequence_lock;
+static TaskHandle_t task_handle;
 
 static void topology_timer_handler(TimerHandle_t tmr);
 static void topology_sampler_task(void *parameters);
@@ -600,8 +602,14 @@ void topology_sampler_init(BridgePowerController *power_controller) {
 
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
-                                TOPO_SAMPLER_TASK_PRIORITY, NULL);
+                                TOPO_SAMPLER_TASK_PRIORITY, &task_handle);
   configASSERT(rval == pdPASS);
+}
+
+static void wait_for_signal_and_check_in(bool signal) {
+  while (!_bridge_power_controller->waitForSignal(signal, pdMS_TO_TICKS(BUS_POWER_ON_DELAY))) {
+    task_monitor_check_in(task_handle);
+  }
 }
 
 void topology_sampler_task(void *parameters) {
@@ -611,7 +619,9 @@ void topology_sampler_task(void *parameters) {
   // This timer will have to wait for the two mintue init period to elapse before beginning
 
   // lets wait 5 seconds for the devices on the bus to power up
+  task_monitor_add(task_handle, "Topology Sampler", BUS_POWER_ON_DELAY);
   vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
+  task_monitor_check_in(task_handle);
   // here we will do an initial sample during the bridges 2 minute on period
   topology_sample();
 
@@ -620,6 +630,7 @@ void topology_sampler_task(void *parameters) {
     // end so that we don't accidentally turn off the bus while doing
     // we are building our topology
     while (!_bridge_power_controller->initPeriodElapsed()) {
+      task_monitor_check_in(task_handle);
       vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
     }
 
@@ -627,7 +638,8 @@ void topology_sampler_task(void *parameters) {
     if (_bridge_power_controller->isPowerControlEnabled()) {
       // Check if we are already sampling, if not, wait (using blocking waitForSignal) for power to turn on
       // if we are sampling, wait for power to turn off
-      if (!_sampling_enabled && _bridge_power_controller->waitForSignal(true, portMAX_DELAY)) {
+      if (!_sampling_enabled) {
+        wait_for_signal_and_check_in(true);
         // lets wait 5 seconds for the devices on the bus to power up
         vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
         topology_sample();
@@ -636,16 +648,18 @@ void topology_sampler_task(void *parameters) {
 
         _sampling_enabled = true;
 
-      } else if (_sampling_enabled &&
-                 _bridge_power_controller->waitForSignal(false, portMAX_DELAY)) {
+      } else if (_sampling_enabled) {
+        wait_for_signal_and_check_in(false);
         _sampling_enabled = false;
         configASSERT(xTimerStop(topology_timer, 10));
       }
     } else {
       // still need to wait after init period for the bus to be turned back on
-      _bridge_power_controller->waitForSignal(true, portMAX_DELAY);
+      task_monitor_check_in(task_handle);
+      wait_for_signal_and_check_in(true);
       // lets wait 5 seconds to make sure the devices on the bus are powered on
       vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
+      task_monitor_check_in(task_handle);
       topology_sample();
       // start the timer! here while the bus is powered we will sample topology every minute
       configASSERT(xTimerStart(topology_timer, 10));
@@ -653,6 +667,7 @@ void topology_sampler_task(void *parameters) {
       // incorrectly, so lets just check to make sure the power controller is disabled. If it
       // is re-enabled, then we will just loop back to the beginning of the for loop
       while (!_bridge_power_controller->isPowerControlEnabled()) {
+        task_monitor_check_in(task_handle);
         vTaskDelay(pdMS_TO_TICKS(1000));
       }
       // We should stop the timer if the power controller is re-enabled
