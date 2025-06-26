@@ -123,8 +123,11 @@ void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     if (notifyL2) {
       bm_l2_netif_set_power(on);
+      // Must turn port 2 off if powering up the network,
+      // port 2 is not used on the bridge and disabling the port will provide
+      // power savings
       if (on) {
-        bm_l2_netif_enable_disable_port(2, !on);
+        bm_l2_netif_enable_disable_port(2, false);
       }
     }
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge bus power: %d\n",
