@@ -37,7 +37,7 @@ typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
   static constexpr double DO_SAMPLE_MEMBER_MIN = -1.0;
   static constexpr double DO_SAMPLE_MEMBER_MAX = 100.0;
   static constexpr double QUALITY_SAMPLE_MEMBER_MIN = 0.0;
-  static constexpr double QUALITY_SAMPLE_MEMBER_MAX = 1.0;
+  static constexpr double QUALITY_SAMPLE_MEMBER_MAX = 2.0;
   static constexpr double DO_SATURATION_SAMPLE_MEMBER_MIN = 0.0;
   static constexpr double DO_SATURATION_SAMPLE_MEMBER_MAX = 150.0;
   static constexpr double SALINITY_PPT_MEMBER_MIN = 0.0;
