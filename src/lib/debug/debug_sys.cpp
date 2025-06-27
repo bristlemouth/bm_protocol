@@ -58,12 +58,10 @@ static const CLI_Command_Definition_t cmdDebug = {
   " * debug reset - Reset device\n"
   " * debug mem - Get some memory statistics\n"
   " * debug tasks - Print task statistics\n"
-#if BUILD_DEBUG
   " * debug crash - Generate crash\n"
   " * debug hardfault - Generate hardfault\n"
   " * debug null - Dereference null pointer\n"
   " * debug hang - Hang the process\n"
-#endif
   " * bootloader - Restart and enter bootloader\n",
   // Command function
   debugCommand,
@@ -308,7 +306,6 @@ static BaseType_t debugCommand(char *writeBuffer,
 
   if (strncmp("reset", parameter, parameterStringLength) == 0) {
     resetSystem(RESET_REASON_DEBUG_RESET);
-#if BUILD_DEBUG
   } else if (strncmp("crash", parameter, parameterStringLength) == 0) {
     configASSERT(0);
   } else if (strncmp("hardfault", parameter, parameterStringLength) == 0) {
@@ -319,7 +316,6 @@ static BaseType_t debugCommand(char *writeBuffer,
     *temp = 0x1234; // cppcheck-suppress nullPointer
   } else if (strncmp("hang", parameter, parameterStringLength) == 0) {
     while(1){};
-#endif // BUILD_DEBUG
   } else if (strncmp("mem", parameter, parameterStringLength) == 0) {
     getHeapStats();
 #if configUSE_TRACE_FACILITY == 1

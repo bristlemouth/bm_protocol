@@ -163,8 +163,6 @@ set(COMPILE_FLAGS
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 	$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 
-    	-DMEMFAULT_USE_GNU_BUILD_ID=1
-
 	-Wformat=2
 	-Wformat-overflow
 	-Wformat-signedness
@@ -510,6 +508,10 @@ target_link_libraries(${EXECUTABLE}
 endif()
 
 target_linker_map(${EXECUTABLE})
+
+add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
+    COMMAND python ${CMAKE_CURRENT_LIST_DIR}/third_party/memfault-firmware-sdk/scripts/fw_build_id.py ${EXECUTABLE}
+)
 
 # Print executable size
 add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
