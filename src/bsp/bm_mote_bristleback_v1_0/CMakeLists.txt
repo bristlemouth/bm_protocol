@@ -70,7 +70,6 @@ set(BSP_DEFINES
         USE_FULL_LL_DRIVER
         USE_HAL_DRIVER
         STM32U575xx
-        MEMFAULT_COREDUMP_STORAGE_WRITE_SIZE=512
         BSP_MOTE_BRISTLEBACK_V1_0
         # Uncomment the following lines to enable the software watchdog
         # MEMFAULT_SOFWARE_WATCHDOG_SOURCE=LPTIM2_BASE
