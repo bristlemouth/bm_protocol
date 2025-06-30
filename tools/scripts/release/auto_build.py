@@ -71,15 +71,19 @@ class AutoBuilder:
         return configs
 
     # Run the cmake command to set up build environment for this config
-    def setup_cmake_dir(self, config):
+    def setup_cmake_dir(self, config, ext_dir):
         project_root = get_project_root()
+        app_name = config["args"]["app"]
+
+        if ext_dir is not None:
+            app_name = ext_dir + "/" + app_name
 
         cmd = [
             "cmake",
             f"{project_root}",
             f"-DCMAKE_TOOLCHAIN_FILE={project_root}/cmake/arm-none-eabi-gcc.cmake",
             f'-DBSP={config["args"]["bsp"]}',
-            f'-DAPP={config["args"]["app"]}',
+            f"-DAPP={app_name}",
             f'-DCMAKE_BUILD_TYPE={config["args"]["build_type"]}',
         ]
 
@@ -228,7 +232,7 @@ class AutoBuilder:
 
         return result
 
-    def build(self, config):
+    def build(self, config, ext_dir):
         returncode = 0
 
         # Tests are run in temporary directory inside repository
@@ -239,13 +243,13 @@ class AutoBuilder:
 
         try:
             # Run cmake setup commands
-            self.setup_cmake_dir(config)
+            self.setup_cmake_dir(config, ext_dir)
 
             # Compile firmware
             self.build_fw(config)
 
             # If this isn't a bootloader image, upload to memfault
-            if config["args"]["app"] != "bootloader":
+            if config["args"]["app"] != "bootloader" and self.is_prod:
                 self.memfault_upload(config)
 
             self.package_release(config)
@@ -289,6 +293,26 @@ class AutoBuilder:
 
         return
 
+    def _setup_external_dir(self, config):
+        temp_dir = None
+        if config["type"] == "ext_fw" and config["repo"] is not None:
+            temp_dir = tempfile.TemporaryDirectory()
+            try:
+                repo = git.Repo.clone_from(
+                    config["repo"], temp_dir.name + "/" + config["args"]["app"]
+                )
+                print(f"Repository successfully cloned to: {repo.working_dir}")
+            except Exception as e:
+                print(f"Error cloning repository: {e}")
+                temp_dir.cleanup()
+                temp_dir = None
+
+        return temp_dir
+
+    def _cleanup_external_dir(self, dir):
+        if dir:
+            dir.cleanup()
+
     def build_all(self):
         with tempfile.TemporaryDirectory(
             dir=args.build_dir, prefix="tmpbuild_"
@@ -303,6 +327,10 @@ class AutoBuilder:
 
             for name, config in self._configs.items():
                 print(f"Building: {name}")
+                external_dir_name = None
+                external_dir = self._setup_external_dir(config)
+                if external_dir:
+                    external_dir_name = external_dir.name
                 config["path"] = os.path.join(tmpdirname, get_name_hash(name, 16))
                 os.mkdir(config["path"])
 
@@ -311,8 +339,8 @@ class AutoBuilder:
                 if "encrypt" not in config:
                     config["encrypt"] = False
 
-                returncode = self.build(config)
-
+                returncode = self.build(config, external_dir_name)
+                self._cleanup_external_dir(external_dir)
                 if returncode != 0:
                     print("FAIL")
                     break
