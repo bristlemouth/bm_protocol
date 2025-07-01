@@ -46,6 +46,7 @@
 #define NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_MS (NODE_CONFIG_CBOR_MAP_REQUEST_TIMEOUT_S * 1000)
 // Accounts for name of app + cbor config map + encoding inefficiencies
 #define NODE_CONFIG_PADDING (512)
+#define NETWORK_TOPOLOGY_QUEUE_SIZE (1)
 
 typedef struct network_configuration_info {
   uint32_t network_crc32;
@@ -68,7 +69,7 @@ static bool _send_on_boot;
 static node_list_s _node_list;
 static QueueHandle_t _sys_info_queue;
 static QueueHandle_t _config_cbor_map_queue;
-static SemaphoreHandle_t _sys_info_sequence_lock;
+static BmSemaphore network_topology_semaphore;
 
 static void topology_timer_handler(TimerHandle_t tmr);
 static void topology_sampler_task(void *parameters);
@@ -86,157 +87,145 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
-static void topology_sample_cb(NetworkTopology *networkTopology) {
-  uint8_t *cbor_buffer = NULL;
-  BmNetworkInfo *network_info = NULL;
+static void topology_sample_cb(NetworkTopology *topology) {
+  if (!topology) {
+    printf("Network Topology NULL, task must be busy\n");
+    return;
+  }
+  // check to make sure bus was powered for the whole topo request
+  // break if bus was powered down at some point
+  if (!_bridge_power_controller->isBridgePowerOn()) {
+    return;
+  }
+
   xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
-  do {
-    SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_HARDWARE);
-    if (!networkTopology) {
-      printf("networkTopology NULL, task must be busy\n");
-      break;
-    }
-    // check to make sure bus was powered for the whole topo request
-    // break if bus was powered down at some point
-    if (!_bridge_power_controller->isBridgePowerOn()) {
-      break;
-    }
+  // compile all additional info here
+  _node_list.num_nodes = topology->length;
+  // if we hit this, expand the node list size
+  configASSERT(sizeof(_node_list.nodes) >= _node_list.num_nodes * sizeof(uint64_t));
 
-    uint32_t network_crc32_calc = 0;
+  memset(_node_list.nodes, 0, sizeof(_node_list.nodes));
+  memset(_node_list.sensor_type, 0, sizeof(_node_list.sensor_type));
 
-    // compile all additional info here
-    _node_list.num_nodes = networkTopology->length;
-    // if we hit this, expand the node list size
-    configASSERT(sizeof(_node_list.nodes) >= _node_list.num_nodes * sizeof(uint64_t));
+  NeighborTableEntry *cursor = NULL;
+  uint16_t counter;
 
-    memset(_node_list.nodes, 0, sizeof(_node_list.nodes));
-    memset(_node_list.sensor_type, 0, sizeof(_node_list.sensor_type));
+  // Iterate through the entire list of nodes and request the sys info.
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                 "Bridge topology in topology sampler:\n");
+  for (cursor = topology->front, counter = 0;
+       (cursor != NULL) && (counter < _node_list.num_nodes);
+       cursor = cursor->nextNode, counter++) {
+    _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
+                   _node_list.nodes[counter]);
+  }
+  xSemaphoreGive(_node_list.node_list_mutex);
+  bm_semaphore_give(network_topology_semaphore);
+}
 
-    NeighborTableEntry *cursor = NULL;
-    uint16_t counter;
-    xQueueReset(_sys_info_queue);
-    xQueueReset(_config_cbor_map_queue);
-    bool exit = false;
+static void check_topology_report(uint32_t timeout_ms) {
+  if (bm_semaphore_take(network_topology_semaphore, timeout_ms) == BmOK) {
+    uint8_t *cbor_buffer = NULL;
+    BmNetworkInfo *network_info = NULL;
+    xSemaphoreTake(_node_list.node_list_mutex, portMAX_DELAY);
+    do {
+      SMConfigCRCList sm_config_crc_list(BM_CFG_PARTITION_HARDWARE);
+      uint32_t network_crc32_calc = 0;
+      xQueueReset(_sys_info_queue);
+      xQueueReset(_config_cbor_map_queue);
 
-    // Iterate through the entire list of nodes and request the sys info.
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Bridge topology in topology sampler:\n");
-    for (cursor = networkTopology->front, counter = 0;
-         (cursor != NULL) && (counter < _node_list.num_nodes);
-         cursor = cursor->nextNode, counter++) {
-      _node_list.nodes[counter] = cursor->neighbor_table_reply->node_id;
-      bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "%016" PRIx64 "\n",
-                     _node_list.nodes[counter]);
-      if (!sys_info_service_request(_node_list.nodes[counter], sys_info_reply_cb,
-                                    NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
-        printf("Failed to send sys info request to node: %" PRIu64 "\n",
-               _node_list.nodes[counter]);
-        exit = true;
+      // Create the network info cbor array and calculate the crc32
+      size_t cbor_bufsize =
+          _node_list.num_nodes *
+          (sizeof(SysInfoReplyData) + sizeof(ConfigCborMapReplyData) + NODE_CONFIG_PADDING);
+      cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
+      configASSERT(cbor_buffer);
+      memset(cbor_buffer, 0, cbor_bufsize);
+
+      if (create_network_info_cbor_array(cbor_buffer, cbor_bufsize)) {
+        network_crc32_calc = crc32_ieee(cbor_buffer, cbor_bufsize);
+      } else {
+        printf("Failed to create network info cbor array\n");
         break;
       }
-      if (xSemaphoreTake(_sys_info_sequence_lock,
-                         pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) != pdTRUE) {
-        bridgeLogPrint(
-            BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-            "Failed to take sys_info semaphore when generating config topology report\n");
-        exit = true;
-        break;
+
+      if (cbor_buffer) {
+        for (uint32_t i = 0; i < cbor_bufsize; i++) {
+          printf("%02x ", cbor_buffer[i]);
+          if (i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
+            printf("\n");
+          }
+        }
+        // If we have a new configuration, store it.
+        if (_node_list.last_network_configuration_info.network_crc32 != network_crc32_calc) {
+          if (_node_list.last_network_configuration_info.cbor_config_map) {
+            vPortFree(_node_list.last_network_configuration_info.cbor_config_map);
+            _node_list.last_network_configuration_info.cbor_config_map = NULL;
+          }
+          _node_list.last_network_configuration_info.network_crc32 = network_crc32_calc;
+          _node_list.last_network_configuration_info.cbor_config_map_size = cbor_bufsize;
+          _node_list.last_network_configuration_info.cbor_config_map =
+              static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
+          configASSERT(_node_list.last_network_configuration_info.cbor_config_map);
+          memcpy(_node_list.last_network_configuration_info.cbor_config_map, cbor_buffer,
+                 cbor_bufsize);
+          log_network_crc_info(network_crc32_calc, sm_config_crc_list);
+          log_cbor_network_configurations(cbor_buffer, cbor_bufsize);
+        }
+        printf("\n");
       }
-    }
-    if (exit) {
-      break;
-    }
 
-    // Create the network info cbor array and calculate the crc32
-    size_t cbor_bufsize =
-        _node_list.num_nodes *
-        (sizeof(SysInfoReplyData) + sizeof(ConfigCborMapReplyData) + NODE_CONFIG_PADDING);
-    cbor_buffer = static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
-    configASSERT(cbor_buffer);
-    memset(cbor_buffer, 0, cbor_bufsize);
+      bool known = sm_config_crc_list.contains(network_crc32_calc);
+      if (!known || _send_on_boot) {
+        if (!known) {
+          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                         "The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
+                         " Adding it.\n",
+                         network_crc32_calc);
+          sm_config_crc_list.add(network_crc32_calc);
+          if (!save_config(BM_CFG_PARTITION_HARDWARE, false)) {
+            printf("Failed to save crc!\n");
+          }
+        }
 
-    if (create_network_info_cbor_array(cbor_buffer, cbor_bufsize)) {
-      network_crc32_calc = crc32_ieee(cbor_buffer, cbor_bufsize);
-    } else {
-      printf("Failed to create network info cbor array\n");
-      break;
-    }
+        BmConfigCrc config_crc = {
+            .partition = BM_CFG_PARTITION_SYSTEM,
+            .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
+        };
+
+        BmFwVersion fw_info = {
+            .major = 0,
+            .minor = 0,
+            .revision = 0,
+            .gitSHA = 0,
+        };
+
+        getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
+        fw_info.gitSHA = getGitSHA();
+
+        bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
+                                    _node_list.num_nodes, _node_list.nodes, cbor_bufsize,
+                                    cbor_buffer);
+        if (_send_on_boot) {
+          _send_on_boot = false;
+        }
+      }
+
+      // The first four inputs are not used by this message type
+      reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
+    } while (0);
+    xSemaphoreGive(_node_list.node_list_mutex);
+
+    // Notify the sensor controller task to sample for sensors
+    xTaskNotify(sensor_controller_task_handle, SAMPLER_TIMER_BITS, eSetBits);
 
     if (cbor_buffer) {
-      for (uint32_t i = 0; i < cbor_bufsize; i++) {
-        printf("%02x ", cbor_buffer[i]);
-        if (i % 16 == 15) { // print a newline every 16 bytes (for print pretty-ness)
-          printf("\n");
-        }
-      }
-      // If we have a new configuration, store it.
-      if (_node_list.last_network_configuration_info.network_crc32 != network_crc32_calc) {
-        if (_node_list.last_network_configuration_info.cbor_config_map) {
-          vPortFree(_node_list.last_network_configuration_info.cbor_config_map);
-          _node_list.last_network_configuration_info.cbor_config_map = NULL;
-        }
-        _node_list.last_network_configuration_info.network_crc32 = network_crc32_calc;
-        _node_list.last_network_configuration_info.cbor_config_map_size = cbor_bufsize;
-        _node_list.last_network_configuration_info.cbor_config_map =
-            static_cast<uint8_t *>(pvPortMalloc(cbor_bufsize));
-        configASSERT(_node_list.last_network_configuration_info.cbor_config_map);
-        memcpy(_node_list.last_network_configuration_info.cbor_config_map, cbor_buffer,
-               cbor_bufsize);
-        log_network_crc_info(network_crc32_calc, sm_config_crc_list);
-        log_cbor_network_configurations(cbor_buffer, cbor_bufsize);
-      }
-      printf("\n");
+      vPortFree(cbor_buffer);
     }
-
-    bool known = sm_config_crc_list.contains(network_crc32_calc);
-    if (!known || _send_on_boot) {
-      if (!known) {
-        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                       "The smConfigurationCrc is not in the known list! calc: 0x%" PRIx32
-                       " Adding it.\n",
-                       network_crc32_calc);
-        sm_config_crc_list.add(network_crc32_calc);
-        if (!save_config(BM_CFG_PARTITION_HARDWARE, false)) {
-          printf("Failed to save crc!\n");
-        }
-      }
-
-      BmConfigCrc config_crc = {
-          .partition = BM_CFG_PARTITION_SYSTEM,
-          .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
-      };
-
-      BmFwVersion fw_info = {
-          .major = 0,
-          .minor = 0,
-          .revision = 0,
-          .gitSHA = 0,
-      };
-
-      getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
-      fw_info.gitSHA = getGitSHA();
-
-      bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
-                                  _node_list.num_nodes, _node_list.nodes, cbor_bufsize,
-                                  cbor_buffer);
-      if (_send_on_boot) {
-        _send_on_boot = false;
-      }
+    if (network_info) {
+      vPortFree(network_info);
     }
-
-    // The first four inputs are not used by this message type
-    reportBuilderAddToQueue(0, 0, NULL, 0, REPORT_BUILDER_CHECK_CRC);
-  } while (0);
-  xSemaphoreGive(_node_list.node_list_mutex);
-
-  // Notify the sensor controller task to sample for sensors
-  xTaskNotify(sensor_controller_task_handle, SAMPLER_TIMER_BITS, eSetBits);
-
-  if (cbor_buffer) {
-    vPortFree(cbor_buffer);
-  }
-  if (network_info) {
-    vPortFree(network_info);
   }
 }
 
@@ -310,8 +299,6 @@ static bool sys_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
   if (!rval && reply.app_name) {
     vPortFree(reply.app_name);
   }
-
-  xSemaphoreGive(_sys_info_sequence_lock);
 
   return rval;
 }
@@ -410,8 +397,15 @@ static bool create_network_info_cbor_array(uint8_t *cbor_buffer, size_t &cbor_bu
         printf("cbor_encoder_create_array failed: %d\n", err);
         break;
       }
+      if (!sys_info_service_request(_node_list.nodes[node_crc_rx_count], sys_info_reply_cb,
+                                    NODE_SYS_INFO_REQUEST_TIMEOUT_S)) {
+        printf("Failed to send sys info request to node: %" PRIu64 "\n",
+               _node_list.nodes[node_crc_rx_count]);
+        break;
+      }
       // Update the network crc with all of the node crcs
-      if (xQueueReceive(_sys_info_queue, &info_reply, 0) == pdTRUE) {
+      if (xQueueReceive(_sys_info_queue, &info_reply,
+                        pdMS_TO_TICKS(NODE_NETWORK_SYS_INFO_REQUEST_TIMEOUT_MS)) == pdTRUE) {
 
         // This function will use the app name to determine the sensor type and update the _node_list.sensor_type array
         // so that the reportBuilder can pull the sensor type from the node id. The sensor type array must match the
@@ -595,9 +589,8 @@ void topology_sampler_init(BridgePowerController *power_controller) {
   _config_cbor_map_queue =
       xQueueCreate(TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE, sizeof(ConfigCborMapReplyData));
   configASSERT(_config_cbor_map_queue);
-  _sys_info_sequence_lock = xSemaphoreCreateBinary();
-  configASSERT(_sys_info_sequence_lock);
-
+  network_topology_semaphore = xSemaphoreCreateBinary();
+  configASSERT(network_topology_semaphore);
   // create task
   BaseType_t rval = xTaskCreate(topology_sampler_task, "TOPO_SAMPLER", 1024, NULL,
                                 TOPO_SAMPLER_TASK_PRIORITY, NULL);
@@ -616,28 +609,29 @@ void topology_sampler_task(void *parameters) {
   topology_sample();
 
   for (;;) {
+
     // After getting the initial topology lets wait for the init period to
     // end so that we don't accidentally turn off the bus while doing
     // we are building our topology
     while (!_bridge_power_controller->initPeriodElapsed()) {
-      vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
+      check_topology_report(BUS_POWER_ON_DELAY);
     }
 
     // Wait for the power control to set the bus ON
     if (_bridge_power_controller->isPowerControlEnabled()) {
+      check_topology_report(1000);
       // Check if we are already sampling, if not, wait (using blocking waitForSignal) for power to turn on
       // if we are sampling, wait for power to turn off
-      if (!_sampling_enabled && _bridge_power_controller->waitForSignal(true, portMAX_DELAY)) {
+      if (!_sampling_enabled && _bridge_power_controller->waitForSignal(true, 0)) {
         // lets wait 5 seconds for the devices on the bus to power up
         vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
         topology_sample();
         // start the timer! here while the bus is powered we will sample topology every minute
-        configASSERT(xTimerStart(topology_timer, 10));
+        configASSERT(xTimerReset(topology_timer, 10));
 
         _sampling_enabled = true;
 
-      } else if (_sampling_enabled &&
-                 _bridge_power_controller->waitForSignal(false, portMAX_DELAY)) {
+      } else if (_sampling_enabled && _bridge_power_controller->waitForSignal(false, 0)) {
         _sampling_enabled = false;
         configASSERT(xTimerStop(topology_timer, 10));
       }
@@ -648,12 +642,12 @@ void topology_sampler_task(void *parameters) {
       vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
       topology_sample();
       // start the timer! here while the bus is powered we will sample topology every minute
-      configASSERT(xTimerStart(topology_timer, 10));
+      configASSERT(xTimerReset(topology_timer, 10));
       // If DFU disabled the power controller before sampling began, we may have gotten here
       // incorrectly, so lets just check to make sure the power controller is disabled. If it
       // is re-enabled, then we will just loop back to the beginning of the for loop
       while (!_bridge_power_controller->isPowerControlEnabled()) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        check_topology_report(1000);
       }
       // We should stop the timer if the power controller is re-enabled
       configASSERT(xTimerStop(topology_timer, 10));

@@ -78,10 +78,6 @@ set(FLASH_START 0x8000000)
 # No Bootloader by default
 set(BOOTLOADER_SIZE 0)
 
-# 1276kB Application size (2048kB-772kB for coredump)
-# TODO - change this when we use 1MB flash part
-set(APP_SIZE 0x13F000)
-
 # No MCUBoot header by default
 set(MCUBOOT_HEADER_SIZE 0)
 
