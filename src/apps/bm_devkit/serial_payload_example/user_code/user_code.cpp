@@ -109,24 +109,19 @@ void loop(void) {
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
-  static u_int32_t ledPulseTimer = uptimeGetMs();
-  static u_int32_t ledOnTimer = 0;
-  static bool led1State = false;
+  static bool ledState = false;
+  static uint64_t ledLastScheduledOnTime = uptimeGetMs();
+  const uint64_t elapsedSinceOnTime = uptimeGetMs() - ledLastScheduledOnTime;
   // Turn LED1 on green every LED_PERIOD_MS milliseconds.
-  if (!led1State && ((u_int32_t)uptimeGetMs() - ledPulseTimer >= LED_PERIOD_MS)) {
+  if (!ledState && elapsedSinceOnTime >= LED_PERIOD_MS) {
+    ledLastScheduledOnTime += LED_PERIOD_MS;
     bristlefin.setLed(1, Bristlefin::LED_GREEN);
-    ledOnTimer = uptimeGetMs();
-    ledPulseTimer += LED_PERIOD_MS;
-    led1State = true;
+    ledState = true;
   }
   // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
-  else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
+  else if (ledState && elapsedSinceOnTime >= LED_ON_TIME_MS) {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
-    led1State = false;
+    ledState = false;
   }
 
   // Read a cluster of bytes if available
