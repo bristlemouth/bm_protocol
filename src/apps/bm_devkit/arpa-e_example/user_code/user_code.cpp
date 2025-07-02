@@ -1,8 +1,8 @@
 #include "user_code.h"
+#include "bsp.h"
 #include "bq25820.h"
 #include "ina232.h"
-#include "serial.h"
-#include "bsp.h"
+#include "debug.h"
 
 static BQ::BQ25820 Charger(&i2c1);
 
