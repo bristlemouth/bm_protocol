@@ -313,6 +313,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "arpa-e_example",
+            "name": "arpa-e_example",
+            "jobs": 8
+        },
+        {
             "configurePreset": "loadcell",
             "name": "loadcell",
             "jobs": 8
