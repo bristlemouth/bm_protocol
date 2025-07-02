@@ -1,4 +1,4 @@
-#include "BQ25820.h"
+#include "bq25820.h"
 #include "debug.h"
 #include "app_util.h"
 
