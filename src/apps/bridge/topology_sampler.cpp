@@ -626,7 +626,7 @@ void topology_sampler_task(void *parameters) {
         vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
         topology_sample();
         // start the timer! here while the bus is powered we will sample topology every minute
-        configASSERT(xTimerReset(topology_timer, 10));
+        configASSERT(xTimerStart(topology_timer, 10));
 
         _sampling_enabled = true;
 
@@ -641,7 +641,7 @@ void topology_sampler_task(void *parameters) {
       vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
       topology_sample();
       // start the timer! here while the bus is powered we will sample topology every minute
-      configASSERT(xTimerReset(topology_timer, 10));
+      configASSERT(xTimerStart(topology_timer, 10));
       // If DFU disabled the power controller before sampling began, we may have gotten here
       // incorrectly, so lets just check to make sure the power controller is disabled. If it
       // is re-enabled, then we will just loop back to the beginning of the for loop
