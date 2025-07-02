@@ -2,16 +2,16 @@ from bitstring import BitStream
 import struct
 
 # Test sensor-data payloads in hex format.
-payload = "de00000000bb9ba012215ed80006d40000caf3e2ef0ef2e48b51b585e00c02a8410000a03fae47e940cdccf4c1f628d54200001841cdcc204114aea73f48e1ba3e85eb4141a01aa8415c8fa23f52b8e640b81ed3c11f05d5420ad71741b81e214148e19a3f48e1ba3e85eb41413333a8415c8fa23f52b8e640295cd1c13d0ad5420ad717419a99214148e19a3f48e1ba3e85eb4141"
+payload = "de00000000d5740a1201f6d80006d40002f7952cefc9a23805eddecd082db2b541cdcc4c3d00000000c3f5a8beae47b8426666fe407b14be403d0a973fdbf92441000000006abcb541cdcc4c3d00000000f628dcbe0080b84252b8fe406666be403d0a973fc3f5244100000000b4c8b541cdcc4c3d000000005c8fc2be71bdb8423d0aff403d0abf40ec51983fc3f5244100000000"
 
 # Description of the detection structure to unpack from the payload.
 # Each tuple contains a type and a field name.
 # This is a representation of the C struct the data is serialized from:
 #       struct __attribute__((packed)) EXO3sample {
 #               float temp_sensor;    // Celcius
-#               float sp_cond;        // uS/cm
-#               float pH;
-#               float pH_mV;          // mV
+#               float sp_cond;        // μS/cm
+#               float phyocyanin;     // μg/L
+#               float chlorophyll;    // μg/L
 #               float dis_oxy;        // % Sat
 #               float dis_oxy_mg;     // mg/L
 #               float turbidity;      // NTU
@@ -20,16 +20,16 @@ payload = "de00000000bb9ba012215ed80006d40000caf3e2ef0ef2e48b51b585e00c02a841000
 #               float power;          // volt
 #             };
 detect_struct_description = [
-    ('float', 'temp_sensor'),       # Celcius
-    ('float', 'sp_cond'),           # uS/cm
-    ('float', 'pH'),                # range: 1-14
-    ('float', 'pH_mV'),             # mV
-    ('float', 'dis_oxy'),           # % Sat
-    ('float', 'dis_oxy_mg'),        # mg/L
-    ('float', 'turbidity'),         # NTU
-    ('float', 'wiper_pos'),         # Volt
-    ('float', 'depth'),             # meters
-    ('float', 'power'),             # Volt
+    ('float', 'temp_sensor (ºC)'),      # Celcius
+    ('float', 'sp_cond (μS/cm)'),       # μS/cm
+    ('float', 'phycocyanin (μg/L)'),    # μg/L
+    ('float', 'chlorophyll (μg/L)'),    # μg/L
+    ('float', 'dis_oxy (% Sat)'),       # % Sat
+    ('float', 'dis_oxy_mg (mg/L)'),     # mg/L
+    ('float', 'turbidity (NTU)'),       # NTU
+    ('float', 'wiper_pos (V)'),         # Volt
+    ('float', 'depth (m)'),             # meters
+    ('float', 'batt_level (V)'),        # Volt
 ]
 
 
