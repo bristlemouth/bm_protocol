@@ -39,7 +39,6 @@ static constexpr char config_borealis_tx_spl_threshold[] = "borealisTxSplThresho
 static constexpr char config_borealis_tx_max_iqr_threshold[] = "borealisTxMaxIqrThreshold";
 static constexpr char config_borealis_tx_entropy_threshold[] = "borealisTxEntropyThreshold";
 
-
 /*!
  @brief Initialize Borealis Sensor Module
 
@@ -503,17 +502,6 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
           err = BmOK;
         } else {
           err = BmEBADMSG;
-        }
-      } break;
-      case BOREALIS_RECORDING_STATUS: {
-        struct borealis_recording_status d;
-        if (borealis_recording_status_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
-          err = borealis->send_spotter_log_individual(
-              "borealis", d.header,
-              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
-              "%.u,%.3f,%.3f,%.*s\n", d.flags, d.seconds_written, d.seconds_free,
-              d.filename_length, d.filename);
-          bm_free(d.filename);
         }
       } break;
       case HYDROTWIN_LDR: {
