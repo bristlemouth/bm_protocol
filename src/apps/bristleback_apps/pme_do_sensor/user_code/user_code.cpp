@@ -41,8 +41,8 @@
 - Follow as bm_pub_wl is developed
 */
 
-uint32_t pmeLogEnable = 1;
-bool pmeLogEnableCfg = false;
+uint32_t sensorBmLogEnable = 1;
+bool sensorBmLogEnableCfg = false;
 uint32_t pmeDOTIntervalS = 600;
 bool pmeDOTIntervalSCfg = false;
 uint32_t pmeWipeIntervalS = 14400;
@@ -113,8 +113,8 @@ void debugTx(void) {}
 void setup(void) {
   // Load system configuration & initialize if not configured by user
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE,
-                      strlen(SENSOR_BM_LOG_ENABLE), &pmeLogEnable)) {
-    pmeLogEnableCfg = true;
+                      strlen(SENSOR_BM_LOG_ENABLE), &sensorBmLogEnable)) {
+    sensorBmLogEnableCfg = true;
   }
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S,
                       strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS)) {
@@ -143,10 +143,10 @@ void setup(void) {
   pmeWipeTopicStrLen = createPmeWipeDataTopic();
   lastWipeEpochS = loadLastWipeEpoch();
   printf("Last wipe time: %lu\n", lastWipeEpochS);
-  if (pmeLogEnableCfg == true) {
-    printf("User-defined pmeLogEnable found: %" PRIu32 "\n", pmeLogEnable);
+  if (sensorBmLogEnableCfg == true) {
+    printf("User-defined sensorBmLogEnable found: %" PRIu32 "\n", sensorBmLogEnable);
   } else {
-    printf("No user-defined pmeLogEnable - defaulting to: %" PRIu32 "\n", pmeLogEnable);
+    printf("No user-defined sensorBmLogEnable - defaulting to: %" PRIu32 "\n", sensorBmLogEnable);
   }
 
   if (pmeDOTIntervalSCfg == true) {
