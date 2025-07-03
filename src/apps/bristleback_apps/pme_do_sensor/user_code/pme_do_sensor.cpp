@@ -20,7 +20,7 @@
 #define LAST_WIPE_EPOCH_KEY "lastWipeEpochS"
 #define FW_VERSION_KEY "fwVersion"
 
-extern uint32_t pmeLogEnable;
+extern uint32_t sensorBmLogEnable;
 extern uint32_t sensorDebugTxEnable;
 
 uint32_t lastWipeEpochS = 0;
@@ -233,7 +233,7 @@ bool PmeSensor::getDoData(PmeDissolvedOxygenMsg::Data &d, float salinityPpt) {
                 d.do_saturation_pct, d.temperature_deg_c, salinityPpt,
                 salinityFactor(d.temperature_deg_c, salinityPpt), d.quality);
         // Make spotter_log conditional on system config
-        if (pmeLogEnable == 1) {
+        if (sensorBmLogEnable == 1) {
           // Modified for new data output
           spotter_log(0, PME_DO_RAW_LOG, USE_TIMESTAMP, DOT_stats);
         }
@@ -291,7 +291,7 @@ bool PmeSensor::getWipeData(PmeWipeMsg::Data &w) {
     char rtc_time_str[32] = {};
     rtcPrint(rtc_time_str, NULL);
 
-    if (pmeLogEnable) {
+    if (sensorBmLogEnable) {
       spotter_log(0, PME_WIPE_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", %s, line: %.*s\n",
                   uptimeGetMs(), _SNpayload_buffer, wipe_read_len, _WIPEpayload_buffer);
     }
