@@ -274,7 +274,7 @@ void loop() {
       printf("[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d\n", uptimeGetMs(),
              rtcTimeBuffer, rx_code);
     }
-  } // \else
+  }
 
   if ((u_int32_t)uptimeGetMs() - _sample_timer_ms >= sample_duration_ms) {
     printf("[rx-live-state] :: GENERATING SAMPLE!\n");
@@ -298,10 +298,6 @@ void loop() {
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
@@ -317,4 +313,4 @@ void loop() {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
-} // \loop()
+} // loop()
