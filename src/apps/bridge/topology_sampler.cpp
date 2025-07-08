@@ -607,15 +607,14 @@ void topology_sampler_task(void *parameters) {
   // here we will do an initial sample during the bridges 2 minute on period
   topology_sample();
 
+  // After getting the initial topology lets wait for the init period to
+  // end so that we don't accidentally turn off the bus while doing
+  // we are building our topology
+  while (!_bridge_power_controller->initPeriodElapsed()) {
+    check_topology_report(BUS_POWER_ON_DELAY);
+  }
+
   for (;;) {
-
-    // After getting the initial topology lets wait for the init period to
-    // end so that we don't accidentally turn off the bus while doing
-    // we are building our topology
-    while (!_bridge_power_controller->initPeriodElapsed()) {
-      check_topology_report(BUS_POWER_ON_DELAY);
-    }
-
     // Wait for the power control to set the bus ON
     if (_bridge_power_controller->isPowerControlEnabled()) {
       check_topology_report(1000);
