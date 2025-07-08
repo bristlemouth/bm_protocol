@@ -105,7 +105,7 @@ void memfault_platform_get_device_info(sMemfaultDeviceInfo *info) {
   *info = (sMemfaultDeviceInfo) {
     .device_serial = getUIDStr(),
     .software_type = APP_NAME,
-    .software_version = getFWVersionStr(),
+    .software_version = getFwVersionStrSemVer(),
     // TODO - read hwid pins
     .hardware_version = BSP_NAME,
   };
