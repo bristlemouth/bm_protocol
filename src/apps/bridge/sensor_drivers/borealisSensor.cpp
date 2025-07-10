@@ -128,7 +128,6 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   max_iqr_band = REPORT_NAN_ERROR_VALUE;
   entropy = REPORT_NAN_ERROR_VALUE;
   if (band_stats == NULL || band_stats_len == 0) {
-    clear_spectral_entropy_list();
     return BmEINVAL;
   }
 
@@ -141,7 +140,6 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   if (means == NULL) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Failed to allocate for Borealis level stats means\n");
-    clear_spectral_entropy_list();
     return BmENOMEM;
   }
   for (size_t band_index = 0; band_index < num_bands; band_index++) {
@@ -164,7 +162,7 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
   spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min_8bit) / db_step_8bit + 0.5f));
 
-  float min_entropy = calc_min_spectral_entropy_and_clear_list(num_bands, means);
+  float min_entropy = calc_min_spectral_entropy(num_bands, means);
   entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
 
   bm_free(means);
@@ -229,6 +227,8 @@ void BorealisSensor::aggregate(void) {
             exceedsConfiguredThresholds(report.spl, report.max_iqr, report.entropy);
       }
     }
+    // Clear the spectral entropy list after entropy has been calculated
+    clear_spectral_entropy_list();
 
     // Add hydrotwin LDR
     if (tracking_data.ldr.size) {
@@ -449,21 +449,24 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
               d.dt, d.first_band_index, d.levels_length, d.levels);
-          // Base64 decodes to 3/4 of input size.
-          // There are two 12-bit band values per 3 bytes.
-          // 3/4 * 2/3 = 1/2
-          size_t num_bands = d.levels_length / 2;
-          float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
-          if (!spl_db) {
-            bm_debug("Failed to allocate memory for Borealis levels data\n");
-            err = BmENOMEM;
-            bm_free(d.levels);
-            break;
+          // Only insert spectrum into list if aggregation reports are enabled
+          if (borealis->m_aggregation_reports) {
+            // Base64 decodes to 3/4 of input size.
+            // There are two 12-bit band values per 3 bytes.
+            // 3/4 * 2/3 = 1/2
+            size_t num_bands = d.levels_length / 2;
+            float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
+            if (!spl_db) {
+              bm_debug("Failed to allocate memory for Borealis levels data\n");
+              err = BmENOMEM;
+              bm_free(d.levels);
+              break;
+            }
+            parse_levels(spl_db, d.levels, d.levels_length);
+            insert_spectrum_into_list(num_bands, spl_db);
+            bm_free(spl_db);
           }
-          parse_levels(spl_db, d.levels, d.levels_length);
           bm_free(d.levels);
-          insert_spectrum_into_list(num_bands, spl_db);
-          bm_free(spl_db);
         }
       } break;
       case BOREALIS_LEVEL_STATISTICS: {
@@ -476,6 +479,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
             // to be less than half of the bridge power controller's sampleDurationMs, we cannot
             // send multiple of level stat messages yet and need to free the unused string
             bm_free(borealis->tracking_data.stats.levels);
+            borealis->tracking_data.stats.levels = NULL;
           }
 
           if (d.dt == 0) {
