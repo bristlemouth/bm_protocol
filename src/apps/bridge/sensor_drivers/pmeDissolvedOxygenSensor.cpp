@@ -49,8 +49,6 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
     if (bm_semaphore_take(dissolved_oxygen_sensor->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
       static PmeDissolvedOxygenMsg::Data dissolved_oxygen_data;
       if (PmeDissolvedOxygenMsg::decode(dissolved_oxygen_data, data, data_len) == CborNoError) {
-        char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
-        configASSERT(log_buff);
         dissolved_oxygen_sensor->temperature_deg_c.addSample(
             dissolved_oxygen_data.temperature_deg_c);
         dissolved_oxygen_sensor->do_mg_per_l.addSample(dissolved_oxygen_data.do_mg_per_l);
@@ -85,8 +83,6 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
 }
 
 void PmeDissolvedOxygenSensor::aggregate(void) {
-  char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
-  configASSERT(log_buff);
   if (bm_semaphore_take(_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
     pme_dissolved_oxygen_aggregations_t dissolved_oxygen_aggs = {.temperature_deg_c_mean = NAN,
                                                                  .do_mg_per_l_mean = NAN,
@@ -144,7 +140,6 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
         sizeof(pme_dissolved_oxygen_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
 
     // Clear the buffers
-    memset(log_buff, 0, SENSOR_LOG_BUF_SIZE);
     temperature_deg_c.clear();
     do_mg_per_l.clear();
     quality.clear();
@@ -156,7 +151,6 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
     bm_debug(
         "Failed to take mutex for PME Dissolved Oxygen Sensor after getting a new reading\n");
   }
-  bm_free(log_buff);
 }
 
 static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
