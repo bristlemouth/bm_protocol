@@ -16,6 +16,7 @@ bool fwIsDirty(const versionInfo_t *info);
 const uint32_t *getUID(void);
 const char *getUIDStr(void);
 const char *getFWVersionStr(void);
+const char *getFwVersionStrSemVer(void);
 uint32_t getGitSHA(void);
 void getFWVersion(uint8_t *major, uint8_t *minor, uint8_t *revision);
 size_t getBuildId(const uint8_t **buildId);

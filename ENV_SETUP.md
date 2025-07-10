@@ -316,3 +316,22 @@ if you're developing in the Sofar organization:
 finally
 
 `memfault coredump`
+
+### Pulling memfault coredump from flash and uploading manually
+Connection to the device via USB is required for this.
+If a device has experienced a crash,
+after the device reboots,
+place the device into dfu bootloader via:
+
+- `bootloader` console command
+- holding the boot button while pressing and releasing the reset button
+
+Run the following `dfu-util` command:
+
+```
+dfu-util -a 0 -s 0x813E000: -U path/to/coredump.bin
+```
+
+Once `dfu-util` has written the coredump,
+navigate to the issues tab in memfault and select `Upload Manually` in the top left corner.
+From here the coredump can be uploaded in order to be inspected.
