@@ -268,7 +268,6 @@ static void defaultTask(void *parameters) {
   // platform boot before starting the watchdog task
   memfault_platform_boot();
 
-  startIWDGTask();
   startSerial();
 
   startSerialConsole(&usbCLI);
