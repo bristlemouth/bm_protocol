@@ -120,7 +120,16 @@ static bm_serial_callbacks_t bm_serial_callbacks;
 static void ncp_uart_pub_cb(uint64_t node_id, const char *topic, uint16_t topic_len,
                             const uint8_t *data, uint16_t data_len, uint8_t type,
                             uint8_t version) {
-  printf("Publishing To Topic: %.*s\n", topic_len, topic);
+
+  // get
+  RTCTimeAndDate_t time_and_date = {};
+  char rtcTimeBuffer[32] = {};
+  bool rtcValid = rtcGet(&time_and_date);
+  if (rtcValid == pdPASS) {
+    rtcPrint(rtcTimeBuffer, &time_and_date);
+  };
+
+  printf("Publishing To Topic: %.*s, from node: %" PRIx64 ", rtc: %s\n", topic_len, topic, node_id,  rtcTimeBuffer);
   bm_serial_pub(node_id, topic, topic_len, data, data_len, type, version);
 }
 
