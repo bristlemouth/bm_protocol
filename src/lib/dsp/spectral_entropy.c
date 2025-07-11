@@ -90,11 +90,9 @@ void clear_spectral_entropy_list(void) {
   }
 }
 
-float calc_min_spectral_entropy_and_clear_list(const unsigned int num_bands,
-                                               float const *const means) {
+float calc_min_spectral_entropy(const unsigned int num_bands, float const *const means) {
   min_entropy = 1.0f;
   SpectralEntropyArgs arg = {.num_bands = num_bands, .means = means};
   ll_traverse(&spectra, compute_entropies_and_find_minimum, &arg);
-  clear_spectral_entropy_list();
   return min_entropy;
 }

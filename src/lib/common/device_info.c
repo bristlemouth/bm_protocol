@@ -133,6 +133,16 @@ const char *getFWVersionStr(void) {
 }
 
 /*!
+ * @brief Get Firmware Version Following Semantic Version 2.0.0
+ *
+ * @details Get firmware version as string without the application name that follows
+ * semantic versioning 
+ *
+ * @returns pointer to firmare version string
+ */
+const char *getFwVersionStrSemVer(void) { return versionNote.info.versionStr; }
+
+/*!
   Get pointer to build-id in memory
 
   \param[out] **buildId Pointer to buildId byte array

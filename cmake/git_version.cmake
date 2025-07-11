@@ -7,7 +7,7 @@
 
 set(GIT_CMD git)
 set(GIT_ARGS_SHA describe --match ForceNone --abbrev=8 --always)
-execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS_SHA}
+execute_process(COMMAND ${GIT_CMD} -C ${CMAKE_CURRENT_LIST_DIR} ${GIT_ARGS_SHA}
                 OUTPUT_VARIABLE GIT_SHA
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
