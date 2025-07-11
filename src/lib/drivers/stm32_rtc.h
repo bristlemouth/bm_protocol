@@ -30,6 +30,7 @@ BaseType_t rtcInit();
 BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate);
 BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate);
 BaseType_t rtcPrint(char* buffer, RTCTimeAndDate_t* timeAndDate);
+uint64_t rtcGetMicrosecondsSimple(void);
 uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate);
 bool logRtcGetTimeStr(char *timeStr, size_t len, bool epoch);
 bool isRTCSet();
