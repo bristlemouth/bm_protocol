@@ -2,7 +2,8 @@ from bitstring import BitStream
 import struct
 
 # Test sensor-data payloads in hex format.
-payload = "de00000000d5740a1201f6d80006d40002f7952cefc9a23805eddecd082db2b541cdcc4c3d00000000c3f5a8beae47b8426666fe407b14be403d0a973fdbf92441000000006abcb541cdcc4c3d00000000f628dcbe0080b84252b8fe406666be403d0a973fc3f5244100000000b4c8b541cdcc4c3d000000005c8fc2be71bdb8423d0aff403d0abf40ec51983fc3f5244100000000"
+payload = "de68753833b61bd40279192dc62de96aff0746ad5e0665b2b19ecc6db43d0ab9417b142ebe00000000295c8fbe85ebba42000000418fc2a540ec51983f81952541295c2f404c37b9410ad7233d00000000e17a94bef628bb42f6280041cdcca4403d0a973f06812541000030407f6ab941cdcc4c3d00000000f628dcbe5238bb4200000041e17aa4403d0a973fd578254100003040"
+sensor_data = "3d0ab9417b142ebe00000000295c8fbe85ebba42000000418fc2a540ec51983f81952541295c2f404c37b9410ad7233d00000000e17a94bef628bb42f6280041cdcca4403d0a973f06812541000030407f6ab941cdcc4c3d00000000f628dcbe5238bb4200000041e17aa4403d0a973fd578254100003040"
 
 # Description of the detection structure to unpack from the payload.
 # Each tuple contains a type and a field name.
@@ -105,12 +106,16 @@ def hex_to_struct(hex_data, struct_description):
 if __name__ == '__main__':
     # Your hexadecimal data as bytes
     hex_data = bytes.fromhex(payload)
+    sensor_hex_data = bytes.fromhex(sensor_data)
 
     # Load into a BitStream
     bitstream = BitStream(hex_data)
+    sensor_bitstream = BitStream(sensor_hex_data)
 
     # To read only raw data, skip the first 29 header bytes by reading and discarding them
     _ = bitstream.read('bytes:29')
+
+    print("~~~~~~~~~ FROM RAW MESSAGES END POINT ~~~~~~~~~")
 
     # Process remaining bits in the bitstream to extract detection data.
     while bitstream.pos < bitstream.len:
@@ -124,5 +129,22 @@ if __name__ == '__main__':
         print(f"- Detection data:")
         for key in detection_data:
             print(f"\t{key}: {float(detection_data[key]):.3f}")
+
+        print("---------------------------------\n")
+
+    print("~~~~~~~~~ FROM SENSOR DATA END POINT ~~~~~~~~~")
+
+    # Process remaining bits in the bitstream to extract detection data.
+    while sensor_bitstream.pos < sensor_bitstream.len:
+        # Read the next 11 bytes representing detection data.
+        s_detect_data = sensor_bitstream.read('bytes:40')
+
+        # Convert detection data from bytes to a structured format.
+        s_detection_data = hex_to_struct(s_detect_data, detect_struct_description)
+
+        # Print the unpacked detection data.
+        print(f"- Detection data:")
+        for key in s_detection_data:
+            print(f"\t{key}: {float(s_detection_data[key]):.3f}")
 
         print("---------------------------------\n")
