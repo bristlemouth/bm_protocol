@@ -162,8 +162,10 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
   spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min_8bit) / db_step_8bit + 0.5f));
 
-  float min_entropy = calc_min_spectral_entropy(num_bands, means);
-  entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
+  // TODO: add back once calculations for entropy require less resources
+  //float min_entropy = calc_min_spectral_entropy(num_bands, means);
+  //entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
+  entropy = 0.0;
 
   bm_free(means);
   return BmOK;
@@ -187,7 +189,10 @@ bool BorealisSensor::exceedsConfiguredThresholds(uint8_t spl, uint8_t max_iqr,
 
   bool spl_exceeds = spl * db_step_8bit + db_min_8bit + borealis_db_offset >= spl_threshold;
   bool max_iqr_exceeds = max_iqr * db_step_8bit >= max_iqr_threshold;
-  bool entropy_exceeds = entropy <= entropy_threshold * 255.0f;
+  // TODO: add back once calculations for entropy require less resources
+  //bool entropy_exceeds = entropy <= entropy_threshold * 255.0f;
+  (void)entropy;
+  bool entropy_exceeds = false;
   return (spl_exceeds || max_iqr_exceeds || entropy_exceeds);
 }
 
@@ -228,7 +233,7 @@ void BorealisSensor::aggregate(void) {
       }
     }
     // Clear the spectral entropy list after entropy has been calculated
-    clear_spectral_entropy_list();
+    //clear_spectral_entropy_list();
 
     // Add hydrotwin LDR
     if (tracking_data.ldr.size) {
@@ -449,24 +454,25 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
               d.dt, d.first_band_index, d.levels_length, d.levels);
+          // TODO: add back once calculations for entropy require less resources
           // Only insert spectrum into list if aggregation reports and power controller are enabled
-          if (borealis->m_aggregation_reports &&
-              borealis->m_pwr_cfg.bridgePowerControllerEnabled) {
-            // Base64 decodes to 3/4 of input size.
-            // There are two 12-bit band values per 3 bytes.
-            // 3/4 * 2/3 = 1/2
-            size_t num_bands = d.levels_length / 2;
-            float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
-            if (!spl_db) {
-              bm_debug("Failed to allocate memory for Borealis levels data\n");
-              err = BmENOMEM;
-              bm_free(d.levels);
-              break;
-            }
-            parse_levels(spl_db, d.levels, d.levels_length);
-            insert_spectrum_into_list(num_bands, spl_db);
-            bm_free(spl_db);
-          }
+          //if (borealis->m_aggregation_reports &&
+          //    borealis->m_pwr_cfg.bridgePowerControllerEnabled) {
+          //  // Base64 decodes to 3/4 of input size.
+          //  // There are two 12-bit band values per 3 bytes.
+          //  // 3/4 * 2/3 = 1/2
+          //  size_t num_bands = d.levels_length / 2;
+          //  float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
+          //  if (!spl_db) {
+          //    bm_debug("Failed to allocate memory for Borealis levels data\n");
+          //    err = BmENOMEM;
+          //    bm_free(d.levels);
+          //    break;
+          //  }
+          //  parse_levels(spl_db, d.levels, d.levels_length);
+          //  insert_spectrum_into_list(num_bands, spl_db);
+          //  bm_free(spl_db);
+          //}
           bm_free(d.levels);
         }
       } break;
