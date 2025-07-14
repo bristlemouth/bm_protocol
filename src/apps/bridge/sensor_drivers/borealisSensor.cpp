@@ -232,6 +232,7 @@ void BorealisSensor::aggregate(void) {
             exceedsConfiguredThresholds(report.spl, report.max_iqr, report.entropy);
       }
     }
+    // TODO: add back once calculations for entropy require less resources
     // Clear the spectral entropy list after entropy has been calculated
     //clear_spectral_entropy_list();
 
