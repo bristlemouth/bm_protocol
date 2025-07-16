@@ -8,9 +8,6 @@ using namespace BQ;
 #define BQ_RST (1 << 7)
 #define POWERPATH_REG_DEF 0x20
 
-static const uint16_t inaAvgCounts[] = {1, 4, 16, 64, 128, 256, 512, 1024};
-static const uint16_t inaConvTimes[] = {140, 203, 332, 588, 1100, 2116, 4156, 8244};
-
 BQ25820::BQ25820(I2CInterface_t * interface, uint8_t address)
 {
   _interface = interface;
@@ -74,7 +71,7 @@ bool BQ25820::init() {
   \param[out] *value register value
   \return true if successfull false otherwise
 */
-bool BQ25820::readReg(Reg_t reg, int16_t *value) {
+bool BQ25820::read16(Reg_t reg, int16_t *value) {
   bool rval = false;
   uint8_t regByte = reg;
   uint16_t regVal = 0;
@@ -145,7 +142,7 @@ bool BQ25820::read8(Reg_t reg, uint8_t *value) {
   \param[in] value Register value to set
   \return true if successfull false otherwise
 */
-bool BQ25820::writeReg(Reg_t reg, uint16_t value) {
+bool BQ25820::write16(Reg_t reg, uint16_t value) {
   uint8_t bytes[] = {static_cast<uint8_t>(reg), static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value & 0xFF)};
   return (writeBytes(bytes, sizeof(bytes), 100) == I2C_OK);
 }
@@ -200,12 +197,6 @@ bool BQ25820::disablePfm() {
     rval = true;
   } while (0);
 
-  //writeReg(CC_LIM_REG, 0x0010);
-
-  // Default value is 0x1D
-  // Setting the top off timer to 15m = 0x5D
-  //write8(TIMER_CTRL_REG, 0x5D);
-  
   return rval;
 }
 
@@ -261,31 +252,31 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
         // ADC is done
         //vTaskDelay(pdMS_TO_TICKS(5));
 
-        readReg(IAC_ADC_REG, &iac_val);
+        read16(IAC_ADC_REG, &iac_val);
         iac = iac_val * 2;
         printf("%d,", iac);
 
-        readReg(IBAT_ADC_REG, &ibat_val);
+        read16(IBAT_ADC_REG, &ibat_val);
         ibat = ibat_val * 2;
         printf("%d,", ibat);
         
-        readReg(VAC_ADC_REG, &vac_val);
+        read16(VAC_ADC_REG, &vac_val);
         vac = vac_val * 0.002f;
         printf("%.3f,", vac);
         
-        readReg(VBAT_ADC_REG, &vbat_val);
+        read16(VBAT_ADC_REG, &vbat_val);
         vbat = vbat_val * 0.002f;
         printf("%.3f,", vbat);
         
-        readReg(VFB_ADC_REG, &vbat_fb_val);
+        read16(VFB_ADC_REG, &vbat_fb_val);
         vbat_fb = vbat_fb_val * 0.008691f;
         printf("%.3f,", vbat_fb);
         
-        readReg(VSYS_ADC_REG, &vsys_val);
+        read16(VSYS_ADC_REG, &vsys_val);
         vsys = vsys_val * 0.002f;
         printf("%.3f,", vsys);
         
-        readReg(TS_ADC_REG, &ts_val);
+        read16(TS_ADC_REG, &ts_val);
         ts = ts_val * 0.09765625f;
         //printf("%.3f\n", ts);
         printf("%.3f,", ts);
@@ -304,16 +295,10 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
     }
     rval = true;
   } while(0);
-  //write8(TIMER_CTRL_REG, 0x5D);
   
   read8(CHARGER_CTRL_REG, &tmpreg);
   printf("0x%X\n", tmpreg);
-  // Default is 0xC9
-  // Setting the threshold to 93% = 0x09
-  //write8(CHARGER_CTRL_REG, 0x09);
-  //write8(CHARGER_CTRL_REG, 0xC9);
-  
-  //writeReg(CHARGE_VLIM_REG, 0x00);
+
   return rval;
 }
 

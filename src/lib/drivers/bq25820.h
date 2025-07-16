@@ -38,9 +38,9 @@ public:
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);
-  bool readReg(Reg_t reg, int16_t *value);
+  bool read16(Reg_t reg, int16_t *value);
   bool read8(Reg_t reg, uint8_t *value);
-  bool writeReg(Reg_t reg, uint16_t value);
+  bool write16(Reg_t reg, uint16_t value);
   bool write8(Reg_t reg, uint8_t value);
   int decodeTwosComplBits(uint16_t bits, uint16_t mask);
 };
