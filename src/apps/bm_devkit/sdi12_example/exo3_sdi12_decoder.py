@@ -1,3 +1,24 @@
+"""
+EXO3 Raw Message and Sensor Data Decoding Script
+
+Decodes hexadecimal payloads from EXO3 sensor messages received via the Sofar API.
+Parses binary-encoded sensor data into human-readable fields including temperature,
+conductivity, total algae-PE, dissolved oxygen, turbidity, depth, and power readings.
+
+Usage:
+- Define a hex payload (e.g., from API).
+- The script skips the message header and unpacks the remaining bytes into a structured format.
+- Each set of 10 floats (40 bytes) is printed with corresponding field names.
+
+Dependencies:
+- bitstring
+- struct
+
+Author: Uma Katikapalli
+Date: July 21, 2025
+"""
+
+
 from bitstring import BitStream
 import struct
 
@@ -10,7 +31,7 @@ sensor_data = "3d0ab9417b142ebe00000000295c8fbe85ebba42000000418fc2a540ec51983f8
 # Each tuple contains a type and a field name.
 # This is a representation of the C struct the data is serialized from:
 #       struct __attribute__((packed)) EXO3sample {
-#               float temp_sensor;    // Celcius
+#               float temp_sensor;    // Celsius
 #               float sp_cond;        // μS/cm
 #               float phyocyanin;     // μg/L
 #               float chlorophyll;    // μg/L
@@ -22,7 +43,7 @@ sensor_data = "3d0ab9417b142ebe00000000295c8fbe85ebba42000000418fc2a540ec51983f8
 #               float power;          // volt
 #             };
 detect_struct_description = [
-    ('float', 'temp_sensor (ºC)'),      # Celcius
+    ('float', 'temp_sensor (ºC)'),      # Celsius
     ('float', 'sp_cond (μS/cm)'),       # μS/cm
     ('float', 'phycocyanin (μg/L)'),    # μg/L
     ('float', 'chlorophyll (μg/L)'),    # μg/L
@@ -120,7 +141,7 @@ if __name__ == '__main__':
 
     # Process remaining bits in the bitstream to extract detection data.
     while raw_bitstream.pos < raw_bitstream.len:
-        # Read the next 11 bytes representing detection data.
+        # Read the next 40 bytes representing detection data.
         raw_detect_data = raw_bitstream.read('bytes:40')
 
         # Convert detection data from bytes to a structured format.
@@ -137,7 +158,7 @@ if __name__ == '__main__':
 
     # Process remaining bits in the bitstream to extract detection data.
     while sensor_bitstream.pos < sensor_bitstream.len:
-        # Read the next 11 bytes representing detection data.
+        # Read the next 40 bytes representing detection data.
         sensor_detect_data = sensor_bitstream.read('bytes:40')
 
         # Convert detection data from bytes to a structured format.
