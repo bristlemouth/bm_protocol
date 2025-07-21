@@ -540,76 +540,76 @@ static void spoof_aanderaa() {
 
     // Now let's aggregate those values into statistics
     if (current_data[0].getNumSamples() >= max_readings_in_agg) {
-      printf("ERR - No more room in current reading buffer, already have %d readings!\n",
+      printf("ERR - No more room in current reading buffer, already have %" PRIu64 " readings!\n",
              max_readings_in_agg);
       return;
     }
 
     printf("parsed values:\n");
     current_data[ABS_SPEED].addSample(d.abs_speed_cm_s);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_SPEED],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[ABS_SPEED],
            d.abs_speed_cm_s, current_data[ABS_SPEED].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[ABS_SPEED].getMin(),
            current_data[ABS_SPEED].getMax());
 
     current_data[ABS_TILT].addSample(d.abs_tilt_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[ABS_TILT],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[ABS_TILT],
            d.abs_tilt_deg, current_data[ABS_TILT].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[ABS_TILT].getMin(),
            current_data[ABS_TILT].getMax());
 
     current_data[DIRECTION].addSample(d.direction_deg_m);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[DIRECTION],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[DIRECTION],
            d.direction_deg_m, current_data[DIRECTION].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[DIRECTION].getMin(),
            current_data[DIRECTION].getMax());
 
     current_data[EAST].addSample(d.east_cm_s);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[EAST], d.east_cm_s,
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[EAST], d.east_cm_s,
            current_data[EAST].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
            current_data[EAST].getMin(), current_data[EAST].getMax());
 
     current_data[HEADING].addSample(d.heading_deg_m);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[HEADING],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[HEADING],
            d.heading_deg_m, current_data[HEADING].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[HEADING].getMin(),
            current_data[HEADING].getMax());
 
     current_data[NORTH].addSample(d.north_cm_s);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[NORTH], d.north_cm_s,
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[NORTH], d.north_cm_s,
            current_data[NORTH].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
            current_data[NORTH].getMin(), current_data[NORTH].getMax());
 
     current_data[PING_COUNT].addSample(d.ping_count);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[PING_COUNT],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[PING_COUNT],
            d.ping_count, current_data[PING_COUNT].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[PING_COUNT].getMin(),
            current_data[PING_COUNT].getMax());
 
     current_data[TILT_X].addSample(d.tilt_x_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TILT_X], d.tilt_x_deg,
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[TILT_X], d.tilt_x_deg,
            current_data[TILT_X].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
            current_data[TILT_X].getMin(), current_data[TILT_X].getMax());
 
     current_data[TILT_Y].addSample(d.tilt_y_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TILT_Y], d.tilt_y_deg,
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[TILT_Y], d.tilt_y_deg,
            current_data[TILT_Y].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
            current_data[TILT_Y].getMin(), current_data[TILT_Y].getMax());
 
     current_data[MAX_TILT].addSample(d.max_tilt_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[MAX_TILT],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[MAX_TILT],
            d.max_tilt_deg, current_data[MAX_TILT].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[MAX_TILT].getMin(),
            current_data[MAX_TILT].getMax());
 
     current_data[STD_TILT].addSample(d.std_tilt_deg);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[STD_TILT],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[STD_TILT],
            d.std_tilt_deg, current_data[STD_TILT].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[STD_TILT].getMin(),
            current_data[STD_TILT].getMax());
 
     current_data[TEMP].addSample(d.temperature_deg_c);
-    printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[TEMP],
+    printf("\t%s | value: %f, count: %" PRIu32 "/%llu, min: %f, max: %f\n", keys[TEMP],
            d.temperature_deg_c, current_data[TEMP].getNumSamples(),
            max_readings_in_agg - N_SAMPLES_PAD, current_data[TEMP].getMin(),
            current_data[TEMP].getMax());

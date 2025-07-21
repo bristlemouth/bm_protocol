@@ -9,6 +9,7 @@
 #include "util.h"
 #include <stdio.h>
 #include <string.h>
+#include "uptime.h"
 
 #define adin_semaphore_max_queue 10
 
@@ -21,6 +22,7 @@ static void adi_spi_task(void *arg) {
   (void)arg;
   while (1) {
     if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY) == pdTRUE) {
+      printf("running adin spi task, ticks: %" PRIu64 "!\n", uptimeGetMs());
       if (ADIN2111_MAC_SPI_CALLBACK) {
         ADIN2111_MAC_SPI_CALLBACK(ADIN2111_MAC_SPI_CALLBACK_PARAM, 0, NULL);
       }
