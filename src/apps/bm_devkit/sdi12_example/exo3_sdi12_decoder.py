@@ -1,16 +1,41 @@
+"""
+EXO3 Raw Message Decoding Script
+
+Decodes raw hexadecimal payloads from EXO3 sensor messages received via the Sofar API.
+Parses binary-encoded sensor data into human-readable fields including temperature,
+conductivity, pH, dissolved oxygen, turbidity, depth, and power readings.
+
+Usage:
+- Define a hex payload (e.g., from API).
+- The script skips the message header and unpacks the remaining bytes into a structured format.
+- Each set of 10 floats (40 bytes) is printed with corresponding field names.
+
+Dependencies:
+- bitstring
+- struct
+
+Note:
+If you're using only the sensor data portion (i.e., not the full raw message from Sofar),
+you can skip the step where the first 29 bytes are discarded.
+
+Author: Uma Arthika Katikapalli
+Date: July 21, 2025
+"""
+
+
 from bitstring import BitStream
 import struct
 
-# Test sensor-data payloads in hex format.
+# payload is a Raw Message received via Sofar API that start with "de.." (not just sensor data)
 payload = "de00000000bb9ba012215ed80006d40000caf3e2ef0ef2e48b51b585e00c02a8410000a03fae47e940cdccf4c1f628d54200001841cdcc204114aea73f48e1ba3e85eb4141a01aa8415c8fa23f52b8e640b81ed3c11f05d5420ad71741b81e214148e19a3f48e1ba3e85eb41413333a8415c8fa23f52b8e640295cd1c13d0ad5420ad717419a99214148e19a3f48e1ba3e85eb4141"
 
 # Description of the detection structure to unpack from the payload.
 # Each tuple contains a type and a field name.
 # This is a representation of the C struct the data is serialized from:
 #       struct __attribute__((packed)) EXO3sample {
-#               float temp_sensor;    // Celcius
+#               float temp_sensor;    // Celsius
 #               float sp_cond;        // uS/cm
-#               float pH;
+#               float pH;             // pH: 1-14
 #               float pH_mV;          // mV
 #               float dis_oxy;        // % Sat
 #               float dis_oxy_mg;     // mg/L
@@ -22,7 +47,7 @@ payload = "de00000000bb9ba012215ed80006d40000caf3e2ef0ef2e48b51b585e00c02a841000
 detect_struct_description = [
     ('float', 'temp_sensor'),       # Celcius
     ('float', 'sp_cond'),           # uS/cm
-    ('float', 'pH'),                # range: 1-14
+    ('float', 'pH'),                # pH: 1-14
     ('float', 'pH_mV'),             # mV
     ('float', 'dis_oxy'),           # % Sat
     ('float', 'dis_oxy_mg'),        # mg/L
@@ -109,16 +134,16 @@ if __name__ == '__main__':
     # Load into a BitStream
     bitstream = BitStream(hex_data)
 
-    # To read only raw data, skip the first 29 header bytes by reading and discarding them
+    # Skip the first 29 header bytes by reading and discarding them. Comment this line if "payload" is sensor data. 
     _ = bitstream.read('bytes:29')
 
     # Process remaining bits in the bitstream to extract detection data.
     while bitstream.pos < bitstream.len:
-        # Read the next 11 bytes representing detection data.
-        detect_data = bitstream.read('bytes:40')
+        # Read the next 40 bytes (10 floats) representing one EXO3 sample.
+        sample_data = bitstream.read('bytes:40')
 
         # Convert detection data from bytes to a structured format.
-        detection_data = hex_to_struct(detect_data, detect_struct_description)
+        detection_data = hex_to_struct(sample_data, detect_struct_description)
 
         # Print the unpacked detection data.
         print(f"- Detection data:")
