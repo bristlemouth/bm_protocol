@@ -45,7 +45,7 @@ payload = "de00000000bb9ba012215ed80006d40000caf3e2ef0ef2e48b51b585e00c02a841000
 #               float power;          // volt
 #             };
 detect_struct_description = [
-    ('float', 'temp_sensor'),       # Celcius
+    ('float', 'temp_sensor'),       # Celsius
     ('float', 'sp_cond'),           # uS/cm
     ('float', 'pH'),                # pH: 1-14
     ('float', 'pH_mV'),             # mV
