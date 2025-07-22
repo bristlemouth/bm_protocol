@@ -1,7 +1,8 @@
 """
 EXO3 Raw Message and Sensor Data Decoding Script
 
-Decodes hexadecimal payloads from EXO3 sensor messages received via the Sofar API.
+Decodes hexadecimal payloads from EXO3 sensor messages received via the raw-messages 
+and sensor-data Sofar API.
 Parses binary-encoded sensor data into human-readable fields including temperature,
 conductivity, total algae-PE, dissolved oxygen, turbidity, depth, and power readings.
 
@@ -137,7 +138,7 @@ if __name__ == '__main__':
     # To read only raw data, skip the first 29 header bytes by reading and discarding them. This is not needed for sensor data
     _ = raw_bitstream.read('bytes:29')
 
-    print("~~~~~~~~~ FROM RAW MESSAGES END POINT ~~~~~~~~~")
+    print("~~~~~~~~~ FROM RAW MESSAGES ENDPOINT ~~~~~~~~~")
 
     # Process remaining bits in the bitstream to extract detection data.
     while raw_bitstream.pos < raw_bitstream.len:
@@ -154,7 +155,7 @@ if __name__ == '__main__':
 
         print("---------------------------------\n")
 
-    print("~~~~~~~~~ FROM SENSOR DATA END POINT ~~~~~~~~~")
+    print("~~~~~~~~~ FROM SENSOR DATA ENDPOINT ~~~~~~~~~")
 
     # Process remaining bits in the bitstream to extract detection data.
     while sensor_bitstream.pos < sensor_bitstream.len:
