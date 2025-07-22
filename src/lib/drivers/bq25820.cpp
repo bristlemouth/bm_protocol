@@ -160,11 +160,9 @@ bool BQ25820::write8(Reg_t reg, uint8_t value) {
 }
 
 /*!
-  Set bits in configuration register
+ Disable the Pulse Frequency Modulation (PFM) feature of the BQ25820 charger IC.
+ When using this charger at low currents the PFM feature causes issues per the data sheet.
 
-  \param[in] bits Value to set in config
-  \param[in] mask Mask for value size (since it will have to clear the bits first)
-  \param[in] position Number of bits to left shift before clearing/setting value
   \return true if successfull false otherwise
 */
 bool BQ25820::disablePfm() {
