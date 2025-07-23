@@ -2,6 +2,7 @@
 #include "queue.h"
 #include "task.h"
 #include <string.h>
+#include "uptime.h"
 
 #include "app_util.h"
 #include "bcmp.h"
@@ -129,7 +130,7 @@ static void ncp_uart_pub_cb(uint64_t node_id, const char *topic, uint16_t topic_
     rtcPrint(rtcTimeBuffer, &time_and_date);
   };
 
-  printf("Publishing To Topic: %.*s, from node: %" PRIx64 ", rtc: %s\n", topic_len, topic, node_id,  rtcTimeBuffer);
+  printf("Publishing To Topic: %.*s, from node: %" PRIx64 ", rtc: %s, ticks: %" PRIu64 "\n", topic_len, topic, node_id,  rtcTimeBuffer, uptimeGetMs());
   bm_serial_pub(node_id, topic, topic_len, data, data_len, type, version);
 }
 

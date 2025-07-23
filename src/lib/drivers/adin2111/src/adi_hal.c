@@ -1,4 +1,5 @@
 #include "adi_hal.h"
+#include "adi_mac.h"
 #include "FreeRTOS.h"
 #include "app_util.h"
 #include "bm_os.h"
@@ -109,6 +110,9 @@ uint32_t HAL_SpiReadWrite(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nByte
 
   if (status == SPI_OK && ADI_SPI_TASK_HANDLE) {
     xTaskNotifyGive(ADI_SPI_TASK_HANDLE);
+    // if (ADIN2111_MAC_SPI_CALLBACK) {
+    //   ADIN2111_MAC_SPI_CALLBACK(ADIN2111_MAC_SPI_CALLBACK_PARAM, 0, NULL);
+    // }
   } else {
     printf("Network SPI Read/Write Failed\n");
   }
