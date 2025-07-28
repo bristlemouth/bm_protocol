@@ -28,12 +28,22 @@ typedef enum {
 
 } Reg_t;
 
+typedef struct {
+  int16_t iac;
+  int16_t ibat;
+  float vac;
+  float vbat;
+  float vbat_fb;
+  float vsys;
+  float ts;
+} BQ25820ADC_t;
+
 class BQ25820 : public AbstractI2C {
 public:
   BQ25820(I2CInterface_t* interface, uint8_t address=I2C_DEFAULT_ADDR);
   bool init();
   bool disablePfm();
-  bool readSensors(char *buffer, size_t len);
+  bool readSensors(BQ25820ADC_t &adc_readings);
   bool readFaults(char *buffer, size_t len);
 
 private:

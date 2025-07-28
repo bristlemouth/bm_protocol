@@ -198,92 +198,70 @@ bool BQ25820::disablePfm() {
   return rval;
 }
 
-bool BQ25820::readSensors(char *buffer, size_t len) {
+bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
   bool rval = false;
   bool quit = false;
   
   int16_t iac_val;
-  int16_t iac;
-
   int16_t ibat_val;
-  int16_t ibat;
-  
   int16_t vac_val;
-  float vac;
-  
   int16_t vbat_val;
-  float vbat;
-  
   int16_t vbat_fb_val;
-  float vbat_fb;
-  
   int16_t vsys_val;
-  float vsys;
-  
   int16_t ts_val;
-  float ts;
 
   uint8_t ppreg = 0x00;
-
   uint8_t tmpreg;
-
   uint16_t i;
 
+  // Enable all ADC channels
   write8(ADC_CH_CTRL_REG, 0x00);
 
   do {
-    if(!write8(ADC_CTRL_REG, 0xE0)) { // 0xA8 = old val
-      break;
+    // Enable the ADC, set it to 1 shot mode, set it to 13 bit resolution, and disable averaging.
+    if(!write8(ADC_CTRL_REG, 0xE0)) {
+      break; // Exit the loop if this register write fails
     }
+    // Loop until the adc is done then collect the results
     for (i = 0; i < 1000; i++) {
-      //printf("%d\n", i);
       vTaskDelay(pdMS_TO_TICKS(2));
+      // Check the ADC_DONE_FLAG bit
       if(!read8(CHARGER_FLAG_1, &tmpreg)) { 
-        quit = true; // Tell the outer do while to exit
+        // If there is an issue checking the flag reg then
+        // Tell the outer do while to exit
+        quit = true; 
         printf("Charger flag 1 read failed\n");
-        break; // Exit this polling loop
+        // Exit this polling loop
+        break;
       }
       if (tmpreg && 0x80) {
+        // The ADC is done. Collect the results.
         printf("Reading ADCs\n");
-        //vTaskDelay(pdMS_TO_TICKS(150));
         printf("loops: %d\n", i);
-        // ADC is done
-        //vTaskDelay(pdMS_TO_TICKS(5));
 
         read16(IAC_ADC_REG, &iac_val);
-        iac = iac_val * 2;
-        printf("%d,", iac);
+        adc_readings.iac = iac_val * 2;
 
         read16(IBAT_ADC_REG, &ibat_val);
-        ibat = ibat_val * 2;
-        printf("%d,", ibat);
+        adc_readings.ibat = ibat_val * 2;
         
         read16(VAC_ADC_REG, &vac_val);
-        vac = vac_val * 0.002f;
-        printf("%.3f,", vac);
+        adc_readings.vac = vac_val * 0.002f;
         
         read16(VBAT_ADC_REG, &vbat_val);
-        vbat = vbat_val * 0.002f;
-        printf("%.3f,", vbat);
+        adc_readings.vbat = vbat_val * 0.002f;
         
         read16(VFB_ADC_REG, &vbat_fb_val);
-        vbat_fb = vbat_fb_val * 0.008691f;
-        printf("%.3f,", vbat_fb);
+        adc_readings.vbat_fb = vbat_fb_val * 0.008691f;
         
         read16(VSYS_ADC_REG, &vsys_val);
-        vsys = vsys_val * 0.002f;
-        printf("%.3f,", vsys);
+        adc_readings.vsys = vsys_val * 0.002f;
         
         read16(TS_ADC_REG, &ts_val);
-        ts = ts_val * 0.09765625f;
-        //printf("%.3f\n", ts);
-        printf("%.3f,", ts);
+        adc_readings.ts = ts_val * 0.09765625f;
 
         read8(POWER_PATH_REG, &ppreg);
         //printf("0x%X\n", ppreg);
-
-        snprintf(buffer, len, "%d,%d,%.3f,%.3f,%.3f,%.3f,%.3f,", iac, ibat,
-            vac, vbat, vbat_fb, vsys, ts);
       }
       vTaskDelay(pdMS_TO_TICKS(5));
       //break;
@@ -300,6 +278,9 @@ bool BQ25820::readSensors(char *buffer, size_t len) {
   return rval;
 }
 
+void BQ25820::logSensors(BQ25820ADC_t &adc_readings) {
+
+}
 
 bool BQ25820::readFaults(char *buffer, size_t len) {
   uint8_t faults = 0x00;
