@@ -236,9 +236,6 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
       }
       if (tmpreg && 0x80) {
         // The ADC is done. Collect the results.
-        printf("Reading ADCs\n");
-        printf("loops: %d\n", i);
-
         read16(IAC_ADC_REG, &iac_val);
         adc_readings.iac = iac_val * 2;
 
@@ -272,8 +269,8 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
     rval = true;
   } while(0);
   
-  read8(CHARGER_CTRL_REG, &tmpreg);
-  printf("0x%X\n", tmpreg);
+  //read8(CHARGER_CTRL_REG, &tmpreg);
+  //printf("0x%X\n", tmpreg);
 
   return rval;
 }
@@ -301,14 +298,15 @@ bool BQ25820::readFaults(BQ25820_faults &bq_faults) {
 bool BQ25820::printFaults(char *buffer, size_t len) {
   uint8_t faults = 0x00;
   int cx = 0;
+  BQ25820_faults ufaults;
 
   char names[8][30] = {"RESERVED", "DRV_OKZ_FLAG", "CHG_TMR_FLAG", "TSHUT_FLAG", "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG", "VAC_UV_FLAG"};
-  read8(FAULT_FLAG_REG, &faults);
-  
-  //printf("%b:\t", faults);
 
+  read8(FAULT_FLAG_REG, &faults);
+  readFaults(ufaults);
+  faults = ufaults.raw_reg;
+  
   for (uint8_t i=0; i < 8; i++) {
-    //printf("%u, ", i);
     if (faults & (1 << i)) {
       printf("%s ", names[i]);
       cx = snprintf(buffer+cx, len-cx, "%s ", names[i]);
@@ -318,6 +316,9 @@ bool BQ25820::printFaults(char *buffer, size_t len) {
       }
     }
   }
-  printf("\n");
+  // If no flags were set then add a filler value for later python parsing
+  if (cx == 0) {
+    snprintf(buffer, len, "OK");
+  }
   return true;
 }
