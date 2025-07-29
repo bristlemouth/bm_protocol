@@ -28,6 +28,20 @@ typedef enum {
 
 } Reg_t;
 
+typedef union {
+  uint8_t raw_reg;
+  struct {
+    bool RESERVED;
+    bool DRV_OKZ_FLAG;
+    bool CHG_TMR_FLAG;
+    bool TSHUT_FLAG;
+    bool VBAT_OV_FLAG;
+    bool IBAT_OCP_FLAG;
+    bool VAC_OV_FLAG;
+    bool VAC_UV_FLAG;
+  } faults;
+} BQ25820_faults;
+
 typedef struct {
   int16_t iac;
   int16_t ibat;
@@ -44,7 +58,9 @@ public:
   bool init();
   bool disablePfm();
   bool readSensors(BQ25820ADC_t &adc_readings);
-  bool readFaults(char *buffer, size_t len);
+  bool readFaults(BQ25820_faults &bq_faults);
+  bool printFaults(char *buffer, size_t len);
+  void printSensors(char *buffer, size_t len);
 
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);

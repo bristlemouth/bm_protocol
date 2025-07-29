@@ -278,11 +278,27 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
   return rval;
 }
 
-void BQ25820::logSensors(BQ25820ADC_t &adc_readings) {
+void BQ25820::printSensors(char *buffer, size_t len) {
+  BQ25820ADC_t adc_readings;
 
+  readSensors(adc_readings);
+  
+  snprintf(buffer, len,
+      "%d,%d,%.3f,%.3f,%.3f,%.3f,%.3f,",
+      adc_readings.iac,
+      adc_readings.ibat,
+      adc_readings.vac,
+      adc_readings.vbat,
+      adc_readings.vbat_fb,
+      adc_readings.vsys,
+      adc_readings.ts);
 }
 
-bool BQ25820::readFaults(char *buffer, size_t len) {
+bool BQ25820::readFaults(BQ25820_faults &bq_faults) {
+  return read8(FAULT_FLAG_REG, &bq_faults.raw_reg);
+}
+
+bool BQ25820::printFaults(char *buffer, size_t len) {
   uint8_t faults = 0x00;
   int cx = 0;
 
