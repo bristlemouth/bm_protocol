@@ -24,17 +24,5 @@ void setup(void) {
 }
 
 void loop(void) { 
-  char cdata[1024];
-  memset(cdata, 0, sizeof(cdata));
-
-  char cfaults[1024];
-  memset(cfaults, 0, sizeof(cfaults));
-
-  Charger.printSensors(cdata, sizeof(cdata));
-  Charger.printFaults(cfaults, sizeof(cfaults));
-
-  printf("%s", cdata);
-  printf("%s\n", cfaults);
-  
   /* USER LOOP CODE GOES HERE */
 }

@@ -228,9 +228,9 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
       // Check the ADC_DONE_FLAG bit
       if(!read8(CHARGER_FLAG_1, &tmpreg)) { 
         // If there is an issue checking the flag reg then
+        printf("Charger flag 1 read failed\n");
         // Tell the outer do while to exit
         quit = true; 
-        printf("Charger flag 1 read failed\n");
         // Exit this polling loop
         break;
       }
@@ -269,9 +269,6 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
     rval = true;
   } while(0);
   
-  //read8(CHARGER_CTRL_REG, &tmpreg);
-  //printf("0x%X\n", tmpreg);
-
   return rval;
 }
 
@@ -302,13 +299,11 @@ bool BQ25820::printFaults(char *buffer, size_t len) {
 
   char names[8][30] = {"RESERVED", "DRV_OKZ_FLAG", "CHG_TMR_FLAG", "TSHUT_FLAG", "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG", "VAC_UV_FLAG"};
 
-  read8(FAULT_FLAG_REG, &faults);
   readFaults(ufaults);
   faults = ufaults.raw_reg;
   
   for (uint8_t i=0; i < 8; i++) {
     if (faults & (1 << i)) {
-      printf("%s ", names[i]);
       cx = snprintf(buffer+cx, len-cx, "%s ", names[i]);
       if (cx<0 || cx>=(int)len) {
         printf("String length error!!\n");
