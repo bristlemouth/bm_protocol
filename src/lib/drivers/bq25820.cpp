@@ -1,6 +1,6 @@
 #include "bq25820.h"
-#include "debug.h"
 #include "app_util.h"
+#include "debug.h"
 
 using namespace BQ;
 
@@ -8,8 +8,7 @@ using namespace BQ;
 #define BQ_RST (1 << 7)
 #define POWERPATH_REG_DEF 0x20
 
-BQ25820::BQ25820(I2CInterface_t * interface, uint8_t address)
-{
+BQ25820::BQ25820(I2CInterface_t *interface, uint8_t address) {
   _interface = interface;
   _addr = static_cast<uint8_t>(address);
 }
@@ -27,12 +26,12 @@ bool BQ25820::init() {
   uint8_t retriesRemaining = 3;
   while (!rval && retriesRemaining--) {
     printf("Retries remaining %u\n", retriesRemaining);
-    if(!read8(PART_INFO_REG, &reg)) {
+    if (!read8(PART_INFO_REG, &reg)) {
       continue;
     }
     printf("MFG_ID: %04X\n", reg);
 
-    if(reg != PN_REV) {
+    if (reg != PN_REV) {
       printf("Invalid manufacturer pn or rev\n");
       continue;
     }
@@ -41,22 +40,22 @@ bool BQ25820::init() {
 
     // Reset to defaults
     reg = BQ_RST;
-    if(!write8(POWER_PATH_REG, reg)) {
+    if (!write8(POWER_PATH_REG, reg)) {
       continue;
     }
 
     vTaskDelay(pdMS_TO_TICKS(2));
 
     reg = 0x00;
-    if(!read8(POWER_PATH_REG, &reg)) {
+    if (!read8(POWER_PATH_REG, &reg)) {
       continue;
     }
-    
-    if((reg == POWERPATH_REG_DEF || reg == (POWERPATH_REG_DEF | 0x2))) {
-        printf("Wrong powerpath reg value after reset!\n");
-        printf("reg_val: %04X\n", reg);
-        vTaskDelay(pdMS_TO_TICKS(2));
-        continue;
+
+    if ((reg == POWERPATH_REG_DEF || reg == (POWERPATH_REG_DEF | 0x2))) {
+      printf("Wrong powerpath reg value after reset!\n");
+      printf("reg_val: %04X\n", reg);
+      vTaskDelay(pdMS_TO_TICKS(2));
+      continue;
     }
     rval = true;
   };
@@ -79,12 +78,12 @@ bool BQ25820::read16(Reg_t reg, int16_t *value) {
   I2CResponse_t res;
   do {
     res = writeBytes((uint8_t *)&regByte, sizeof(regByte), 100);
-    if(res != I2C_OK) {
+    if (res != I2C_OK) {
       printf("error writing bytes: %d\n", res);
       break;
     }
     res = readBytes((uint8_t *)&regVal, sizeof(regVal), 100);
-    if(res != I2C_OK) {
+    if (res != I2C_OK) {
       printf("error reading bytes: %d\n", res);
       break;
     }
@@ -115,17 +114,17 @@ bool BQ25820::read8(Reg_t reg, uint8_t *value) {
   I2CResponse_t res;
   do {
     res = writeBytes((uint8_t *)&regByte, sizeof(regByte), 100);
-    if(res != I2C_OK) {
+    if (res != I2C_OK) {
       printf("error writing bytes: %d\n", res);
       break;
     }
     res = readBytes((uint8_t *)&regVal, sizeof(regVal), 100);
-    if(res != I2C_OK) {
+    if (res != I2C_OK) {
       printf("error reading bytes: %d\n", res);
       break;
     }
 
-    if(value != NULL) {
+    if (value != NULL) {
       *value = regVal;
     }
 
@@ -143,7 +142,8 @@ bool BQ25820::read8(Reg_t reg, uint8_t *value) {
   \return true if successfull false otherwise
 */
 bool BQ25820::write16(Reg_t reg, uint16_t value) {
-  uint8_t bytes[] = {static_cast<uint8_t>(reg), static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value & 0xFF)};
+  uint8_t bytes[] = {static_cast<uint8_t>(reg), static_cast<uint8_t>(value >> 8),
+                     static_cast<uint8_t>(value & 0xFF)};
   return (writeBytes(bytes, sizeof(bytes), 100) == I2C_OK);
 }
 
@@ -174,21 +174,21 @@ bool BQ25820::disablePfm() {
   uint8_t tmpreg;
   do {
 
-    if(!read8(POWER_PATH_REG, &tmpreg)) {
+    if (!read8(POWER_PATH_REG, &tmpreg)) {
       break;
     }
 
     // Clear pfm bit (the 5th bit)
     tmpreg &= ~(0x1 << 5);
 
-    if(!write8(POWER_PATH_REG, tmpreg)) {
+    if (!write8(POWER_PATH_REG, tmpreg)) {
       break;
     }
     printf("power path reg updated\n");
 
     tmpreg = 0;
-    if(!read8(POWER_PATH_REG, &tmpreg)) {
-        break;
+    if (!read8(POWER_PATH_REG, &tmpreg)) {
+      break;
     }
     printf("PowerPathReg: %04X\n", tmpreg);
 
@@ -201,7 +201,7 @@ bool BQ25820::disablePfm() {
 bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
   bool rval = false;
   bool quit = false;
-  
+
   int16_t iac_val;
   int16_t ibat_val;
   int16_t vac_val;
@@ -219,18 +219,18 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
 
   do {
     // Enable the ADC, set it to 1 shot mode, set it to 13 bit resolution, and disable averaging.
-    if(!write8(ADC_CTRL_REG, 0xE0)) {
+    if (!write8(ADC_CTRL_REG, 0xE0)) {
       break; // Exit the loop if this register write fails
     }
     // Loop until the adc is done then collect the results
     for (i = 0; i < 1000; i++) {
       vTaskDelay(pdMS_TO_TICKS(2));
       // Check the ADC_DONE_FLAG bit
-      if(!read8(CHARGER_FLAG_1, &tmpreg)) { 
+      if (!read8(CHARGER_FLAG_1, &tmpreg)) {
         // If there is an issue checking the flag reg then
         printf("Charger flag 1 read failed\n");
         // Tell the outer do while to exit
-        quit = true; 
+        quit = true;
         // Exit this polling loop
         break;
       }
@@ -241,19 +241,19 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
 
         read16(IBAT_ADC_REG, &ibat_val);
         adc_readings.ibat = ibat_val * 2;
-        
+
         read16(VAC_ADC_REG, &vac_val);
         adc_readings.vac = vac_val * 0.002f;
-        
+
         read16(VBAT_ADC_REG, &vbat_val);
         adc_readings.vbat = vbat_val * 0.002f;
-        
+
         read16(VFB_ADC_REG, &vbat_fb_val);
         adc_readings.vbat_fb = vbat_fb_val * 0.008691f;
-        
+
         read16(VSYS_ADC_REG, &vsys_val);
         adc_readings.vsys = vsys_val * 0.002f;
-        
+
         read16(TS_ADC_REG, &ts_val);
         adc_readings.ts = ts_val * 0.09765625f;
 
@@ -267,8 +267,8 @@ bool BQ25820::readSensors(BQ25820ADC_t &adc_readings) {
       break;
     }
     rval = true;
-  } while(0);
-  
+  } while (0);
+
   return rval;
 }
 
@@ -276,16 +276,10 @@ void BQ25820::printSensors(char *buffer, size_t len) {
   BQ25820ADC_t adc_readings;
 
   readSensors(adc_readings);
-  
-  snprintf(buffer, len,
-      "%d,%d,%.3f,%.3f,%.3f,%.3f,%.3f,",
-      adc_readings.iac,
-      adc_readings.ibat,
-      adc_readings.vac,
-      adc_readings.vbat,
-      adc_readings.vbat_fb,
-      adc_readings.vsys,
-      adc_readings.ts);
+
+  snprintf(buffer, len, "%d,%d,%.3f,%.3f,%.3f,%.3f,%.3f,", adc_readings.iac, adc_readings.ibat,
+           adc_readings.vac, adc_readings.vbat, adc_readings.vbat_fb, adc_readings.vsys,
+           adc_readings.ts);
 }
 
 bool BQ25820::readFaults(BQ25820_faults &bq_faults) {
@@ -297,15 +291,16 @@ bool BQ25820::printFaults(char *buffer, size_t len) {
   int cx = 0;
   BQ25820_faults ufaults;
 
-  char names[8][30] = {"RESERVED", "DRV_OKZ_FLAG", "CHG_TMR_FLAG", "TSHUT_FLAG", "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG", "VAC_UV_FLAG"};
+  char names[8][30] = {"RESERVED",     "DRV_OKZ_FLAG",  "CHG_TMR_FLAG", "TSHUT_FLAG",
+                       "VBAT_OV_FLAG", "IBAT_OCP_FLAG", "VAC_OV_FLAG",  "VAC_UV_FLAG"};
 
   readFaults(ufaults);
   faults = ufaults.raw_reg;
-  
-  for (uint8_t i=0; i < 8; i++) {
+
+  for (uint8_t i = 0; i < 8; i++) {
     if (faults & (1 << i)) {
-      cx = snprintf(buffer+cx, len-cx, "%s ", names[i]);
-      if (cx<0 || cx>=(int)len) {
+      cx = snprintf(buffer + cx, len - cx, "%s ", names[i]);
+      if (cx < 0 || cx >= (int)len) {
         printf("String length error!!\n");
         break;
       }
