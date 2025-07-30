@@ -2,6 +2,7 @@
 
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
+#include "app_config.h"
 #include "bm_borealis.h"
 #include "cbor_sensor_report_encoder.h"
 #include "semphr.h"
@@ -49,6 +50,7 @@ public:
   bool m_aggregation_reports;
   uint32_t m_hydrotwin_ldr_minute;
   uint32_t m_hydrotwin_hdr_minute;
+  power_config_s m_pwr_cfg;
 
   // public static constants
   static constexpr uint8_t REPORT_NAN_ERROR_VALUE = 0xFF;

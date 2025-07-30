@@ -6,30 +6,8 @@
 #include "iwdg.h"
 #include "task_priorities.h"
 
-// If you want to use the memfault watchdog, uncomment the following include,
-// enable the LPTIM2 clock, and uncomment the memfault_software_watchdog_enable()
-// call in startIWDGTask() and the memfault_software_watchdog_feed() call in watchdogFeed()
-// #include "memfault/ports/watchdog.h"
-
-static void iWDGTask( void *parameters );
-
-void startIWDGTask() {
-  // memfault_software_watchdog_enable();
-  BaseType_t rval;
-  rval = xTaskCreate(
-              iWDGTask,
-              "IWDG",
-              configMINIMAL_STACK_SIZE,
-              NULL,
-              IWDG_TASK_PRIORITY,
-              NULL);
-
-  configASSERT(rval == pdTRUE);
-}
-
 void watchdogFeed() {
   LL_IWDG_ReloadCounter(IWDG);
-  // memfault_software_watchdog_feed();
 }
 
 //
@@ -47,14 +25,9 @@ void watchdogFeed() {
 //        periodically and the watchdog is only refreshed when several
 //        conditions are met.
 //
-static void iWDGTask( void *parameters ) {
-  // Don't warn about unused parameters
-  (void) parameters;
 
-  for(;;) {
+void vApplicationIdleHook(void) {
     watchdogFeed();
-    vTaskDelay(2 * 1000);
-  }
 }
 
 void IWDG_IRQHandler(void) {

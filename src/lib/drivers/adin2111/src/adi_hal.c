@@ -15,18 +15,6 @@
 static HAL_Callback_t ADIN2111_MAC_SPI_CALLBACK = NULL;
 static void *ADIN2111_MAC_SPI_CALLBACK_PARAM = NULL;
 extern adin_pins_t adin_pins;
-static BmTaskHandle ADI_SPI_TASK_HANDLE = NULL;
-
-static void adi_spi_task(void *arg) {
-  (void)arg;
-  while (1) {
-    if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY) == pdTRUE) {
-      if (ADIN2111_MAC_SPI_CALLBACK) {
-        ADIN2111_MAC_SPI_CALLBACK(ADIN2111_MAC_SPI_CALLBACK_PARAM, 0, NULL);
-      }
-    }
-  }
-}
 
 uint32_t HAL_EnterCriticalSection(void) {
   __disable_irq();
@@ -61,14 +49,7 @@ uint32_t HAL_GetEnableIrq(void) { return NVIC_GetEnableIRQ(ADIN_INT_EXTI_IRQn); 
  * @return none
  */
 
-uint32_t HAL_Init_Hook(void) {
-  BmErr err = BmENOMEM;
-
-  err = bm_task_create(adi_spi_task, "ADIN SPI Task", 512, NULL, ADIN_SPI_TASK_PRIORITY,
-                       &ADI_SPI_TASK_HANDLE);
-
-  return err == BmOK ? ADI_HAL_SUCCESS : ADI_HAL_ERROR;
-}
+uint32_t HAL_Init_Hook(void) { return ADI_HAL_SUCCESS; }
 
 uint32_t HAL_UnInit_Hook(void) { return ADI_HAL_SUCCESS; }
 
@@ -105,8 +86,10 @@ uint32_t HAL_SpiReadWrite(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nByte
   }
   IOWrite(adin_pins.chipSelect, 1);
 
-  if (status == SPI_OK && ADI_SPI_TASK_HANDLE) {
-    xTaskNotifyGive(ADI_SPI_TASK_HANDLE);
+  if (status == SPI_OK) {
+    if (ADIN2111_MAC_SPI_CALLBACK) {
+      ADIN2111_MAC_SPI_CALLBACK(ADIN2111_MAC_SPI_CALLBACK_PARAM, 0, NULL);
+    }
   } else {
     printf("Network SPI Read/Write Failed\n");
   }

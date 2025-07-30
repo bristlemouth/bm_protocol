@@ -210,10 +210,6 @@ void loop(void) {
     }
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static uint32_t ledPulseTimer = uptimeGetMs();
   static uint32_t ledOnTimer = 0;
   static bool ledState = false;

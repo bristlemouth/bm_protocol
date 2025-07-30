@@ -11,7 +11,6 @@ memfault_library(${MEMFAULT_SDK_ROOT} MEMFAULT_COMPONENTS
 
 set(MEMFAULT_PORT_ROOT ${MEMFAULT_SDK_ROOT}/ports)
 set(MEMFAULT_FREERTOS_PORT_ROOT ${MEMFAULT_PORT_ROOT}/freertos)
-# set(MEMFAULT_STM32_PORT_ROOT ${MEMFAULT_PORT_ROOT}/stm32cube/l4)
 set(MEMFAULT_STM32_PORT_ROOT ${MEMFAULT_PORT_ROOT}/stm32cube/u5)
 
 set(MEMFAULT_SOURCES
@@ -23,7 +22,7 @@ set(MEMFAULT_SOURCES
     ${MEMFAULT_FREERTOS_PORT_ROOT}/src/memfault_metrics_freertos.c
     ${MEMFAULT_FREERTOS_PORT_ROOT}/src/memfault_panics_freertos.c
 
-    # STM32L4 Cube Ports
+    # STM32U5 Cube Ports
     ${MEMFAULT_STM32_PORT_ROOT}/flash_coredump_storage.c
     ${MEMFAULT_STM32_PORT_ROOT}/rcc_reboot_tracking.c
 
@@ -39,6 +38,11 @@ set(MEMFAULT_INCLUDES
     ${MEMFAULT_PORT_ROOT}/include
     )
 
+# Memfault does not support 575 out of the box, but the flash setup is the same as the 585
+set(MEMFAULT_COMPILE_FLAGS
+    -DSTM32U585xx
+)
+
 # Deal with unused-parameter warnings for memfault sdk
 set_source_files_properties(
     ${MEMFAULT_SDK_ROOT}/components/panics/src/memfault_fault_handling_arm.c
@@ -47,4 +51,4 @@ set_source_files_properties(
     ${MEMFAULT_STM32_PORT_ROOT}/flash_coredump_storage.c
     DIRECTORY ${SRC_DIR}
     PROPERTIES
-    COMPILE_FLAGS -Wno-unused-parameter)
+    COMPILE_FLAGS ${MEMFAULT_COMPILE_FLAGS})

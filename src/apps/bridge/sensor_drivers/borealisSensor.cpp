@@ -1,7 +1,6 @@
 extern "C" {
 #include "util.h"
 }
-#include "app_config.h"
 #include "app_util.h"
 #include "bm_config.h"
 #include "bm_os.h"
@@ -14,6 +13,7 @@ extern "C" {
 #include "pubsub.h"
 #include "sensorController.h"
 #include "spectral_entropy.h"
+#include "stm32_rtc.h"
 #include "uptime.h"
 #include <inttypes.h>
 #include <math.h>
@@ -39,7 +39,6 @@ static constexpr char config_borealis_tx_spl_threshold[] = "borealisTxSplThresho
 static constexpr char config_borealis_tx_max_iqr_threshold[] = "borealisTxMaxIqrThreshold";
 static constexpr char config_borealis_tx_entropy_threshold[] = "borealisTxEntropyThreshold";
 
-
 /*!
  @brief Initialize Borealis Sensor Module
 
@@ -48,7 +47,7 @@ static constexpr char config_borealis_tx_entropy_threshold[] = "borealisTxEntrop
 void BorealisSensor::init(void) {
   static constexpr uint32_t MAX_SAMPLES_PER_REPORT = 2;
   uint32_t samples_per_report = 0;
-  power_config_s pwr_cfg = {};
+  m_pwr_cfg = getPowerConfigs();
 
   m_aggregation_reports = report_builder_get_transmit_aggregations();
   samples_per_report = report_builder_get_samples_per_report();
@@ -61,7 +60,7 @@ void BorealisSensor::init(void) {
                    samples_per_report, MAX_SAMPLES_PER_REPORT);
   }
 
-  if (pwr_cfg.subsampleEnabled) {
+  if (m_pwr_cfg.subsampleEnabled) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                    "Subsampling enabled, be aware that BOREALIS data will only transmit last "
                    "collected level statistics message in sampleDurationsMs period remotely\n");
@@ -129,7 +128,6 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   max_iqr_band = REPORT_NAN_ERROR_VALUE;
   entropy = REPORT_NAN_ERROR_VALUE;
   if (band_stats == NULL || band_stats_len == 0) {
-    clear_spectral_entropy_list();
     return BmEINVAL;
   }
 
@@ -142,7 +140,6 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   if (means == NULL) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
                    "Failed to allocate for Borealis level stats means\n");
-    clear_spectral_entropy_list();
     return BmENOMEM;
   }
   for (size_t band_index = 0; band_index < num_bands; band_index++) {
@@ -165,8 +162,10 @@ BmErr BorealisSensor::calculateQuantizedSplAndEntropy(uint8_t const *const band_
   float broadband_spl_db = 10.0f * log10f(spl_linear_sum);
   spl = fmaxf(0.0f, fminf(255.0f, (broadband_spl_db - db_min_8bit) / db_step_8bit + 0.5f));
 
-  float min_entropy = calc_min_spectral_entropy_and_clear_list(num_bands, means);
-  entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
+  // TODO: add back once calculations for entropy require less resources
+  //float min_entropy = calc_min_spectral_entropy(num_bands, means);
+  //entropy = fmaxf(0.0f, fminf(255.0f, min_entropy * 255.0f));
+  entropy = 0.0;
 
   bm_free(means);
   return BmOK;
@@ -190,7 +189,10 @@ bool BorealisSensor::exceedsConfiguredThresholds(uint8_t spl, uint8_t max_iqr,
 
   bool spl_exceeds = spl * db_step_8bit + db_min_8bit + borealis_db_offset >= spl_threshold;
   bool max_iqr_exceeds = max_iqr * db_step_8bit >= max_iqr_threshold;
-  bool entropy_exceeds = entropy <= entropy_threshold * 255.0f;
+  // TODO: add back once calculations for entropy require less resources
+  //bool entropy_exceeds = entropy <= entropy_threshold * 255.0f;
+  (void)entropy;
+  bool entropy_exceeds = false;
   return (spl_exceeds || max_iqr_exceeds || entropy_exceeds);
 }
 
@@ -230,6 +232,9 @@ void BorealisSensor::aggregate(void) {
             exceedsConfiguredThresholds(report.spl, report.max_iqr, report.entropy);
       }
     }
+    // TODO: add back once calculations for entropy require less resources
+    // Clear the spectral entropy list after entropy has been calculated
+    //clear_spectral_entropy_list();
 
     // Add hydrotwin LDR
     if (tracking_data.ldr.size) {
@@ -366,8 +371,8 @@ BmErr BorealisSensor::hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data
         SensorHeaderMsg::Data header = {
             hydrotwin_message_version,
             uptimeGetMs(),
-            bm_ticks_to_ms(bm_get_tick_count()),
-            0,
+            rtcGetMicrosecondsSimple(),
+            rtcGetMicrosecondsSimple(),
         };
         err = send_spotter_log_individual(
             "hydrotwin", header,
@@ -450,21 +455,26 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
               "borealis", d.header,
               MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms), "%.3f,%u,%.*s\n",
               d.dt, d.first_band_index, d.levels_length, d.levels);
-          // Base64 decodes to 3/4 of input size.
-          // There are two 12-bit band values per 3 bytes.
-          // 3/4 * 2/3 = 1/2
-          size_t num_bands = d.levels_length / 2;
-          float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
-          if (!spl_db) {
-            bm_debug("Failed to allocate memory for Borealis levels data\n");
-            err = BmENOMEM;
-            bm_free(d.levels);
-            break;
-          }
-          parse_levels(spl_db, d.levels, d.levels_length);
+          // TODO: add back once calculations for entropy require less resources
+          // Only insert spectrum into list if aggregation reports and power controller are enabled
+          //if (borealis->m_aggregation_reports &&
+          //    borealis->m_pwr_cfg.bridgePowerControllerEnabled) {
+          //  // Base64 decodes to 3/4 of input size.
+          //  // There are two 12-bit band values per 3 bytes.
+          //  // 3/4 * 2/3 = 1/2
+          //  size_t num_bands = d.levels_length / 2;
+          //  float *spl_db = static_cast<float *>(bm_malloc(num_bands * sizeof(float)));
+          //  if (!spl_db) {
+          //    bm_debug("Failed to allocate memory for Borealis levels data\n");
+          //    err = BmENOMEM;
+          //    bm_free(d.levels);
+          //    break;
+          //  }
+          //  parse_levels(spl_db, d.levels, d.levels_length);
+          //  insert_spectrum_into_list(num_bands, spl_db);
+          //  bm_free(spl_db);
+          //}
           bm_free(d.levels);
-          insert_spectrum_into_list(num_bands, spl_db);
-          bm_free(spl_db);
         }
       } break;
       case BOREALIS_LEVEL_STATISTICS: {
@@ -477,6 +487,7 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
             // to be less than half of the bridge power controller's sampleDurationMs, we cannot
             // send multiple of level stat messages yet and need to free the unused string
             bm_free(borealis->tracking_data.stats.levels);
+            borealis->tracking_data.stats.levels = NULL;
           }
 
           if (d.dt == 0) {
@@ -494,7 +505,8 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
             bm_debug("Failed to send borealis aggregated log to spotter, reason: %d\n", err);
           }
 
-          if (!borealis->m_aggregation_reports) {
+          if (!borealis->m_aggregation_reports ||
+              !borealis->m_pwr_cfg.bridgePowerControllerEnabled) {
             // Free levels information here as it will not be aggregated
             bm_free(d.levels);
           } else {
@@ -503,17 +515,6 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
           err = BmOK;
         } else {
           err = BmEBADMSG;
-        }
-      } break;
-      case BOREALIS_RECORDING_STATUS: {
-        struct borealis_recording_status d;
-        if (borealis_recording_status_decode(&d, (uint8_t *)data, data_len) == CborNoError) {
-          err = borealis->send_spotter_log_individual(
-              "borealis", d.header,
-              MAX_BOREALIS_READING_PERIOD_MS(borealis->m_reading_period_ms),
-              "%.u,%.3f,%.3f,%.*s\n", d.flags, d.seconds_written, d.seconds_free,
-              d.filename_length, d.filename);
-          bm_free(d.filename);
         }
       } break;
       case HYDROTWIN_LDR: {
@@ -525,7 +526,8 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
         }
 
         err = borealis->hydrotwinSendSpotterLog(data, data_len, sub_type);
-        if (borealis->m_aggregation_reports) {
+        if (borealis->m_aggregation_reports &&
+            borealis->m_pwr_cfg.bridgePowerControllerEnabled) {
           borealis->tracking_data.ldr.buf = static_cast<uint8_t *>(bm_malloc(data_len));
 
           if (borealis->tracking_data.ldr.buf) {
@@ -577,6 +579,10 @@ static void borealisLevelsDurationEval(bool default_config, uint64_t node_id,
   // Subtract 20 seconds as a buffer for BOREALIS boot, time it takes to get RTC and reporting time
   float recommended_sample_duration_s = sample_duration_ms / 1000.0 - 20.0;
   uint8_t num_level_stats_per_duration = 0;
+
+  if (!pwr_cfg.bridgePowerControllerEnabled) {
+    return;
+  }
 
   if (period_s == 0.0) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
