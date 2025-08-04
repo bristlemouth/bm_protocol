@@ -14,7 +14,6 @@ void enableTransactions(HardwareControlFunc preTxFunc, HardwareControlFunc postT
 void startTransaction();
 bool endTransaction(uint32_t wait_ms = DEFAULT_POST_TRANSACTION_WAIT_MS);
 
-
 // Set the baud rate for the LPUART
 void setBaud(uint32_t new_baud_rate);
 
@@ -57,6 +56,8 @@ void setUseByteStreamBuffer(bool enable);
 // Clear the uart buffer and reset the uart
 void reset(void);
 void flush(void);
+
+void setProcessByteCb(void (*process_byte)(void *data, uint8_t len));
 
 // Setup Rx and Tx stream buffers, and start the Rx handler task LPUartRx
 BaseType_t init(uint8_t task_priority);

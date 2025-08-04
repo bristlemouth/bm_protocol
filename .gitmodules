@@ -34,3 +34,6 @@
 [submodule "src/lib/bm_core"]
 	path = src/lib/bm_core
 	url = https://github.com/bristlemouth/bm_core.git
+[submodule "src/apps/bm_devkit/solar_scout/sss"]
+	path = src/apps/bm_devkit/solar_scout/sss
+	url = git@github.com:bristlemouth/solar_scout_serial_library.git
