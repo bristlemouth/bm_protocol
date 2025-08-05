@@ -39,7 +39,7 @@ bool PA7LD::init() {
   readData(data, sizeof(data));
   scaling0 = data[1] << 8 | data[2];
 
-  printf("scaling0: %" PRIx16 "\n", scaling0);
+  printf("scaling0: %" PRIx32 "\n", scaling0);
 
   sendCommand(SCALING1, 1);
   vTaskDelay(2);

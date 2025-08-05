@@ -281,7 +281,7 @@ void user_code_start() {
   BmErr err = bm_task_create(user_task, "USER", 4096, NULL, USER_TASK_PRIORITY, NULL);
   if (err != BmOK) {
     static const char *err_str = "Failed to create user task\n";
-    bm_debug(err_str);
+    bm_debug("%s", err_str);
     spotter_log(0, bmdk_log_filename, USE_TIMESTAMP, err_str);
     spotter_log_console(0, err_str);
   }
@@ -320,7 +320,6 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
-  startIWDGTask();
   startSerial();
 
   startSerialConsole(&usbCLI);

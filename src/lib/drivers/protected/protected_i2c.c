@@ -77,7 +77,7 @@ I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuf
 #ifdef I2C_DEBUG
     printf("%s [%s] ", __func__, interface->name);
     if(txLen) {
-      printf("TX(%"PRIu32") ", txLen);
+      printf("TX(%" PRIu32 ") ", (uint32_t)txLen);
       for(uint16_t idx = 0; idx < txLen; idx++) {
         printf("%02X ", txBuff[idx]);
       }
@@ -127,7 +127,7 @@ I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuf
 
 #ifdef I2C_DEBUG
       if(rxLen) {
-        printf("RX(%"PRIu32") ", rxLen);
+        printf("RX(%" PRIu32 ") ", (uint32_t)rxLen);
         for(uint16_t idx = 0; idx < rxLen; idx++) {
           printf("%02X ", rxBuff[idx]);
         }
