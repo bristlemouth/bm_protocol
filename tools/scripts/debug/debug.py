@@ -14,13 +14,14 @@ import time
 
 
 def get_project_root():
-    git_repo = git.Repo(search_parent_directories=True)
+    git_repo = git.Repo(os.path.abspath(__file__), search_parent_directories=True)
     return os.path.realpath(git_repo.git.rev_parse("--show-toplevel"))
 
 
 # Don't close python script with Ctrl+C since GDB uses it
 def sig_handler(signum, frame):
     pass
+
 
 # Try ports in range until one is open
 # Used in case we launch multiple openocd/gdb instances at once
@@ -107,7 +108,7 @@ def run_openocd(args, port=3333):
             # Comment out the following two lines to print openocd output to console
             # stdout=subprocess.DEVNULL,
             # stderr=subprocess.STDOUT,
-            startupinfo=startupinfo
+            startupinfo=startupinfo,
         )
     elif os.name == "posix":
         # https://stackoverflow.com/questions/5045771/python-how-to-prevent-subprocesses-from-receiving-ctrl-c-control-c-sigint

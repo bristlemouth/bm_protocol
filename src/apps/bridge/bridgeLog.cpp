@@ -75,7 +75,7 @@ void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t l
   if (len > 0) {
     switch (type) {
     case BM_COMMON_IND:
-      printf("[%s] %.*s", "BM_COMMON_IND", len, str);
+      printf("[%s] %.*s", "BM_COMMON_IND", (int)len, str);
       bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TOPIC,
                     sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_TOPIC) - 1,
                     reinterpret_cast<const uint8_t *>(str), len,
@@ -83,7 +83,7 @@ void bridgeSensorLogPrintf(bridgeSensorLogType_e type, const char *str, size_t l
                     APP_PUB_SUB_BM_BRIDGE_SENSOR_IND_VERSION);
       break;
     case BM_COMMON_AGG:
-      printf("[%s] %.*s", "BM_COMMON_AGG", len, str);
+      printf("[%s] %.*s", "BM_COMMON_AGG", (int)len, str);
       bm_serial_pub(getNodeId(), APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TOPIC,
                     sizeof(APP_PUB_SUB_BM_BRIDGE_SENSOR_AGG_TOPIC) - 1,
                     reinterpret_cast<const uint8_t *>(str), len,

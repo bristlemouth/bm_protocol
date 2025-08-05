@@ -10,7 +10,8 @@ typedef struct sensor_report_encoder_context {
   CborEncoder sample_array;
 } sensor_report_encoder_context_t;
 
-typedef CborError (*sample_encoder_cb)(CborEncoder &sample_array, void *sensor_data);
+typedef CborError (*sample_encoder_cb)(CborEncoder &sample_array, void *sensor_data,
+                                       uint32_t size);
 
 CborError sensor_report_encoder_open_report(uint8_t *cbor_buffer, size_t cbor_buffer_len,
                                             uint8_t num_sensors,
@@ -28,7 +29,7 @@ CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &con
 
 CborError sensor_report_encoder_add_sample_member(sensor_report_encoder_context_t &context,
                                                   sample_encoder_cb sample_member_encoder_cb,
-                                                  void *sensor_data);
+                                                  void *sensor_data, uint32_t size = 0);
 
 CborError sensor_report_encoder_close_sample(sensor_report_encoder_context_t &context);
 

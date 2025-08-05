@@ -4,6 +4,7 @@
 #include "app_pub_sub.h"
 #include "array_utils.h"
 #include "avgSampler.h"
+#include "barometric_pressure_data_msg.h"
 #include "bm_os.h"
 #include "bm_printf.h"
 #include "bsp.h"
@@ -38,15 +39,19 @@
 - Comment code
 - Remove or comment out debugging printf's
 - Follow as bm_pub_wl is developed
-- Pull barometric pressure from spotter to use for DOsat% calc
 */
 
-uint32_t pmeLogEnable = 1;
-bool pmeLogEnableCfg = false;
+uint32_t sensorBmLogEnable = 1;
+bool sensorBmLogEnableCfg = false;
 uint32_t pmeDOTIntervalS = 600;
 bool pmeDOTIntervalSCfg = false;
 uint32_t pmeWipeIntervalS = 14400;
 bool pmeWipeIntervalSCfg = false;
+uint32_t sensorDebugTxEnable = 0;
+bool sensorDebugTxEnableCfg = false;
+
+static float salinityPpt = 35.0;
+bool salinityPptCfg = false;
 
 static PmeSensor pmeSensor;
 
@@ -60,9 +65,11 @@ bool firstDo;
 
 // Defines the max buffer size for the pme sensor message
 static constexpr uint32_t pmeSensorDataMsgMaxSize = 256;
-static constexpr char SENSOR_BM_LOG_ENABLE[] = "pmeLogEnable";
+static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
 static constexpr char SENSOR_BM_DOT_INTERVAL_S[] = "pmeDOTIntervalS";
 static constexpr char SENSOR_BM_WIPE_INTERVAL_S[] = "pmeWipeIntervalS";
+static constexpr char SENSOR_DEBUG_TX_ENABLE[] = "sensorDebugTxEnable";
+static constexpr char SALINITY_PPT[] = "salinityPpt";
 
 // Variables for measurements and timing
 static uint32_t lastWipeEpochS = 0;
@@ -83,48 +90,97 @@ static int createPmeWipeDataTopic(void) { // Wipe
   return topicStrLen;
 }
 
+static void handle_barometric_pressure(uint64_t node_id, const char *topic, uint16_t topic_len,
+                                       const uint8_t *data, uint16_t data_len, uint8_t type,
+                                       uint8_t version) {
+  (void)node_id;
+  (void)topic;
+  (void)topic_len;
+  (void)type;
+  (void)version;
+
+  BarometricPressureDataMsg::Data d;
+  CborError err = BarometricPressureDataMsg::decode(d, data, data_len);
+  if (err == CborNoError) {
+    pmeSensor.setBarometricPressure(d.barometric_pressure_mbar);
+  } else {
+    printf("Failed to decode barometric pressure data message. err=%d\n", err);
+  }
+}
+
 void debugTx(void) {}
 
 void setup(void) {
   // Load system configuration & initialize if not configured by user
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE), &pmeLogEnable)) {
-    pmeLogEnableCfg = true;
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE,
+                      strlen(SENSOR_BM_LOG_ENABLE), &sensorBmLogEnable)) {
+    sensorBmLogEnableCfg = true;
   }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S, strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS)) {
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_DOT_INTERVAL_S,
+                      strlen(SENSOR_BM_DOT_INTERVAL_S), &pmeDOTIntervalS)) {
     pmeDOTIntervalSCfg = true;
   }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S, strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS)) {
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_WIPE_INTERVAL_S,
+                      strlen(SENSOR_BM_WIPE_INTERVAL_S), &pmeWipeIntervalS)) {
     pmeWipeIntervalSCfg = true;
   }
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_DEBUG_TX_ENABLE,
+                      strlen(SENSOR_DEBUG_TX_ENABLE), &sensorDebugTxEnable)) {
+    sensorDebugTxEnableCfg = true;
+  }
+  if (get_config_float(BM_CFG_PARTITION_SYSTEM, SALINITY_PPT, strlen(SALINITY_PPT),
+                       &salinityPpt)) {
+    salinityPptCfg = true;
+  }
+
+  // Subscribe to barometric pressure
+  bm_sub("sensor/*/barometric_pressure", handle_barometric_pressure);
+  // Possibly longer term, subscribe to salinity
+  // bm_sub("sensor/*/salinity", handle_salinity);
 
   pmeSensor.init();
   pmeDoTopicStrLen = createPmeDoMeasurementDataTopic();
   pmeWipeTopicStrLen = createPmeWipeDataTopic();
   lastWipeEpochS = loadLastWipeEpoch();
   printf("Last wipe time: %lu\n", lastWipeEpochS);
-  if (pmeLogEnableCfg == true) {
-    printf("User-defined pmeLogEnable found: %" PRIu32 "\n", pmeLogEnable);
-  }
-  else {
-    printf("No user-defined pmeLogEnable - defaulting to: %" PRIu32 "\n", pmeLogEnable);
+  if (sensorBmLogEnableCfg == true) {
+    printf("User-defined sensorBmLogEnable found: %" PRIu32 "\n", sensorBmLogEnable);
+  } else {
+    printf("No user-defined sensorBmLogEnable - defaulting to: %" PRIu32 "\n", sensorBmLogEnable);
   }
 
   if (pmeDOTIntervalSCfg == true) {
     printf("User-defined pmeDOTIntervalS found: %" PRIu32 " seconds.\n", pmeDOTIntervalS);
-  }
-  else {
-    printf("No user-defined pmeDOTIntervalS - defaulting to: %" PRIu32 " seconds.\n", pmeDOTIntervalS);
+  } else {
+    printf("No user-defined pmeDOTIntervalS - defaulting to: %" PRIu32 " seconds.\n",
+           pmeDOTIntervalS);
   }
 
   if (pmeWipeIntervalSCfg == true) {
     printf("User-defined pmeWipeIntervalS found: %" PRIu32 " seconds.\n", pmeWipeIntervalS);
+  } else {
+    printf("No user-defined pmeWipeIntervalS - defaulting to: %" PRIu32 " seconds.\n",
+           pmeWipeIntervalS);
   }
-  else {
-    printf("No user-defined pmeWipeIntervalS - defaulting to: %" PRIu32 " seconds.\n\n", pmeWipeIntervalS);
+
+  if (sensorDebugTxEnableCfg == true) {
+    printf("User-defined sensorDebugTxEnable found: %" PRIu32 "\n", sensorDebugTxEnable);
+  } else {
+    printf("No user-defined sensorDebugTxEnable - defaulting to: %" PRIu32 "\n",
+           sensorDebugTxEnable);
   }
-  // Ensure Vbus stable before enabling Vout
-  IOWrite(&BB_VBUS_EN, 0);
-  bm_delay(50);
+
+  if (salinityPptCfg == true) {
+    printf("User-defined salinityPpt found: %f\n", salinityPpt);
+  } else {
+    printf("No user-defined salinityPpt - defaulting to: %f\n", salinityPpt);
+  }
+
+  printf("\n");
+
+  // VBUS and 9V are not used in microDOT so we can turn these both off (they are active when LOW)
+  IOWrite(&BB_PL_BUCK_EN, 1);
+  IOWrite(&BB_VBUS_EN, 1);
   ledAllOff();
   //Set first DO measurement flag to true to trigger startup DO measurement
   firstDo = true;
@@ -135,7 +191,7 @@ void loop(void) {
   bool rtcIsSet = rtcGet(&time_and_date);
   uint64_t epochTimeSec = (rtcGetMicroSeconds(&time_and_date) / 1000000);
   uint64_t currentUptimeSec = uptimeGetMs() / 1000;
- 
+
   //////////
   // Wipe //
   //////////
@@ -157,15 +213,15 @@ void loop(void) {
         if (PmeWipeMsg::encode(w, cborBuf, sizeof(cborBuf), &encodedLen) == CborNoError) {
           bm_pub_wl(pmeWipeTopic, pmeWipeTopicStrLen, cborBuf, encodedLen, 0,
                     BM_COMMON_PUB_SUB_VERSION);
-          printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %d, \n", pmeWipeTopic,
-                 cborBuf); 
+          //printf("#  WIPE Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
+          //       "...\n", pmeWipeTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         } else {
           printf("!  Failed to encode WIPE data message\n");
         }
       }
     } else {
       if (elapsedWipe % 10 == 0) {
-        printf("Wipe timer: %llu of %i seconds\n", elapsedWipe, pmeWipeIntervalS);
+        printf("Wipe timer: %llu of %lu seconds\n", elapsedWipe, pmeWipeIntervalS);
       }
     }
   } else {
@@ -185,16 +241,16 @@ void loop(void) {
       firstDo = false; //Turn off initial DO flag
     }
 
-    if (pmeSensor.getDoData(d)) {
+    if (pmeSensor.getDoData(d, salinityPpt)) {
       static uint8_t cborBuf[pmeSensorDataMsgMaxSize];
       size_t encodedLen = 0;
       if (PmeDissolvedOxygenMsg::encode(d, cborBuf, sizeof(cborBuf), &encodedLen) ==
           CborNoError) {
-        printf("#  DOT Encoding success! | Topic: %s, cborBuf: %d, \n", pmeDoTopic,
-               cborBuf);
+        //printf("#  DOT Encoding success! | Topic: %s, cborBuf: %" PRIx8 "%" PRIx8 "%" PRIx8
+        //       "...\n", pmeDoTopic, cborBuf[0], cborBuf[1], cborBuf[2]);
         bm_pub_wl(pmeDoTopic, pmeDoTopicStrLen, cborBuf, encodedLen, 0,
                   BM_COMMON_PUB_SUB_VERSION);
-        if (true) {
+        if (false) {
           debugTx();
         }
       } else {
@@ -206,7 +262,7 @@ void loop(void) {
     lastDoMeasurementUptimeSec = currentUptimeSec;
   } else {
     if (elapsedDoSec % 10 == 0) {
-    printf("DOT timer: %llu of %i seconds\n", elapsedDoSec, pmeDOTIntervalS);
+      printf("DOT timer: %llu of %lu seconds\n", elapsedDoSec, pmeDOTIntervalS);
     }
   }
   bm_delay(1000);

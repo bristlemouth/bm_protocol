@@ -75,7 +75,7 @@ void setup(void) {
   // samples per send
   get_config_uint(BM_CFG_PARTITION_USER, "sampleCount", strlen("sampleCount"), &sample_count);
   if (sample_count * SAMPLE_SIZE > MAX_TX_BUFFER_SIZE) {
-    printf("sampleCount value is larger than max buffer size: %d, limiting sampleCount to: %d",
+    printf("sampleCount value is larger than max buffer size: %d, limiting sampleCount to: %u",
            MAX_TX_BUFFER_SIZE, MAX_TX_BUFFER_SIZE / SAMPLE_SIZE);
     sample_count = MAX_TX_BUFFER_SIZE / SAMPLE_SIZE;
   }
@@ -185,10 +185,6 @@ void loop(void) {
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;

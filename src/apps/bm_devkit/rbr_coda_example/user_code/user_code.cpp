@@ -167,10 +167,6 @@ void loop(void) {
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
@@ -238,7 +234,7 @@ void loop(void) {
     ledLinePulse = uptimeGetMs();
     // Now when we get a line of text data, our LineParser turns it into numeric values.
     if (parser.parseLine(payload_buffer, read_len)) {
-      printf("parsed values: %llu | %f\n", parser.getValue(0).data, parser.getValue(1).data);
+      printf("parsed values: %llu | %f\n", parser.getValue(0).data.uint64_val, parser.getValue(1).data.double_val);
     } else {
       printf("Error parsing line!\n");
       return; // FIXME: this is a little confusing
@@ -254,7 +250,7 @@ void loop(void) {
     double coda_reading = parser.getValue(1).data.double_val;
     coda_data.addSample(coda_reading);
 
-    printf("count: %u/%d, min: %f, max: %f\n", coda_data.getNumSamples(), MAX_CODA_SAMPLES,
+    printf("count: %lu/%d, min: %f, max: %f\n", coda_data.getNumSamples(), MAX_CODA_SAMPLES,
            coda_data.getMin(), coda_data.getMax());
   }
 }

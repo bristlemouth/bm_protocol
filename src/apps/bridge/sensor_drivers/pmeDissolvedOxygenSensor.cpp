@@ -12,6 +12,7 @@
 #include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "sensorController.h"
 #include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
@@ -48,14 +49,13 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
     if (bm_semaphore_take(dissolved_oxygen_sensor->_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
       static PmeDissolvedOxygenMsg::Data dissolved_oxygen_data;
       if (PmeDissolvedOxygenMsg::decode(dissolved_oxygen_data, data, data_len) == CborNoError) {
-        char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
-        configASSERT(log_buff);
         dissolved_oxygen_sensor->temperature_deg_c.addSample(
             dissolved_oxygen_data.temperature_deg_c);
         dissolved_oxygen_sensor->do_mg_per_l.addSample(dissolved_oxygen_data.do_mg_per_l);
         dissolved_oxygen_sensor->quality.addSample(dissolved_oxygen_data.quality);
         dissolved_oxygen_sensor->do_saturation_pct.addSample(
             dissolved_oxygen_data.do_saturation_pct);
+        dissolved_oxygen_sensor->salinity_ppt.addSample(dissolved_oxygen_data.salinity_ppt);
         dissolved_oxygen_sensor->reading_count++;
 
         BmErr err = dissolved_oxygen_sensor->send_spotter_log_individual(
@@ -64,9 +64,11 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
             "%.4f,"   // temperature_deg_c
             "%.3f,"   // do_mg_per_l
             "%.3f,"   // quality
-            "%.1f\n", // do_saturation_pct
+            "%.1f,"   // do_saturation_pct
+            "%.1f\n", // salinity_ppt
             dissolved_oxygen_data.temperature_deg_c, dissolved_oxygen_data.do_mg_per_l,
-            dissolved_oxygen_data.quality, dissolved_oxygen_data.do_saturation_pct);
+            dissolved_oxygen_data.quality, dissolved_oxygen_data.do_saturation_pct,
+            dissolved_oxygen_data.salinity_ppt);
         if (err != BmOK) {
           bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to IND log, err: %d\n",
                    err);
@@ -81,13 +83,12 @@ void PmeDissolvedOxygenSensor::pmeDissolvedOxygenSubCallback(
 }
 
 void PmeDissolvedOxygenSensor::aggregate(void) {
-  char *log_buff = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
-  configASSERT(log_buff);
   if (bm_semaphore_take(_mutex, BM_MAX_DELAY_UINT32) == BmOK) {
     pme_dissolved_oxygen_aggregations_t dissolved_oxygen_aggs = {.temperature_deg_c_mean = NAN,
                                                                  .do_mg_per_l_mean = NAN,
                                                                  .quality_mean = NAN,
                                                                  .do_saturation_pct_mean = NAN,
+                                                                 .salinity_ppt_mean = NAN,
                                                                  .reading_count = 0};
 
     if (temperature_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
@@ -95,6 +96,7 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
       dissolved_oxygen_aggs.do_mg_per_l_mean = do_mg_per_l.getMean();
       dissolved_oxygen_aggs.quality_mean = quality.getMean();
       dissolved_oxygen_aggs.do_saturation_pct_mean = do_saturation_pct.getMean();
+      dissolved_oxygen_aggs.salinity_ppt_mean = salinity_ppt.getMean();
       dissolved_oxygen_aggs.reading_count = reading_count;
 
       if (dissolved_oxygen_aggs.temperature_deg_c_mean < TEMP_SAMPLE_MEMBER_MIN ||
@@ -113,6 +115,10 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
           dissolved_oxygen_aggs.do_saturation_pct_mean > DO_SATURATION_SAMPLE_MEMBER_MAX) {
         dissolved_oxygen_aggs.do_saturation_pct_mean = NAN;
       }
+      if (dissolved_oxygen_aggs.salinity_ppt_mean < SALINITY_PPT_MEMBER_MIN ||
+          dissolved_oxygen_aggs.salinity_ppt_mean > SALINITY_PPT_MEMBER_MAX) {
+        dissolved_oxygen_aggs.salinity_ppt_mean = NAN;
+      }
     }
 
     BmErr err = send_spotter_log_aggregate(
@@ -120,9 +126,11 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
         "%.4f,"   // temperature_deg_c
         "%.3f,"   // do_mg_per_l
         "%.3f,"   // quality
-        "%.1f\n", // do_saturation_pct
+        "%.1f,"    // do_saturation_pct
+        "%.1f\n", // salinity_ppt_mean
         dissolved_oxygen_aggs.temperature_deg_c_mean, dissolved_oxygen_aggs.do_mg_per_l_mean,
-        dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean);
+        dissolved_oxygen_aggs.quality_mean, dissolved_oxygen_aggs.do_saturation_pct_mean,
+        dissolved_oxygen_aggs.salinity_ppt_mean);
     if (err != BmOK) {
       bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to AGG log, err: %d\n", err);
     }
@@ -132,18 +140,17 @@ void PmeDissolvedOxygenSensor::aggregate(void) {
         sizeof(pme_dissolved_oxygen_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
 
     // Clear the buffers
-    memset(log_buff, 0, SENSOR_LOG_BUF_SIZE);
     temperature_deg_c.clear();
     do_mg_per_l.clear();
     quality.clear();
     do_saturation_pct.clear();
+    salinity_ppt.clear();
     reading_count = 0;
     bm_semaphore_give(_mutex);
   } else {
     bm_debug(
         "Failed to take mutex for PME Dissolved Oxygen Sensor after getting a new reading\n");
   }
-  bm_free(log_buff);
 }
 
 static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
@@ -231,6 +238,7 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
       new_sub->do_mg_per_l.initBuffer(averager_max_samples);
       new_sub->quality.initBuffer(averager_max_samples);
       new_sub->do_saturation_pct.initBuffer(averager_max_samples);
+      new_sub->salinity_ppt.initBuffer(averager_max_samples);
       new_sub->reading_count = 0;
 
       CURRENT_SUB = new_sub;

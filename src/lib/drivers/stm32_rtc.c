@@ -163,6 +163,13 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   return rval;
 }
 
+uint64_t rtcGetMicrosecondsSimple(void) {
+  RTCTimeAndDate_t time_and_date = {};
+  rtcGet(&time_and_date);
+
+  return rtcGetMicroSeconds(&time_and_date);
+}
+
 uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate){
   int i;
   uint64_t microseconds = 0;

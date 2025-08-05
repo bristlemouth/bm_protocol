@@ -280,10 +280,6 @@ void loop(void) {
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
@@ -294,7 +290,7 @@ void loop(void) {
     ledPulseTimer += LED_PERIOD_MS;
     led1State = true;
   }
-    // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
+  // If LED1 has been on for LED_ON_TIME_MS milliseconds, turn it off.
   else if (led1State && ((u_int32_t)uptimeGetMs() - ledOnTimer >= LED_ON_TIME_MS)) {
     IOWrite(&LED_RED, 1);
     led1State = false;
@@ -311,10 +307,10 @@ void loop(void) {
     printf("[nortek] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
 
     if (parser.parseLine(payload_buffer, read_len)) {
-      printf("parsed values: %f | %f\n", parser.getValue(23).data, parser.getValue(24).data);
+      printf("parsed values: %f | %f\n", parser.getValue(23).data.double_val, parser.getValue(24).data.double_val);
       fillNortekStruct(); //No args. This uses global parser to update global nortkeData
       if (month_stats.sample_count >= MAX_SENSOR_SAMPLES) {
-        printf("ERR - No more room in the Nortek stats buffer, already have %lu readings!\n", MAX_SENSOR_SAMPLES);
+        printf("ERR - No more room in the Nortek stats buffer, already have %llu readings!\n", MAX_SENSOR_SAMPLES);
         return;
       }
 
@@ -324,7 +320,7 @@ void loop(void) {
       rtcPrint(rtcTimeBuffer, NULL);
       this_uptime = uptimeGetMs();
 
-      printf("batt v from userProcessLine | count: %u/%lu batt v: %f \n",
+      printf("batt v from userProcessLine | count: %u/%llu batt v: %f \n",
         batt_v_stats.sample_count,
         MAX_SENSOR_SAMPLES-10,
         nortekData.batt_v);

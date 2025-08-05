@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define DEFAULT_TRANSMIT_AGGREGATIONS 1
-
 typedef enum {
   SAMPLER_TIMER_BITS = 0x01,
   AGGREGATION_TIMER_BITS = 0x02,

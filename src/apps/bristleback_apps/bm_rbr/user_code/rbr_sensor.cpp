@@ -165,7 +165,7 @@ bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::D
   spotter_log_console(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
             read_len, s);
   printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
-         read_len, s);
+         (int)read_len, s);
 
   // Use LineParser to turn string data into numeric values.
   if (_parsers[_type] && _parsers[_type]->parseLine(s, read_len)) {

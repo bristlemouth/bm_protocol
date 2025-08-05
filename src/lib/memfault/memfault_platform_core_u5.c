@@ -37,7 +37,7 @@ static sMfltResetReasonInfo memfault_reset_info;
 
 // Note: reboot tracking needs to be placed in a noinit region
 // because metadata across resets is tracked
-MEMFAULT_PUT_IN_SECTION(".noinit")
+MEMFAULT_PUT_IN_SECTION(".noinit.s_reboot_tracking")
 static uint8_t s_reboot_tracking[MEMFAULT_REBOOT_TRACKING_REGION_SIZE];
 
 void memfault_platform_log(eMemfaultPlatformLogLevel level, const char *fmt, ...) {
@@ -101,7 +101,7 @@ void memfault_platform_get_device_info(sMemfaultDeviceInfo *info) {
   *info = (sMemfaultDeviceInfo) {
     .device_serial = getUIDStr(),
     .software_type = APP_NAME,
-    .software_version = getFWVersionStr(),
+    .software_version = getFwVersionStrSemVer(),
     // TODO - read hwid pins
     .hardware_version = BSP_NAME,
   };

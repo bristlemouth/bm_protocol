@@ -75,6 +75,7 @@ __weak
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -212,6 +213,8 @@ static void SystemPower_Config(void)
   {
     Error_Handler();
   }
+/* USER CODE BEGIN PWR */
+/* USER CODE END PWR */
 }
 
 /* USER CODE BEGIN 4 */

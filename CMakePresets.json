@@ -110,6 +110,15 @@
             }
         },
         {
+            "name": "arpa-e_example",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_APP_TYPE": "BMDK",
+                "APP": "arpa-e_example",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
             "name": "loadcell",
             "inherits": "hello-world",
             "cacheVariables": {
@@ -146,6 +155,13 @@
             }
         },
         {
+            "name": "pme-do-sensor",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "pme_do_sensor"
+            }
+        },
+        {
             "name": "pub-example",
             "inherits": "hello-world",
             "cacheVariables": {
@@ -178,6 +194,13 @@
             "inherits": "hello-world",
             "cacheVariables": {
                 "APP": "rx_live_example"
+            }
+        },
+        {
+            "name": "sdi12-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sdi12_example"
             }
         },
         {
@@ -290,6 +313,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "arpa-e_example",
+            "name": "arpa-e_example",
+            "jobs": 8
+        },
+        {
             "configurePreset": "loadcell",
             "name": "loadcell",
             "jobs": 8
@@ -315,6 +343,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "pme-do-sensor",
+            "name": "pme-do-sensor",
+            "jobs": 8
+        },
+        {
             "configurePreset": "pub-example",
             "name": "pub-example",
             "jobs": 8
@@ -337,6 +370,11 @@
         {
             "configurePreset": "rx-live-example",
             "name": "rx-live-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sdi12-example",
+            "name": "sdi12-example",
             "jobs": 8
         },
         {

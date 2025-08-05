@@ -38,7 +38,7 @@ void RxLiveSensor::computeCCCode() {
   }
 
   _ccCode = sum; // Set the computed CC code to the sum of the digits
-  printf("%llut | Computed CC Code: %u for serial: %u\n", uptimeGetMs(), _ccCode,
+  printf("%llut | Computed CC Code: %u for serial: %lu\n", uptimeGetMs(), _ccCode,
          _serial_number);
 }
 
@@ -46,7 +46,7 @@ void RxLiveSensor::computeCCCode() {
 void RxLiveSensor::txCommand(const RxLiveCommand &command) const {
   // Transmit the command buffer using PLUART, with serial number and ccCode
   char formattedCommand[64] = {0};
-  snprintf(formattedCommand, sizeof(formattedCommand), "*%06u.0#%02u,%s\r",
+  snprintf(formattedCommand, sizeof(formattedCommand), "*%06lu.0#%02u,%s\r",
             _serial_number, _ccCode, command.command_buffer);
 
   const size_t commandLen = strlen(formattedCommand);
@@ -88,8 +88,8 @@ bool RxLiveSensor::sendCommand(RxLiveCommandType command_type) {
 }
 
 bool RxLiveSensor::validateResponseHeader(const char *rx_data) const {
-  char headerBuffer[13] = {0};
-  snprintf(headerBuffer, sizeof(headerBuffer), "*%06u.0#%02u", _serial_number, _ccCode);
+  char headerBuffer[20] = {0};
+  snprintf(headerBuffer, sizeof(headerBuffer), "*%06lu.0#%02u", _serial_number, _ccCode);
   return strstr(rx_data, headerBuffer) != nullptr;
 }
 
@@ -221,7 +221,7 @@ RxLiveStatusCode RxLiveSensor::run(const uint8_t *rx_data, const size_t rx_len) 
           printf("\t\tCode Char: %c\n", parsed_tag_id.code_char);
           printf("\t\tCode Freq: %u\n", parsed_tag_id.code_freq);
           printf("\t\tCode Channel: %u\n", parsed_tag_id.code_channel);
-          printf("\t\tTag Serial no: %u\n", parsed_tag_id.tag_serial_no);
+          printf("\t\tTag Serial no: %lu\n", parsed_tag_id.tag_serial_no);
           _latest_detection = parsed_tag_id;
           return RX_CODE_DETECTION;
         } else {
@@ -230,7 +230,7 @@ RxLiveStatusCode RxLiveSensor::run(const uint8_t *rx_data, const size_t rx_len) 
         }
       }
       printf("%llut | WARN - Rx-Live data was not an STD line!\n", uptimeGetMs());
-      printf("%llut | TODO, process data: %.*s\n", uptimeGetMs(), rx_len,
+      printf("%llut | TODO, process data: %.*s\n", uptimeGetMs(), (int)rx_len,
              reinterpret_cast<const char *>(rx_data));
       return RX_CODE_NO_PARSE;
     }

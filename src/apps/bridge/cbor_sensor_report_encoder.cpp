@@ -117,8 +117,8 @@ CborError sensor_report_encoder_open_sample(sensor_report_encoder_context_t &con
  */
 CborError sensor_report_encoder_add_sample_member(sensor_report_encoder_context_t &context,
                                                   sample_encoder_cb sample_member_encoder_cb,
-                                                  void *sensor_data) {
-  return sample_member_encoder_cb(context.sample_array, sensor_data);
+                                                  void *sensor_data, uint32_t size) {
+  return sample_member_encoder_cb(context.sample_array, sensor_data, size);
 }
 
 /*!

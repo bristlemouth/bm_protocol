@@ -5,6 +5,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../bristleback_apps_common/sensors/sensors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/pme_do_sensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/do_calc.c
 )
 
 set(APP_INCLUDES

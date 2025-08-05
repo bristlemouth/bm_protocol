@@ -130,9 +130,9 @@ void tally_detection(const TagID &latest_detection) {
         tag_detections[i].detection_count++;
       } else {
         // Print an error for debugging
-        printf(
-            "Error: Detection count for tag serial no %u has reached its maximum value (%u).\n",
-            tag_detections[i].tag_serial_no, UINT16_MAX);
+        printf("Error: Detection count for tag serial no %lu has reached its maximum value "
+               "(%" PRIu16 ").\n",
+               tag_detections[i].tag_serial_no, UINT16_MAX);
       }
       found = true;
       break;
@@ -158,7 +158,7 @@ void tally_detection(const TagID &latest_detection) {
          "Freq", "Chan", "Detections");
   printf("---------------------------------------------------------\n");
   for (uint32_t i = 0; i < unique_tag_ids; ++i) {
-    printf("| %-5u | %-10u | %-6c | %-8u | %-5u | %-10u |\n", i,
+    printf("| %-5lu | %-10lu | %-6c | %-8u | %-5u | %-10u |\n", i,
            tag_detections[i].tag_serial_no, tag_detections[i].code_char,
            tag_detections[i].code_freq, tag_detections[i].code_channel,
            tag_detections[i].detection_count);
@@ -274,7 +274,7 @@ void loop() {
       printf("[rx-live-state] | tick: %llu, rtc: %s, rx_code: %d\n", uptimeGetMs(),
              rtcTimeBuffer, rx_code);
     }
-  } // \else
+  }
 
   if ((u_int32_t)uptimeGetMs() - _sample_timer_ms >= sample_duration_ms) {
     printf("[rx-live-state] :: GENERATING SAMPLE!\n");
@@ -298,10 +298,6 @@ void loop() {
     led2State = false;
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static u_int32_t ledPulseTimer = uptimeGetMs();
   static u_int32_t ledOnTimer = 0;
   static bool led1State = false;
@@ -317,4 +313,4 @@ void loop() {
     bristlefin.setLed(1, Bristlefin::LED_OFF);
     led1State = false;
   }
-} // \loop()
+} // loop()

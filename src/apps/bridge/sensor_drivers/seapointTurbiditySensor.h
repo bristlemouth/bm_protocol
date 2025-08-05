@@ -4,6 +4,7 @@
 #include "avgSampler.h"
 #include "sensorController.h"
 
+#include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -35,6 +36,11 @@ typedef struct SeapointTurbiditySensor : public AbstractSensor {
 public:
   bool subscribe() override;
   void aggregate(void);
+  static constexpr seapoint_turbidity_aggregations_t seapoint_turbidity_NAN_AGG = {
+      .turbidity_s_mean_ftu = NAN,
+      .turbidity_r_mean_ftu = NAN,
+      .reading_count = 0,
+  };
 
 private:
   static void seapointTurbiditySubCallback(uint64_t node_id, const char *topic,
