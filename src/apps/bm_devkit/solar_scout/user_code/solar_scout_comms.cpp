@@ -10,6 +10,7 @@
 #define SSS_TIMEOUT_MS 100
 
 static struct SSSInst sss;
+static BmSemaphore mutex = NULL;
 
 static void sss_service(uint8_t *data, uint16_t len) {
 
@@ -34,8 +35,6 @@ static int8_t sss_send(uint8_t *payload, uint16_t len) {
   PLUART::write(payload, len);
   return 0;
 }
-
-static uint32_t sss_time(void) { return (uint32_t)uptimeGetMs(); }
 
 static int8_t sss_handle_cmd(SSSCommand type, const uint8_t *payload, uint16_t len, bool *nack,
                              SSSNackReason *reason) {
@@ -68,7 +67,14 @@ static int8_t sss_handle_cmd(SSSCommand type, const uint8_t *payload, uint16_t l
   return 0;
 }
 
+static uint32_t sss_time(void) { return (uint32_t)uptimeGetMs(); }
+
+static void sss_lock(void) { bm_mutex_lock(mutex); }
+
+static void sss_unlock(void) { bm_mutex_unlock(mutex); }
+
 BmErr solar_scout_comms_init(void) {
+  BmErr err = BmOK;
   // Initialize the UART interface
   PLUART::init(USER_TASK_PRIORITY);
   PLUART::setBaud(SSS_BAUD_RATE);
@@ -82,14 +88,21 @@ BmErr solar_scout_comms_init(void) {
       .send_cb = sss_send,
       .handle_cb = sss_handle_cmd,
       .time_cb = sss_time,
+      .lock = sss_lock,
+      .unlock = sss_unlock,
       .timeout_ms = SSS_TIMEOUT_MS,
       .retry_count = SSS_MAX_RETRY_COUNT,
   };
 
-  BmTimer timer = bm_timer_create("sss_timer", 10, true, NULL, timer_cb);
-  bm_timer_start(timer, 0);
+  err = sss_init(&sss, sss_cfg) == 0 ? BmOK : BmEIO;
 
-  return sss_init(&sss, sss_cfg) == 0 ? BmOK : BmEIO;
+  if (err == BmOK) {
+    BmTimer timer = bm_timer_create("sss_timer", 10, true, NULL, timer_cb);
+    bm_timer_start(timer, 0);
+    mutex = bm_mutex_create();
+  }
+
+  return err;
 }
 
 BmErr solar_scout_send_cmd(SSSCommand cmd, uint8_t *payload, uint16_t len) {
