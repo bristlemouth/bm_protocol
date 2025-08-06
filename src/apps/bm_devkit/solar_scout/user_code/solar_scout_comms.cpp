@@ -1,5 +1,6 @@
 #include "solar_scout_comms.h"
 #include "bm_config.h"
+#include "bm_os.h"
 #include "payload_uart.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -19,7 +20,15 @@ static void sss_service(uint8_t *data, uint16_t len) {
   }
 }
 
-static void process_rx_bytes(void *data, uint8_t len) { sss_service((uint8_t *)data, len); }
+static void timer_cb(BmTimer timer) {
+  (void)timer;
+  sss_service(NULL, 0);
+}
+
+static void process_rx_bytes(void *handle, uint8_t byte) {
+  (void)handle;
+  sss_service((uint8_t *)&byte, sizeof(uint8_t));
+}
 
 static int8_t sss_send(uint8_t *payload, uint16_t len) {
   PLUART::write(payload, len);
@@ -76,6 +85,10 @@ BmErr solar_scout_comms_init(void) {
       .timeout_ms = SSS_TIMEOUT_MS,
       .retry_count = SSS_MAX_RETRY_COUNT,
   };
+
+  BmTimer timer = bm_timer_create("sss_timer", 10, true, NULL, timer_cb);
+  bm_timer_start(timer, 0);
+
   return sss_init(&sss, sss_cfg) == 0 ? BmOK : BmEIO;
 }
 

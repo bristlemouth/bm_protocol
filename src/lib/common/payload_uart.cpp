@@ -342,7 +342,7 @@ SerialHandle_t uart_handle = {
     .postTxCb = NULL,
 };
 
-void setProcessByteCb(void (*process_byte)(void *data, uint8_t len)) {
+void setProcessByteCb(void (*process_byte)(void *handle, uint8_t byte)) {
   uart_handle.processByte = process_byte;
 }
 

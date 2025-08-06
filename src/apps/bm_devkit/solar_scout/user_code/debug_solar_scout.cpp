@@ -18,7 +18,7 @@ static BaseType_t cmd_sss_cb(char *write_buffer, size_t write_len, const char *c
 
   if (!parameter_str_len || !sss_cmd_str) {
     bm_debug("Invalid parameters, please ensure <cmd> is set.\n");
-    return pdFAIL;
+    return pdFALSE;
   }
 
   SSSCommand cmd = (SSSCommand)strtoul(sss_cmd_str, NULL, 0);
@@ -30,13 +30,12 @@ static BaseType_t cmd_sss_cb(char *write_buffer, size_t write_len, const char *c
     if (mbedtls_base64_decode(payload, sizeof(payload), &decode_len,
                               (const unsigned char *)message, parameter_str_len) != 0) {
       bm_debug("Could not decode Base64 string.\n");
-      return pdFAIL;
+      return pdFALSE;
     }
   }
 
-  BaseType_t ret =
-      solar_scout_send_cmd(cmd, payload, (uint16_t)decode_len) == BmOK ? pdPASS : pdFAIL;
-  if (ret == pdPASS) {
+  BmErr err = solar_scout_send_cmd(cmd, payload, (uint16_t)decode_len);
+  if (err == BmOK) {
     bm_debug("Sending cmd: %d", cmd);
     if (message) {
       bm_debug(", data: %.*s", (int)parameter_str_len, message);
@@ -46,7 +45,7 @@ static BaseType_t cmd_sss_cb(char *write_buffer, size_t write_len, const char *c
     bm_debug("Failed to send message.\n");
   }
 
-  return ret;
+  return pdFALSE;
 }
 
 static const CLI_Command_Definition_t cmd_sss = {

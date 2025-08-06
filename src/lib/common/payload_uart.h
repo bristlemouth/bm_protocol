@@ -57,7 +57,7 @@ void setUseByteStreamBuffer(bool enable);
 void reset(void);
 void flush(void);
 
-void setProcessByteCb(void (*process_byte)(void *data, uint8_t len));
+void setProcessByteCb(void (*process_byte)(void *handle, uint8_t byte));
 
 // Setup Rx and Tx stream buffers, and start the Rx handler task LPUartRx
 BaseType_t init(uint8_t task_priority);
