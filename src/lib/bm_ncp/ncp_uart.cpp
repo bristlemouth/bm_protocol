@@ -357,6 +357,7 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
 
   if (value) {
     xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
+    HAL_UART_DMAStop(&huart3);
     ncp_rx = false;
   } else {
     xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
