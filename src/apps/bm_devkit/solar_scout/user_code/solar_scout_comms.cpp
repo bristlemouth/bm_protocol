@@ -69,9 +69,9 @@ static int8_t sss_handle_cmd(SSSCommand type, const uint8_t *payload, uint16_t l
 
 static uint32_t sss_time(void) { return (uint32_t)uptimeGetMs(); }
 
-static void sss_lock(void) { bm_mutex_lock(mutex); }
+static void sss_lock(void) { bm_semaphore_take(mutex, UINT32_MAX); }
 
-static void sss_unlock(void) { bm_mutex_unlock(mutex); }
+static void sss_unlock(void) { bm_semaphore_give(mutex); }
 
 BmErr solar_scout_comms_init(void) {
   BmErr err = BmOK;
