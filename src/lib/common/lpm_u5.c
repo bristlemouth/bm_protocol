@@ -11,6 +11,7 @@
 #include "task.h"
 #include "lpm.h"
 #include "watchdog.h"
+#include "bsp.h"
 
 #define SUPPORT_VREG_RANGES_1_THROUGH_3
 
@@ -127,6 +128,7 @@ void lpmPreSleepProcessing() {
       useDeepSleep = pdTRUE;
       #define PWR_CR1_LPMS_STOP1 PWR_CR1_LPMS_0
       MODIFY_REG(PWR->CR1, PWR_CR1_LPMS_Msk, PWR_CR1_LPMS_STOP1);
+      IOWrite(&TP10, 0);
 
    }
    else if ((deepSleepForbiddenFlags & ~LPM_OK_IN_STOP1) == 0)
@@ -155,6 +157,7 @@ void lpmPostSleepProcessing() {
   // reference xMaximumSuppressedTicks, the maximum amount of time we can sleep
   // is 1998 ticks (or ms, ref configTICK_RATE_HZ). Feed the watchdog here
   // before moving onto next tasks
+  IOWrite(&TP10, 1);
   watchdogFeed();
   if (SCB->SCR & SCB_SCR_SLEEPDEEP_Msk)
    {

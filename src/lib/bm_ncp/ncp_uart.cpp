@@ -356,9 +356,13 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (value) {
+    if (huart3.hdmarx->State != HAL_DMA_STATE_BUSY) {
+      lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+    }
     xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     ncp_rx = false;
   } else {
+    lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
     xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     ncp_rx = true;
     HAL_UART_AbortReceive(&huart3);
@@ -373,6 +377,12 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
              BridgePowerController *power_controller) {
   // here we will change the defualt rx interrupt routine to the custom one we have here
   // and then we will initialize the ncpRXTask
+
+  // __HAL_RCC_GPDMA1_CLK_SLEEP_DISABLE();
+  // __HAL_RCC_USART3_CLK_SLEEP_DISABLE();
+
+  // HAL_UARTEx_DisableStopMode(&huart3);
+
 
   // Initialize the serial handle
   configASSERT(ncpUartHandle);
@@ -455,7 +465,11 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
+  // HAL_UARTEx_DisableStopMode(&huart3);
   serialEnable(ncpSerialHandle);
+  // UART_AutonomousModeConfTypeDef autonomous_mode_config;
+  // HAL_UARTEx_GetConfigAutonomousMode(&huart3, &autonomous_mode_config);
+  // printf("Autonomous mode config: %" PRIu32 "\n", autonomous_mode_config.AutonomousModeState);
   ncpBaudRateDiscovery();
   ncp_dfu_check_for_update();
   bm_serial_send_reboot_info(getNodeId(), checkResetReason(), getGitSHA(),
@@ -526,6 +540,9 @@ void ncpRXTask(void *parameters) {
   for (;;) {
     uint32_t taskNotifyValue = 0;
     BaseType_t res = xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, portMAX_DELAY);
+
+    printf("\n***********\nCR1 register: 0x%" PRIx32 "\n**********\n\n", huart3.Instance->CR1);
+    printf("\n***********\nCR2 register: 0x%" PRIx32 "\n**********\n\n", huart3.Instance->CR2);
 
     if (res != pdTRUE) {
       printf("Error waiting for ncp task notification\n");
@@ -607,10 +624,10 @@ static void ncpBaudRateDiscovery(void) {
 #ifndef DEBUG_USE_USART3
 extern "C" void USART3_IRQHandler(void) {
   HAL_UART_IRQHandler(&huart3);
-  if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
-    HAL_UART_DMAStop(&huart3);
+  if (HAL_UART_GetError(&huart3) != HAL_UART_ERROR_NONE && ncp_rx) {
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
                                  NCP_BUFF_LEN);
+    lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   }
 }
 #endif
@@ -649,6 +666,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
       ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     }
   }
+  lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
@@ -695,7 +713,8 @@ static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
     xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
   }
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
-  lpmPeripheralActive(LPM_USART3_TX);
+  // HAL_UART_MspInit(&huart3);
+  lpmPeripheralActive(LPM_USART3);
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
   IOWrite(&BM_INT, 0);
   vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
