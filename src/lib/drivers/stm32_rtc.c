@@ -1,13 +1,17 @@
 #include "stm32_rtc.h"
-#include "stm32u5xx_ll_rcc.h"
 #include "app_util.h"
+#include "bm_os.h"
+#include "stm32u5xx_ll_rcc.h"
 #include <stdio.h>
 #include <string.h>
 
 // Magic number to write into backup register 0 to indicate that the rtc is set
 #define RTC_SET_MAGIC 0x836A20DD
 
-static const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31}; // API starts months from 1, this array starts from 0
+static const uint8_t monthDays[] = {
+    31, 28, 31, 30, 31, 30,
+    31, 31, 30, 31, 30, 31}; // API starts months from 1, this array starts from 0
+static BmSemaphore rtc_mutex = NULL;
 
 BaseType_t rtcInit() {
   BaseType_t rval = pdPASS;
@@ -30,15 +34,23 @@ BaseType_t rtcInit() {
 
   // {Hour format, asynch prescaler, synch prescaler}
   LL_RTC_InitTypeDef RTC_InitStruct = {LL_RTC_HOURFORMAT_24HOUR, 127, 255};
-  if(LL_RTC_Init(RTC, &RTC_InitStruct) != SUCCESS) {
+  if (LL_RTC_Init(RTC, &RTC_InitStruct) != SUCCESS) {
     rval = pdFAIL;
   }
+
+  rtc_mutex = bm_mutex_create();
 
   return rval;
 }
 
 bool isRTCSet() {
-  return (LL_RTC_BKP_GetRegister(RTC, LL_RTC_BKP_DR0) == RTC_SET_MAGIC);
+  bool ret = false;
+
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
+  ret = LL_RTC_BKP_GetRegister(RTC, LL_RTC_BKP_DR0) == RTC_SET_MAGIC;
+  bm_semaphore_give(rtc_mutex);
+
+  return ret;
 }
 
 /*!
@@ -49,7 +61,8 @@ bool isRTCSet() {
   \param[out] deltaS - Delta seconds from previous time to current time (absolute value)
   \return true if RTC time within maximum allowed drift, false if not
 */
-bool isRTCValid(RTCTimeAndDate_t *receivedTimeAndDate, uint32_t driftThesholdS, uint32_t *deltaS) {
+bool isRTCValid(RTCTimeAndDate_t *receivedTimeAndDate, uint32_t driftThesholdS,
+                uint32_t *deltaS) {
   if (!isRTCSet()) {
     return false;
   }
@@ -73,7 +86,7 @@ bool isRTCValid(RTCTimeAndDate_t *receivedTimeAndDate, uint32_t driftThesholdS, 
     if (deltaS != NULL) {
       *deltaS = (int64_t)(rtcTimeMicroSeconds - receivedTimeMicroSeconds);
     }
-    return (rtcTimeMicroSeconds - receivedTimeMicroSeconds ) <= ((uint64_t)driftThesholdS * 1e6);
+    return (rtcTimeMicroSeconds - receivedTimeMicroSeconds) <= ((uint64_t)driftThesholdS * 1e6);
   }
 }
 
@@ -81,7 +94,8 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   BaseType_t rval = pdPASS;
   configASSERT(timeAndDate != NULL);
 
-  if(isRTCSet()) {
+  if (isRTCSet()) {
+    bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
     uint32_t subSecond = LL_RTC_TIME_GetSubSecond(RTC);
     uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC);
     timeAndDate->second = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
@@ -94,11 +108,12 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
     // Year is stored as only 2 digits :(
     timeAndDate->year = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetYear(RTC)) + 2000;
 
-    if(prediv >= subSecond) {
-      timeAndDate->ms = (1000 * (prediv-subSecond))/(prediv+1);
+    if (prediv >= subSecond) {
+      timeAndDate->ms = (1000 * (prediv - subSecond)) / (prediv + 1);
     } else {
       timeAndDate->ms = 0;
     }
+    bm_semaphore_give(rtc_mutex);
   } else {
     rval = pdFAIL;
   }
@@ -106,7 +121,7 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   return rval;
 }
 
-BaseType_t rtcPrint(char* buffer, RTCTimeAndDate_t* timeAndDate) {
+BaseType_t rtcPrint(char *buffer, RTCTimeAndDate_t *timeAndDate) {
   RTCTimeAndDate_t rtc = {};
   if (timeAndDate == NULL) {
     rtcGet(&rtc);
@@ -114,14 +129,8 @@ BaseType_t rtcPrint(char* buffer, RTCTimeAndDate_t* timeAndDate) {
     memcpy(&rtc, timeAndDate, sizeof(RTCTimeAndDate_t));
   }
   if (rtc.year != 0) {
-    return sprintf(buffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
-            rtc.year,
-            rtc.month,
-            rtc.day,
-            rtc.hour,
-            rtc.minute,
-            rtc.second,
-            rtc.ms);
+    return sprintf(buffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u", rtc.year, rtc.month, rtc.day,
+                   rtc.hour, rtc.minute, rtc.second, rtc.ms);
   } else {
     strcpy(buffer, "0");
     return 0;
@@ -136,6 +145,7 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   LL_RTC_TimeTypeDef RTC_TimeStruct;
   LL_RTC_DateTypeDef RTC_DateStruct;
 
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
   RTC_TimeStruct.TimeFormat = LL_RTC_TIME_FORMAT_AM_OR_24;
   RTC_TimeStruct.Hours = timeAndDate->hour;
   RTC_TimeStruct.Minutes = timeAndDate->minute;
@@ -152,13 +162,14 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   // Year is stored as only 2 digits :(
   RTC_DateStruct.Year = timeAndDate->year - 2000;
 
-  if(LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_DateStruct) != SUCCESS) {
+  if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_DateStruct) != SUCCESS) {
     rval = pdFAIL;
   }
 
-  if(rval == pdPASS) {
+  if (rval == pdPASS) {
     LL_RTC_BKP_SetRegister(RTC, LL_RTC_BKP_DR0, RTC_SET_MAGIC);
   }
+  bm_semaphore_give(rtc_mutex);
 
   return rval;
 }
@@ -170,7 +181,7 @@ uint64_t rtcGetMicrosecondsSimple(void) {
   return rtcGetMicroSeconds(&time_and_date);
 }
 
-uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate){
+uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate) {
   int i;
   uint64_t microseconds = 0;
 
@@ -182,19 +193,19 @@ uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate){
   microseconds = (timeAndDate->year - 1970) * (SECS_PER_DAY * 365);
   for (i = 1970; i < timeAndDate->year; i++) {
     if (LEAP_YEAR(i - 1970)) {
-      microseconds +=  SECS_PER_DAY;   // add extra days for leap years
+      microseconds += SECS_PER_DAY; // add extra days for leap years
     }
   }
 
   // add days for this year, months start from 1
   for (i = 1; i < timeAndDate->month; i++) {
-    if ( (i == 2) && LEAP_YEAR(timeAndDate->year - 1970)) {
+    if ((i == 2) && LEAP_YEAR(timeAndDate->year - 1970)) {
       microseconds += SECS_PER_DAY * 29;
     } else {
-      microseconds += SECS_PER_DAY * monthDays[i-1];  //monthDay array starts from 0
+      microseconds += SECS_PER_DAY * monthDays[i - 1]; //monthDay array starts from 0
     }
   }
-  microseconds += (timeAndDate->day-1) * SECS_PER_DAY;
+  microseconds += (timeAndDate->day - 1) * SECS_PER_DAY;
   microseconds += timeAndDate->hour * SECS_PER_HOUR;
   microseconds += timeAndDate->minute * SECS_PER_MIN;
   microseconds += timeAndDate->second;
@@ -203,34 +214,57 @@ uint64_t rtcGetMicroSeconds(RTCTimeAndDate_t *timeAndDate){
   return microseconds;
 }
 
-uint32_t getCALM(){
-  return LL_RTC_CAL_GetMinus(RTC);
+uint32_t getCALM() {
+  uint32_t ret = 0;
+
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
+  ret = LL_RTC_CAL_GetMinus(RTC);
+  bm_semaphore_give(rtc_mutex);
+
+  return ret;
 }
 
-uint32_t getCALP(){
-  return LL_RTC_CAL_IsPulseInserted(RTC);
+uint32_t getCALP() {
+  uint32_t ret = 0;
+
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
+  ret = LL_RTC_CAL_IsPulseInserted(RTC);
+  bm_semaphore_give(rtc_mutex);
+
+  return ret;
 }
 
-uint32_t getRECALP(){
-  return LL_RTC_IsActiveFlag_RECALP(RTC);
+uint32_t getRECALP() {
+  uint32_t ret = 0;
+
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
+  ret = LL_RTC_IsActiveFlag_RECALP(RTC);
+  bm_semaphore_give(rtc_mutex);
+
+  return ret;
 }
 
-uint32_t setCALM(uint32_t calm){
+uint32_t setCALM(uint32_t calm) {
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
   LL_RTC_DisableWriteProtection(RTC);
   LL_RTC_CAL_SetMinus(RTC, calm);
   LL_RTC_EnableWriteProtection(RTC);
+  bm_semaphore_give(rtc_mutex);
+
   return 0;
 }
 
-uint32_t setCALP(uint32_t calp){
+uint32_t setCALP(uint32_t calp) {
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
   LL_RTC_DisableWriteProtection(RTC);
-  if(calp){
+  if (calp) {
     LL_RTC_CAL_SetPulse(RTC, LL_RTC_CALIB_INSERTPULSE_SET);
-  }
-  else{
-    LL_RTC_CAL_SetPulse(RTC,LL_RTC_CALIB_INSERTPULSE_NONE);
+  } else {
+    LL_RTC_CAL_SetPulse(RTC, LL_RTC_CALIB_INSERTPULSE_NONE);
   }
   LL_RTC_EnableWriteProtection(RTC);
+  bm_semaphore_give(rtc_mutex);
+
   return 0;
 }
 
@@ -246,24 +280,15 @@ bool logRtcGetTimeStr(char *timeStr, size_t len, bool epoch) {
   RTCTimeAndDate_t timeAndDate;
   size_t numChars = 0;
   if (rtcGet(&timeAndDate) == pdPASS) {
-    if(epoch) {
-      uint32_t time = utcFromDateTime(timeAndDate.year,
-                                      timeAndDate.month,
-                                      timeAndDate.day,
-                                      timeAndDate.hour,
-                                      timeAndDate.minute,
-                                      timeAndDate.second);
+    if (epoch) {
+      uint32_t time = utcFromDateTime(timeAndDate.year, timeAndDate.month, timeAndDate.day,
+                                      timeAndDate.hour, timeAndDate.minute, timeAndDate.second);
 
       numChars = snprintf(timeStr, len, "%lu.%03d", time, timeAndDate.ms);
     } else {
-      numChars = snprintf(timeStr, len, "%04d-%02d-%02dT%02d:%02d:%02d.%03uZ",
-                          timeAndDate.year,
-                          timeAndDate.month,
-                          timeAndDate.day,
-                          timeAndDate.hour,
-                          timeAndDate.minute,
-                          timeAndDate.second,
-                          timeAndDate.ms);
+      numChars = snprintf(timeStr, len, "%04d-%02d-%02dT%02d:%02d:%02d.%03uZ", timeAndDate.year,
+                          timeAndDate.month, timeAndDate.day, timeAndDate.hour,
+                          timeAndDate.minute, timeAndDate.second, timeAndDate.ms);
     }
   } else {
     numChars = snprintf(timeStr, len, "%lut", xTaskGetTickCount());
