@@ -12,29 +12,21 @@
 extern "C" {
 #endif
 
-#define DEBUG_USE_LPUART1
-#define DEBUG_USE_USART3
-
-#define STM32_UUID ((uint32_t *)0x1FFF7A10)
-
-// Bristleback LED logic levels.
-#define BB_LED_ON (1)
-#define BB_LED_OFF (0)
-
 void mxInit(void);
 void bspInit();
 
 // Pin definitions
 extern IOPinHandle_t IMU_INT;
-extern IOPinHandle_t POWER_EN;
 extern IOPinHandle_t VUSB_DETECT;
+extern IOPinHandle_t POWER_EN;
 extern IOPinHandle_t MOTOR_SPEED1;
+extern IOPinHandle_t BM_CS;
 extern IOPinHandle_t BM_SCK;
 extern IOPinHandle_t BM_MISO;
 extern IOPinHandle_t BM_MOSI;
-extern IOPinHandle_t BM_CS;
 extern IOPinHandle_t MOTOR_SPEED2;
-extern IOPinHandle_t BB_VBUS_EN;
+extern IOPinHandle_t VBUS_EN;
+extern IOPinHandle_t BARO_INT;
 extern IOPinHandle_t FLASH_SCK;
 extern IOPinHandle_t FLASH_MISO;
 extern IOPinHandle_t FLASH_MOSI;
@@ -47,10 +39,6 @@ extern IOPinHandle_t ADIN_MISO;
 extern IOPinHandle_t ADIN_MOSI;
 extern IOPinHandle_t BOOT_LED;
 extern IOPinHandle_t ADIN_INT;
-extern IOPinHandle_t DEBUG_RX;
-extern IOPinHandle_t DEBUG_TX;
-extern IOPinHandle_t PAYLOAD_RX;
-extern IOPinHandle_t PAYLOAD_TX;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;

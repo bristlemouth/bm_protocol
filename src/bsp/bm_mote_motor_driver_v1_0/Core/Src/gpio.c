@@ -62,7 +62,7 @@ void MX_GPIO_Init(void)
                           |ADIN_CS_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(BB_VBUS_EN_GPIO_Port, BB_VBUS_EN_Pin);
+  LL_GPIO_ResetOutputPin(VBUS_EN_GPIO_Port, VBUS_EN_Pin);
 
   /**/
   GPIO_InitStruct.Pin = IMU_BOOT_Pin;
@@ -90,12 +90,12 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = BB_VBUS_EN_Pin;
+  GPIO_InitStruct.Pin = VBUS_EN_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(BB_VBUS_EN_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(VBUS_EN_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = BOOT_LED_Pin;

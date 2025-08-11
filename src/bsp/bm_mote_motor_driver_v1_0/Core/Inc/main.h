@@ -96,8 +96,8 @@ void SystemPower_Config_ext(void);
 #define BM_SPI_MOSI_GPIO_Port GPIOA
 #define MOTOR_SPEED1_Pin LL_GPIO_PIN_0
 #define MOTOR_SPEED1_GPIO_Port GPIOB
-#define BB_VBUS_EN_Pin LL_GPIO_PIN_1
-#define BB_VBUS_EN_GPIO_Port GPIOB
+#define VBUS_EN_Pin LL_GPIO_PIN_1
+#define VBUS_EN_GPIO_Port GPIOB
 #define FLASH_SCK_Pin LL_GPIO_PIN_13
 #define FLASH_SCK_GPIO_Port GPIOB
 #define FLASH_MISO_Pin LL_GPIO_PIN_14
