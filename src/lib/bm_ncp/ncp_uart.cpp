@@ -356,13 +356,17 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (value) {
-    if (huart3.hdmarx->State != HAL_DMA_STATE_BUSY) {
+    if (huart3.hdmarx->State == HAL_DMA_STATE_READY) {
+      // LL_DMA_DisableChannel(GPDMA1, LL_DMA_CHANNEL_11); // RX
+      // LL_USART_DisableDMAReq_RX(USART3);
       lpmPeripheralInactiveFromISR(LPM_USART3_RX);
     }
     xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     ncp_rx = false;
   } else {
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
+    // LL_DMA_EnableChannel(GPDMA1, LL_DMA_CHANNEL_11); // RX
+    // LL_USART_EnableDMAReq_RX(USART3);
     xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
     ncp_rx = true;
     HAL_UART_AbortReceive(&huart3);
@@ -627,6 +631,8 @@ extern "C" void USART3_IRQHandler(void) {
   if (HAL_UART_GetError(&huart3) != HAL_UART_ERROR_NONE && ncp_rx) {
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
                                  NCP_BUFF_LEN);
+    // LL_DMA_DisableChannel(GPDMA1, LL_DMA_CHANNEL_11); // RX
+    // LL_USART_DisableDMAReq_RX(USART3);
     lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   }
 }
@@ -666,6 +672,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
       ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     }
   }
+  // LL_DMA_DisableChannel(GPDMA1, LL_DMA_CHANNEL_11); // RX
+  // LL_USART_DisableDMAReq_RX(USART3);
   lpmPeripheralInactiveFromISR(LPM_USART3_RX);
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
@@ -713,8 +721,11 @@ static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
     xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
   }
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
-  // HAL_UART_MspInit(&huart3);
   lpmPeripheralActive(LPM_USART3);
+  // LL_DMA_EnableChannel(GPDMA1, LL_DMA_CHANNEL_10); // TX
+  // LL_DMA_EnableChannel(GPDMA1, LL_DMA_CHANNEL_11); // RX
+  // LL_USART_EnableDMAReq_TX(USART3);
+  // LL_USART_EnableDMAReq_RX(USART3);
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
   IOWrite(&BM_INT, 0);
   vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
@@ -734,6 +745,8 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
   LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
   LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
+  // LL_DMA_DisableChannel(GPDMA1, LL_DMA_CHANNEL_10); // TX
+  // LL_USART_DisableDMAReq_TX(USART3);
   lpmPeripheralInactiveFromISR(LPM_USART3_TX);
   portYIELD_FROM_ISR(
       higherPriorityTaskWoken == pdTRUE || higherPriorityTaskEventHandle == pdTRUE ? pdTRUE
