@@ -81,6 +81,8 @@ void SystemPower_Config_ext(void);
 #define ADIN_RST_GPIO_Port GPIOA
 #define BARO_INT_Pin LL_GPIO_PIN_2
 #define BARO_INT_GPIO_Port GPIOA
+#define MOTOR_SPEED2_Pin LL_GPIO_PIN_3
+#define MOTOR_SPEED2_GPIO_Port GPIOA
 #define BM_SPI_CS_Pin LL_GPIO_PIN_4
 #define BM_SPI_CS_GPIO_Port GPIOA
 #define BM_SPI_SCK_Pin LL_GPIO_PIN_5

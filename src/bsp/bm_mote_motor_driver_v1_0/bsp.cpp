@@ -14,7 +14,6 @@
 #include "gpio.h"
 #include "icache.h"
 #include "iwdg.h"
-#include "usart.h"
 #include "usb_otg.h"
 
 extern __IO uint32_t uwTick;
@@ -89,11 +88,10 @@ bool usb_is_connected() {
 
 void mxInit(void) {
   MX_GPIO_Init();
-  MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_IWDG_Init();
-  MX_TIM2_Init();
+  MX_TIM5_Init();
   MX_TIM3_Init();
 }
