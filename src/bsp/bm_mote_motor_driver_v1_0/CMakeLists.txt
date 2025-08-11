@@ -43,8 +43,10 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_hal_tim_ex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_exti.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_lpgpio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_lpuart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_gpio.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_rtc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_usb.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32U5xx_HAL_Driver/Src/stm32u5xx_ll_utils.c
         # Uncomment the following line to enable the software watchdog - you must enable/add the LPTIM2 in CubeMX
@@ -64,8 +66,6 @@ set(BSP_DEFINES
         USE_FULL_LL_DRIVER
         USE_HAL_DRIVER
         STM32U575xx
-        MEMFAULT_COREDUMP_STORAGE_WRITE_SIZE=512
-        BSP_MOTE_BRISTLEBACK_MOTOR_DRIVER_V1_0
         # Uncomment the following lines to enable the software watchdog
         # MEMFAULT_SOFWARE_WATCHDOG_SOURCE=LPTIM2_BASE
         # MEMFAULT_EXC_HANDLER_WATCHDOG=LPTIM2_IRQHandler

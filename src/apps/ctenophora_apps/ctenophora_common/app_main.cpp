@@ -7,7 +7,6 @@
 #include "icache.h"
 #include "iwdg.h"
 // #include "rtc.h"
-#include "usart.h"
 #include "usb_otg.h"
 
 // Includes for FreeRTOS
@@ -27,7 +26,6 @@
 #include "debug_gpio.h"
 #include "debug_memfault.h"
 #include "debug_nvm_cli.h"
-#include "debug_pluart_cli.h"
 #include "debug_rtc.h"
 #include "debug_spotter.h"
 #include "debug_sys.h"
@@ -69,28 +67,6 @@
 #include <string.h>
 
 static void defaultTask(void *parameters);
-
-// Serial console (when no usb present)
-SerialHandle_t usart3 = {
-    .device = USART3,
-    .name = "usart3",
-    .txPin = &BM_MOSI_TX3,
-    .rxPin = &BM_SCK_RX3,
-    .interruptPin = NULL,
-    .txStreamBuffer = NULL,
-    .rxStreamBuffer = NULL,
-    .txBufferSize = 1024,
-    .rxBufferSize = 512,
-    .rxBytesFromISR = serialGenericRxBytesFromISR,
-    .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
-    .processByte = NULL,
-    .data = NULL,
-    .arg = NULL,
-    .enabled = false,
-    .flags = 0,
-    .preTxCb = NULL,
-    .postTxCb = NULL,
-};
 
 // Serial console USB device
 SerialHandle_t usbCLI = {
@@ -143,8 +119,6 @@ NvmPartition *dfu_partition_global = NULL;
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
-extern "C" void USART3_IRQHandler(void) { serialGenericUartIRQHandler(&usart3); }
-
 // Only needed if we want the debug commands too
 // extern INA::INA232 *debugIna;
 
@@ -192,39 +166,6 @@ extern "C" int main(void) {
   };
 }
 
-bool start_stress(const void *pinHandle, uint8_t value, void *args) {
-  (void)pinHandle;
-  (void)args;
-  static bool started;
-
-  if (!started && value) {
-    started = true;
-    stress_start_tx((2 * 1024) / 8);
-  }
-
-  return false;
-}
-
-void handle_sensor_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
-                                 const uint8_t *data, uint16_t data_len, uint8_t type,
-                                 uint8_t version) {
-  (void)node_id;
-  (void)version;
-  (void)type;
-  if (strncmp("button", topic, topic_len) == 0) {
-    if (strncmp("on", reinterpret_cast<const char *>(data), data_len) == 0) {
-      IOWrite(&LED_GREEN, BB_LED_ON);
-    } else if (strncmp("off", reinterpret_cast<const char *>(data), data_len) == 0) {
-      IOWrite(&LED_GREEN, BB_LED_OFF);
-    } else {
-      // Not handled
-    }
-  } else {
-    printf("Topic: %.*s\n", topic_len, topic);
-    printf("Data: %.*s\n", data_len, data);
-  }
-}
-
 void handle_bm_subscriptions(uint64_t node_id, const char *topic, uint16_t topic_len,
                              const uint8_t *data, uint16_t data_len, uint8_t type,
                              uint8_t version) {
@@ -261,23 +202,11 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic, uint16_t topic
   }
 }
 
-// TODO - move this to some debug file
 // Defines lost if GPIOs for Debug CLI
 static const DebugGpio_t debugGpioPins[] = {
-    {"adin_cs", &ADIN_CS, GPIO_OUT},
-    {"adin_int", &ADIN_INT, GPIO_IN},
-    {"adin_pwr", &ADIN_PWR, GPIO_OUT},
-    {"adin_rst", &ADIN_RST, GPIO_OUT},
-    {"bb_3v3_en", &BB_3V3_EN, GPIO_OUT},
-    {"gpio1", &GPIO1, GPIO_OUT},
-    {"bb_pl_buck_en", &BB_PL_BUCK_EN, GPIO_OUT},
-    {"led_green", &LED_GREEN, GPIO_OUT},
-    {"led_red", &LED_RED, GPIO_OUT},
-    {"led_blue", &LED_BLUE, GPIO_OUT},
-    {"bb_vbus_en", &BB_VBUS_EN, GPIO_OUT},
-    {"flash_cs", &FLASH_CS, GPIO_OUT},
-    {"boot_led", &BOOT_LED, GPIO_IN},
-    {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+    {"adin_cs", &ADIN_CS, GPIO_OUT},   {"adin_int", &ADIN_INT, GPIO_IN},
+    {"adin_pwr", &ADIN_PWR, GPIO_OUT}, {"adin_rst", &ADIN_RST, GPIO_OUT},
+    {"power_en", &POWER_EN, GPIO_OUT},
 };
 
 /* USER CODE EXECUTED HERE */
@@ -362,7 +291,6 @@ static void defaultTask(void *parameters) {
   NvmPartition dfu_partition(debugW25, dfu_configuration);
   dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
-  debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init();
   debugConfigurationInit();
@@ -382,14 +310,7 @@ static void defaultTask(void *parameters) {
   SensorWatchdog::SensorWatchdogInit();
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
-  // Turn of the bristleback leds
-  IOWrite(&LED_GREEN, BB_LED_OFF);
-  IOWrite(&LED_BLUE, BB_LED_OFF);
-  IOWrite(&LED_RED, BB_LED_OFF);
-  IOWrite(&BB_3V3_EN,
-          1);                 // 1 enables, 0 disables. Needed for I2C and I/O control.
-  IOWrite(&BB_VBUS_EN, 1);    // 0 enables, 1 disables. Needed for VOUT and 5V.
-  IOWrite(&BB_PL_BUCK_EN, 1); // 0 enables, 1 disables. Vout
+  IOWrite(&POWER_EN, 0); // 0 enables, 1 disables. Needed for VOUT and 3V3.
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif

@@ -44,7 +44,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stm32u5xx_ll_usart.h"
+#include "stm32u5xx_ll_lpuart.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -75,12 +76,14 @@ void SystemPower_Config_ext(void);
 #define IMU_BOOT_GPIO_Port GPIOC
 #define IMU_INT_Pin LL_GPIO_PIN_0
 #define IMU_INT_GPIO_Port GPIOH
+#define IMU_INT_EXTI_IRQn EXTI0_IRQn
 #define ADIN_PWR_Pin LL_GPIO_PIN_1
 #define ADIN_PWR_GPIO_Port GPIOH
 #define ADIN_RST_Pin LL_GPIO_PIN_0
 #define ADIN_RST_GPIO_Port GPIOA
 #define BARO_INT_Pin LL_GPIO_PIN_2
 #define BARO_INT_GPIO_Port GPIOA
+#define BARO_INT_EXTI_IRQn EXTI2_IRQn
 #define MOTOR_SPEED2_Pin LL_GPIO_PIN_3
 #define MOTOR_SPEED2_GPIO_Port GPIOA
 #define BM_SPI_CS_Pin LL_GPIO_PIN_4

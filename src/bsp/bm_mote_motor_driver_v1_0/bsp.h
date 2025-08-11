@@ -25,15 +25,14 @@ void mxInit(void);
 void bspInit();
 
 // Pin definitions
-extern IOPinHandle_t LED_GREEN;
-extern IOPinHandle_t GPIO1;
+extern IOPinHandle_t IMU_INT;
+extern IOPinHandle_t POWER_EN;
 extern IOPinHandle_t VUSB_DETECT;
-extern IOPinHandle_t BB_3V3_EN;
 extern IOPinHandle_t MOTOR_SPEED1;
-extern IOPinHandle_t BB_PL_BUCK_EN;
-extern IOPinHandle_t BM_SCK_RX3;
+extern IOPinHandle_t BM_SCK;
 extern IOPinHandle_t BM_MISO;
-extern IOPinHandle_t BM_MOSI_TX3;
+extern IOPinHandle_t BM_MOSI;
+extern IOPinHandle_t BM_CS;
 extern IOPinHandle_t MOTOR_SPEED2;
 extern IOPinHandle_t BB_VBUS_EN;
 extern IOPinHandle_t FLASH_SCK;

@@ -61,6 +61,7 @@ extern DMA_HandleTypeDef handle_GPDMA1_Channel15;
 extern DMA_HandleTypeDef handle_GPDMA1_Channel14;
 extern DMA_HandleTypeDef handle_GPDMA1_Channel13;
 extern DMA_HandleTypeDef handle_GPDMA1_Channel12;
+extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi3;
 extern TIM_HandleTypeDef htim8;
@@ -91,6 +92,46 @@ void DebugMon_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32u5xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles EXTI Line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+  /* USER CODE END EXTI0_IRQn 0 */
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_0) != RESET)
+  {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_0);
+    /* USER CODE BEGIN LL_EXTI_LINE_0_FALLING */
+
+    /* USER CODE END LL_EXTI_LINE_0_FALLING */
+  }
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI Line2 interrupt.
+  */
+void EXTI2_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI2_IRQn 0 */
+
+  /* USER CODE END EXTI2_IRQn 0 */
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_2) != RESET)
+  {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_2);
+    /* USER CODE BEGIN LL_EXTI_LINE_2_FALLING */
+
+    /* USER CODE END LL_EXTI_LINE_2_FALLING */
+  }
+  /* USER CODE BEGIN EXTI2_IRQn 1 */
+
+  /* USER CODE END EXTI2_IRQn 1 */
+}
 
 /**
   * @brief This function handles EXTI Line8 interrupt.
@@ -151,6 +192,20 @@ void TIM8_UP_IRQHandler(void)
   /* USER CODE BEGIN TIM8_UP_IRQn 1 */
 
   /* USER CODE END TIM8_UP_IRQn 1 */
+}
+
+/**
+  * @brief This function handles SPI1 global interrupt.
+  */
+void SPI1_IRQHandler(void)
+{
+  /* USER CODE BEGIN SPI1_IRQn 0 */
+
+  /* USER CODE END SPI1_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi1);
+  /* USER CODE BEGIN SPI1_IRQn 1 */
+
+  /* USER CODE END SPI1_IRQn 1 */
 }
 
 /**

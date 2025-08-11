@@ -2,7 +2,6 @@
 
 #include "bsp.h"
 #include "serial.h"
-#include "usart.h"
 
 namespace PLUART {
 

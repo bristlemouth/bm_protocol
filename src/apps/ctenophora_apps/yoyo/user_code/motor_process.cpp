@@ -80,10 +80,12 @@ static void power_monitor_task(void *args) {
   while (1) {
 
     if (powerSamplerGetLatest(I2C_INA_MAIN_ADDR, voltage, current)) {
-      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", voltage, current);
+      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", (unsigned int)I2C_INA_MAIN_ADDR,
+               voltage, current);
     }
     if (powerSamplerGetLatest(I2C_INA_PODL_ADDR, voltage, current)) {
-      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", voltage, current);
+      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", (unsigned int)I2C_INA_MAIN_ADDR,
+               voltage, current);
     }
 
     bm_delay(POWER_MONITOR_TASK_UPDATE_TIME_MS);
@@ -94,8 +96,7 @@ void motor_init(void) {
   // Sample current monitor at a higher rate
   sensorSamplerChangeSamplingPeriodMs(POWER_SAMPLER_NAME, 100);
 
-  motor_ctx.sem = bm_semaphore_create();
-  bm_semaphore_give(motor_ctx.sem);
+  motor_ctx.sem = bm_mutex_create();
   bm_task_create(motor_control_task, "motor control task", 512, NULL, 10, NULL);
   bm_task_create(power_monitor_task, "power monitor task", 512, NULL, 12, NULL);
 }
@@ -113,14 +114,15 @@ bool set_pwm_duty(uint8_t duty, IOPinHandle_t *handle) {
     pwm_reg = &TIM3->CCR3;
     value = CALCULATE_DUTY(TIM3, duty);
   } else if (handle == &MOTOR_SPEED2) {
-    timer = &htim2;
-    channel = TIM_CHANNEL_2;
-    pwm_reg = &TIM2->CCR2;
+    timer = &htim5;
+    channel = TIM_CHANNEL_4;
+    pwm_reg = &TIM5->CCR4;
     value = CALCULATE_DUTY(TIM2, duty);
   }
 
   if (timer && pwm_reg) {
-    bm_debug("Setting duty cycle to %d (%d) at handle %p\n", duty, value, handle);
+    bm_debug("Setting duty cycle to %" PRIx8 " (%" PRIx32 ") at handle %p\n", duty, value,
+             handle);
     *pwm_reg = value;
     HAL_TIM_PWM_Start(timer, channel);
     ret = true;
