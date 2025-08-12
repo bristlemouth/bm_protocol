@@ -15,6 +15,7 @@
 
 #define NUMBER_OF_ITERATIONS                                                                   \
   (((float)MAX_SPEED_PERCENT - (float)STARTING_SPEED_PERCENT) / (float)SPEED_PER_ITERATION)
+
 #define DELAY_TIME_MS ((uint32_t)((float)RAMP_TIME_MS / (float)NUMBER_OF_ITERATIONS))
 #define MOTOR_SEMAPHORE_MAX_DELAY_MS (1000)
 
@@ -84,7 +85,7 @@ static void power_monitor_task(void *args) {
                voltage, current);
     }
     if (powerSamplerGetLatest(I2C_INA_PODL_ADDR, voltage, current)) {
-      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", (unsigned int)I2C_INA_MAIN_ADDR,
+      bm_debug("Power Draw At Address 0x%X: %.3fV %.3fmA\n", (unsigned int)I2C_INA_PODL_ADDR,
                voltage, current);
     }
 
@@ -117,11 +118,11 @@ bool set_pwm_duty(uint8_t duty, IOPinHandle_t *handle) {
     timer = &htim5;
     channel = TIM_CHANNEL_4;
     pwm_reg = &TIM5->CCR4;
-    value = CALCULATE_DUTY(TIM2, duty);
+    value = CALCULATE_DUTY(TIM5, duty);
   }
 
   if (timer && pwm_reg) {
-    bm_debug("Setting duty cycle to %" PRIx8 " (%" PRIx32 ") at handle %p\n", duty, value,
+    bm_debug("Setting duty cycle to %" PRIu8 " (%" PRIu32 ") at handle %p\n", duty, value,
              handle);
     *pwm_reg = value;
     HAL_TIM_PWM_Start(timer, channel);

@@ -310,7 +310,6 @@ static void defaultTask(void *parameters) {
   SensorWatchdog::SensorWatchdogInit();
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
 
-  IOWrite(&POWER_EN, 0); // 0 enables, 1 disables. Needed for VOUT and 3V3.
 #ifdef USE_MICROPYTHON
   micropython_freertos_init(&usbCLI);
 #endif

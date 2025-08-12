@@ -64,8 +64,7 @@ void setup(void) {
   bm_sub(MOTOR_CONTROL_TOPIC, motor_sub);
 
   // Enable power to bristleback and the motor
-  IOWrite(&BB_VBUS_EN, 0);
-  IOWrite(&BB_PL_BUCK_EN, 0);
+  IOWrite(&VBUS_EN, 0);
 }
 
 void loop(void) {}

@@ -61,6 +61,7 @@ void bspInit() {
   osStarted = true;
   HAL_SuspendTick();
 
+  spiInit(&spi1);
   spiInit(&spi2);
   spiInit(&spi3);
   i2cInit(&i2c1);
@@ -68,14 +69,8 @@ void bspInit() {
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
 
-  // Turn LEDS on by default
-  IOWrite(&LED_GREEN, 0);
-
-  // Turn off the BUCK by default (it's enabled when low)
-  IOWrite(&BB_PL_BUCK_EN, 1);
-
-  // Turn it on by default
-  IOWrite(&BB_3V3_EN, 1);
+  // Turn on power by default
+  IOWrite(&POWER_EN, 1);
 }
 
 bool usb_is_connected() {
