@@ -11,7 +11,6 @@
 #include "task.h"
 #include "lpm.h"
 #include "watchdog.h"
-#include "bsp.h"
 
 #define SUPPORT_VREG_RANGES_1_THROUGH_3
 

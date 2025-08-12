@@ -545,9 +545,6 @@ void ncpRXTask(void *parameters) {
     uint32_t taskNotifyValue = 0;
     BaseType_t res = xTaskNotifyWait(pdFALSE, UINT32_MAX, &taskNotifyValue, portMAX_DELAY);
 
-    printf("\n***********\nCR1 register: 0x%" PRIx32 "\n**********\n\n", huart3.Instance->CR1);
-    printf("\n***********\nCR2 register: 0x%" PRIx32 "\n**********\n\n", huart3.Instance->CR2);
-
     if (res != pdTRUE) {
       printf("Error waiting for ncp task notification\n");
       continue;
