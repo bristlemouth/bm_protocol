@@ -38,6 +38,13 @@ BaseType_t rtcInit() {
     rval = pdFAIL;
   }
 
+  // Disable reading from shadow register as it is updated at 1Hz and may cause
+  // concurrency problems
+  LL_RTC_DisableWriteProtection(RTC);
+  LL_RTC_EnableShadowRegBypass(RTC);
+  LL_RTC_EnableWriteProtection(RTC);
+  configASSERT(LL_RTC_IsShadowRegBypassEnabled(RTC));
+
   rtc_mutex = bm_mutex_create();
 
   return rval;
@@ -91,34 +98,51 @@ bool isRTCValid(RTCTimeAndDate_t *receivedTimeAndDate, uint32_t driftThesholdS,
 }
 
 BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
-  BaseType_t rval = pdPASS;
   configASSERT(timeAndDate != NULL);
 
-  if (isRTCSet()) {
-    bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
-    uint32_t subSecond = LL_RTC_TIME_GetSubSecond(RTC);
-    uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC);
-    timeAndDate->second = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
-    timeAndDate->minute = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
-    timeAndDate->hour = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
-
-    timeAndDate->day = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetDay(RTC));
-    timeAndDate->month = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetMonth(RTC));
-
-    // Year is stored as only 2 digits :(
-    timeAndDate->year = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetYear(RTC)) + 2000;
-
-    if (prediv >= subSecond) {
-      timeAndDate->ms = (1000 * (prediv - subSecond)) / (prediv + 1);
-    } else {
-      timeAndDate->ms = 0;
-    }
-    bm_semaphore_give(rtc_mutex);
-  } else {
-    rval = pdFAIL;
+  if (!isRTCSet()) {
+    return pdFAIL;
   }
 
-  return rval;
+  *timeAndDate = (RTCTimeAndDate_t){0};
+  RTCTimeAndDate_t previous = {0};
+  RTCTimeAndDate_t *to_read = NULL;
+  uint32_t subSecond = 0;
+  uint32_t prediv = 0;
+
+  bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
+
+  // Read from registers until previous and current read are the same to address race conditions
+  // between reading TR and DR registers, this ensures coherency between these registers see:
+  // BYPSHAD in the RTC control register
+  do {
+    if (to_read == &previous) {
+      to_read = timeAndDate;
+    } else {
+      to_read = &previous;
+    }
+    subSecond = LL_RTC_TIME_GetSubSecond(RTC);
+    prediv = LL_RTC_GetSynchPrescaler(RTC);
+    to_read->second = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
+    to_read->minute = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
+    to_read->hour = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
+
+    to_read->day = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetDay(RTC));
+    to_read->month = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetMonth(RTC));
+
+    // Year is stored as only 2 digits :(
+    to_read->year = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetYear(RTC)) + 2000;
+
+  } while (memcmp(timeAndDate, &previous, sizeof(RTCTimeAndDate_t)) != 0);
+
+  if (prediv >= subSecond) {
+    timeAndDate->ms = (1000 * (prediv - subSecond)) / (prediv + 1);
+  } else {
+    timeAndDate->ms = 0;
+  }
+  bm_semaphore_give(rtc_mutex);
+
+  return pdPASS;
 }
 
 BaseType_t rtcPrint(char *buffer, RTCTimeAndDate_t *timeAndDate) {
