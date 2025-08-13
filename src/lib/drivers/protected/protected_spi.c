@@ -245,14 +245,14 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
   return rval;
 }
 
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
+static void spiCpltCallback(SPI_HandleTypeDef *hspi, bool error_occured) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   for(int i = 0; i < _dma_context.num_registered_spi; i++){
     if(hspi == _dma_context.spi_interfaces[i]->handle){
       configASSERT(_dma_context.spi_task_to_wake[i]);
       vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
       _dma_context.spi_task_to_wake[i] = NULL;
-      _dma_context.spi_dma_error_occurred[i] = false;
+      _dma_context.spi_dma_error_occurred[i] = error_occured;
       if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
         lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
       }
@@ -260,72 +260,24 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
     }
   }
   portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
+  spiCpltCallback(hspi, false);
 }
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_interfaces[i]->handle){
-      configASSERT(_dma_context.spi_task_to_wake[i]);
-      vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
-      _dma_context.spi_task_to_wake[i] = NULL;
-      _dma_context.spi_dma_error_occurred[i] = false;
-      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
-        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
-      }
-      break;
-    }
-  }
-  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+  spiCpltCallback(hspi, false);
 }
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_interfaces[i]->handle){
-      configASSERT(_dma_context.spi_task_to_wake[i]);
-      vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
-      _dma_context.spi_task_to_wake[i] = NULL;
-      _dma_context.spi_dma_error_occurred[i] = false;
-      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
-        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
-      }
-      break;
-    }
-  }
-  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+  spiCpltCallback(hspi, false);
 }
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_interfaces[i]->handle){
-      configASSERT(_dma_context.spi_task_to_wake[i]);
-      vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
-      _dma_context.spi_task_to_wake[i] = NULL;
-      _dma_context.spi_dma_error_occurred[i] = true;
-      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
-        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
-      }
-      break;
-    }
-  }
-  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+  spiCpltCallback(hspi, true);
 }
 
 void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi) {
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_interfaces[i]->handle){
-      configASSERT(_dma_context.spi_task_to_wake[i]);
-      vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
-      _dma_context.spi_task_to_wake[i] = NULL;
-      _dma_context.spi_dma_error_occurred[i] = true;
-      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
-        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
-      }
-      break;
-    }
-  }
-  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+  spiCpltCallback(hspi, true);
 }
