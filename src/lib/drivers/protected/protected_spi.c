@@ -232,10 +232,6 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
     logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
 #endif
 
-    // if(interface->lpm_mask) {
-    //   lpmPeripheralInactive(interface->lpm_mask);
-    // }
-
     xSemaphoreGive(interface->mutex);
   } else {
     printf("%s Error [%s] - Unable to take mutex.\n", __func__, interface->name);
