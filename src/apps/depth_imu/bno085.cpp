@@ -69,8 +69,9 @@ int Bno085::read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us
   // My notes:
   // One thing I need to find out is how the interrupt line
   // plays into recieving... if we even need it?
+  return readBytes(pBuffer, len);
 
-  return 0;
+  // return 0;
 }
 
 int Bno085::write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len) {
@@ -91,7 +92,9 @@ int Bno085::write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len) {
   // accepted.  It need not block.  The actual transmission of
   // the data can continue after this function returns.
 
-  return 0;
+  return writeBytes(pBuffer, len);
+
+  // return 0;
 }
 
 uint32_t Bno085::getTimeUs(sh2_Hal_t *self) {
