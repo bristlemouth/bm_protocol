@@ -349,7 +349,7 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
-static void set_bm_int_pin_to_int(void) {
+static void set_bm_int_pin_to_interrupt(void) {
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_INPUT);
   LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
   LL_GPIO_SetPinPull(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_PULL_UP);
@@ -621,7 +621,7 @@ extern "C" void USART3_IRQHandler(void) {
   if (HAL_UART_GetError(&huart3) != HAL_UART_ERROR_NONE && ncp_rx) {
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
                                  NCP_BUFF_LEN);
-    set_bm_int_pin_to_int();
+    set_bm_int_pin_to_interrupt();
   }
 }
 #endif
@@ -660,7 +660,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
       ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     }
   }
-  set_bm_int_pin_to_int();
+  set_bm_int_pin_to_interrupt();
   portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
@@ -723,7 +723,7 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
     xSemaphoreGiveFromISR(ncp_ctx.negotiating_lock, NULL);
   }
   if (huart3.hdmarx->State == HAL_DMA_STATE_READY) {
-    set_bm_int_pin_to_int();
+    set_bm_int_pin_to_interrupt();
   }
 
   lpmPeripheralInactiveFromISR(LPM_USART3_TX);
