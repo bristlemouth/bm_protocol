@@ -14,6 +14,7 @@ extern "C" {
 
 void mxInit(void);
 void bspInit();
+void delay_us(uint64_t us);
 
 // Pin definitions
 extern IOPinHandle_t IMU_INT;
@@ -59,6 +60,7 @@ typedef struct adin_pins_s {
 
 #define I2C_INA_MAIN_ADDR (0x43)
 #define I2C_INA_PODL_ADDR (0x41)
+#define I2C_BMP581_ADDR (0x47)
 #define NUM_INA232_DEV (2)
 
 #ifdef __cplusplus

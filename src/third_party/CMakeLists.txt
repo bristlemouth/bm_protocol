@@ -77,6 +77,7 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(THIRD_PARTY_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${SRC_DIR}/third_party/BME280_driver/bme280.c
+    ${SRC_DIR}/third_party/BMP581/bmp5.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
@@ -91,6 +92,7 @@ set(THIRD_PARTY_FILES
 
 set(THIRD_PARTY_INCLUDES
     ${SRC_DIR}/third_party/BME280_driver
+    ${SRC_DIR}/third_party/BMP581
     ${SRC_DIR}/third_party/fnv
     ${SRC_DIR}/third_party/mbedtls_base64
     ${SRC_DIR}/third_party/cobs-c

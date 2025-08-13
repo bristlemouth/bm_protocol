@@ -64,6 +64,7 @@ extern DMA_HandleTypeDef handle_GPDMA1_Channel12;
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi3;
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim8;
 
 /* USER CODE BEGIN EV */
@@ -105,7 +106,7 @@ void EXTI0_IRQHandler(void)
   {
     LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_0);
     /* USER CODE BEGIN LL_EXTI_LINE_0_FALLING */
-
+    STM32IOHandleInterrupt((const STM32Pin_t *)IMU_INT.pin);
     /* USER CODE END LL_EXTI_LINE_0_FALLING */
   }
   /* USER CODE BEGIN EXTI0_IRQn 1 */
@@ -125,7 +126,7 @@ void EXTI2_IRQHandler(void)
   {
     LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_2);
     /* USER CODE BEGIN LL_EXTI_LINE_2_FALLING */
-
+    STM32IOHandleInterrupt((const STM32Pin_t *)BARO_INT.pin);
     /* USER CODE END LL_EXTI_LINE_2_FALLING */
   }
   /* USER CODE BEGIN EXTI2_IRQn 1 */
@@ -178,6 +179,20 @@ void EXTI9_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_IRQn 1 */
   portYIELD_FROM_ISR(rval);
   /* USER CODE END EXTI9_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**

@@ -10,6 +10,7 @@
 #include "stm32_io.h"
 #include "tim.h"
 // Peripheral includes for MX_ init functions
+#include "bm_os.h"
 #include "gpdma.h"
 #include "gpio.h"
 #include "icache.h"
@@ -18,6 +19,7 @@
 
 extern __IO uint32_t uwTick;
 static bool osStarted = false;
+static BmSemaphore delay_sem;
 
 uint32_t HAL_GetTick(void) {
   if (osStarted) {
@@ -81,7 +83,20 @@ bool usb_is_connected() {
   return (bool)vusb;
 }
 
+extern "C" {
+void tim2_cb(void) { bm_semaphore_give(delay_sem); }
+}
+
+void delay_us(uint64_t us) {
+  __HAL_TIM_SET_COUNTER(&htim2, 0);
+  __HAL_TIM_SET_AUTORELOAD(&htim2, us);
+  HAL_TIM_Base_Start_IT(&htim2);
+  bm_semaphore_take(delay_sem, portMAX_DELAY);
+  HAL_TIM_Base_Stop_IT(&htim2);
+}
+
 void mxInit(void) {
+  delay_sem = bm_semaphore_create();
   MX_GPIO_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
@@ -89,4 +104,6 @@ void mxInit(void) {
   MX_IWDG_Init();
   MX_TIM5_Init();
   MX_TIM3_Init();
+  MX_TIM2_Init();
+  HAL_TIM_Base_Stop_IT(&htim2);
 }

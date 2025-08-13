@@ -55,6 +55,38 @@ void motor_sub(uint64_t node_id, const char *topic, uint16_t topic_len, const ui
 //  }
 //}
 
+#include "bmp5.h"
+#include "bsp.h"
+#include "protected_i2c.h"
+
+BMP5_INTF_RET_TYPE bmp581_write(uint8_t reg, const uint8_t *data, uint32_t len,
+                                void *intf_ptr) {
+  uint8_t size = sizeof(reg) + len;
+  uint8_t buf[size];
+
+  buf[0] = reg;
+  memcpy(&buf[1], data, len);
+
+  I2CResponse_t resp = i2cTx(&i2c1, *(uint8_t *)intf_ptr, (uint8_t *)buf, size, 100);
+
+  return resp == I2C_OK ? 0 : 1;
+}
+
+BMP5_INTF_RET_TYPE bmp581_read(uint8_t reg, uint8_t *data, uint32_t len, void *intf_ptr) {
+  I2CResponse_t resp = i2cTx(&i2c1, *(uint8_t *)intf_ptr, &reg, sizeof(reg), 100);
+
+  if (resp == I2C_OK) {
+    resp = i2cRx(&i2c1, *(uint8_t *)intf_ptr, data, len, 100);
+  }
+
+  return resp == I2C_OK ? 0 : 1;
+}
+
+void bmp581_delay_us(uint32_t us, void *intf_ptr) {
+  (void)intf_ptr;
+  delay_us(us);
+}
+
 void setup(void) {
   lpmPeripheralActive(LPM_BOOT);
 
@@ -65,6 +97,38 @@ void setup(void) {
 
   // Enable power to bristleback and the motor
   IOWrite(&VBUS_EN, 0);
+
+  static uint8_t addr = I2C_BMP581_ADDR;
+  static struct bmp5_dev dev = {};
+  dev.read = bmp581_read;
+  dev.write = bmp581_write;
+  dev.delay_us = bmp581_delay_us;
+  dev.intf_ptr = &addr;
+  dev.intf = BMP5_I2C_INTF;
+  bmp5_soft_reset(&dev);
+  bmp5_init(&dev);
+  const struct bmp5_int_source_select int_source_select {
+    .drdy_en = BMP5_ENABLE, .fifo_full_en = BMP5_DISABLE, .fifo_thres_en = BMP5_DISABLE,
+    .oor_press_en = BMP5_DISABLE,
+  };
+  bmp5_int_source_select(&int_source_select, &dev);
+  bmp5_configure_interrupt(BMP5_PULSED, BMP5_ACTIVE_LOW, BMP5_INTR_PUSH_PULL, BMP5_INTR_ENABLE,
+                           &dev);
+  const struct bmp5_osr_odr_press_config osr_odf_press_config = {
+      .osr_t = BMP5_OVERSAMPLING_2X,
+      .osr_p = BMP5_OVERSAMPLING_2X,
+      .press_en = BMP5_ENABLE,
+      .odr = BMP5_ODR_240_HZ,
+  };
+  bmp5_set_osr_odr_press_config(&osr_odf_press_config, &dev);
+  const struct bmp5_iir_config iir_cfg = {
+      .set_iir_t = BMP5_IIR_FILTER_COEFF_7,
+      .set_iir_p = BMP5_IIR_FILTER_COEFF_7,
+      .shdw_set_iir_t = BMP5_DISABLE,
+      .shdw_set_iir_p = BMP5_DISABLE,
+      .iir_flush_forced_en = BMP5_DISABLE,
+  };
+  bmp5_set_iir_config(&iir_cfg, &dev);
 }
 
 void loop(void) {}

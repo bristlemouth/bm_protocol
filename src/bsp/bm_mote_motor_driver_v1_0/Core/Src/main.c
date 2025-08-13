@@ -112,6 +112,7 @@ int main(void)
   MX_TIM3_Init();
   MX_SPI1_Init();
   MX_TIM5_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -221,6 +222,7 @@ static void SystemPower_Config(void)
 void SystemPower_Config_ext(void) {
   SystemPower_Config();
 }
+extern void tim2_cb(void);
 /* USER CODE END 4 */
 
 /**
@@ -240,6 +242,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  else if (htim->Instance == TIM2) {
+    tim2_cb();
+  }
 
   /* USER CODE END Callback 1 */
 }
