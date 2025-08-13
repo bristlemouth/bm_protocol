@@ -26,7 +26,7 @@ extern "C" {
 
 // If any of the above peripherals are ok in STOP1 mode, add them to LPM_OK_IN_STOP1
 // #define LPM_OK_IN_STOP1 (LPM_LPTIM2)
-#define LPM_OK_IN_STOP1 (0)
+#define LPM_OK_IN_STOP1 (LPM_USART3_RX)
 
 void lpmInit();
 

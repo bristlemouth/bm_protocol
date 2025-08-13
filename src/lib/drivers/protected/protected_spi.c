@@ -7,12 +7,13 @@
 
 typedef struct SpiDmaContext {
   uint8_t num_registered_spi;
-  SPI_HandleTypeDef *spi_handles[MAX_NUM_SPI];
+  SPIInterface_t *spi_interfaces[MAX_NUM_SPI];
   TaskHandle_t spi_task_to_wake[MAX_NUM_SPI];
   bool spi_dma_error_occurred[MAX_NUM_SPI];
+  volatile uint8_t spi_lpm_counter[MAX_NUM_SPI];
 } SpiDmaContext_t;
 
-static SpiDmaContext_t _dma_context;
+static volatile SpiDmaContext_t _dma_context;
 
 /*!
   Initialize an spi interface
@@ -32,7 +33,7 @@ bool spiInit(SPIInterface_t *interface) {
 
   configASSERT(_dma_context.num_registered_spi < MAX_NUM_SPI);
   interface->dma_id = _dma_context.num_registered_spi;
-  _dma_context.spi_handles[interface->dma_id] = interface->handle;
+  _dma_context.spi_interfaces[interface->dma_id] = interface;
   _dma_context.num_registered_spi++;
 
   return rval;
@@ -149,6 +150,7 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
 
     if(interface->lpm_mask) {
       lpmPeripheralActive(interface->lpm_mask);
+      _dma_context.spi_lpm_counter[interface->dma_id]++;
     }
 
 #ifdef SPI_DEBUG
@@ -230,9 +232,9 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
     logPrintf(SPILog, LOG_LEVEL_DEBUG, "\n");
 #endif
 
-    if(interface->lpm_mask) {
-      lpmPeripheralInactive(interface->lpm_mask);
-    }
+    // if(interface->lpm_mask) {
+    //   lpmPeripheralInactive(interface->lpm_mask);
+    // }
 
     xSemaphoreGive(interface->mutex);
   } else {
@@ -246,11 +248,14 @@ SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_handles[i]){
+    if(hspi == _dma_context.spi_interfaces[i]->handle){
       configASSERT(_dma_context.spi_task_to_wake[i]);
       vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
       _dma_context.spi_task_to_wake[i] = NULL;
       _dma_context.spi_dma_error_occurred[i] = false;
+      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
+        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
+      }
       break;
     }
   }
@@ -260,11 +265,14 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_handles[i]){
+    if(hspi == _dma_context.spi_interfaces[i]->handle){
       configASSERT(_dma_context.spi_task_to_wake[i]);
       vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
       _dma_context.spi_task_to_wake[i] = NULL;
       _dma_context.spi_dma_error_occurred[i] = false;
+      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
+        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
+      }
       break;
     }
   }
@@ -274,11 +282,14 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_handles[i]){
+    if(hspi == _dma_context.spi_interfaces[i]->handle){
       configASSERT(_dma_context.spi_task_to_wake[i]);
       vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
       _dma_context.spi_task_to_wake[i] = NULL;
       _dma_context.spi_dma_error_occurred[i] = false;
+      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
+        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
+      }
       break;
     }
   }
@@ -288,11 +299,14 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_handles[i]){
+    if(hspi == _dma_context.spi_interfaces[i]->handle){
       configASSERT(_dma_context.spi_task_to_wake[i]);
       vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
       _dma_context.spi_task_to_wake[i] = NULL;
       _dma_context.spi_dma_error_occurred[i] = true;
+      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
+        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
+      }
       break;
     }
   }
@@ -302,11 +316,14 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
 void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   for(int i = 0; i < _dma_context.num_registered_spi; i++){
-    if(hspi == _dma_context.spi_handles[i]){
+    if(hspi == _dma_context.spi_interfaces[i]->handle){
       configASSERT(_dma_context.spi_task_to_wake[i]);
       vTaskNotifyGiveFromISR( _dma_context.spi_task_to_wake[i], &xHigherPriorityTaskWoken );
       _dma_context.spi_task_to_wake[i] = NULL;
       _dma_context.spi_dma_error_occurred[i] = true;
+      if (_dma_context.spi_interfaces[i]->lpm_mask && --_dma_context.spi_lpm_counter[i] == 0) {
+        lpmPeripheralInactiveFromISR(_dma_context.spi_interfaces[i]->lpm_mask);
+      }
       break;
     }
   }
