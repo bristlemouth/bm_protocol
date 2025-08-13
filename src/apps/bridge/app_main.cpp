@@ -283,8 +283,12 @@ static void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t t
       };
 
       if (rtcSet(&rtc_time) == pdPASS) {
-        printf("Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n", rtc_time.year, rtc_time.month,
-               rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.ms);
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, false,
+                       "Updating RTC to %u-%u-%u %02u:%02u:%02u.%04u\n", rtc_time.year,
+                       rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
+                       rtc_time.second, rtc_time.ms);
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, false,
+                       "Setting RTC On Bridge To: %" PRIu64, "\n", utc->utc_us);
       } else {
         printf("\n Failed to set RTC.\n");
       }
