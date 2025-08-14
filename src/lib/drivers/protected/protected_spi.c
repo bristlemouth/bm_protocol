@@ -13,7 +13,7 @@ typedef struct SpiDmaContext {
   volatile uint8_t spi_lpm_counter[MAX_NUM_SPI];
 } SpiDmaContext_t;
 
-static volatile SpiDmaContext_t _dma_context;
+static SpiDmaContext_t _dma_context;
 
 /*!
   Initialize an spi interface
