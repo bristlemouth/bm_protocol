@@ -2,6 +2,7 @@
 #include "app_util.h"
 #include "bm_os.h"
 #include "stm32u5xx_ll_rcc.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -12,6 +13,23 @@ static const uint8_t monthDays[] = {
     31, 28, 31, 30, 31, 30,
     31, 31, 30, 31, 30, 31}; // API starts months from 1, this array starts from 0
 static BmSemaphore rtc_mutex = NULL;
+
+static uint16_t calculate_rtc_ms(void) {
+  uint32_t subSecond = 0;
+  uint32_t prediv = 0;
+  uint32_t ret = 0;
+
+  subSecond = LL_RTC_TIME_GetSubSecond(RTC);
+  prediv = LL_RTC_GetSynchPrescaler(RTC);
+
+  if (prediv >= subSecond) {
+    ret = (1000 * (prediv - subSecond)) / (prediv + 1);
+  } else {
+    ret = 0;
+  }
+
+  return (uint16_t)ret;
+}
 
 BaseType_t rtcInit() {
   BaseType_t rval = pdPASS;
@@ -107,8 +125,6 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   *timeAndDate = (RTCTimeAndDate_t){0};
   RTCTimeAndDate_t previous = {0};
   RTCTimeAndDate_t *to_read = NULL;
-  uint32_t subSecond = 0;
-  uint32_t prediv = 0;
 
   bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
 
@@ -121,8 +137,6 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
     } else {
       to_read = &previous;
     }
-    subSecond = LL_RTC_TIME_GetSubSecond(RTC);
-    prediv = LL_RTC_GetSynchPrescaler(RTC);
     to_read->second = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
     to_read->minute = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
     to_read->hour = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
@@ -135,11 +149,7 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
 
   } while (memcmp(timeAndDate, &previous, sizeof(RTCTimeAndDate_t)) != 0);
 
-  if (prediv >= subSecond) {
-    timeAndDate->ms = (1000 * (prediv - subSecond)) / (prediv + 1);
-  } else {
-    timeAndDate->ms = 0;
-  }
+  timeAndDate->ms = calculate_rtc_ms();
   bm_semaphore_give(rtc_mutex);
 
   return pdPASS;
@@ -185,6 +195,30 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
 
   // Year is stored as only 2 digits :(
   RTC_DateStruct.Year = timeAndDate->year - 2000;
+
+  // Adjust fractional seconds of the clock, this can be adjusted at
+  // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
+  uint16_t rtc_ms = calculate_rtc_ms();
+  uint16_t diff = abs(timeAndDate->ms - rtc_ms);
+  uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1;
+  uint32_t adjust = 0;
+  uint32_t action = 0;
+
+  if (timeAndDate->ms > rtc_ms) {
+    action = LL_RTC_SHIFT_SECOND_ADVANCE;
+    adjust = (1000U * pre - diff * pre) / 1000U;
+  } else {
+    action = LL_RTC_SHIFT_SECOND_DELAY;
+    adjust = (diff * pre) / 1000U;
+  }
+
+  // Ensure that there is not an overflow potential and sync time, max delay here of 1/pre seconds
+  while (pre == LL_RTC_TIME_GetSubSecond(RTC)) {
+  };
+  LL_RTC_TIME_Synchronize(RTC, action, adjust);
+  // Wait for shift operation pending flag to clear
+  while (LL_RTC_IsActiveFlag_SHP(RTC)) {
+  };
 
   if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_DateStruct) != SUCCESS) {
     rval = pdFAIL;
