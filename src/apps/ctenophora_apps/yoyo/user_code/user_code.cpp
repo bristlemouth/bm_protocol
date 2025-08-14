@@ -82,24 +82,26 @@ BMP5_INTF_RET_TYPE bmp581_read(uint8_t reg, uint8_t *data, uint32_t len, void *i
   return resp == I2C_OK ? 0 : 1;
 }
 
+#include "bm_os.h"
 void bmp581_delay_us(uint32_t us, void *intf_ptr) {
   (void)intf_ptr;
   delay_us(us);
 }
 
+static struct bmp5_dev dev = {};
+
 void setup(void) {
   lpmPeripheralActive(LPM_BOOT);
 
   pwm_debug_init();
-  motor_init();
+  //motor_init();
 
   bm_sub(MOTOR_CONTROL_TOPIC, motor_sub);
 
-  // Enable power to bristleback and the motor
+  // Enable power to the motor
   IOWrite(&VBUS_EN, 0);
 
   static uint8_t addr = I2C_BMP581_ADDR;
-  static struct bmp5_dev dev = {};
   dev.read = bmp581_read;
   dev.write = bmp581_write;
   dev.delay_us = bmp581_delay_us;
@@ -107,20 +109,21 @@ void setup(void) {
   dev.intf = BMP5_I2C_INTF;
   bmp5_soft_reset(&dev);
   bmp5_init(&dev);
-  const struct bmp5_int_source_select int_source_select {
-    .drdy_en = BMP5_ENABLE, .fifo_full_en = BMP5_DISABLE, .fifo_thres_en = BMP5_DISABLE,
-    .oor_press_en = BMP5_DISABLE,
-  };
-  bmp5_int_source_select(&int_source_select, &dev);
-  bmp5_configure_interrupt(BMP5_PULSED, BMP5_ACTIVE_LOW, BMP5_INTR_PUSH_PULL, BMP5_INTR_ENABLE,
-                           &dev);
-  const struct bmp5_osr_odr_press_config osr_odf_press_config = {
+
+  bmp5_set_power_mode(BMP5_POWERMODE_STANDBY, &dev);
+
+  const struct bmp5_osr_odr_press_config osr_odf_press_cfg = {
       .osr_t = BMP5_OVERSAMPLING_2X,
       .osr_p = BMP5_OVERSAMPLING_2X,
       .press_en = BMP5_ENABLE,
       .odr = BMP5_ODR_240_HZ,
   };
-  bmp5_set_osr_odr_press_config(&osr_odf_press_config, &dev);
+  bmp5_set_osr_odr_press_config(&osr_odf_press_cfg, &dev);
+
+  struct bmp5_osr_odr_eff osr_odr_eff;
+  bmp5_get_osr_odr_eff(&osr_odr_eff, &dev);
+  bm_debug("Is valid: %u\n", osr_odr_eff.odr_is_valid);
+
   const struct bmp5_iir_config iir_cfg = {
       .set_iir_t = BMP5_IIR_FILTER_COEFF_7,
       .set_iir_p = BMP5_IIR_FILTER_COEFF_7,
@@ -129,6 +132,31 @@ void setup(void) {
       .iir_flush_forced_en = BMP5_DISABLE,
   };
   bmp5_set_iir_config(&iir_cfg, &dev);
+
+  bmp5_configure_interrupt(BMP5_PULSED, BMP5_ACTIVE_LOW, BMP5_INTR_PUSH_PULL, BMP5_INTR_ENABLE,
+                           &dev);
+
+  const struct bmp5_int_source_select int_source_select {
+    .drdy_en = BMP5_ENABLE, .fifo_full_en = BMP5_DISABLE, .fifo_thres_en = BMP5_DISABLE,
+    .oor_press_en = BMP5_DISABLE,
+  };
+  bmp5_int_source_select(&int_source_select, &dev);
+  bmp5_int_source_select(&int_source_select, &dev);
+
+  bmp5_set_power_mode(BMP5_POWERMODE_NORMAL, &dev);
 }
 
-void loop(void) {}
+void loop(void) {
+  uint8_t int_status;
+  bmp5_get_interrupt_status(&int_status, &dev);
+
+  if (int_status & BMP5_INT_ASSERTED_DRDY) {
+    struct bmp5_osr_odr_press_config osr_odf_press_cfg = {};
+
+    struct bmp5_sensor_data sensor_data = {};
+    bmp5_get_osr_odr_press_config(&osr_odf_press_cfg, &dev);
+    bmp5_get_sensor_data(&sensor_data, &osr_odf_press_cfg, &dev);
+
+    bm_debug("Sensor Temp: %f, Pressure: %f\n", sensor_data.temperature, sensor_data.pressure);
+  }
+}

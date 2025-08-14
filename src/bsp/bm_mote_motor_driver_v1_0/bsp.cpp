@@ -90,6 +90,13 @@ void tim2_cb(void) { bm_semaphore_give(delay_sem); }
 void delay_us(uint64_t us) {
   __HAL_TIM_SET_COUNTER(&htim2, 0);
   __HAL_TIM_SET_AUTORELOAD(&htim2, us);
+
+  // Clear interrupt flag if set before timer has been started
+  if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE)) {
+    __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+    HAL_NVIC_ClearPendingIRQ(TIM2_IRQn);
+  }
+
   HAL_TIM_Base_Start_IT(&htim2);
   bm_semaphore_take(delay_sem, portMAX_DELAY);
   HAL_TIM_Base_Stop_IT(&htim2);
@@ -105,5 +112,4 @@ void mxInit(void) {
   MX_TIM5_Init();
   MX_TIM3_Init();
   MX_TIM2_Init();
-  HAL_TIM_Base_Stop_IT(&htim2);
 }
