@@ -137,15 +137,15 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
     } else {
       to_read = &previous;
     }
-    to_read->second = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
-    to_read->minute = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
-    to_read->hour = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
+    to_read->second = LL_RTC_TIME_GetSecond(RTC);
+    to_read->minute = LL_RTC_TIME_GetMinute(RTC);
+    to_read->hour = LL_RTC_TIME_GetHour(RTC);
 
-    to_read->day = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetDay(RTC));
-    to_read->month = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetMonth(RTC));
+    to_read->day = LL_RTC_DATE_GetDay(RTC);
+    to_read->month = LL_RTC_DATE_GetMonth(RTC);
 
     // Year is stored as only 2 digits :(
-    to_read->year = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetYear(RTC)) + 2000;
+    to_read->year = LL_RTC_DATE_GetYear(RTC) + 2000;
 
   } while (memcmp(timeAndDate, &previous, sizeof(RTCTimeAndDate_t)) != 0);
 
@@ -180,21 +180,6 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   LL_RTC_DateTypeDef RTC_DateStruct;
 
   bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
-  RTC_TimeStruct.TimeFormat = LL_RTC_TIME_FORMAT_AM_OR_24;
-  RTC_TimeStruct.Hours = timeAndDate->hour;
-  RTC_TimeStruct.Minutes = timeAndDate->minute;
-  RTC_TimeStruct.Seconds = timeAndDate->second;
-
-  if (LL_RTC_TIME_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_TimeStruct) != SUCCESS) {
-    rval = pdFAIL;
-  }
-
-  RTC_DateStruct.WeekDay = LL_RTC_WEEKDAY_MONDAY;
-  RTC_DateStruct.Month = timeAndDate->month;
-  RTC_DateStruct.Day = timeAndDate->day;
-
-  // Year is stored as only 2 digits :(
-  RTC_DateStruct.Year = timeAndDate->year - 2000;
 
   // Adjust fractional seconds of the clock, this can be adjusted at
   // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
@@ -220,7 +205,23 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   while (LL_RTC_IsActiveFlag_SHP(RTC)) {
   };
 
-  if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_DateStruct) != SUCCESS) {
+  RTC_TimeStruct.TimeFormat = LL_RTC_TIME_FORMAT_AM_OR_24;
+  RTC_TimeStruct.Hours = timeAndDate->hour;
+  RTC_TimeStruct.Minutes = timeAndDate->minute;
+  RTC_TimeStruct.Seconds = timeAndDate->second;
+
+  if (LL_RTC_TIME_Init(RTC, LL_RTC_FORMAT_BCD, &RTC_TimeStruct) != SUCCESS) {
+    rval = pdFAIL;
+  }
+
+  RTC_DateStruct.WeekDay = LL_RTC_WEEKDAY_MONDAY;
+  RTC_DateStruct.Month = timeAndDate->month;
+  RTC_DateStruct.Day = timeAndDate->day;
+
+  // Year is stored as only 2 digits :(
+  RTC_DateStruct.Year = timeAndDate->year - 2000;
+
+  if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BCD, &RTC_DateStruct) != SUCCESS) {
     rval = pdFAIL;
   }
 
