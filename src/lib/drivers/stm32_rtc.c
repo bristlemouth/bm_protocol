@@ -2,7 +2,6 @@
 #include "app_util.h"
 #include "bm_os.h"
 #include "stm32u5xx_ll_rcc.h"
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -13,23 +12,6 @@ static const uint8_t monthDays[] = {
     31, 28, 31, 30, 31, 30,
     31, 31, 30, 31, 30, 31}; // API starts months from 1, this array starts from 0
 static BmSemaphore rtc_mutex = NULL;
-
-static uint16_t calculate_rtc_ms(void) {
-  uint32_t subSecond = 0;
-  uint32_t prediv = 0;
-  uint32_t ret = 0;
-
-  subSecond = LL_RTC_TIME_GetSubSecond(RTC);
-  prediv = LL_RTC_GetSynchPrescaler(RTC);
-
-  if (prediv >= subSecond) {
-    ret = (1000 * (prediv - subSecond)) / (prediv + 1);
-  } else {
-    ret = 0;
-  }
-
-  return (uint16_t)ret;
-}
 
 BaseType_t rtcInit() {
   BaseType_t rval = pdPASS;
@@ -127,6 +109,7 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   RTCTimeAndDate_t *to_read = NULL;
 
   bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
+  static uint8_t second_prev = 0;
 
   // Read from registers until previous and current read are the same to address race conditions
   // between reading TR and DR registers, this ensures coherency between these registers see:
@@ -149,7 +132,25 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
 
   } while (memcmp(timeAndDate, &previous, sizeof(RTCTimeAndDate_t)) != 0);
 
-  timeAndDate->ms = calculate_rtc_ms();
+  uint32_t subSecond = LL_RTC_TIME_GetSubSecond(RTC);
+  uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC);
+  uint32_t diff = prediv - subSecond;
+
+  if (prediv < subSecond) {
+    diff = subSecond - prediv;
+  }
+
+  timeAndDate->ms = (1000 * diff) / (prediv + 1);
+
+  // Workaround if SSR is > PRE_S, this second offset will last until
+  // SSR reaches zero
+  if (subSecond > prediv || second_prev != 0) {
+    second_prev = timeAndDate->second;
+    timeAndDate->second--;
+  } else if (timeAndDate->second > second_prev) {
+    second_prev = 0;
+  }
+
   bm_semaphore_give(rtc_mutex);
 
   return pdPASS;
