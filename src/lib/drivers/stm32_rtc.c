@@ -137,15 +137,15 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
     } else {
       to_read = &previous;
     }
-    to_read->second = LL_RTC_TIME_GetSecond(RTC);
-    to_read->minute = LL_RTC_TIME_GetMinute(RTC);
-    to_read->hour = LL_RTC_TIME_GetHour(RTC);
+    to_read->second = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
+    to_read->minute = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
+    to_read->hour = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
 
-    to_read->day = LL_RTC_DATE_GetDay(RTC);
-    to_read->month = LL_RTC_DATE_GetMonth(RTC);
+    to_read->day = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetDay(RTC));
+    to_read->month = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetMonth(RTC));
 
     // Year is stored as only 2 digits :(
-    to_read->year = LL_RTC_DATE_GetYear(RTC) + 2000;
+    to_read->year = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetYear(RTC)) + 2000;
 
   } while (memcmp(timeAndDate, &previous, sizeof(RTCTimeAndDate_t)) != 0);
 
@@ -180,39 +180,29 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   LL_RTC_DateTypeDef RTC_DateStruct;
 
   bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
-
-  // Adjust fractional seconds of the clock, this can be adjusted at
-  // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
-  uint16_t rtc_ms = calculate_rtc_ms();
-  uint16_t diff = abs(timeAndDate->ms - rtc_ms);
-  uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1;
-  uint32_t adjust = 0;
-  uint32_t action = 0;
-
-  if (timeAndDate->ms > rtc_ms) {
-    action = LL_RTC_SHIFT_SECOND_ADVANCE;
-    adjust = (1000U * pre - diff * pre) / 1000U;
-  } else {
-    action = LL_RTC_SHIFT_SECOND_DELAY;
-    adjust = (diff * pre) / 1000U;
-  }
-
-  // Ensure that there is not an overflow potential and sync time, max delay here of 1/pre seconds
-  while (pre == LL_RTC_TIME_GetSubSecond(RTC)) {
-  };
-  LL_RTC_TIME_Synchronize(RTC, action, adjust);
-  // Wait for shift operation pending flag to clear
-  while (LL_RTC_IsActiveFlag_SHP(RTC)) {
-  };
-
   RTC_TimeStruct.TimeFormat = LL_RTC_TIME_FORMAT_AM_OR_24;
   RTC_TimeStruct.Hours = timeAndDate->hour;
   RTC_TimeStruct.Minutes = timeAndDate->minute;
   RTC_TimeStruct.Seconds = timeAndDate->second;
 
-  if (LL_RTC_TIME_Init(RTC, LL_RTC_FORMAT_BCD, &RTC_TimeStruct) != SUCCESS) {
+  if (LL_RTC_TIME_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_TimeStruct) != SUCCESS) {
     rval = pdFAIL;
   }
+
+  // Wait for shift operation pending flag to clear
+  while (LL_RTC_IsActiveFlag_SHP(RTC)) {
+  };
+
+  // Adjust fractional seconds of the clock, this can be adjusted at
+  // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
+  uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1;
+  uint32_t adjust = (1000U * pre - timeAndDate->ms * pre) / 1000U;
+
+  LL_RTC_DisableWriteProtection(RTC);
+  // This adds 1 second to RTC, then subtracts (adjust * 1/PRE_S) seconds
+  // to obtain subsecond offset
+  LL_RTC_TIME_Synchronize(RTC, LL_RTC_SHIFT_SECOND_ADVANCE, adjust);
+  LL_RTC_EnableWriteProtection(RTC);
 
   RTC_DateStruct.WeekDay = LL_RTC_WEEKDAY_MONDAY;
   RTC_DateStruct.Month = timeAndDate->month;
@@ -221,13 +211,14 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   // Year is stored as only 2 digits :(
   RTC_DateStruct.Year = timeAndDate->year - 2000;
 
-  if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BCD, &RTC_DateStruct) != SUCCESS) {
+  if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_DateStruct) != SUCCESS) {
     rval = pdFAIL;
   }
 
   if (rval == pdPASS) {
     LL_RTC_BKP_SetRegister(RTC, LL_RTC_BKP_DR0, RTC_SET_MAGIC);
   }
+
   bm_semaphore_give(rtc_mutex);
 
   return rval;
