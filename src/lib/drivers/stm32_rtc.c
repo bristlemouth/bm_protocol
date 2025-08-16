@@ -13,6 +13,21 @@ static const uint8_t monthDays[] = {
     31, 31, 30, 31, 30, 31}; // API starts months from 1, this array starts from 0
 static BmSemaphore rtc_mutex = NULL;
 
+static uint16_t calculate_rtc_ms(void) {
+  uint32_t subSecond = LL_RTC_TIME_GetSubSecond(RTC);
+  uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC);
+  uint32_t diff = prediv - subSecond;
+  uint32_t ret = 0;
+
+  if (prediv < subSecond) {
+    diff = subSecond - prediv;
+  }
+
+  ret = (1000 * diff) / (prediv + 1);
+
+  return ret;
+}
+
 BaseType_t rtcInit() {
   BaseType_t rval = pdPASS;
 
@@ -109,7 +124,6 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   RTCTimeAndDate_t *to_read = NULL;
 
   bm_semaphore_take(rtc_mutex, BM_MAX_DELAY_UINT32);
-  static uint8_t second_prev = 0;
 
   // Read from registers until previous and current read are the same to address race conditions
   // between reading TR and DR registers, this ensures coherency between these registers see:
@@ -132,19 +146,12 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
 
   } while (memcmp(timeAndDate, &previous, sizeof(RTCTimeAndDate_t)) != 0);
 
-  uint32_t subSecond = LL_RTC_TIME_GetSubSecond(RTC);
-  uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC);
-  uint32_t diff = prediv - subSecond;
+  timeAndDate->ms = calculate_rtc_ms();
 
-  if (prediv < subSecond) {
-    diff = subSecond - prediv;
-  }
-
-  timeAndDate->ms = (1000 * diff) / (prediv + 1);
-
+  static uint8_t second_prev = 0;
   // Workaround if SSR is > PRE_S, this second offset will last until
   // SSR reaches zero
-  if (subSecond > prediv || second_prev != 0) {
+  if (LL_RTC_TIME_GetSubSecond(RTC) > LL_RTC_GetSynchPrescaler(RTC) || second_prev != 0) {
     second_prev = timeAndDate->second;
     timeAndDate->second--;
   } else if (timeAndDate->second > second_prev) {
@@ -190,21 +197,6 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
     rval = pdFAIL;
   }
 
-  // Wait for shift operation pending flag to clear
-  while (LL_RTC_IsActiveFlag_SHP(RTC)) {
-  };
-
-  // Adjust fractional seconds of the clock, this can be adjusted at
-  // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
-  uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1;
-  uint32_t adjust = (1000U * pre - timeAndDate->ms * pre) / 1000U;
-
-  LL_RTC_DisableWriteProtection(RTC);
-  // This adds 1 second to RTC, then subtracts (adjust * 1/PRE_S) seconds
-  // to obtain subsecond offset
-  LL_RTC_TIME_Synchronize(RTC, LL_RTC_SHIFT_SECOND_ADVANCE, adjust);
-  LL_RTC_EnableWriteProtection(RTC);
-
   RTC_DateStruct.WeekDay = LL_RTC_WEEKDAY_MONDAY;
   RTC_DateStruct.Month = timeAndDate->month;
   RTC_DateStruct.Day = timeAndDate->day;
@@ -215,6 +207,27 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
   if (LL_RTC_DATE_Init(RTC, LL_RTC_FORMAT_BIN, &RTC_DateStruct) != SUCCESS) {
     rval = pdFAIL;
   }
+
+  // Adjust fractional seconds of the clock, this can be adjusted at
+  // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
+  uint16_t rtc_ms = calculate_rtc_ms();
+  uint16_t diff = abs(timeAndDate->ms - rtc_ms);
+  uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1;
+  uint32_t adjust = 0;
+  uint32_t action = 0;
+
+  if (timeAndDate->ms > rtc_ms) {
+    action = LL_RTC_SHIFT_SECOND_ADVANCE;
+    adjust = (1000U * pre - diff * pre) / 1000U;
+  } else {
+    action = LL_RTC_SHIFT_SECOND_DELAY;
+    adjust = (diff * pre) / 1000U;
+  }
+
+  // Wait for shift operation pending flag to clear
+  while (LL_RTC_IsActiveFlag_SHP(RTC)) {
+  };
+  LL_RTC_TIME_Synchronize(RTC, action, adjust);
 
   if (rval == pdPASS) {
     LL_RTC_BKP_SetRegister(RTC, LL_RTC_BKP_DR0, RTC_SET_MAGIC);
