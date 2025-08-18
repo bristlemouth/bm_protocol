@@ -41,7 +41,6 @@ static volatile uint8_t ncpRXCurrBuff = 0;
 static volatile uint8_t ncpRXBuffIdx = 0;
 static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
 static volatile uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
-static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
@@ -383,6 +382,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   ncpSerialHandle->rxStreamBuffer = xStreamBufferCreate(ncpSerialHandle->rxBufferSize, 1);
   configASSERT(ncpSerialHandle->rxStreamBuffer != NULL);
 
+  // Set the rxBytesFromISR to the custom NCP one
   ncpSerialHandle->rxBytesFromISR = ncpRXBytesFromISR;
   ncpSerialHandle->interruptPin = &BM_INT;
 
@@ -543,14 +543,14 @@ void ncpRXTask(void *parameters) {
     cobs_decode_result cobs_result =
         cobs_decode(ncpRXBuffDecoded, NCP_BUFF_LEN, (const void *)ncpRXBuff[bufferIdx],
                     ncpRXBuffLen[bufferIdx]);
-    memset(const_cast<uint8_t *>(ncpRXBuff[bufferIdx]), 0, NCP_BUFF_LEN);
+    memset(const_cast<uint8_t *>(ncpRXBuff[bufferIdx]), 0, ncpRXBuffLen[bufferIdx]);
     // Allocate a buffer for the ncpRXProcessor to process the data.
     // Note that ncpRXProcessor will be in charge of freeing that data.
     if (cobs_result.out_len > 0) {
       uint8_t *processor_buffer = static_cast<uint8_t *>(pvPortMalloc(cobs_result.out_len));
       configASSERT(processor_buffer);
       memcpy(processor_buffer, ncpRXBuffDecoded, cobs_result.out_len);
-      memset(ncpRXBuffDecoded, 0, NCP_BUFF_LEN);
+      memset(ncpRXBuffDecoded, 0, cobs_result.out_len);
       ProcessorQueueItem_t q_msg = {
           .buffer = processor_buffer,
           .len = cobs_result.out_len,
