@@ -148,14 +148,9 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
 
   timeAndDate->ms = calculate_rtc_ms();
 
-  static uint8_t second_prev = 0;
   // Workaround if SSR is > PRE_S, this second offset will last until
   // SSR reaches zero
-  if (timeAndDate->second > second_prev && second_prev) {
-    second_prev = 0;
-  } else if (LL_RTC_TIME_GetSubSecond(RTC) > LL_RTC_GetSynchPrescaler(RTC) ||
-             second_prev != 0) {
-    second_prev = timeAndDate->second;
+  if (LL_RTC_TIME_GetSubSecond(RTC) > LL_RTC_GetSynchPrescaler(RTC)) {
     timeAndDate->second--;
   }
   bm_semaphore_give(rtc_mutex);
