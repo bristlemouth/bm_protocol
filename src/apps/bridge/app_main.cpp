@@ -287,6 +287,11 @@ static void handle_subscriptions(uint64_t node_id, const char *topic, uint16_t t
                        "Updating RTC to %u-%u-%u %02u:%02u:%02u.%-04u\n", rtc_time.year,
                        rtc_time.month, rtc_time.day, rtc_time.hour, rtc_time.minute,
                        rtc_time.second, rtc_time.ms);
+        rtcGet(&rtc_time);
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, true,
+                       "RTC is %u-%u-%u %02u:%02u:%02u.%-04u\n", rtc_time.year, rtc_time.month,
+                       rtc_time.day, rtc_time.hour, rtc_time.minute, rtc_time.second,
+                       rtc_time.ms);
       } else {
         printf("\n Failed to set RTC.\n");
       }
