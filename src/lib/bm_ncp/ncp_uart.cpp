@@ -704,11 +704,8 @@ static inline BaseType_t postTxEventHandle(SerialHandle_t *handle,
 
 static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
   configASSERT(handle);
-  if (ncp_rx) {
-    xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
-  }
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
-  lpmPeripheralActive(LPM_USART3_TX);
+  lpmPeripheralActive(LPM_USART3);
   LL_GPIO_SetPinMode(BM_INT_GPIO_Port, BM_INT_Pin, LL_GPIO_MODE_OUTPUT);
   IOWrite(&BM_INT, 0);
   vTaskDelay(pdMS_TO_TICKS(LPM_WAKE_TIME_MS));
