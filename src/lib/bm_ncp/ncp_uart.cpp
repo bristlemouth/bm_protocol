@@ -38,6 +38,7 @@ static constexpr uint8_t NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS = 10;
 static constexpr uint8_t NCP_RX_BUFF_COUNT = 2;
 static constexpr uint16_t NCP_BUFF_LEN = 2048;
 static volatile uint8_t ncpRXCurrBuff = 0;
+static volatile uint8_t ncpRXBuffIdx = 0;
 static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
 static volatile uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
 static volatile bool ncp_rx = false;
@@ -46,7 +47,6 @@ static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
 static SemaphoreHandle_t ncp_serial_lock = NULL;
 static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
-static SemaphoreHandle_t tx_complete_lock = NULL;
 
 static TaskHandle_t ncpRXTaskHandle;
 
@@ -353,26 +353,6 @@ static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   return (bm_serial_send_self_test(getNodeId(), 1) == BM_SERIAL_OK);
 }
 
-// static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args) {
-//   (void)args;
-//   (void)pinHandle;
-
-//   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-//   if (value) {
-//     xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
-//     ncp_rx = false;
-//   } else {
-//     xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
-//     ncp_rx = true;
-//     HAL_UART_AbortReceive(&huart3);
-//     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
-//                                  NCP_BUFF_LEN);
-//   }
-
-//   return xHigherPriorityTaskWoken;
-// }
-
 static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, void *args) {
   (void)args;
   (void)pinHandle;
@@ -423,10 +403,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
 
   ncp_serial_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_serial_lock);
-
-  tx_complete_lock = xSemaphoreCreateBinary();
-  configASSERT(tx_complete_lock);
-  xSemaphoreGive(tx_complete_lock);
+  xSemaphoreGive(ncp_serial_lock);
 
   ncp_ctx.negotiating_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_ctx.negotiating_lock);
@@ -518,8 +495,8 @@ void ncpTxTask(void *parameters) {
     negotiate_event = NULL;
 
     if (res == pdPASS) {
-      if (xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS &&
-          xSemaphoreTake(ncp_serial_lock, portMAX_DELAY) == pdPASS) {
+      if (xSemaphoreTake(ncp_serial_lock, portMAX_DELAY) == pdPASS &&
+          xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS) {
         // reset the whole buff to zero
         memset(&ncp_tx_buff, 0, NCP_BUFF_LEN);
 
@@ -534,8 +511,6 @@ void ncpTxTask(void *parameters) {
           }
 
           ncpSerialHandle->arg = negotiate_event;
-          // ncpPreTxCb(ncpSerialHandle);
-          // HAL_UART_Transmit_DMA(&huart3, ncp_tx_buff, cobs_result.out_len + 1);
           serialWrite(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1, negotiate_event);
         } else {
           xSemaphoreGive(ncp_serial_lock);
@@ -608,6 +583,7 @@ static void ncpBaudRateDiscovery(void) {
     baud_idx--;
     // Reset buffers just incase anything was sent at a different baud rate
     ncpRXCurrBuff = 0;
+    ncpRXBuffIdx = 0;
     serialSetBaudRate(ncpSerialHandle, acceptable_bauds[baud_idx]);
     bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
     ncp_negotiate_baud_rate(1000000);
@@ -622,6 +598,7 @@ static void ncpBaudRateDiscovery(void) {
     // Send 0 to reset receiving buffer on spotter and reset our buffers just
     // incase anything was sent at a different baud rate
     ncpRXCurrBuff = 0;
+    ncpRXBuffIdx = 0;
     bm_serial_tx(BM_SERIAL_ACK, &null_buf, sizeof(uint8_t));
     printf("Could not find a baudrate to communicate to spotter with\n");
   }
@@ -638,65 +615,69 @@ static void ncpBaudRateDiscovery(void) {
 extern "C" void USART3_IRQHandler(void) {
   configASSERT(ncpSerialHandle);
   serialGenericUartIRQHandler(ncpSerialHandle);
-  // HAL_UART_IRQHandler(&huart3);
-  // if (HAL_UART_GetError(&huart3) == HAL_UART_ERROR_FE && ncp_rx) {
-  //   HAL_UART_DMAStop(&huart3);
-  //   HAL_UARTEx_ReceiveToIdle_DMA(&huart3, const_cast<uint8_t *>(ncpRXBuff[ncpRXCurrBuff]),
-  //                                NCP_BUFF_LEN);
-  // }
 }
 #endif
 
-// HAL_UARTEx_RxEventCallback is a weakly defined function in the STM32 UART HAL.
-// Here we are overriding the weak function to handle the RX event.
-// This function called from within HAL_UART_IRQHandler function,
-// which is called above in the USART3_IRQHandler function.
-// It can also be called from the DMA IRQ at a half complete
-// interrupt event, and we have special handling for that case.
-// void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t len) {
+// cppcheck-suppress constParameter
+static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
+  (void)handle;
 
-//   // If DMA is still busy then that means we are being called by the Half Complete interrupt callback.
-//   // Since we are waiting for the idle line and our buffer can hold the whole message,
-//   // lets just skip the half complete interrupt.
-//   if (huart->hdmarx->State == HAL_DMA_STATE_BUSY) {
-//     return;
-//   }
+  // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
 
-//   // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
-//   BaseType_t higherPriorityTaskWoken = pdFALSE;
+  uint8_t byte = buffer[0];
 
-//   // Lets only notify the task and rotate the buffers id we recieved data
-//   if (len > 0) {
-//     // set the length of the current buff to the idx - 1 since we don't need the 0x00
-//     ncpRXBuffLen[ncpRXCurrBuff] = len - 1;
+  configASSERT(buffer != NULL);
 
-//     BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff),
-//                                          eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
-//     if (rval == pdFALSE) {
-//       // previous packet still pending, 😬
-//       // TODO - track dropped packets?
-//       configASSERT(0);
-//     } else {
-//       // switch ncp buffers
-//       ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
-//     }
-//   }
-//   portYIELD_FROM_ISR(higherPriorityTaskWoken);
-// }
+  configASSERT(len == 1);
 
-// HAL_UART_TxCpltCallback is called when the transmission is complete.
-// This is called from the HAL_UART_IRQHandler function, which is called
-// above in the USART3_IRQHandler function.
-// void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-//   (void)huart;
-//   BaseType_t higherPriorityTaskWoken = pdFALSE;
-//   ncpPostTxCb(ncpSerialHandle);
+  if (ncpRXBuffIdx == 0) {
+    xSemaphoreTakeFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
+  }
 
-//   // // We are done transmitting, so we can give the semaphore to the task
-//   // xSemaphoreGiveFromISR(tx_complete_lock, &higherPriorityTaskWoken);
+  // but the byte into the current buffer
+  ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
 
-//   portYIELD_FROM_ISR(higherPriorityTaskWoken);
-// }
+  do {
+    if (ncpRXBuffIdx >= NCP_BUFF_LEN) {
+      // too much data so lets reset the current buffer
+      ncpRXBuffIdx = 0;
+      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
+      break;
+    }
+
+    if (byte != 0) {
+      // Keep receiving data
+      break;
+    }
+
+    if (ncpRXBuffIdx <= sizeof(bm_serial_packet_t)) {
+      // Empty packet, reset current buffer
+      ncpRXBuffIdx = 0;
+      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
+      break;
+    }
+
+    // set the length of the current buff to the idx - 1 since we don't need the 0x00
+    ncpRXBuffLen[ncpRXCurrBuff] = ncpRXBuffIdx - 1;
+
+    ncpRXBuffIdx = 0;
+
+    BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
+                                         eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
+    if (rval == pdFALSE) {
+      // previous packet still pending, 😬
+      // TODO - track dropped packets?
+      configASSERT(0);
+    } else {
+      // switch ncp buffers
+      ncpRXCurrBuff ^= 1;
+    }
+    xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
+  } while (0);
+
+  return higherPriorityTaskWoken;
+}
 
 static inline BaseType_t postTxEventHandle(SerialHandle_t *handle, NCPNegotiatingEvent_t event)
     __attribute__((always_inline));
@@ -753,65 +734,4 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
   portYIELD_FROM_ISR(
       higherPriorityTaskWoken == pdTRUE || higherPriorityTaskEventHandle == pdTRUE ? pdTRUE
                                                                                    : pdFALSE);
-}
-
-// cppcheck-suppress constParameter
-static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
-  (void)handle;
-
-  // Here we will just fill up the buffers until we receive a 0x00 char and then notify the task.
-  BaseType_t higherPriorityTaskWoken = pdFALSE;
-
-  uint8_t byte = buffer[0];
-
-  configASSERT(buffer != NULL);
-
-  configASSERT(len == 1);
-
-  if (ncpRXCurrBuff == 0) {
-    xSemaphoreTakeFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-  }
-
-  // but the byte into the current buffer
-  ncpRXBuff[ncpRXCurrBuff][ncpRXCurrBuff++] = byte;
-
-  do {
-    if (ncpRXCurrBuff >= NCP_BUFF_LEN) {
-      // too much data so lets reset the current buffer
-      ncpRXCurrBuff = 0;
-      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-      break;
-    }
-
-    if (byte != 0) {
-      // Keep receiving data
-      break;
-    }
-
-    if (ncpRXCurrBuff <= sizeof(bm_serial_packet_t)) {
-      // Empty packet, reset current buffer
-      ncpRXCurrBuff = 0;
-      xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-      break;
-    }
-
-    // set the length of the current buff to the idx - 1 since we don't need the 0x00
-    ncpRXBuffLen[ncpRXCurrBuff] = ncpRXCurrBuff - 1;
-
-    ncpRXCurrBuff = 0;
-
-    BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
-                                         eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
-    if (rval == pdFALSE) {
-      // previous packet still pending, 😬
-      // TODO - track dropped packets?
-      configASSERT(0);
-    } else {
-      // switch ncp buffers
-      ncpRXCurrBuff ^= 1;
-    }
-    xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-  } while (0);
-
-  return higherPriorityTaskWoken;
 }
