@@ -15,7 +15,7 @@ static BmSemaphore rtc_mutex = NULL;
 
 static uint16_t calculate_rtc_ms(void) {
   uint32_t subSecond = LL_RTC_TIME_GetSubSecond(RTC);
-  uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC) + 1U;
+  uint32_t prediv = LL_RTC_GetSynchPrescaler(RTC);
   uint32_t diff = prediv - subSecond;
   uint32_t ret = 0;
 
@@ -23,7 +23,7 @@ static uint16_t calculate_rtc_ms(void) {
     diff = 2U * prediv - subSecond;
   }
 
-  ret = (1000 * diff) / prediv;
+  ret = (1000 * diff) / (prediv + 1);
 
   return ret;
 }
@@ -151,7 +151,11 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   // Workaround if SSR is > PRE_S, this second offset will last until
   // SSR reaches zero
   if (LL_RTC_TIME_GetSubSecond(RTC) > LL_RTC_GetSynchPrescaler(RTC)) {
-    timeAndDate->second--;
+    if (timeAndDate->second == 0) {
+      timeAndDate->second = 59;
+    } else {
+      timeAndDate->second--;
+    }
   }
   bm_semaphore_give(rtc_mutex);
 
