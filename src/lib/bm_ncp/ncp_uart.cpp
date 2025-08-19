@@ -25,7 +25,6 @@ extern "C" {
 #include "pubsub.h"
 #include "reset_reason.h"
 #include "stm32_rtc.h"
-// #include "stm32u5xx_hal_uart.h"
 #include "task_priorities.h"
 #include "usart.h"
 
