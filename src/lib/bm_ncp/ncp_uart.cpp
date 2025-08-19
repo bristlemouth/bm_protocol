@@ -676,7 +676,7 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
       configASSERT(0);
     } else {
       // switch ncp buffers
-      ncpRXCurrBuff ^= 1;
+      ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     }
     xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
   } while (0);
