@@ -41,11 +41,13 @@ static volatile uint32_t ncpRXBuffIdx = 0;
 static volatile uint8_t ncpRXCurrBuff = 0;
 static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
 static volatile uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
+static volatile bool ncp_rx = false;
 
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
 static SemaphoreHandle_t ncp_serial_lock = NULL;
 static SemaphoreHandle_t ncp_baud_rate_discovery_lock = NULL;
+static SemaphoreHandle_t tx_complete_lock = NULL;
 
 static TaskHandle_t ncpRXTaskHandle;
 
@@ -360,8 +362,12 @@ static bool bm_int_gpio_callback_fromISR(const void *pinHandle, uint8_t value, v
 
   if (value) {
     lpmPeripheralInactiveFromISR(LPM_USART3_RX);
+    xSemaphoreGiveFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
+    ncp_rx = false;
   } else {
     lpmPeripheralActiveFromISR(LPM_USART3_RX); // Active low
+    xSemaphoreTakeFromISR(ncp_serial_lock, &xHigherPriorityTaskWoken);
+    ncp_rx = true;
   }
 
   return xHigherPriorityTaskWoken;
@@ -403,7 +409,10 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
 
   ncp_serial_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_serial_lock);
-  xSemaphoreGive(ncp_serial_lock);
+
+  tx_complete_lock = xSemaphoreCreateBinary();
+  configASSERT(tx_complete_lock);
+  xSemaphoreGive(tx_complete_lock);
 
   ncp_ctx.negotiating_lock = xSemaphoreCreateBinary();
   configASSERT(ncp_ctx.negotiating_lock);
@@ -495,8 +504,8 @@ void ncpTxTask(void *parameters) {
     negotiate_event = NULL;
 
     if (res == pdPASS) {
-      if (xSemaphoreTake(ncp_serial_lock, portMAX_DELAY) == pdPASS &&
-          xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS) {
+      if (xSemaphoreTake(ncp_ctx.negotiating_lock, portMAX_DELAY) == pdPASS &&
+          xSemaphoreTake(tx_complete_lock, portMAX_DELAY) == pdPASS) {
         // reset the whole buff to zero
         memset(&ncp_tx_buff, 0, NCP_BUFF_LEN);
 
@@ -513,7 +522,7 @@ void ncpTxTask(void *parameters) {
           ncpSerialHandle->arg = negotiate_event;
           serialWrite(ncpSerialHandle, ncp_tx_buff, cobs_result.out_len + 1, negotiate_event);
         } else {
-          xSemaphoreGive(ncp_serial_lock);
+          xSemaphoreGive(tx_complete_lock);
         }
       } else {
         printf("Could not take serial lock to transmit message\n");
@@ -703,6 +712,9 @@ static inline BaseType_t postTxEventHandle(SerialHandle_t *handle,
 }
 
 static void ncpPreTxCb(SerialHandle_t *handle) { // called from task context
+  if (ncp_rx) {
+    xSemaphoreTake(ncp_serial_lock, portMAX_DELAY);
+  }
   configASSERT(handle);
   LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_0);
   lpmPeripheralActive(LPM_USART3);
@@ -715,6 +727,8 @@ static void ncpPostTxCb(SerialHandle_t *handle) { // called form ISR context
   BaseType_t higherPriorityTaskEventHandle = pdFALSE;
   BaseType_t higherPriorityTaskWoken = pdFALSE;
   configASSERT(handle);
+
+  xSemaphoreGiveFromISR(tx_complete_lock, &higherPriorityTaskWoken);
 
   if (handle->arg) {
     higherPriorityTaskEventHandle =
