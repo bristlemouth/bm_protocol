@@ -640,10 +640,6 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
   configASSERT(len == 1);
 
-  if (ncpRXBuffIdx == 0) {
-    xSemaphoreTakeFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
-  }
-
   // but the byte into the current buffer
   ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
 
