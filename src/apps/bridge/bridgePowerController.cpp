@@ -18,11 +18,13 @@
 #endif // RAW_PRESSURE_ENABLE
 
 BridgePowerController::BridgePowerController(
-    IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs, uint32_t sampleDurationMs,
-    uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs, bool subsamplingEnabled,
-    bool powerControllerEnabled, uint32_t alignmentS, bool ticksSamplingEnabled)
-    : _BusPowerPin(BusPowerPin), _powerControlEnabled(powerControllerEnabled),
-      _sampleIntervalS(sampleIntervalMs / 1000), _sampleDurationS(sampleDurationMs / 1000),
+    IOPinHandle_t &BusPowerPin, IOPinHandle_t &BoostPowerPin, uint32_t sampleIntervalMs,
+    uint32_t sampleDurationMs, uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs,
+    bool subsamplingEnabled, bool powerControllerEnabled, uint32_t alignmentS,
+    bool ticksSamplingEnabled)
+    : _BusPowerPin(BusPowerPin), _BoostPowerPin(BoostPowerPin),
+      _powerControlEnabled(powerControllerEnabled), _sampleIntervalS(sampleIntervalMs / 1000),
+      _sampleDurationS(sampleDurationMs / 1000),
       _subsampleIntervalS(subsampleIntervalMs / 1000),
       _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
       _subsampleIntervalStartS(0), _alignmentS(alignmentS),
@@ -119,7 +121,14 @@ void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     EventBits_t signal_to_set = (on) ? BridgePowerController::ON : BridgePowerController::OFF;
     EventBits_t signal_to_clear = (on) ? BridgePowerController::OFF : BridgePowerController::ON;
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
-    IOWrite(&_BusPowerPin, on);
+    if (on) {
+      IOWrite(&_BoostPowerPin, on);
+      vTaskDelay(100); // Allow time for capacitors to charge
+      IOWrite(&_BusPowerPin, on);
+    } else {
+      IOWrite(&_BusPowerPin, on);
+      IOWrite(&_BoostPowerPin, on);
+    }
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     if (notifyL2) {
       bm_l2_netif_set_power(on);

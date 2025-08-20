@@ -10,7 +10,8 @@
 class BridgePowerController {
 public:
   explicit BridgePowerController(
-      IOPinHandle_t &BusPowerPin, uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      IOPinHandle_t &BusPowerPin, IOPinHandle_t &BoostPowerPin,
+      uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000,
       uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000,
       uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S * 1000,
@@ -68,6 +69,7 @@ private:
 
 private:
   IOPinHandle_t &_BusPowerPin;
+  IOPinHandle_t &_BoostPowerPin;
   bool _powerControlEnabled;
   uint32_t _sampleIntervalS;
   uint32_t _sampleDurationS;
