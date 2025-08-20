@@ -112,6 +112,46 @@ bool isRTCValid(RTCTimeAndDate_t *receivedTimeAndDate, uint32_t driftThesholdS,
   }
 }
 
+static inline void decrement_one_second(RTCTimeAndDate_t *t) {
+  // Set second if overflow
+  if (t->second) {
+    t->second--;
+    return;
+  }
+  t->second = 59;
+
+  // Set minute if overflow
+  if (t->minute) {
+    t->minute--;
+    return;
+  }
+  t->minute = 59;
+
+  // Set hour if overflow
+  if (t->hour) {
+    t->hour--;
+    return;
+  }
+  t->hour = 23;
+
+  // Set day if overflow
+  if (t->day > 1) {
+    t->day--;
+    return;
+  }
+
+  // Set month
+  if (!--t->month) {
+    t->month = 12;
+    if (t->year) {
+      t->year--;
+    }
+  }
+
+  bool leap = LEAP_YEAR((int64_t)t->year - 1970);
+  t->day = (t->month == 2 && leap) ? 29 : monthDays[t->month - 1];
+}
+
 BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   configASSERT(timeAndDate != NULL);
 
@@ -149,13 +189,9 @@ BaseType_t rtcGet(RTCTimeAndDate_t *timeAndDate) {
   timeAndDate->ms = calculate_rtc_ms();
 
   // Workaround if SSR is > PRE_S, this second offset will last until
-  // SSR reaches zero
+  // SSR falls below PRE_S
   if (LL_RTC_TIME_GetSubSecond(RTC) > LL_RTC_GetSynchPrescaler(RTC)) {
-    if (timeAndDate->second == 0) {
-      timeAndDate->second = 59;
-    } else {
-      timeAndDate->second--;
-    }
+    decrement_one_second(timeAndDate);
   }
   bm_semaphore_give(rtc_mutex);
 
@@ -209,22 +245,11 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
 
   // Adjust fractional seconds of the clock, this can be adjusted at
   // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
-  uint16_t rtc_ms = calculate_rtc_ms();
-  uint16_t diff = abs((int16_t)timeAndDate->ms - (int16_t)rtc_ms);
   uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1U;
-  uint32_t adjust = 0;
-  uint32_t action = 0;
-
-  if (timeAndDate->ms > rtc_ms) {
-    action = LL_RTC_SHIFT_SECOND_ADVANCE;
-    adjust = (1000 * pre - diff * pre) / 1000U;
-  } else {
-    action = LL_RTC_SHIFT_SECOND_DELAY;
-    adjust = (diff * pre) / 1000U;
-  }
+  uint32_t adjust = (1000 * pre - timeAndDate->ms * pre) / 1000U;
 
   LL_RTC_DisableWriteProtection(RTC);
-  LL_RTC_TIME_Synchronize(RTC, action, adjust);
+  LL_RTC_TIME_Synchronize(RTC, LL_RTC_SHIFT_SECOND_ADVANCE, adjust);
   LL_RTC_EnableWriteProtection(RTC);
   // Wait for shift operation pending flag to clear
   while (LL_RTC_IsActiveFlag_SHP(RTC)) {
