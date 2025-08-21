@@ -156,8 +156,8 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   const uint32_t kNineteenMinutes = 1140000;
   const uint32_t kFiveMinutes = 300000;
   const uint32_t kOneMinute = 60000;
-  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTwentyMinutes, kNineteenMinutes,
-                                        kFiveMinutes, kOneMinute, true, true);
+  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTwentyMinutes,
+                                        kNineteenMinutes, kFiveMinutes, kOneMinute, true, true);
   powerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
@@ -311,8 +311,8 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   const uint32_t kSevenMinutes = 420000;
   const uint32_t kThreeMinutes = 180000;
   const uint32_t kOneMinute = 60000;
-  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTenMinutes, kSevenMinutes, kThreeMinutes,
-                                        kOneMinute, true, true);
+  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTenMinutes, kSevenMinutes,
+                                        kThreeMinutes, kOneMinute, true, true);
   powerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
@@ -438,8 +438,8 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   const uint32_t kNineteenMinutes = 1140000;
   const uint32_t kFiveMinutes = 300000;
   const uint32_t kOneMinute = 60000;
-  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTwentyMinutes, kNineteenMinutes,
-                                        kFiveMinutes, kOneMinute, true, true);
+  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTwentyMinutes,
+                                        kNineteenMinutes, kFiveMinutes, kOneMinute, true, true);
   powerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
