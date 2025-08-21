@@ -245,6 +245,8 @@ BaseType_t rtcSet(const RTCTimeAndDate_t *timeAndDate) {
 
   // Adjust fractional seconds of the clock, this can be adjusted at
   // 1/PRE_S ticks, reference 2.6 of STMicroelectronics an4769
+  // The SSR register is reset to PRE_S whenever the Time and Date are set
+  // meaning the ms will always have to be shifted forward
   uint32_t pre = LL_RTC_GetSynchPrescaler(RTC) + 1U;
   uint32_t adjust = (1000 * pre - timeAndDate->ms * pre) / 1000U;
 
