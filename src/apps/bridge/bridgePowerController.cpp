@@ -123,7 +123,7 @@ void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     if (on) {
       IOWrite(&_BoostPowerPin, on);
-      vTaskDelay(100); // Allow time for capacitors to charge
+      vTaskDelay(15); // Allow time for capacitors to charge
       IOWrite(&_BusPowerPin, on);
     } else {
       IOWrite(&_BusPowerPin, on);
