@@ -2,6 +2,8 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/aanderaa_conductivity_sensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/aanderaa_conductivity_sensor.h
 )
 
 set(APP_INCLUDES

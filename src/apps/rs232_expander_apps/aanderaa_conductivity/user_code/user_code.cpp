@@ -9,7 +9,7 @@
 #include "uptime.h"
 #include "app_util.h"
 #include "aanderaa_conductivity_sensor.h"
-/*
+
 static constexpr uint32_t AANDERAA_CONDUCTIVITY_DATA_MSG_MAX_SIZE = 256;
 static AanderaaConductivitySensor aanderaa_conductivity_sensor;
 static char aanderaa_conductivity_topic[BM_TOPIC_MAX_LEN];
@@ -21,15 +21,13 @@ static int createAanderaaConductivityDataTopic(void) {
   configASSERT(topic_str_len > 0 && topic_str_len < BM_TOPIC_MAX_LEN);
   return topic_str_len;
 }
-*/
+
 void setup(void) {
-/*
   aanderaa_conductivity_sensor.init();
   aanderaa_conductivity_topic_str_len = createAanderaaConductivityDataTopic();
   IOWrite(&VBUS_EN, 0);
   vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
   IOWrite(&PL_BUCK_EN, 0);
-*/
 }
 void loop(void) {
   // Read and handle line from sensor

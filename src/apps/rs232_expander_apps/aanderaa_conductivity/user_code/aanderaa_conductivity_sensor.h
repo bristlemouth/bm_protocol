@@ -11,6 +11,7 @@ public:
     AanderaaConductivitySensor()
         : _parser(",", 256, PARSER_VALUE_TYPE, 6) {};
     void init();
+    void configureSensor(void);
     bool getData(AanderaaConductivityMsg::Data &d);
     void flush(void);
 
