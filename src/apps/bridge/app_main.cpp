@@ -415,8 +415,8 @@ static void defaultTask(void *parameters) {
   printf("Using bridge power controller.\n");
   power_config_s pwrcfg = getPowerConfigs();
   BridgePowerController::Config config = {
-      .BusPowerPin = VBUS_SW_EN,
-      .BoostPowerPin = BOOST_EN,
+      .BusLoadSwitchEnablePin = VBUS_SW_EN,
+      .BoostEnablePin = BOOST_EN,
       .sampleIntervalMs = pwrcfg.sampleIntervalMs,
       .sampleDurationMs = pwrcfg.sampleDurationMs,
       .subsampleIntervalMs = pwrcfg.subsampleIntervalMs,

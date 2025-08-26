@@ -114,8 +114,8 @@ TEST_F(BridgePowerControllerTest, alignment) {
   IOPinHandle_t unusedPin = {.driver = &unusedDriver, .pin = NULL};
   IOPinHandle_t unusedPin2 = {.driver = &unusedDriver, .pin = NULL};
   BridgePowerController::Config config = {
-      .BusPowerPin = unusedPin,
-      .BoostPowerPin = unusedPin2,
+      .BusLoadSwitchEnablePin = unusedPin,
+      .BoostEnablePin = unusedPin2,
   };
   BridgePowerController powerController(config);
 
@@ -168,8 +168,8 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   const uint32_t kFiveMinutesMs = 300000;
   const uint32_t kOneMinuteMs = 60000;
   BridgePowerController::Config config = {
-      .BusPowerPin = FAKE_VBUS_EN,
-      .BoostPowerPin = FAKE_BOOST_EN,
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
       .sampleIntervalMs = kTwentyMinutesMs,
       .sampleDurationMs = kNineteenMinutesMs,
       .subsampleIntervalMs = kFiveMinutesMs,
@@ -362,8 +362,8 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   const uint32_t kThreeMinutesMs = 180000;
   const uint32_t kOneMinuteMs = 60000;
   BridgePowerController::Config config = {
-      .BusPowerPin = FAKE_VBUS_EN,
-      .BoostPowerPin = FAKE_BOOST_EN,
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
       .sampleIntervalMs = kTenMinutesMs,
       .sampleDurationMs = kSevenMinutesMs,
       .subsampleIntervalMs = kThreeMinutesMs,
@@ -523,8 +523,8 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   const uint32_t kFiveMinutesMs = 300000;
   const uint32_t kOneMinuteMs = 60000;
   BridgePowerController::Config config = {
-      .BusPowerPin = FAKE_VBUS_EN,
-      .BoostPowerPin = FAKE_BOOST_EN,
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
       .sampleIntervalMs = kTwentyMinutesMs,
       .sampleDurationMs = kNineteenMinutesMs,
       .subsampleIntervalMs = kFiveMinutesMs,
@@ -722,8 +722,8 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
 
 TEST_F(BridgePowerControllerTest, goldenPath) {
   BridgePowerController::Config config = {
-      .BusPowerPin = FAKE_VBUS_EN,
-      .BoostPowerPin = FAKE_BOOST_EN,
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
       .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
       .sampleDurationMs = SAMPLE_DURATION_S * 1000,
       .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
@@ -831,8 +831,8 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
 
 TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   BridgePowerController::Config config = {
-      .BusPowerPin = FAKE_VBUS_EN,
-      .BoostPowerPin = FAKE_BOOST_EN,
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
       .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
       .sampleDurationMs = SAMPLE_DURATION_S * 1000,
       BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,

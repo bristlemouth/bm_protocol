@@ -10,8 +10,8 @@
 class BridgePowerController {
 public:
   struct Config {
-    IOPinHandle_t &BusPowerPin;
-    IOPinHandle_t &BoostPowerPin;
+    IOPinHandle_t &BusLoadSwitchEnablePin;
+    IOPinHandle_t &BoostEnablePin;
     uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000;
     uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000;
     uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000;

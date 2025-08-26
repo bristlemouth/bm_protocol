@@ -18,7 +18,7 @@
 #endif // RAW_PRESSURE_ENABLE
 
 BridgePowerController::BridgePowerController(const Config &config)
-    : _BusLoadSwitchEnablePin(config.BusPowerPin), _BoostEnablePin(config.BoostPowerPin),
+    : _BusLoadSwitchEnablePin(config.BusLoadSwitchEnablePin), _BoostEnablePin(config.BoostEnablePin),
       _powerControlEnabled(config.powerControllerEnabled),
       _sampleIntervalS(config.sampleIntervalMs / 1000),
       _sampleDurationS(config.sampleDurationMs / 1000),
