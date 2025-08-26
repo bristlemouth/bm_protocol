@@ -54,6 +54,7 @@
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
+#include "stress.h"
 #include "tca9546a.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
@@ -366,6 +367,7 @@ static void defaultTask(void *parameters) {
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
 #endif
+  bcl_init();
   debugRTCInit();
 
   // Commenting out while we test usart1
