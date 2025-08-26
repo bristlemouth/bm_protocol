@@ -363,9 +363,9 @@ static void defaultTask(void *parameters) {
   debugConfigurationInit();
 
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
-  NvmPartition dfu_cli_partition(debugW25, dfu_configuration);
-  dfu_partition_global = &dfu_cli_partition;
-  debugNvmCliInit(&debug_cli_partition, &dfu_cli_partition);
+  NvmPartition dfu_partition(debugW25, dfu_configuration);
+  dfu_partition_global = &dfu_partition;
+  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
 #endif
