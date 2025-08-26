@@ -70,8 +70,10 @@ protected:
     RESET_FAKE(isRTCSet);
     RESET_FAKE(rtcGet);
     RESET_FAKE(rtcGetMicroSeconds);
+    num_io_reads = 0;
+    num_io_writes = 0;
     xEventGroupCreate_fake.return_val =
-        (EventGroupDef_t *)malloc(sizeof(StaticEventGroup_t)); // lol
+        static_cast<EventGroupDef_t *>(malloc(sizeof(StaticEventGroup_t))); // lol
     xTaskCreate_fake.return_val = pdTRUE;
     fake_io_read_func_fake.custom_fake = io_read_custom_fake;
     fake_io_write_func_fake.custom_fake = io_write_custom_fake;
@@ -90,6 +92,12 @@ protected:
   }
 
   static constexpr uint32_t SAMPLE_DURATION_S = (5 * 60);
+  static constexpr uint32_t NUM_IO_READS_PER_BUS_EVENT = (1);
+  // There are 2 IOWrites per BUS ON/OFF event
+  static constexpr uint32_t NUM_IO_WRITES_PER_BUS_EVENT = (2);
+  // tracking variables used by tests to track how many IO reads/writes occur
+  uint32_t num_io_reads = 0;
+  uint32_t num_io_writes = 0;
   // Objects declared here can be used by all tests in the test suite for Foo.
   IODriver_t fake_io_driver = {.write = fake_io_write_func,
                                .read = fake_io_read_func,
@@ -171,9 +179,11 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   };
   BridgePowerController powerController(config);
   powerController._update();
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
   // Init sequence powers the bus on for two minutes
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
   uint32_t curtimeMs = BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
@@ -184,8 +194,12 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   // Bridge Controller is now intitialized, but RTC is not set
   // Bus turns off
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  // IORead is called twice in this case
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[2], 0);
   curtimeMs += 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -201,7 +215,8 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   isRTCSet_fake.return_val = true;
   powerController._update();
   EXPECT_EQ(isRTCSet_fake.call_count, 5);
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
   curtimeMs += 856000; // 14 minutes 16 seconds, to align with hour 2
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
@@ -210,8 +225,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   S = 0;
   rtcGetMicroSeconds_fake.return_val = 1713232800000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 6);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   // The bus stays on for one minute until the next Subample Off time
   curtimeMs += (kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS);
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -220,8 +237,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 1;
   rtcGetMicroSeconds_fake.return_val = 1713232860000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 6);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 8);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 0);
 
   // Task waits through the Subsampling off period until the next interval starts
@@ -232,8 +251,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 5;
   rtcGetMicroSeconds_fake.return_val = 1713233100000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 7);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 10);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[8], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -242,8 +263,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 6;
   rtcGetMicroSeconds_fake.return_val = 1713233160000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 12);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[10], 0);
   curtimeMs += 4 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -252,8 +275,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 10;
   rtcGetMicroSeconds_fake.return_val = 1713233400000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 9);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 14);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[12], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -262,8 +287,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 11;
   rtcGetMicroSeconds_fake.return_val = 1713233460000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 10);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 16);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[14], 0);
   curtimeMs += 4 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -272,8 +299,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 15;
   rtcGetMicroSeconds_fake.return_val = 1713233700000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 11);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 18);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[16], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -282,8 +311,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 16;
   rtcGetMicroSeconds_fake.return_val = 1713233760000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 12);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 20);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[18], 0);
   curtimeMs += 3 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -292,8 +323,9 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 19;
   rtcGetMicroSeconds_fake.return_val = 1713233940000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 13);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 20);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   curtimeMs += kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
@@ -301,8 +333,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 20;
   rtcGetMicroSeconds_fake.return_val = 1713234000000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 14);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 22);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[20], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -311,8 +345,10 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   M = 21;
   rtcGetMicroSeconds_fake.return_val = 1713234060000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 15);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 24);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[22], 0);
   curtimeMs += 4 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -338,8 +374,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   BridgePowerController powerController(config);
   powerController._update();
   // Init sequence powers the bus on for two minutes
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
   uint32_t curtimeMs = BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
@@ -350,8 +388,12 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   // Bridge Controller is now intitialized, but RTC is not set
   // Bus turns off
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  // IORead is called twice in this case
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[2], 0);
   curtimeMs += 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -367,8 +409,9 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   isRTCSet_fake.return_val = true;
   powerController._update();
   EXPECT_EQ(isRTCSet_fake.call_count, 5);
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   curtimeMs += 71000; // 1 minute 11 seconds, to align with hour 2
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
@@ -378,8 +421,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   S = 0;
   rtcGetMicroSeconds_fake.return_val = 1713232800000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 6);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[4], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -388,8 +433,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 1;
   rtcGetMicroSeconds_fake.return_val = 1713232860000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 6);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 8);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 0);
   curtimeMs += 2 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -398,8 +445,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 3;
   rtcGetMicroSeconds_fake.return_val = 1713232980000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 7);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 10);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[8], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -408,8 +457,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 4;
   rtcGetMicroSeconds_fake.return_val = 1713233040000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 12);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[10], 0);
   curtimeMs += 2 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -418,8 +469,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 6;
   rtcGetMicroSeconds_fake.return_val = 1713233160000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 9);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 14);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[12], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -428,8 +481,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 7;
   rtcGetMicroSeconds_fake.return_val = 1713233220000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 10);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 16);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[14], 0);
   curtimeMs += kThreeMinutesMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -438,8 +493,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 10;
   rtcGetMicroSeconds_fake.return_val = 1713233400000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 11);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 18);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[16], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -448,8 +505,10 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   M = 11;
   rtcGetMicroSeconds_fake.return_val = 1713233460000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 12);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 20);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[18], 0);
   curtimeMs += 2 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -476,8 +535,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   BridgePowerController powerController(config);
   powerController._update();
   // Init sequence powers the bus on for two minutes
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
   uint32_t curtimeMs = BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
@@ -488,8 +549,12 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   // Bridge Controller is now intitialized, but RTC is not set
   // Bus turns off
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  // IORead is called twice in this case
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[2], 0);
   curtimeMs += 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -505,7 +570,8 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   isRTCSet_fake.return_val = true;
   powerController._update();
   EXPECT_EQ(isRTCSet_fake.call_count, 5);
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
   curtimeMs += 856000; // 14 minutes 16 seconds, to align with hour 2
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
@@ -514,8 +580,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   S = 0;
   rtcGetMicroSeconds_fake.return_val = 1713232800000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 6);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   // The bus stays on for one minute until the next Subample Off time
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -524,8 +592,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 1;
   rtcGetMicroSeconds_fake.return_val = 1713232860000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 6);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 8);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 0);
 
   // Task waits through the Subsampling off period until the next interval starts
@@ -536,8 +606,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 5;
   rtcGetMicroSeconds_fake.return_val = 1713233100000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 7);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 10);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[8], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -546,8 +618,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 6;
   rtcGetMicroSeconds_fake.return_val = 1713233160000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 12);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[10], 0);
   curtimeMs += 4 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -556,8 +630,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 10;
   rtcGetMicroSeconds_fake.return_val = 1713233400000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 9);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 14);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[12], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -566,8 +642,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 11;
   rtcGetMicroSeconds_fake.return_val = 1713233460000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 10);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 16);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[14], 0);
   curtimeMs += 4 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -576,8 +654,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 15;
   rtcGetMicroSeconds_fake.return_val = 1713233700000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 11);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 18);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[16], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -586,8 +666,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 16;
   rtcGetMicroSeconds_fake.return_val = 1713233760000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 12);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 20);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[18], 0);
   curtimeMs += 3 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -597,8 +679,8 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   S = 59;
   rtcGetMicroSeconds_fake.return_val = 1713233939000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 12);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 20);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   curtimeMs += 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
@@ -607,8 +689,9 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   S = 0;
   rtcGetMicroSeconds_fake.return_val = 1713233940000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 13);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 20);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   curtimeMs += kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
@@ -616,8 +699,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 20;
   rtcGetMicroSeconds_fake.return_val = 1713234000000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 14);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 22);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[20], 1);
   curtimeMs += kOneMinuteMs + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -626,8 +711,10 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   M = 21;
   rtcGetMicroSeconds_fake.return_val = 1713234060000000;
   powerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 15);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 24);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[22], 0);
   curtimeMs += 4 * kOneMinuteMs;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -646,8 +733,10 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   BridgePowerController BridgePowerController(config);
   BridgePowerController._update();
   // Init sequence powers the bus on for two minutes
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
   EXPECT_EQ(xTaskGetTickCount(), (BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
@@ -657,8 +746,9 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   // Bridge Controller is now intitialized, not enabled and RTC is not set
   // Bus should still be on
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 2);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
 
   // RTC gets set.
   y = 2023;
@@ -668,19 +758,21 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   isRTCSet_fake.return_val = true;
   BridgePowerController._update();
   EXPECT_EQ(isRTCSet_fake.call_count, 3);
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
 
   // Scheduler is still disabled
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
 
   // Enable the scheduler
   xTaskSetTickCount(0); // Convenience tick set for checking sleep.
   BridgePowerController.powerControlEnable(true);
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
 
   // Controller waits until the next aligned sample start
   uint32_t curtimeMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000;
@@ -689,16 +781,19 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   // The bus stays on until the next Sample Off time
   rtcGetMicroSeconds_fake.return_val = curtimeMs * 1000;
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 5);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   curtimeMs += SAMPLE_DURATION_S * 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Time for a bus down cycle
   rtcGetMicroSeconds_fake.return_val = curtimeMs * 1000;
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 6);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[2], 0);
 
   // Task waits through the sampling off period until the next interval starts
@@ -711,8 +806,10 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   // bus up
   rtcGetMicroSeconds_fake.return_val = curtimeMs * 1000;
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 7);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 6);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[4], 1);
   curtimeMs += BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000 +
                BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
@@ -721,8 +818,10 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   // Turn off for subsampling
   rtcGetMicroSeconds_fake.return_val = curtimeMs * 1000;
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 8);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 0);
   curtimeMs += (BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S -
                 BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S) *
@@ -746,8 +845,12 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   BridgePowerController BridgePowerController(config);
   BridgePowerController._update();
   // Init sequence powers the bus on for two minutes
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 2);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  // IORead is called twice in this case
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // Our timebase is already enabled, so we sleep for the entire interval time.
   uint32_t curtimeMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000 +
@@ -757,8 +860,9 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   // Bridge Controller is now intitialized, not enabled and Ticks is set
   // Bus should still be on
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   curtimeMs += BridgePowerController::MIN_TASK_SLEEP_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -766,7 +870,9 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   // Scheduler is still disabled
   BridgePowerController._update();
   EXPECT_EQ(isRTCSet_fake.call_count, 3);
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   curtimeMs += BridgePowerController::MIN_TASK_SLEEP_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
@@ -774,8 +880,8 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   // Enable the scheduler
   BridgePowerController.powerControlEnable(true);
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
 
   // Controller waits until the next aligned sample start
   curtimeMs += (BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000) -
@@ -784,14 +890,18 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
 
   // The bus stays on until the next Sample Off time
   BridgePowerController._update();
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   curtimeMs += SAMPLE_DURATION_S * 1000;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Time for a bus down cycle
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 6);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 4);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[2], 0);
 
   // Task waits through the sampling off period until the next interval starts
@@ -803,8 +913,10 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
 
   // bus up
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 7);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 6);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[4], 1);
   curtimeMs += BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000 +
                BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
@@ -812,8 +924,10 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
 
   // Turn off for subsampling
   BridgePowerController._update();
-  EXPECT_EQ(fake_io_read_func_fake.call_count, 8);
-  EXPECT_EQ(fake_io_write_func_fake.call_count, 8);
+  num_io_reads += NUM_IO_READS_PER_BUS_EVENT;
+  num_io_writes += NUM_IO_WRITES_PER_BUS_EVENT;
+  EXPECT_EQ(fake_io_read_func_fake.call_count, num_io_reads);
+  EXPECT_EQ(fake_io_write_func_fake.call_count, num_io_writes);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[6], 0);
   curtimeMs += (BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S -
                 BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S) *
