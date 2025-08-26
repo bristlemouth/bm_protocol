@@ -122,11 +122,14 @@ void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
     EventBits_t signal_to_clear = (on) ? BridgePowerController::OFF : BridgePowerController::ON;
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     if (on) {
+      // Turn on boost first, allow time for capacitors to charge, turn on the load switch. (See PR#335 for more details)
       IOWrite(&_BoostPowerPin, on);
-      vTaskDelay(CAPACITOR_CHARGE_DELAY_MS); // Allow time for capacitors to charge
+      vTaskDelay(CAPACITOR_CHARGE_DELAY_MS);
       IOWrite(&_BusPowerPin, on);
     } else {
+      // Turn off the load switch first, then turn off the boost converter.
       IOWrite(&_BusPowerPin, on);
+      // Turning the boost converter off during OFF periods saves ~3mW.
       IOWrite(&_BoostPowerPin, on);
     }
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
