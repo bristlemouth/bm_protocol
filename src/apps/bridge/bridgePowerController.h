@@ -62,6 +62,7 @@ public:
   static constexpr uint32_t MAX_ALIGNMENT_S = (24 * 60 * 60);
   static constexpr uint32_t DEFAULT_ALIGNMENT_5_MIN_INTERVAL = (1);
   static constexpr uint32_t DEFAULT_TICKS_SAMPLING_ENABLED = (0);
+  static constexpr uint32_t CAPACITOR_CHARGE_DELAY_MS = 15;
 
 private:
   static constexpr uint32_t MIN_TASK_SLEEP_MS = (1000);
