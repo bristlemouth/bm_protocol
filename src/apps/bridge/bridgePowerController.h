@@ -39,7 +39,7 @@ public:
                               uint32_t sampleIntervalS);
 
 private:
-  void powerBusAndSetSignal(bool on, bool notifyL2 = true);
+  void setBusPowerAndSetSignal(bool busOn, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
   static PowerInfoReplyData powerInfoStatsCb(void *arg);
   void checkAndUpdateTimebase();

@@ -113,38 +113,67 @@ bool BridgePowerController::waitForSignal(bool on, TickType_t ticks_to_wait) {
   return rval;
 }
 
-void BridgePowerController::powerBusAndSetSignal(bool on, bool notifyL2) {
+/*!
+ * \brief Controls bridge bus power with proper sequencing and event signaling.
+ *
+ * Power-up sequence (when busOn=true):
+ * 1. Turn on boost converter first
+ * 2. Wait for capacitors to charge (CAPACITOR_CHARGE_DELAY_MS)
+ * 3. Turn on load switch to enable bus power
+ *
+ * Power-down sequence (when busOn=false):
+ * 1. Turn off load switch first to disconnect the load
+ * 2. Turn off boost converter (saves ~3mW)
+ *
+ * The function also:
+ * - Checks current pin state to avoid unnecessary operations
+ * - Sets/clears event group bits to signal power state changes to waiting tasks
+ * - Optionally notifies L2 network layer of power state changes
+ * - Disables unused port 2 during power-up for power savings
+ * - Logs power state changes for debugging
+ *
+ * \param[in] busOn - true to turn on bus power, false to turn off
+ * \param[in] notifyL2 - true to notify L2 network layer of power changes (default: true)
+ *
+ * \note The boost converter must be turned on before the load switch to allow
+ *       capacitor charging time. See PR#335 for detailed analysis.
+ * \note Port 2 is automatically disabled during power-up as it's unused on bridge
+ *       hardware and disabling provides power savings.
+ */
+void BridgePowerController::setBusPowerAndSetSignal(bool busOn, bool notifyL2) {
   do {
     uint8_t enabled;
-    if (IORead(&_BusPowerPin, &enabled) && (enabled == on)) {
+    if (IORead(&_BusPowerPin, &enabled) && (enabled == busOn)) {
       break;
     }
-    EventBits_t signal_to_set = (on) ? BridgePowerController::ON : BridgePowerController::OFF;
-    EventBits_t signal_to_clear = (on) ? BridgePowerController::OFF : BridgePowerController::ON;
+    EventBits_t signal_to_set =
+        (busOn) ? BridgePowerController::ON : BridgePowerController::OFF;
+    EventBits_t signal_to_clear =
+        (busOn) ? BridgePowerController::OFF : BridgePowerController::ON;
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
-    if (on) {
+    if (busOn) {
       // Turn on boost first, allow time for capacitors to charge, turn on the load switch. (See PR#335 for more details)
-      IOWrite(&_BoostPowerPin, on);
+      IOWrite(&_BoostPowerPin, static_cast<uint8_t>(busOn));
       vTaskDelay(CAPACITOR_CHARGE_DELAY_MS);
-      IOWrite(&_BusPowerPin, on);
+      IOWrite(&_BusPowerPin, static_cast<uint8_t>(busOn));
     } else {
       // Turn off the load switch first, then turn off the boost converter.
-      IOWrite(&_BusPowerPin, on);
-      // Turning the boost converter off during OFF periods saves ~3mW.
-      IOWrite(&_BoostPowerPin, on);
+      IOWrite(&_BusPowerPin, static_cast<uint8_t>(busOn));
+      // Turning the boost converter off saves ~3mW.
+      IOWrite(&_BoostPowerPin, static_cast<uint8_t>(busOn));
     }
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     if (notifyL2) {
-      bm_l2_netif_set_power(on);
+      bm_l2_netif_set_power(busOn);
       // Must turn port 2 off if powering up the network,
       // port 2 is not used on the bridge and disabling the port will provide
       // power savings
-      if (on) {
+      if (busOn) {
         bm_l2_netif_enable_disable_port(2, false);
       }
     }
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge bus power: %d\n",
-                   static_cast<int>(on));
+                   static_cast<int>(busOn));
   } while (0);
 }
 
@@ -170,7 +199,7 @@ void BridgePowerController::_update(void) {
     if (!_initDone) { // Initializing
       bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge State Init\n");
       // We start Bus on, no need to signal an eth up / power up event to l2 & adin
-      powerBusAndSetSignal(true, false);
+      setBusPowerAndSetSignal(true, false);
       // Set bus on for two minutes for init.
       vTaskDelay(INIT_POWER_ON_TIMEOUT_MS);
       if (_configError) {
@@ -199,7 +228,7 @@ void BridgePowerController::_update(void) {
             MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
         // The default state until first sample interval depends
         // on whether bus power control is enabled.
-        powerBusAndSetSignal(!_powerControlEnabled);
+        setBusPowerAndSetSignal(!_powerControlEnabled);
       }
       _initDone = true;
     } else if (_powerControlEnabled && _timebaseSet) { // Sampling Enabled
@@ -229,7 +258,7 @@ void BridgePowerController::_update(void) {
               _subsampleIntervalStartS, currentCycleS, _subsampleDurationS);
           if (subsampleTimeRemainingS) {
             stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
-            powerBusAndSetSignal(true);
+            setBusPowerAndSetSignal(true);
             time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
             break;
           } else {
@@ -244,7 +273,7 @@ void BridgePowerController::_update(void) {
             time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
             // Prevent bus thrash
             if (nextSubsampleEpochS > currentCycleS) {
-              powerBusAndSetSignal(false);
+              setBusPowerAndSetSignal(false);
             }
             break;
           }
@@ -257,7 +286,7 @@ void BridgePowerController::_update(void) {
                            "Started rbrPressureProcessor\n");
           }
 #endif // RAW_PRESSURE_ENABLE
-          powerBusAndSetSignal(true);
+          setBusPowerAndSetSignal(true);
           time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
           break;
         }
@@ -273,7 +302,7 @@ void BridgePowerController::_update(void) {
                 : MIN_TASK_SLEEP_MS;
         // Prevent bus thrash
         if (nextSampleEpochS > currentCycleS) {
-          powerBusAndSetSignal(false);
+          setBusPowerAndSetSignal(false);
         }
         xTaskNotify(sensor_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
         break;
@@ -284,14 +313,14 @@ void BridgePowerController::_update(void) {
         if (!enabled) { // Turn the bus on if we've disabled the power manager.
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "Bridge State Disabled - bus on\n");
-          powerBusAndSetSignal(true);
+          setBusPowerAndSetSignal(true);
         }
       } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
         if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "Bridge State Disabled - controller enabled, but timebase is not yet "
                          "set - bus off\n");
-          powerBusAndSetSignal(false);
+          setBusPowerAndSetSignal(false);
         }
 
         // Align the first sample to UTC or tick offset when the timebase finally gets set
