@@ -165,8 +165,9 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
-  uint32_t curtimeMs =
-      2 * kOneMinuteMs + 1000 + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
+  uint32_t curtimeMs = BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
+                       BridgePowerController::MIN_TASK_SLEEP_MS +
+                       BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Bridge Controller is now intitialized, but RTC is not set
@@ -322,7 +323,9 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
-  uint32_t curtimeMs = 2 * kOneMinuteMs + 1015;
+  uint32_t curtimeMs = BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
+                       BridgePowerController::MIN_TASK_SLEEP_MS +
+                       BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Bridge Controller is now intitialized, but RTC is not set
@@ -450,7 +453,9 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
-  uint32_t curtimeMs = 2 * kOneMinuteMs + 1015;
+  uint32_t curtimeMs = BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
+                       BridgePowerController::MIN_TASK_SLEEP_MS +
+                       BridgePowerController::CAPACITOR_CHARGE_DELAY_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Bridge Controller is now intitialized, but RTC is not set
@@ -612,8 +617,9 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
   // 2 min + MIN_TASK_SLEEP_MS
-  EXPECT_EQ(xTaskGetTickCount(),
-            (2 * 60 * 1000 + 1000 + BridgePowerController::CAPACITOR_CHARGE_DELAY_MS));
+  EXPECT_EQ(xTaskGetTickCount(), (BridgePowerController::INIT_POWER_ON_TIMEOUT_MS +
+                                  BridgePowerController::MIN_TASK_SLEEP_MS +
+                                  BridgePowerController::CAPACITOR_CHARGE_DELAY_MS));
 
   // Bridge Controller is now intitialized, not enabled and RTC is not set
   // Bus should still be on
