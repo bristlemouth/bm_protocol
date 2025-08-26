@@ -414,12 +414,20 @@ static void defaultTask(void *parameters) {
 
   printf("Using bridge power controller.\n");
   power_config_s pwrcfg = getPowerConfigs();
-  BridgePowerController bridge_power_controller(
-      VBUS_SW_EN, BOOST_EN, pwrcfg.sampleIntervalMs, pwrcfg.sampleDurationMs, pwrcfg.subsampleIntervalMs,
-      pwrcfg.subsampleDurationMs, static_cast<bool>(pwrcfg.subsampleEnabled),
-      static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
-      (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S),
-      static_cast<bool>(pwrcfg.ticksSamplingEnabled));
+  BridgePowerController::Config config = {
+      .BusPowerPin = VBUS_SW_EN,
+      .BoostPowerPin = BOOST_EN,
+      .sampleIntervalMs = pwrcfg.sampleIntervalMs,
+      .sampleDurationMs = pwrcfg.sampleDurationMs,
+      .subsampleIntervalMs = pwrcfg.subsampleIntervalMs,
+      .subsampleDurationMs = pwrcfg.subsampleDurationMs,
+      .subsamplingEnabled = static_cast<bool>(pwrcfg.subsampleEnabled),
+      .powerControllerEnabled = static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
+      .alignmentS =
+          (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S),
+      .ticksSamplingEnabled = static_cast<bool>(pwrcfg.ticksSamplingEnabled),
+  };
+  BridgePowerController bridge_power_controller(config);
 
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);

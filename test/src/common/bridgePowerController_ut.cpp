@@ -105,7 +105,11 @@ TEST_F(BridgePowerControllerTest, alignment) {
       .write = NULL, .read = NULL, .config = NULL, .registerCallback = NULL};
   IOPinHandle_t unusedPin = {.driver = &unusedDriver, .pin = NULL};
   IOPinHandle_t unusedPin2 = {.driver = &unusedDriver, .pin = NULL};
-  BridgePowerController powerController(unusedPin, unusedPin2);
+  BridgePowerController::Config config = {
+      .BusPowerPin = unusedPin,
+      .BoostPowerPin = unusedPin2,
+  };
+  BridgePowerController powerController(config);
 
   // Starting with default interval of 20 minutes
   uint32_t interval = 1200;
@@ -155,9 +159,17 @@ TEST_F(BridgePowerControllerTest, subsampling1) {
   const uint32_t kNineteenMinutesMs = 1140000;
   const uint32_t kFiveMinutesMs = 300000;
   const uint32_t kOneMinuteMs = 60000;
-  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTwentyMinutesMs,
-                                        kNineteenMinutesMs, kFiveMinutesMs, kOneMinuteMs, true,
-                                        true);
+  BridgePowerController::Config config = {
+      .BusPowerPin = FAKE_VBUS_EN,
+      .BoostPowerPin = FAKE_BOOST_EN,
+      .sampleIntervalMs = kTwentyMinutesMs,
+      .sampleDurationMs = kNineteenMinutesMs,
+      .subsampleIntervalMs = kFiveMinutesMs,
+      .subsampleDurationMs = kOneMinuteMs,
+      .subsamplingEnabled = true,
+      .powerControllerEnabled = true,
+  };
+  BridgePowerController powerController(config);
   powerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
@@ -313,9 +325,17 @@ TEST_F(BridgePowerControllerTest, subsampling2) {
   const uint32_t kSevenMinutesMs = 420000;
   const uint32_t kThreeMinutesMs = 180000;
   const uint32_t kOneMinuteMs = 60000;
-  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTenMinutesMs,
-                                        kSevenMinutesMs, kThreeMinutesMs, kOneMinuteMs, true,
-                                        true);
+  BridgePowerController::Config config = {
+      .BusPowerPin = FAKE_VBUS_EN,
+      .BoostPowerPin = FAKE_BOOST_EN,
+      .sampleIntervalMs = kTenMinutesMs,
+      .sampleDurationMs = kSevenMinutesMs,
+      .subsampleIntervalMs = kThreeMinutesMs,
+      .subsampleDurationMs = kOneMinuteMs,
+      .subsamplingEnabled = true,
+      .powerControllerEnabled = true,
+  };
+  BridgePowerController powerController(config);
   powerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
@@ -443,9 +463,17 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
   const uint32_t kNineteenMinutesMs = 1140000;
   const uint32_t kFiveMinutesMs = 300000;
   const uint32_t kOneMinuteMs = 60000;
-  BridgePowerController powerController(FAKE_VBUS_EN, FAKE_BOOST_EN, kTwentyMinutesMs,
-                                        kNineteenMinutesMs, kFiveMinutesMs, kOneMinuteMs, true,
-                                        true);
+  BridgePowerController::Config config = {
+      .BusPowerPin = FAKE_VBUS_EN,
+      .BoostPowerPin = FAKE_BOOST_EN,
+      .sampleIntervalMs = kTwentyMinutesMs,
+      .sampleDurationMs = kNineteenMinutesMs,
+      .subsampleIntervalMs = kFiveMinutesMs,
+      .subsampleDurationMs = kOneMinuteMs,
+      .subsamplingEnabled = true,
+      .powerControllerEnabled = true,
+  };
+  BridgePowerController powerController(config);
   powerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
@@ -606,10 +634,16 @@ TEST_F(BridgePowerControllerTest, subsampling3WakeEarly) {
 }
 
 TEST_F(BridgePowerControllerTest, goldenPath) {
-  BridgePowerController BridgePowerController(
-      FAKE_VBUS_EN, FAKE_BOOST_EN, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
-      SAMPLE_DURATION_S * 1000, BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
-      BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000);
+  BridgePowerController::Config config = {
+      .BusPowerPin = FAKE_VBUS_EN,
+      .BoostPowerPin = FAKE_BOOST_EN,
+      .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      .sampleDurationMs = SAMPLE_DURATION_S * 1000,
+      .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000,
+      .powerControllerEnabled = false,
+  };
+  BridgePowerController BridgePowerController(config);
   BridgePowerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 1);
@@ -642,7 +676,7 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
 
   // Enable the scheduler
-  xTaskSetTickCount(0); // Convinience tick set for checking sleep.
+  xTaskSetTickCount(0); // Convenience tick set for checking sleep.
   BridgePowerController.powerControlEnable(true);
   BridgePowerController._update();
   EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
@@ -697,11 +731,19 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
 }
 
 TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
-  BridgePowerController BridgePowerController(
-      FAKE_VBUS_EN, FAKE_BOOST_EN, BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
-      SAMPLE_DURATION_S * 1000, BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
-      BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000, false, false,
-      BridgePowerController::DEFAULT_ALIGNMENT_S, true);
+  BridgePowerController::Config config = {
+      .BusPowerPin = FAKE_VBUS_EN,
+      .BoostPowerPin = FAKE_BOOST_EN,
+      .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      .sampleDurationMs = SAMPLE_DURATION_S * 1000,
+      BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000,
+      .subsamplingEnabled = false,
+      .powerControllerEnabled = false,
+      .alignmentS = BridgePowerController::DEFAULT_ALIGNMENT_S,
+      .ticksSamplingEnabled = true,
+  };
+  BridgePowerController BridgePowerController(config);
   BridgePowerController._update();
   // Init sequence powers the bus on for two minutes
   EXPECT_EQ(fake_io_read_func_fake.call_count, 2);

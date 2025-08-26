@@ -17,19 +17,27 @@
 #include "rbrPressureProcessor.h"
 #endif // RAW_PRESSURE_ENABLE
 
-BridgePowerController::BridgePowerController(
-    IOPinHandle_t &BusPowerPin, IOPinHandle_t &BoostPowerPin, uint32_t sampleIntervalMs,
-    uint32_t sampleDurationMs, uint32_t subsampleIntervalMs, uint32_t subsampleDurationMs,
-    bool subsamplingEnabled, bool powerControllerEnabled, uint32_t alignmentS,
-    bool ticksSamplingEnabled)
-    : _BusPowerPin(BusPowerPin), _BoostPowerPin(BoostPowerPin),
-      _powerControlEnabled(powerControllerEnabled), _sampleIntervalS(sampleIntervalMs / 1000),
-      _sampleDurationS(sampleDurationMs / 1000),
-      _subsampleIntervalS(subsampleIntervalMs / 1000),
-      _subsampleDurationS(subsampleDurationMs / 1000), _sampleIntervalStartS(0),
-      _subsampleIntervalStartS(0), _alignmentS(alignmentS),
-      _ticksSamplingEnabled(ticksSamplingEnabled), _timebaseSet(false), _initDone(false),
-      _subsamplingEnabled(subsamplingEnabled), _configError(false) {
+BridgePowerController::BridgePowerController(const Config &config)
+    : _BusPowerPin(config.BusPowerPin), _BoostPowerPin(config.BoostPowerPin),
+      _powerControlEnabled(config.powerControllerEnabled),
+      _sampleIntervalS(config.sampleIntervalMs / 1000),
+      _sampleDurationS(config.sampleDurationMs / 1000),
+      _subsampleIntervalS(config.subsampleIntervalMs / 1000),
+      _subsampleDurationS(config.subsampleDurationMs / 1000), _sampleIntervalStartS(0),
+      _subsampleIntervalStartS(0), _alignmentS(config.alignmentS),
+      _ticksSamplingEnabled(config.ticksSamplingEnabled), _timebaseSet(false), _initDone(false),
+      _subsamplingEnabled(config.subsamplingEnabled), _configError(false) {
+  validateConfig();
+  _busPowerEventGroup = xEventGroupCreate();
+  configASSERT(_busPowerEventGroup);
+  BaseType_t rval = xTaskCreate(BridgePowerController::powerControllerRun, "Power Controller",
+                                128 * 4, this, BRIDGE_POWER_TASK_PRIORITY, &_task_handle);
+  configASSERT(rval == pdTRUE);
+
+  configASSERT(power_info_service_init(powerInfoStatsCb, this) == BmOK);
+}
+
+void BridgePowerController::validateConfig(void) {
   if (_sampleIntervalS > MAX_SAMPLE_INTERVAL_S || _sampleIntervalS < MIN_SAMPLE_INTERVAL_S) {
     printf("INVALID SAMPLE INTERVAL, using default.\n");
     _configError = true;
@@ -65,13 +73,6 @@ BridgePowerController::BridgePowerController(
     _configError = true;
     _subsamplingEnabled = false;
   }
-  _busPowerEventGroup = xEventGroupCreate();
-  configASSERT(_busPowerEventGroup);
-  BaseType_t rval = xTaskCreate(BridgePowerController::powerControllerRun, "Power Controller",
-                                128 * 4, this, BRIDGE_POWER_TASK_PRIORITY, &_task_handle);
-  configASSERT(rval == pdTRUE);
-
-  configASSERT(power_info_service_init(powerInfoStatsCb, this) == BmOK);
 }
 
 /*!

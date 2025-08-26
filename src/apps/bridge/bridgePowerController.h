@@ -9,14 +9,20 @@
 
 class BridgePowerController {
 public:
-  explicit BridgePowerController(
-      IOPinHandle_t &BusPowerPin, IOPinHandle_t &BoostPowerPin,
-      uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000,
-      uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000,
-      uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
-      uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S * 1000,
-      bool subsamplingEnabled = false, bool powerControllerEnabled = false,
-      uint32_t alignmentS = DEFAULT_ALIGNMENT_S, bool ticksSamplingEnabled = false);
+  struct Config {
+    IOPinHandle_t &BusPowerPin;
+    IOPinHandle_t &BoostPowerPin;
+    uint32_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_S * 1000;
+    uint32_t sampleDurationMs = DEFAULT_SAMPLE_DURATION_S * 1000;
+    uint32_t subsampleIntervalMs = DEFAULT_SUBSAMPLE_INTERVAL_S * 1000;
+    uint32_t subsampleDurationMs = DEFAULT_SUBSAMPLE_DURATION_S * 1000;
+    bool subsamplingEnabled = static_cast<bool>(DEFAULT_SUBSAMPLE_ENABLED);
+    bool powerControllerEnabled = static_cast<bool>(DEFAULT_POWER_CONTROLLER_ENABLED);
+    uint32_t alignmentS = DEFAULT_ALIGNMENT_S;
+    bool ticksSamplingEnabled = static_cast<bool>(DEFAULT_TICKS_SAMPLING_ENABLED);
+  };
+
+  explicit BridgePowerController(const Config &config);
   void powerControlEnable(bool enable);
   bool isPowerControlEnabled();
   void subsampleEnable(bool enable);
@@ -24,6 +30,7 @@ public:
   bool waitForSignal(bool on, TickType_t ticks_to_wait);
   bool isBridgePowerOn(void);
   bool initPeriodElapsed(void);
+  void validateConfig(void);
 
   // Shim function for FreeRTOS compatibility, should not be called as part of the public API.
   void _update(void); // PRIVATE
