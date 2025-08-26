@@ -90,7 +90,6 @@ protected:
   }
 
   static constexpr uint32_t SAMPLE_DURATION_S = (5 * 60);
-  static constexpr uint32_t POWER_CONTROLLER_MIN_DELAY_MS = 1000;
   // Objects declared here can be used by all tests in the test suite for Foo.
   IODriver_t fake_io_driver = {.write = fake_io_write_func,
                                .read = fake_io_read_func,
@@ -719,7 +718,7 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   EXPECT_EQ(fake_io_read_func_fake.call_count, 3);
   EXPECT_EQ(fake_io_write_func_fake.call_count, 2);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
-  curtimeMs += POWER_CONTROLLER_MIN_DELAY_MS;
+  curtimeMs += BridgePowerController::MIN_TASK_SLEEP_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Scheduler is still disabled
@@ -727,7 +726,7 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
   EXPECT_EQ(isRTCSet_fake.call_count, 3);
   EXPECT_EQ(fake_io_read_func_fake.call_count, 4);
   EXPECT_EQ(fake_io_write_func_fake.arg1_history[0], 1);
-  curtimeMs += POWER_CONTROLLER_MIN_DELAY_MS;
+  curtimeMs += BridgePowerController::MIN_TASK_SLEEP_MS;
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // Enable the scheduler
@@ -738,7 +737,7 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
 
   // Controller waits until the next aligned sample start
   curtimeMs += (BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000) -
-               (2 * POWER_CONTROLLER_MIN_DELAY_MS);
+               (2 * BridgePowerController::MIN_TASK_SLEEP_MS);
   EXPECT_EQ(xTaskGetTickCount(), curtimeMs);
 
   // The bus stays on until the next Sample Off time
