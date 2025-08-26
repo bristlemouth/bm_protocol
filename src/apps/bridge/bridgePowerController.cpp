@@ -18,7 +18,7 @@
 #endif // RAW_PRESSURE_ENABLE
 
 BridgePowerController::BridgePowerController(const Config &config)
-    : _BusPowerPin(config.BusPowerPin), _BoostPowerPin(config.BoostPowerPin),
+    : _BusLoadSwitchEnablePin(config.BusPowerPin), _BoostEnablePin(config.BoostPowerPin),
       _powerControlEnabled(config.powerControllerEnabled),
       _sampleIntervalS(config.sampleIntervalMs / 1000),
       _sampleDurationS(config.sampleDurationMs / 1000),
@@ -143,7 +143,7 @@ bool BridgePowerController::waitForSignal(bool on, TickType_t ticks_to_wait) {
 void BridgePowerController::setBusPowerAndSetSignal(bool busOn, bool notifyL2) {
   do {
     uint8_t enabled;
-    if (IORead(&_BusPowerPin, &enabled) && (enabled == busOn)) {
+    if (IORead(&_BusLoadSwitchEnablePin, &enabled) && (enabled == busOn)) {
       break;
     }
     EventBits_t signal_to_set =
@@ -153,14 +153,14 @@ void BridgePowerController::setBusPowerAndSetSignal(bool busOn, bool notifyL2) {
     xEventGroupClearBits(_busPowerEventGroup, signal_to_clear);
     if (busOn) {
       // Turn on boost first, allow time for capacitors to charge, turn on the load switch. (See PR#335 for more details)
-      IOWrite(&_BoostPowerPin, static_cast<uint8_t>(busOn));
+      IOWrite(&_BoostEnablePin, static_cast<uint8_t>(busOn));
       vTaskDelay(CAPACITOR_CHARGE_DELAY_MS);
-      IOWrite(&_BusPowerPin, static_cast<uint8_t>(busOn));
+      IOWrite(&_BusLoadSwitchEnablePin, static_cast<uint8_t>(busOn));
     } else {
       // Turn off the load switch first, then turn off the boost converter.
-      IOWrite(&_BusPowerPin, static_cast<uint8_t>(busOn));
+      IOWrite(&_BusLoadSwitchEnablePin, static_cast<uint8_t>(busOn));
       // Turning the boost converter off saves ~3mW.
-      IOWrite(&_BoostPowerPin, static_cast<uint8_t>(busOn));
+      IOWrite(&_BoostEnablePin, static_cast<uint8_t>(busOn));
     }
     xEventGroupSetBits(_busPowerEventGroup, signal_to_set);
     if (notifyL2) {
@@ -179,7 +179,7 @@ void BridgePowerController::setBusPowerAndSetSignal(bool busOn, bool notifyL2) {
 
 bool BridgePowerController::isBridgePowerOn(void) {
   uint8_t val;
-  IORead(&_BusPowerPin, &val);
+  IORead(&_BusLoadSwitchEnablePin, &val);
   return static_cast<bool>(val);
 }
 
@@ -309,13 +309,13 @@ void BridgePowerController::_update(void) {
       }
     } else { // Sampling Not Enabled
       uint8_t enabled;
-      if (!_powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
+      if (!_powerControlEnabled && IORead(&_BusLoadSwitchEnablePin, &enabled)) {
         if (!enabled) { // Turn the bus on if we've disabled the power manager.
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "Bridge State Disabled - bus on\n");
           setBusPowerAndSetSignal(true);
         }
-      } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusPowerPin, &enabled)) {
+      } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusLoadSwitchEnablePin, &enabled)) {
         if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
           bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                          "Bridge State Disabled - controller enabled, but timebase is not yet "

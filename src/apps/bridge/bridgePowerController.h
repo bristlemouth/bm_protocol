@@ -74,8 +74,8 @@ public:
   static constexpr uint32_t INIT_POWER_ON_TIMEOUT_MS = (2 * 60 * 1000);
 
 private:
-  IOPinHandle_t &_BusPowerPin;
-  IOPinHandle_t &_BoostPowerPin;
+  IOPinHandle_t &_BusLoadSwitchEnablePin;
+  IOPinHandle_t &_BoostEnablePin;
   bool _powerControlEnabled;
   uint32_t _sampleIntervalS;
   uint32_t _sampleDurationS;
