@@ -69,6 +69,7 @@
 NvmPartition *userConfigurationPartition = NULL;
 NvmPartition *systemConfigurationPartition = NULL;
 NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 static void defaultTask(void *parameters);
 #ifndef DEBUG_USE_LPUART1
@@ -363,6 +364,7 @@ static void defaultTask(void *parameters) {
 
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_cli_partition(debugW25, dfu_configuration);
+  dfu_partition_global = &dfu_cli_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_cli_partition);
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
