@@ -28,6 +28,7 @@ void setup(void) {
   IOWrite(&VBUS_EN, 0);
   vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
   IOWrite(&PL_BUCK_EN, 0);
+  aanderaa_conductivity_sensor.configureSensor();
 }
 void loop(void) {
   // Read and handle line from sensor
