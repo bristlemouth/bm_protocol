@@ -413,14 +413,21 @@ static void defaultTask(void *parameters) {
   sensorsInit();
 
   printf("Using bridge power controller.\n");
-  IOWrite(&BOOST_EN, 1);
   power_config_s pwrcfg = getPowerConfigs();
-  BridgePowerController bridge_power_controller(
-      VBUS_SW_EN, pwrcfg.sampleIntervalMs, pwrcfg.sampleDurationMs, pwrcfg.subsampleIntervalMs,
-      pwrcfg.subsampleDurationMs, static_cast<bool>(pwrcfg.subsampleEnabled),
-      static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
-      (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S),
-      static_cast<bool>(pwrcfg.ticksSamplingEnabled));
+  BridgePowerController::Config config = {
+      .BusLoadSwitchEnablePin = VBUS_SW_EN,
+      .BoostEnablePin = BOOST_EN,
+      .sampleIntervalMs = pwrcfg.sampleIntervalMs,
+      .sampleDurationMs = pwrcfg.sampleDurationMs,
+      .subsampleIntervalMs = pwrcfg.subsampleIntervalMs,
+      .subsampleDurationMs = pwrcfg.subsampleDurationMs,
+      .subsamplingEnabled = static_cast<bool>(pwrcfg.subsampleEnabled),
+      .powerControllerEnabled = static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
+      .alignmentS =
+          (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S),
+      .ticksSamplingEnabled = static_cast<bool>(pwrcfg.ticksSamplingEnabled),
+  };
+  BridgePowerController bridge_power_controller(config);
 
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
