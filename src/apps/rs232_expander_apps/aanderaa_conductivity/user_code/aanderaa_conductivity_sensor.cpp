@@ -38,50 +38,90 @@ void AanderaaConductivitySensor::init() {
 }
 
 void AanderaaConductivitySensor::configureSensor(void) {
+  //timeout is 60000 ms, looks like we gotta wake the senor and then send any commands after this.
   printf("One time setup Aanderaa Conductivity Sensor\n");
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  vTaskDelay(pdMS_TO_TICKS(2000));
   // send stop command to stop streaming
   uint16_t read_len = 0;
   read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
   // process startup message
 
   vTaskDelay(pdMS_TO_TICKS(3000));
-  PLUART::write((uint8_t *)"stop\r\n", strlen("stop\r\n"));
+  PLUART::write((uint8_t *)"0", strlen("0")); //wake
+  vTaskDelay(pdMS_TO_TICKS(50));
+  read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+  clearPayloadBuffer();
+
+  PLUART::write((uint8_t *)CMD_STOP, strlen(CMD_STOP));
   vTaskDelay(pdMS_TO_TICKS(200));
   read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-  printf("Received line: %.*s\n", read_len, _payload_buffer);
-  // clear buffer
-  vTaskDelay(pdMS_TO_TICKS(1000));
-  // if _payload_buffer is not "!#\r\n"
-  while (strncmp(_payload_buffer, "!#", 2) != 0) {
-    printf("Sensor not responding to stop command, retrying...\n");
-    PLUART::write((uint8_t *)"stop\r\n", strlen("stop\r\n"));
-    vTaskDelay(pdMS_TO_TICKS(200));
-    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-    printf("Received line: %.*s\n", read_len, _payload_buffer);
-  }
+  clearPayloadBuffer();
+  vTaskDelay(pdMS_TO_TICKS(500));
 
   // passkey command
-  // wait for #
+  PLUART::write((uint8_t *)CMD_SET_PASSKEY_1, strlen(CMD_SET_PASSKEY_1));
+  vTaskDelay(pdMS_TO_TICKS(1000));
   // enable sleep
+  PLUART::write((uint8_t *)CMD_ENABLE_SLEEP_YES, strlen(CMD_ENABLE_SLEEP_YES));
+  vTaskDelay(pdMS_TO_TICKS(1000));
   // wait for #
   // set interval, define default interval
+  PLUART::write((uint8_t *)CMD_SET_INTERVAL_2, strlen(CMD_SET_INTERVAL_2));
+  vTaskDelay(pdMS_TO_TICKS(1000));
   // enable Temperature
+  PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
+  vTaskDelay(pdMS_TO_TICKS(1000));
   // enable decimalformat
+  PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
+  vTaskDelay(pdMS_TO_TICKS(200));
   // disable rawdata
+  PLUART::write((uint8_t *)CMD_ENABLE_RAWDATA_NO, strlen(CMD_ENABLE_RAWDATA_NO));
+  vTaskDelay(pdMS_TO_TICKS(200));
   // enable derived parameters
+  PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES,
+                 strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
+  vTaskDelay(pdMS_TO_TICKS(200));
   // disable RawCond1
-
+  PLUART::write((uint8_t *)CMD_ENABLE_RAWCOND1_NO, strlen(CMD_ENABLE_RAWCOND1_NO));
+  vTaskDelay(pdMS_TO_TICKS(200));
   // enable conductivity
-  // enable/disable Polled Mode?
-  // enable/disable Text
-  // if _pressureKpa == NAN, then don't send any pressure command; else set pressure
-
+  PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES,
+                 strlen(CMD_ENABLE_CONDUCTIVITY_YES));
+  vTaskDelay(pdMS_TO_TICKS(200));
+  //  disable Polled Mode
+  PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO,
+                 strlen(CMD_ENABLE_POLLEDMODE_NO));
+  vTaskDelay(pdMS_TO_TICKS(200));
+  // enable Text
+  PLUART::write((uint8_t *)CMD_ENABLE_TEXT_YES, strlen(CMD_ENABLE_TEXT_YES));
+  vTaskDelay(pdMS_TO_TICKS(200));
+  // enable decimalformat
+  PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
+  vTaskDelay(pdMS_TO_TICKS(200));
+  // save command
+  PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
+  vTaskDelay(pdMS_TO_TICKS(200));
+  clearPayloadBuffer();
+  vTaskDelay(pdMS_TO_TICKS(6000));
   // send get_all command and cross check if they were saved.
+  PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
+  read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+  printf("Get all params response: %.*s\n", read_len, _payload_buffer);
+
+  clearPayloadBuffer();
+  vTaskDelay(pdMS_TO_TICKS(2000));
+  //PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
+
+  // if _pressureKpa == NAN, then don't send any pressure command; else set pressure
+	//printf("%d\n",read_len);
 }
 
 void AanderaaConductivitySensor::flush(void) {
   PLUART::reset();
+}
+
+void AanderaaConductivitySensor::clearPayloadBuffer(void) {
+  memset(_payload_buffer, 0, sizeof(_payload_buffer));
 }
 /*
 bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {

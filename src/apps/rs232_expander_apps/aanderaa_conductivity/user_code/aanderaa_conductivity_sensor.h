@@ -6,6 +6,23 @@
 #include "OrderedSeparatorLineParser.h"
 #include "aanderaa_conductivity_msg.h"
 
+#define CMD_STOP                        "Stop\r\n"
+#define CMD_SET_PASSKEY_1               "Set Passkey(1)\r\n"
+#define CMD_ENABLE_CONDUCTIVITY_YES     "Set Enable Conductivity(Yes)\r\n"
+#define CMD_ENABLE_SLEEP_YES            "Set Enable Sleep(Yes)\r\n"
+#define CMD_ENABLE_POLLEDMODE_NO        "Set Enable Polled Mode(No)\r\n"
+#define CMD_ENABLE_TEXT_YES             "Set Enable Text(Yes)\r\n"
+#define CMD_ENABLE_DECIMALFORMAT_YES    "Set Enable Decimalformat(Yes)\r\n"
+#define CMD_ENABLE_TEMPERATURE_YES      "Set Enable Temperature(Yes)\r\n"
+#define CMD_ENABLE_RAWDATA_NO           "Set Enable Rawdata(No)\r\n"
+#define CMD_ENABLE_DERIVEDPARAMETERS_YES "Set Enable Derived Parameters(Yes)\r\n"
+#define CMD_ENABLE_RAWCOND1_NO          "Set Enable RawCond1(No)\r\n"
+#define CMD_SET_INTERVAL_2              "Set Interval(2)\r\n"
+#define CMD_SAVE                        "Save\r\n"
+#define CMD_RESET                       "Reset\r\n"
+#define ACK                             "#\r\n"
+#define CMD_GET_ALL                    "Get_All\r\n"
+#define CMD_GET_ALL_PARAMS             "Get_All Parameters\r\n"
 
 
 class AanderaaConductivitySensor {
@@ -16,6 +33,7 @@ public:
     void configureSensor(void);
     bool getData(AanderaaConductivityMsg::Data &d);
     void flush(void);
+    void clearPayloadBuffer(void);
 
     static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_conductivity_raw.log";
 
@@ -33,4 +51,5 @@ private:
     float _pressureKpa = 0.0f;
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
+
 };
