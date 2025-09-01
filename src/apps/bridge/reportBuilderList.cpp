@@ -1,6 +1,7 @@
 #include "reportBuilderList.h"
 #include "FreeRTOS.h"
 #include "aanderaaSensor.h"
+#include "aanderaaConductivitySensor.h"
 #include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "pmeDissolvedOxygenSensor.h"
@@ -113,6 +114,12 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
   case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
     nan_sample = &SeapointTurbiditySensor::seapoint_turbidity_NAN_AGG;
     dst = &(static_cast<seapoint_turbidity_aggregations_t *>(
+        element->sensor_data))[element->sample_counter];
+    break;
+  }
+  case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
+    nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
+    dst = &(static_cast<aanderaa_conductivity_aggregations_t *>(
         element->sensor_data))[element->sample_counter];
     break;
   }

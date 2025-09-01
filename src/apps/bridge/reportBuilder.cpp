@@ -1,6 +1,7 @@
 #include "reportBuilder.h"
 #include "FreeRTOS.h"
 #include "aanderaaSensor.h"
+#include "aanderaaConductivitySensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bm_serial.h"
@@ -353,6 +354,65 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
+  case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
+    aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
+        (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
+    if (sensor_report_encoder_open_sample(context, AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
+                                          "bm_aanderaa_conductivity_v0") != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to open aanderaa_conductivity sample in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &aanderaa_conductivity_sample.conductivity_mean_ms_cm) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &aanderaa_conductivity_sample.temperature_mean_deg_c) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &aanderaa_conductivity_sample.salinity_mean_psu) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &aanderaa_conductivity_sample.water_density_mean_kg_m3) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &aanderaa_conductivity_sample.sound_speed_mean_m_s) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_add_sample_member(
+            context, encode_double_sample_member,
+            &aanderaa_conductivity_sample.depth_mean_m) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+      break;
+    }
+    if (sensor_report_encoder_close_sample(context) != CborNoError) {
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                     "Failed to close sample in addSamplesToReport\n");
+      break;
+    }
+    rval = true;
+    break;
+  }
   case SENSOR_TYPE_PME_DO: {
     pme_dissolved_oxygen_aggregations_t pme_do_sample =
         (static_cast<pme_dissolved_oxygen_aggregations_t *>(sensor_data))[sample_index];
@@ -526,6 +586,10 @@ static void report_builder_task(void *parameters) {
                       }
                       case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
                         size = sizeof(seapoint_turbidity_aggregations_t);
+                        break;
+                      }
+                      case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
+                        size = sizeof(aanderaa_conductivity_aggregations_t);
                         break;
                       }
                       case SENSOR_TYPE_PME_DO: {

@@ -7,6 +7,7 @@
 #include "rbrCodaSensor.h"
 #include "reportBuilderList.h"
 #include "seapointTurbiditySensor.h"
+#include "aanderaaConductivitySensor.h"
 #include "softSensor.h"
 #include "gtest/gtest.h"
 #include <stdlib.h>
@@ -72,6 +73,16 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             },
             NULL,
             sizeof(seapoint_turbidity_aggregations_t),
+        },
+    [SENSOR_TYPE_AANDERAA_CONDUCTIVITY] =
+        {
+            0,
+            &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG,
+            [](void *data, uint8_t idx) -> void * {
+              return &(static_cast<aanderaa_conductivity_aggregations_t *>(data))[idx];
+            },
+            NULL,
+            sizeof(aanderaa_conductivity_aggregations_t),
         },
     [SENSOR_TYPE_BOREALIS] =
         {
