@@ -16,6 +16,7 @@
 #define CMD_ENABLE_TEMPERATURE_YES      "Set Enable Temperature(Yes)\r\n"
 #define CMD_ENABLE_RAWDATA_NO           "Set Enable Rawdata(No)\r\n"
 #define CMD_ENABLE_DERIVEDPARAMETERS_YES "Set Enable Derived Parameters(Yes)\r\n"
+#define CMD_ENABLE_DERIVEDPARAMETERS_NO "Set Enable Derived Parameters(No)\r\n"
 #define CMD_ENABLE_RAWCOND1_NO          "Set Enable RawCond1(No)\r\n"
 #define CMD_SET_INTERVAL_2              "Set Interval(2)\r\n"
 #define CMD_SAVE                        "Save\r\n"
@@ -34,6 +35,7 @@ public:
     bool getData(AanderaaConductivityMsg::Data &d);
     void flush(void);
     void clearPayloadBuffer(void);
+    void resetSensor(void);
 
     static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_conductivity_raw.log";
 

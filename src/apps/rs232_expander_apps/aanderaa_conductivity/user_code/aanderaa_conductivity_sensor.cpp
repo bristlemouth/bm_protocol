@@ -21,7 +21,6 @@ void AanderaaConductivitySensor::init() {
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
                    &_sensorDepth);
   printf("sensorDepthM: %f\n", _sensorDepth);
-  _sensorDepth = NAN;
 
   // convert depth in meters to pressure in kPa
   _pressureKpa = _sensorDepth * 9.81f;
@@ -74,40 +73,48 @@ void AanderaaConductivitySensor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(1000));
   // enable decimalformat
   PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // disable rawdata
   PLUART::write((uint8_t *)CMD_ENABLE_RAWDATA_NO, strlen(CMD_ENABLE_RAWDATA_NO));
-  vTaskDelay(pdMS_TO_TICKS(200));
-  // enable derived parameters
-  PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES,
-                 strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // disable RawCond1
   PLUART::write((uint8_t *)CMD_ENABLE_RAWCOND1_NO, strlen(CMD_ENABLE_RAWCOND1_NO));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // enable conductivity
   PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES,
                  strlen(CMD_ENABLE_CONDUCTIVITY_YES));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   //  disable Polled Mode
   PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO,
                  strlen(CMD_ENABLE_POLLEDMODE_NO));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // enable Text
   PLUART::write((uint8_t *)CMD_ENABLE_TEXT_YES, strlen(CMD_ENABLE_TEXT_YES));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // enable decimalformat
   PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // set pressure command if _pressureKpa is not NAN
   if (!isnan(_sensorDepth)) {
+    printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
     char pressure_cmd[32];
     snprintf(pressure_cmd, sizeof(pressure_cmd), "Set Pressure(%.2f)\r\n", _pressureKpa);
     PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    // enable derived parameters
+    PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES,
+    strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
   else {
+    printf("sensorDepthM was set to NAN, so setting Pressure to 0.0 kpa and disabling Derived Parameters\n");
     PLUART::write((uint8_t *)"Set Pressure(0.0)\r\n", strlen("Set Pressure(0.0)\r\n"));
+    // disabling derived parameters
+    PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_NO,
+    strlen(CMD_ENABLE_DERIVEDPARAMETERS_NO));
+    vTaskDelay(pdMS_TO_TICKS(200));
   }
+  vTaskDelay(pdMS_TO_TICKS(200));
   // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
   vTaskDelay(pdMS_TO_TICKS(200));
@@ -115,17 +122,17 @@ void AanderaaConductivitySensor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(6000));
   // send get_all command and cross check if they were saved.
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
-  read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-  printf("Get all params response: %.*s\n", read_len, _payload_buffer);
+  uint16_t line_count = 0;
+  while (line_count < 25) {
+    if (PLUART::lineAvailable()) {
+    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+    printf("%.*s\n", read_len, _payload_buffer);
+    line_count++;
+    }
+  }
 
   clearPayloadBuffer();
   vTaskDelay(pdMS_TO_TICKS(2000));
-  // PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
-
-  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
-
-  // if _pressureKpa == NAN, then don't send any pressure command; else set pressure
-	//printf("%d\n",read_len);
 }
 
 void AanderaaConductivitySensor::flush(void) {
@@ -140,3 +147,10 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
   // Not used for this sensor
   return false;
 }*/
+void AanderaaConductivitySensor::resetSensor(void) {
+  // Send reset command to the sensor
+  PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
+  vTaskDelay(pdMS_TO_TICKS(500));
+  clearPayloadBuffer();
+  printf("Sensor reset command sent.\n");
+}
