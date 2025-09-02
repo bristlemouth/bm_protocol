@@ -21,6 +21,7 @@ void AanderaaConductivitySensor::init() {
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
                    &_sensorDepth);
   printf("sensorDepthM: %f\n", _sensorDepth);
+  _sensorDepth = NAN;
 
   // convert depth in meters to pressure in kPa
   _pressureKpa = _sensorDepth * 9.81f;
@@ -98,7 +99,16 @@ void AanderaaConductivitySensor::configureSensor(void) {
   // enable decimalformat
   PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
   vTaskDelay(pdMS_TO_TICKS(200));
-  // save command
+  // set pressure command if _pressureKpa is not NAN
+  if (!isnan(_sensorDepth)) {
+    char pressure_cmd[32];
+    snprintf(pressure_cmd, sizeof(pressure_cmd), "Set Pressure(%.2f)\r\n", _pressureKpa);
+    PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
+  }
+  else {
+    PLUART::write((uint8_t *)"Set Pressure(0.0)\r\n", strlen("Set Pressure(0.0)\r\n"));
+  }
+  // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
   vTaskDelay(pdMS_TO_TICKS(200));
   clearPayloadBuffer();
@@ -110,7 +120,9 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
   clearPayloadBuffer();
   vTaskDelay(pdMS_TO_TICKS(2000));
-  //PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
+  // PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
+
+  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
 
   // if _pressureKpa == NAN, then don't send any pressure command; else set pressure
 	//printf("%d\n",read_len);
