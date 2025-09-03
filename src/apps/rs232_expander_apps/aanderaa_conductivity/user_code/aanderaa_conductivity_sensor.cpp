@@ -142,15 +142,98 @@ void AanderaaConductivitySensor::flush(void) {
 void AanderaaConductivitySensor::clearPayloadBuffer(void) {
   memset(_payload_buffer, 0, sizeof(_payload_buffer));
 }
-/*
-bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
-  // Not used for this sensor
-  return false;
-}*/
+
 void AanderaaConductivitySensor::resetSensor(void) {
-  // Send reset command to the sensor
   PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
-  vTaskDelay(pdMS_TO_TICKS(500));
-  clearPayloadBuffer();
-  printf("Sensor reset command sent.\n");
+}
+
+void AanderaaConductivitySensor::startSensor(void) {
+  PLUART::write((uint8_t *)CMD_START, strlen(CMD_START));
+}
+
+bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
+  bool success = false;
+  if (PLUART::lineAvailable()) {
+    uint16_t read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+
+    RTCTimeAndDate_t time_and_date = {};
+    rtcGet(&time_and_date);
+    char rtc_time_str[32] = {};
+    rtcPrint(rtc_time_str, NULL);
+
+    if (_sensorBmLogEnable) {
+      spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+                 "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
+                 read_len, _payload_buffer);
+    }
+    spotter_log_console(0, "conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+              rtc_time_str, read_len, _payload_buffer);
+    printf("conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
+           read_len, _payload_buffer);
+
+    // Check if this is a measurement frame (starts with \x13\x11MEASUREMENT)
+    if (read_len > 15 && _payload_buffer[0] == 0x13 && _payload_buffer[1] == 0x11 &&
+        strncmp(&_payload_buffer[2], "MEASUREMENT", 11) == 0) {
+
+      // Parse the measurement data using string parsing
+      char *line = _payload_buffer;
+      double conductivity = NAN, temperature = NAN, salinity = NAN, density = NAN, soundspeed = NAN;
+
+      // Find and parse Conductivity[mS/cm]
+      char *cond_pos = strstr(line, "Conductivity[mS/cm]");
+      if (cond_pos) {
+        cond_pos += strlen("Conductivity[mS/cm]");
+        while (*cond_pos == ' ' || *cond_pos == '\t') cond_pos++; // Skip whitespace
+        conductivity = strtod(cond_pos, NULL);
+      }
+
+      // Find and parse Temperature[Deg.C]
+      char *temp_pos = strstr(line, "Temperature[Deg.C]");
+      if (temp_pos) {
+        temp_pos += strlen("Temperature[Deg.C]");
+        while (*temp_pos == ' ' || *temp_pos == '\t') temp_pos++; // Skip whitespace
+        temperature = strtod(temp_pos, NULL);
+      }
+
+      // Find and parse Salinity[PSU]
+      char *sal_pos = strstr(line, "Salinity[PSU]");
+      if (sal_pos) {
+        sal_pos += strlen("Salinity[PSU]");
+        while (*sal_pos == ' ' || *sal_pos == '\t') sal_pos++; // Skip whitespace
+        salinity = strtod(sal_pos, NULL);
+      }
+
+      // Find and parse Density[kg/m3]
+      char *dens_pos = strstr(line, "Density[kg/m3]");
+      if (dens_pos) {
+        dens_pos += strlen("Density[kg/m3]");
+        while (*dens_pos == ' ' || *dens_pos == '\t') dens_pos++; // Skip whitespace
+        density = strtod(dens_pos, NULL);
+      }
+
+      // Find and parse Soundspeed[m/s]
+      char *sound_pos = strstr(line, "Soundspeed[m/s]");
+      if (sound_pos) {
+        sound_pos += strlen("Soundspeed[m/s]");
+        while (*sound_pos == ' ' || *sound_pos == '\t') sound_pos++; // Skip whitespace
+        soundspeed = strtod(sound_pos, NULL);
+      }
+
+      // Populate the message structure
+      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
+      d.header.sensor_reading_time_ms = uptimeGetMs();
+      d.conductivity_ms_cm = conductivity;
+      d.temperature_deg_c = temperature;
+      d.salinity_psu = salinity;
+      d.water_density_kg_m3 = density;
+      d.sound_speed_m_s = soundspeed;
+      d.depth_m = _sensorDepth; // Use configured depth
+
+      printf("Parsed: Cond=%.3f, Temp=%.3f, Sal=%.3f, Dens=%.3f, Sound=%.3f, Depth=%.2f\n",
+             conductivity, temperature, salinity, density, soundspeed, _sensorDepth);
+
+      success = true;
+    }
+  }
+  return success;
 }

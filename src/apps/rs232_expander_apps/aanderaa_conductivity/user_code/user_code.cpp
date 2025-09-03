@@ -29,10 +29,10 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(500)); // Wait for Vbus to stabilize
   IOWrite(&PL_BUCK_EN, 0);
   aanderaa_conductivity_sensor.configureSensor();
+  aanderaa_conductivity_sensor.startSensor();
 }
 void loop(void) {
   // Read and handle line from sensor
-/*
   static AanderaaConductivityMsg::Data d;
   if (aanderaa_conductivity_sensor.getData(d)) {
     static uint8_t cbor_buf[AANDERAA_CONDUCTIVITY_DATA_MSG_MAX_SIZE];
@@ -43,5 +43,4 @@ void loop(void) {
       printf("Failed to encode conductivity data message\n");
     }
   }
-*/
 }

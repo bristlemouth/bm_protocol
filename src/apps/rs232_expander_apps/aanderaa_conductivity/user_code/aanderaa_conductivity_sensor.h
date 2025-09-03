@@ -7,6 +7,7 @@
 #include "aanderaa_conductivity_msg.h"
 
 #define CMD_STOP                        "Stop\r\n"
+#define CMD_START                       "Start\r\n"
 #define CMD_SET_PASSKEY_1               "Set Passkey(1)\r\n"
 #define CMD_ENABLE_CONDUCTIVITY_YES     "Set Enable Conductivity(Yes)\r\n"
 #define CMD_ENABLE_SLEEP_YES            "Set Enable Sleep(Yes)\r\n"
@@ -36,6 +37,7 @@ public:
     void flush(void);
     void clearPayloadBuffer(void);
     void resetSensor(void);
+    void startSensor(void);
 
     static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_conductivity_raw.log";
 
