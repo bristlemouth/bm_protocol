@@ -1,12 +1,15 @@
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
+set(SERIAL_BRIDGE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../common/serial_bridge)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
+    ${SERIAL_BRIDGE_DIR}/serial_bridge.cpp
 )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
+    ${SERIAL_BRIDGE_DIR}
 )
 
 set(APP_LIBS
