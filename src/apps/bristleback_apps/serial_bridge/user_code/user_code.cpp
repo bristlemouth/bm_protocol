@@ -78,7 +78,7 @@ static void sub_message_cb(uint64_t node_id, const char *topic, uint16_t topic_l
  @return True on success, false on failure
  */
 static bool sub_cb(const char *topic, uint16_t topic_len) {
-  return bm_sub_wl(topic, topic_len, sub_message_cb);
+  return bm_sub_wl(topic, topic_len, sub_message_cb) == BmOK;
 }
 
 /*!
