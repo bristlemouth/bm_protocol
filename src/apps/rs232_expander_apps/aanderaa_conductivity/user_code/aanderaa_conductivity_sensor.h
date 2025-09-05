@@ -19,12 +19,13 @@
 #define CMD_ENABLE_DERIVEDPARAMETERS_YES "Set Enable Derived Parameters(Yes)\r\n"
 #define CMD_ENABLE_DERIVEDPARAMETERS_NO "Set Enable Derived Parameters(No)\r\n"
 #define CMD_ENABLE_RAWCOND1_NO          "Set Enable RawCond1(No)\r\n"
-#define CMD_SET_INTERVAL_2              "Set Interval(2)\r\n"
+#define CMD_SET_INTERVAL              "Set Interval(%" PRIu32 ")\r\n"
 #define CMD_SAVE                        "Save\r\n"
 #define CMD_RESET                       "Reset\r\n"
 #define ACK                             "#\r\n"
 #define CMD_GET_ALL                    "Get_All\r\n"
 #define CMD_GET_ALL_PARAMS             "Get_All Parameters\r\n"
+#define CMD_SET_PRESSURE                "Set Pressure(%.2f)\r\n"
 
 
 class AanderaaConductivitySensor {
@@ -49,10 +50,13 @@ private:
         TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
+    static constexpr char SENSOR_PRESSURE_KPA[] = "pressureKpa";
+    static constexpr char SENSOR_INTERVAL_S[] = "readingIntervalS";
 
     uint32_t _sensorBmLogEnable = 0;
     float _sensorDepth = 0.0f;
     float _pressureKpa = 0.0f;
+	uint32_t _intervalS = 2;
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
 

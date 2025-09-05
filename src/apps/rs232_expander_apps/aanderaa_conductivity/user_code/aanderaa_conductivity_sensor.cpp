@@ -22,6 +22,10 @@ void AanderaaConductivitySensor::init() {
                    &_sensorDepth);
   printf("sensorDepthM: %f\n", _sensorDepth);
 
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_INTERVAL_S, strlen(SENSOR_INTERVAL_S),
+                   &_intervalS);
+  printf("readingIntervalS: %" PRIu32 "\n", _intervalS);
+
   // convert depth in meters to pressure in kPa
   _pressureKpa = _sensorDepth * 9.81f;
   printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
@@ -40,37 +44,41 @@ void AanderaaConductivitySensor::init() {
 void AanderaaConductivitySensor::configureSensor(void) {
   //timeout is 60000 ms, looks like we gotta wake the senor and then send any commands after this.
   printf("One time setup Aanderaa Conductivity Sensor\n");
-  vTaskDelay(pdMS_TO_TICKS(2000));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // send stop command to stop streaming
   uint16_t read_len = 0;
-  read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-  // process startup message
+  if (PLUART::lineAvailable()) {
+    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+    // process startup message
+    if (read_len > 0) {
+      printf("Startup message: %.*s\n", read_len, _payload_buffer);
+    } else {
+      printf("No startup message received\n");
+    }
+  }
 
   vTaskDelay(pdMS_TO_TICKS(3000));
   PLUART::write((uint8_t *)"0", strlen("0")); //wake
   vTaskDelay(pdMS_TO_TICKS(50));
-  read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-  clearPayloadBuffer();
 
   PLUART::write((uint8_t *)CMD_STOP, strlen(CMD_STOP));
-  vTaskDelay(pdMS_TO_TICKS(200));
-  read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-  clearPayloadBuffer();
   vTaskDelay(pdMS_TO_TICKS(500));
 
   // passkey command
   PLUART::write((uint8_t *)CMD_SET_PASSKEY_1, strlen(CMD_SET_PASSKEY_1));
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // enable sleep
   PLUART::write((uint8_t *)CMD_ENABLE_SLEEP_YES, strlen(CMD_ENABLE_SLEEP_YES));
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // wait for #
   // set interval, define default interval
-  PLUART::write((uint8_t *)CMD_SET_INTERVAL_2, strlen(CMD_SET_INTERVAL_2));
+  char interval_cmd[32];
+  snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _intervalS);
+  PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
   vTaskDelay(pdMS_TO_TICKS(1000));
   // enable Temperature
   PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  vTaskDelay(pdMS_TO_TICKS(100));
   // enable decimalformat
   PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
@@ -98,7 +106,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   if (!isnan(_sensorDepth)) {
     printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
     char pressure_cmd[32];
-    snprintf(pressure_cmd, sizeof(pressure_cmd), "Set Pressure(%.2f)\r\n", _pressureKpa);
+    snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
     PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
     vTaskDelay(pdMS_TO_TICKS(100));
     // enable derived parameters
@@ -108,11 +116,9 @@ void AanderaaConductivitySensor::configureSensor(void) {
   }
   else {
     printf("sensorDepthM was set to NAN, so setting Pressure to 0.0 kpa and disabling Derived Parameters\n");
-    PLUART::write((uint8_t *)"Set Pressure(0.0)\r\n", strlen("Set Pressure(0.0)\r\n"));
-    // disabling derived parameters
-    PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_NO,
-    strlen(CMD_ENABLE_DERIVEDPARAMETERS_NO));
-    vTaskDelay(pdMS_TO_TICKS(200));
+    char pressure_cmd[32];
+    snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, (float)0.0);
+    PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
   }
   vTaskDelay(pdMS_TO_TICKS(200));
   // save
