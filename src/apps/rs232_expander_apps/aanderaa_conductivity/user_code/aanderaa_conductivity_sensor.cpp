@@ -43,89 +43,80 @@ void AanderaaConductivitySensor::init() {
 
 void AanderaaConductivitySensor::configureSensor(void) {
   //timeout is 60000 ms, looks like we gotta wake the senor and then send any commands after this.
-  printf("One time setup Aanderaa Conductivity Sensor\n");
-  vTaskDelay(pdMS_TO_TICKS(100));
-  // send stop command to stop streaming
   uint16_t read_len = 0;
-  if (PLUART::lineAvailable()) {
-    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-    // process startup message
-    if (read_len > 0) {
-      printf("Startup message: %.*s\n", read_len, _payload_buffer);
-    } else {
-      printf("No startup message received\n");
-    }
-  }
-
   vTaskDelay(pdMS_TO_TICKS(3000));
   PLUART::write((uint8_t *)"0", strlen("0")); //wake
   vTaskDelay(pdMS_TO_TICKS(50));
 
+  // send stop command to stop streaming
   PLUART::write((uint8_t *)CMD_STOP, strlen(CMD_STOP));
   vTaskDelay(pdMS_TO_TICKS(500));
 
   // passkey command
   PLUART::write((uint8_t *)CMD_SET_PASSKEY_1, strlen(CMD_SET_PASSKEY_1));
   vTaskDelay(pdMS_TO_TICKS(100));
+
   // enable sleep
   PLUART::write((uint8_t *)CMD_ENABLE_SLEEP_YES, strlen(CMD_ENABLE_SLEEP_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
-  // wait for #
+
   // set interval, define default interval
   char interval_cmd[32];
   snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _intervalS);
   PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
   vTaskDelay(pdMS_TO_TICKS(1000));
+
   // enable Temperature
   PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
-  // enable decimalformat
-  PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
-  vTaskDelay(pdMS_TO_TICKS(100));
+
   // disable rawdata
   PLUART::write((uint8_t *)CMD_ENABLE_RAWDATA_NO, strlen(CMD_ENABLE_RAWDATA_NO));
   vTaskDelay(pdMS_TO_TICKS(100));
+
   // disable RawCond1
   PLUART::write((uint8_t *)CMD_ENABLE_RAWCOND1_NO, strlen(CMD_ENABLE_RAWCOND1_NO));
   vTaskDelay(pdMS_TO_TICKS(100));
+
   // enable conductivity
-  PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES,
-                 strlen(CMD_ENABLE_CONDUCTIVITY_YES));
+  PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES, strlen(CMD_ENABLE_CONDUCTIVITY_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
+
   //  disable Polled Mode
-  PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO,
-                 strlen(CMD_ENABLE_POLLEDMODE_NO));
+  PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO, strlen(CMD_ENABLE_POLLEDMODE_NO));
   vTaskDelay(pdMS_TO_TICKS(100));
+
   // enable Text
   PLUART::write((uint8_t *)CMD_ENABLE_TEXT_YES, strlen(CMD_ENABLE_TEXT_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
+
   // enable decimalformat
   PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
+
+  // enable derived parameters
+  PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES, strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
+  vTaskDelay(pdMS_TO_TICKS(100));
+
   // set pressure command if _pressureKpa is not NAN
   if (!isnan(_sensorDepth)) {
     printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
     char pressure_cmd[32];
     snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
     PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-    vTaskDelay(pdMS_TO_TICKS(100));
-    // enable derived parameters
-    PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES,
-    strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
-    vTaskDelay(pdMS_TO_TICKS(100));
-  }
-  else {
-    printf("sensorDepthM was set to NAN, so setting Pressure to 0.0 kpa and disabling Derived Parameters\n");
+
+  } else {
+    printf("sensorDepthM was set to NAN, so setting Pressure to 0.0 kpa\n");
     char pressure_cmd[32];
     snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, (float)0.0);
     PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
   }
   vTaskDelay(pdMS_TO_TICKS(200));
+
   // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
-  vTaskDelay(pdMS_TO_TICKS(200));
-  clearPayloadBuffer();
   vTaskDelay(pdMS_TO_TICKS(6000));
+
   // send get_all command and cross check if they were saved.
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
   uint16_t line_count = 0;
@@ -153,7 +144,7 @@ void AanderaaConductivitySensor::resetSensor(void) {
   PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
 }
 
-void AanderaaConductivitySensor::startSensor(void) {
+void AanderaaConductivitySensor::startStreaming(void) {
   PLUART::write((uint8_t *)CMD_START, strlen(CMD_START));
 }
 
@@ -183,14 +174,13 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
 
       // Parse the measurement data using string parsing
       char *line = _payload_buffer;
-      double conductivity = NAN, temperature = NAN, salinity = NAN, density = NAN, soundspeed = NAN;
 
       // Find and parse Conductivity[mS/cm]
       char *cond_pos = strstr(line, "Conductivity[mS/cm]");
       if (cond_pos) {
         cond_pos += strlen("Conductivity[mS/cm]");
         while (*cond_pos == ' ' || *cond_pos == '\t') cond_pos++; // Skip whitespace
-        conductivity = strtod(cond_pos, NULL);
+        _conductivity = strtod(cond_pos, NULL);
       }
 
       // Find and parse Temperature[Deg.C]
@@ -198,7 +188,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
       if (temp_pos) {
         temp_pos += strlen("Temperature[Deg.C]");
         while (*temp_pos == ' ' || *temp_pos == '\t') temp_pos++; // Skip whitespace
-        temperature = strtod(temp_pos, NULL);
+        _temperature = strtod(temp_pos, NULL);
       }
 
       // Find and parse Salinity[PSU]
@@ -206,7 +196,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
       if (sal_pos) {
         sal_pos += strlen("Salinity[PSU]");
         while (*sal_pos == ' ' || *sal_pos == '\t') sal_pos++; // Skip whitespace
-        salinity = strtod(sal_pos, NULL);
+        _salinity = strtod(sal_pos, NULL);
       }
 
       // Find and parse Density[kg/m3]
@@ -214,7 +204,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
       if (dens_pos) {
         dens_pos += strlen("Density[kg/m3]");
         while (*dens_pos == ' ' || *dens_pos == '\t') dens_pos++; // Skip whitespace
-        density = strtod(dens_pos, NULL);
+        _waterdensity = strtod(dens_pos, NULL);
       }
 
       // Find and parse Soundspeed[m/s]
@@ -222,21 +212,21 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
       if (sound_pos) {
         sound_pos += strlen("Soundspeed[m/s]");
         while (*sound_pos == ' ' || *sound_pos == '\t') sound_pos++; // Skip whitespace
-        soundspeed = strtod(sound_pos, NULL);
+        _soundspeed = strtod(sound_pos, NULL);
       }
 
       // Populate the message structure
       d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
       d.header.sensor_reading_time_ms = uptimeGetMs();
-      d.conductivity_ms_cm = conductivity;
-      d.temperature_deg_c = temperature;
-      d.salinity_psu = salinity;
-      d.water_density_kg_m3 = density;
-      d.sound_speed_m_s = soundspeed;
+      d.conductivity_ms_cm = _conductivity;
+      d.temperature_deg_c = _temperature;
+      d.salinity_psu = _salinity;
+      d.water_density_kg_m3 = _waterdensity;
+      d.sound_speed_m_s = _soundspeed;
       d.depth_m = _sensorDepth; // Use configured depth
 
       printf("Parsed: Cond=%.3f, Temp=%.3f, Sal=%.3f, Dens=%.3f, Sound=%.3f, Depth=%.2f\n",
-             conductivity, temperature, salinity, density, soundspeed, _sensorDepth);
+             _conductivity, _temperature, _salinity, _waterdensity, _soundspeed, _sensorDepth);
 
       success = true;
     }
