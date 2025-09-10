@@ -13,6 +13,7 @@
 #define CMD_ENABLE_SLEEP_YES            "Set Enable Sleep(Yes)\r\n"
 #define CMD_ENABLE_POLLEDMODE_NO        "Set Enable Polled Mode(No)\r\n"
 #define CMD_ENABLE_TEXT_YES             "Set Enable Text(Yes)\r\n"
+#define CMD_ENABLE_TEXT_NO              "Set Enable Text(No)\r\n"
 #define CMD_ENABLE_DECIMALFORMAT_YES    "Set Enable Decimalformat(Yes)\r\n"
 #define CMD_ENABLE_TEMPERATURE_YES      "Set Enable Temperature(Yes)\r\n"
 #define CMD_ENABLE_RAWDATA_NO           "Set Enable Rawdata(No)\r\n"
@@ -26,12 +27,13 @@
 #define CMD_GET_ALL                     "Get_All\r\n"
 #define CMD_GET_ALL_PARAMS              "Get_All Parameters\r\n"
 #define CMD_SET_PRESSURE                "Set Pressure(%.2f)\r\n"
+#define CMD_COMM_TIMEOUT               "Set Comm TimeOut(1 min)\r\n"
 
 
 class AanderaaConductivitySensor {
 public:
     AanderaaConductivitySensor()
-        : _parser(",", 256, PARSER_VALUE_TYPE, 6) {};
+        : _parser("\t", 256, PARSER_VALUE_TYPE, 5) {};
     void init();
     void configureSensor(void);
     bool getData(AanderaaConductivityMsg::Data &d);
@@ -46,7 +48,8 @@ private:
     static constexpr uint32_t BAUD_RATE = 9600;
     static constexpr char LINE_TERM = '\n';
 
-    static constexpr ValueType PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
+    //conductivity  temperature  salinity  waterdensity  soundspeed depth
+    static constexpr ValueType PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
     static constexpr char SENSOR_PRESSURE_KPA[] = "pressureKpa";
@@ -59,9 +62,4 @@ private:
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
 
-    double _conductivity = 0.0;
-    double _temperature = 0.0;
-    double _salinity = 0.0;
-    double _waterdensity = 0.0;
-    double _soundspeed = 0.0;
 };

@@ -87,7 +87,10 @@ void AanderaaConductivitySensor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(100));
 
   // enable Text
-  PLUART::write((uint8_t *)CMD_ENABLE_TEXT_YES, strlen(CMD_ENABLE_TEXT_YES));
+  // PLUART::write((uint8_t *)CMD_ENABLE_TEXT_YES, strlen(CMD_ENABLE_TEXT_YES));
+  // vTaskDelay(pdMS_TO_TICKS(100));
+  // disable text
+  PLUART::write((uint8_t *)CMD_ENABLE_TEXT_NO, strlen(CMD_ENABLE_TEXT_NO));
   vTaskDelay(pdMS_TO_TICKS(100));
 
   // enable decimalformat
@@ -115,7 +118,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
   // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
-  vTaskDelay(pdMS_TO_TICKS(6000));
+  vTaskDelay(pdMS_TO_TICKS(8000));
 
   // send get_all command and cross check if they were saved.
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
@@ -129,7 +132,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   }
 
   clearPayloadBuffer();
-  vTaskDelay(pdMS_TO_TICKS(2000));
+  vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
 void AanderaaConductivitySensor::flush(void) {
@@ -168,68 +171,43 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
     printf("conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
            read_len, _payload_buffer);
 
-    // Check if this is a measurement frame (starts with \x13\x11MEASUREMENT)
-    if (read_len > 15 && _payload_buffer[0] == 0x13 && _payload_buffer[1] == 0x11 &&
-        strncmp(&_payload_buffer[2], "MEASUREMENT", 11) == 0) {
+    if (read_len > 10 && _payload_buffer[0] == 0x13 && _payload_buffer[1] == 0x11){
+        // Skip the \x13\x11 header bytes
+        char *data_start = &_payload_buffer[2];
+        // Skip the first two tab-separated fields
+        for (int i = 0; i < 2; i++) {
+          data_start = strchr(data_start, '\t');
+          if (data_start) {
+            data_start++; // Move past the tab
+          } else {
+            printf("Failed to find expected tabs in data\n");
+            return success;
+          }
+        }
 
-      // Parse the measurement data using string parsing
-      char *line = _payload_buffer;
+        if (_parser.parseLine(data_start, read_len - (data_start - _payload_buffer))) {
+          Value conductivity = _parser.getValue(0);
+          Value temperature = _parser.getValue(1);
+          Value salinity = _parser.getValue(2);
+          Value water_density = _parser.getValue(3);
+          Value sound_speed = _parser.getValue(4);
 
-      // Find and parse Conductivity[mS/cm]
-      char *cond_pos = strstr(line, "Conductivity[mS/cm]");
-      if (cond_pos) {
-        cond_pos += strlen("Conductivity[mS/cm]");
-        while (*cond_pos == ' ' || *cond_pos == '\t') cond_pos++; // Skip whitespace
-        _conductivity = strtod(cond_pos, NULL);
+          d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
+          d.header.reading_uptime_millis = uptimeGetMs();
+          d.conductivity_ms_cm = conductivity.data.double_val;
+          d.temperature_deg_c = temperature.data.double_val;
+          d.salinity_psu = salinity.data.double_val;
+          d.water_density_kg_m3 = water_density.data.double_val;
+          d.sound_speed_m_s = sound_speed.data.double_val;
+          d.depth_m = _sensorDepth;
+          success = true;
+
+          printf("conductivity: %.3f mS/cm, temperature: %.3f C, salinity: %.3f PSU, water density: %.3f kg/m3, sound speed: %.3f m/s, depth: %.3f m\n", d.conductivity_ms_cm, d.temperature_deg_c, d.salinity_psu, d.water_density_kg_m3, d.sound_speed_m_s, d.depth_m);
+        } else {
+          printf("Failed to parse 5 double values from conductivity data\n");
+        }
+        clearPayloadBuffer();
       }
-
-      // Find and parse Temperature[Deg.C]
-      char *temp_pos = strstr(line, "Temperature[Deg.C]");
-      if (temp_pos) {
-        temp_pos += strlen("Temperature[Deg.C]");
-        while (*temp_pos == ' ' || *temp_pos == '\t') temp_pos++; // Skip whitespace
-        _temperature = strtod(temp_pos, NULL);
-      }
-
-      // Find and parse Salinity[PSU]
-      char *sal_pos = strstr(line, "Salinity[PSU]");
-      if (sal_pos) {
-        sal_pos += strlen("Salinity[PSU]");
-        while (*sal_pos == ' ' || *sal_pos == '\t') sal_pos++; // Skip whitespace
-        _salinity = strtod(sal_pos, NULL);
-      }
-
-      // Find and parse Density[kg/m3]
-      char *dens_pos = strstr(line, "Density[kg/m3]");
-      if (dens_pos) {
-        dens_pos += strlen("Density[kg/m3]");
-        while (*dens_pos == ' ' || *dens_pos == '\t') dens_pos++; // Skip whitespace
-        _waterdensity = strtod(dens_pos, NULL);
-      }
-
-      // Find and parse Soundspeed[m/s]
-      char *sound_pos = strstr(line, "Soundspeed[m/s]");
-      if (sound_pos) {
-        sound_pos += strlen("Soundspeed[m/s]");
-        while (*sound_pos == ' ' || *sound_pos == '\t') sound_pos++; // Skip whitespace
-        _soundspeed = strtod(sound_pos, NULL);
-      }
-
-      // Populate the message structure
-      d.header.reading_time_utc_ms = rtcGetMicroSeconds(&time_and_date) / 1000;
-      d.header.sensor_reading_time_ms = uptimeGetMs();
-      d.conductivity_ms_cm = _conductivity;
-      d.temperature_deg_c = _temperature;
-      d.salinity_psu = _salinity;
-      d.water_density_kg_m3 = _waterdensity;
-      d.sound_speed_m_s = _soundspeed;
-      d.depth_m = _sensorDepth; // Use configured depth
-
-      printf("Parsed: Cond=%.3f, Temp=%.3f, Sal=%.3f, Dens=%.3f, Sound=%.3f, Depth=%.2f\n",
-             _conductivity, _temperature, _salinity, _waterdensity, _soundspeed, _sensorDepth);
-
-      success = true;
     }
-  }
   return success;
 }
