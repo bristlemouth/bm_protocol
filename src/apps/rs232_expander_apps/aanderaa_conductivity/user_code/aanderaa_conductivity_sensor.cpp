@@ -18,17 +18,20 @@ void AanderaaConductivitySensor::init() {
                   &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
-  get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
-                   &_sensorDepth);
-  printf("sensorDepthM: %f\n", _sensorDepth);
-
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_INTERVAL_S, strlen(SENSOR_INTERVAL_S),
                    &_intervalS);
   printf("readingIntervalS: %" PRIu32 "\n", _intervalS);
 
+  // getting stored pressure kpa or depth m
+  get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
+                   &_sensorDepth);
+  printf("sensorDepthM: %f\n", _sensorDepth);
   // convert depth in meters to pressure in kPa
   _pressureKpa = _sensorDepth * 9.81f;
   printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
+
+  // add code for cellCoeff here (TBD what it is)
+
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
   PLUART::setBaud(BAUD_RATE);
@@ -86,9 +89,6 @@ void AanderaaConductivitySensor::configureSensor(void) {
   PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO, strlen(CMD_ENABLE_POLLEDMODE_NO));
   vTaskDelay(pdMS_TO_TICKS(100));
 
-  // enable Text
-  // PLUART::write((uint8_t *)CMD_ENABLE_TEXT_YES, strlen(CMD_ENABLE_TEXT_YES));
-  // vTaskDelay(pdMS_TO_TICKS(100));
   // disable text
   PLUART::write((uint8_t *)CMD_ENABLE_TEXT_NO, strlen(CMD_ENABLE_TEXT_NO));
   vTaskDelay(pdMS_TO_TICKS(100));
