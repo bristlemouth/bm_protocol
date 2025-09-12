@@ -23,3 +23,4 @@ target_sources(aanderaa_conductivity_sensor_util_tests
 target_link_libraries(aanderaa_conductivity_sensor_util_tests gmock gtest_main)
 
 add_test(NAME aanderaa_conductivity_sensor_util_tests COMMAND aanderaa_conductivity_sensor_util_tests)
+set_tests_properties(aanderaa_conductivity_sensor_util_tests PROPERTIES LABELS "conductivity;unit")

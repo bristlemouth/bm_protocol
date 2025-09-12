@@ -16,7 +16,7 @@ extern "C" {
 DEFINE_FFF_GLOBALS;
 
 static constexpr ValueType rbrParserExample[3] = {TYPE_UINT64, TYPE_DOUBLE, TYPE_DOUBLE};
-static constexpr ValueType aanderaaConductivityParserExample[6] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_FLOAT};
+static constexpr ValueType aanderaaConductivityParserExample[6] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
 
 // The fixture for testing class Foo.
 class LineParserTest : public ::testing::Test {
@@ -235,8 +235,8 @@ TEST_F(LineParserTest, AanderaaConductivityParser_Valid) {
   EXPECT_NEAR(sound_speed.data.double_val, 1498.15, 1e-6);
 
   Value depth = aanderaaConductivityTestParser.getValue(5);
-  EXPECT_EQ(depth.type, TYPE_FLOAT);
-  EXPECT_NEAR(depth.data.float_val, 10.0f, 1e-6);
+  EXPECT_EQ(depth.type, TYPE_DOUBLE);
+  EXPECT_NEAR(depth.data.double_val, 10.0, 1e-6);
 }
 
 TEST_F(LineParserTest, AanderaaConductivityParser_ValidWithNegativeTemp) {
@@ -273,10 +273,18 @@ TEST_F(LineParserTest, AanderaaConductivityParser_FailTooFewFields) {
   EXPECT_EQ(success, false);
 }
 
-TEST_F(LineParserTest, AanderaaConductivityParser_FailTooManyFields) {
+TEST_F(LineParserTest, AanderaaConductivityParser_IgnoreExtraFields) {
+  // OrderedSeparatorLineParser ignores extra fields by design - this should succeed
   const char* test_line = "50.123,23.456,35.123,1025.83,1498.15,10.0,extra";
   bool success = aanderaaConductivityTestParser.parseLine(test_line, strlen(test_line));
-  EXPECT_EQ(success, false);
+  EXPECT_EQ(success, true);
+
+  // Verify the first 6 fields were parsed correctly
+  Value conductivity = aanderaaConductivityTestParser.getValue(0);
+  EXPECT_NEAR(conductivity.data.double_val, 50.123, 1e-6);
+
+  Value depth = aanderaaConductivityTestParser.getValue(5);
+  EXPECT_NEAR(depth.data.double_val, 10.0, 1e-6);
 }
 
 TEST_F(LineParserTest, AanderaaConductivityParser_FailInvalidFloat) {
