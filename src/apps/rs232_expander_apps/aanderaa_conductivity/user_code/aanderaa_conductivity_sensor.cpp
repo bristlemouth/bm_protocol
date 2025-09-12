@@ -18,19 +18,23 @@ void AanderaaConductivitySensor::init() {
                   &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
+  // reading interval
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_INTERVAL_S, strlen(SENSOR_INTERVAL_S),
                    &_intervalS);
   printf("readingIntervalS: %" PRIu32 "\n", _intervalS);
 
-  // getting stored pressure kpa or depth m
+  // sensor depth or pressure??
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
                    &_sensorDepth);
   printf("sensorDepthM: %f\n", _sensorDepth);
-  // convert depth in meters to pressure in kPa
-  _pressureKpa = _sensorDepth * 9.81f;
+  // convert depth in meters to pressure in kPa; Pressure = 10 * depth
+  _pressureKpa = _sensorDepth * 10.0f;
   printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
 
-  // add code for cellCoeff here (TBD what it is)
+  // calibration coefficients
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_CELL_COEFF, strlen(SENSOR_CELL_COEFF),
+                   &_cellCoeff);
+  printf("cellCoeff: %" PRIu32 "\n", _cellCoeff);
 
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
@@ -101,19 +105,11 @@ void AanderaaConductivitySensor::configureSensor(void) {
   PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES, strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
   vTaskDelay(pdMS_TO_TICKS(100));
 
-  // set pressure command if _pressureKpa is not NAN
-  if (!isnan(_sensorDepth)) {
-    printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
-    char pressure_cmd[32];
-    snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
-    PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-
-  } else {
-    printf("sensorDepthM was set to NAN, so setting Pressure to 0.0 kpa\n");
-    char pressure_cmd[32];
-    snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, (float)0.0);
-    PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-  }
+  // set pressure command
+  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
+  char pressure_cmd[32];
+  snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
+  PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
   vTaskDelay(pdMS_TO_TICKS(200));
 
   // save

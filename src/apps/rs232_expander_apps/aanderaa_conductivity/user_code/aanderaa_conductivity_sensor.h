@@ -54,11 +54,13 @@ private:
     static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
     static constexpr char SENSOR_PRESSURE_KPA[] = "pressureKpa";
     static constexpr char SENSOR_INTERVAL_S[] = "readingIntervalS";
+    static constexpr char SENSOR_CELL_COEFF[] = "cellCoeff";
 
     uint32_t _sensorBmLogEnable = 0;
     float _sensorDepth = 0.0f;
     float _pressureKpa = 0.0f;
 	uint32_t _intervalS = 2;
+    uint32_t _cellCoeff = 0;
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
 
