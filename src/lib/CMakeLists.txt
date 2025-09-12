@@ -9,6 +9,9 @@ add_subdirectory(${LIB_DIR}/bm_integration)
 # Include BM_NCP files
 add_subdirectory(${LIB_DIR}/bm_ncp)
 
+# Sensor app interface libraries are included directly by apps
+# add_subdirectory(${LIB_DIR}/sensor_app_interface)
+
 # Set bm_serial specific defines and add to project
 set(BM_SERIAL_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LIB_DIR}/bm_serial/CMakeLists.txt)
@@ -96,6 +99,7 @@ set(LIB_FILES
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
     ${LIB_DIR}/sensor_sampler/pressureSampler.cpp
+    ${LIB_DIR}/sensor_app_interface/SensorAppUtils.cpp
     ${TINYUSB_FILES}
     ${BM_SERIAL_FILES}
     ${BM_INTEGRATION_FILES}
@@ -114,6 +118,17 @@ if(APP_NAME MATCHES "bringup")
     list(APPEND LIB_FILES
         ${LIB_DIR}/debug/debug_uart.c
         ${LIB_DIR}/debug/debug_adin_raw.c
+    )
+endif()
+
+if(APP_NAME MATCHES "aanderaa_conductivity")
+    list(APPEND LIB_FILES
+        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity/AanderaaConductivityApp.cpp
+        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity/AanderaaConductivitySensor.cpp
+        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity/AanderaaConductivitySensorUtil.cpp
+    )
+    list(APPEND LIB_INCLUDES
+        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity
     )
 endif()
 
@@ -160,6 +175,7 @@ set(LIB_INCLUDES
     ${LIB_DIR}/memfault
     ${LIB_DIR}/middleware
     ${LIB_DIR}/sensor_sampler
+    ${LIB_DIR}/sensor_app_interface
     ${LIB_DIR}/sys/
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc/

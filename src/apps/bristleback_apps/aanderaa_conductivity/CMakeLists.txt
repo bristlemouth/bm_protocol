@@ -2,15 +2,18 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/aanderaa_conductivity_sensor.cpp
 )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
+    # Include shared sensor app interface headers
+    ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface/aanderaa_conductivity
+    ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface
 )
 
 set(APP_LIBS
+    # No longer need the shared library - we include source files directly
 )
 
 set(APP_DEFINES
