@@ -71,30 +71,30 @@ void AanderaaConductivitySensor::aanderaaConductivitySubCallback(uint64_t node_i
 
   if (conductivity_sensor && conductivity_sensor->type == SENSOR_TYPE_AANDERAA_CONDUCTIVITY) {
     if (xSemaphoreTake(conductivity_sensor->_mutex, portMAX_DELAY)) {
-      static AanderaaConductivityMsg::Data conductivity_data;
+      static AanderaaConductivityMsg::Data aanderaa5990_cbor_msg;
 
       // Decode CBOR message
-      if (AanderaaConductivityMsg::decode(conductivity_data, data, data_len) == CborNoError) {
+      if (AanderaaConductivityMsg::decode(aanderaa5990_cbor_msg, data, data_len) == CborNoError) {
         char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
 
         // Add sensor readings to statistical samplers for aggregation
-        conductivity_sensor->conductivity_ms_cm.addSample(conductivity_data.conductivity_ms_cm);
-        conductivity_sensor->temperature_deg_c.addSample(conductivity_data.temperature_deg_c);
-        conductivity_sensor->salinity_psu.addSample(conductivity_data.salinity_psu);
-        conductivity_sensor->water_density_kg_m3.addSample(conductivity_data.water_density_kg_m3);
-        conductivity_sensor->sound_speed_m_s.addSample(conductivity_data.sound_speed_m_s);
-        conductivity_sensor->depth_m.addSample(conductivity_data.depth_m);
+        conductivity_sensor->conductivity_ms_cm.addSample(aanderaa5990_cbor_msg.conductivity_ms_cm);
+        conductivity_sensor->temperature_deg_c.addSample(aanderaa5990_cbor_msg.temperature_deg_c);
+        conductivity_sensor->salinity_psu.addSample(aanderaa5990_cbor_msg.salinity_psu);
+        conductivity_sensor->water_density_kg_m3.addSample(aanderaa5990_cbor_msg.water_density_kg_m3);
+        conductivity_sensor->sound_speed_m_s.addSample(aanderaa5990_cbor_msg.sound_speed_m_s);
+        conductivity_sensor->depth_m.addSample(aanderaa5990_cbor_msg.depth_m);
         conductivity_sensor->reading_count++;
 
         // Prepare timestamp formatting for logging
         // Large floats get formatted in scientific notation,
         // so we print integer seconds and millis separately.
-        uint64_t reading_time_sec = conductivity_data.header.reading_time_utc_ms / 1000U;
-        uint32_t reading_time_millis = conductivity_data.header.reading_time_utc_ms % 1000U;
-        uint64_t sensor_reading_time_sec = conductivity_data.header.sensor_reading_time_ms / 1000U;
+        uint64_t reading_time_sec = aanderaa5990_cbor_msg.header.reading_time_utc_ms / 1000U;
+        uint32_t reading_time_millis = aanderaa5990_cbor_msg.header.reading_time_utc_ms % 1000U;
+        uint64_t sensor_reading_time_sec = aanderaa5990_cbor_msg.header.sensor_reading_time_ms / 1000U;
         uint32_t sensor_reading_time_millis =
-            conductivity_data.header.sensor_reading_time_ms % 1000U;
+            aanderaa5990_cbor_msg.header.sensor_reading_time_ms % 1000U;
 
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
         if (current_timestamp - conductivity_sensor->last_timestamp >
@@ -127,11 +127,11 @@ void AanderaaConductivitySensor::aanderaaConductivitySubCallback(uint64_t node_i
                      "%.3f,"                  // sound_speed_m_s
                      "%.3f\n",                // depth_m
                      node_id, conductivity_sensor->node_position,
-                     conductivity_data.header.reading_uptime_millis, reading_time_sec,
+                     aanderaa5990_cbor_msg.header.reading_uptime_millis, reading_time_sec,
                      reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     conductivity_data.conductivity_ms_cm, conductivity_data.temperature_deg_c,
-                     conductivity_data.salinity_psu, conductivity_data.water_density_kg_m3,
-                     conductivity_data.sound_speed_m_s, conductivity_data.depth_m);
+                     aanderaa5990_cbor_msg.conductivity_ms_cm, aanderaa5990_cbor_msg.temperature_deg_c,
+                     aanderaa5990_cbor_msg.salinity_psu, aanderaa5990_cbor_msg.water_density_kg_m3,
+                     aanderaa5990_cbor_msg.sound_speed_m_s, aanderaa5990_cbor_msg.depth_m);
         if (log_buflen > 0) {
           BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
         } else {
