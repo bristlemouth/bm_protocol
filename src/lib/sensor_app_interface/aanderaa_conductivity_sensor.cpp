@@ -1,11 +1,15 @@
 #include "aanderaa_conductivity_sensor.h"
-#include "PLUART.h"
+#include "payload_uart.h"
 #include "bsp.h"
 #include "debug.h"
 #include "spotter.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
 #include "util.h"
+#include "task_priorities.h"
+#include "configuration.h"
+#include "FreeRTOS.h"
+#include <string.h>
 
 /**
  * @brief Initializes the Aanderaa Conductivity Sensor.
@@ -14,11 +18,24 @@
  * It also initializes the line parser for processing incoming data.
  */
 void AanderaaConductivitySensor::init() {
-  PLUART::init(BAUD_RATE, LINE_TERM);
+  PLUART::init(USER_TASK_PRIORITY);
+  // Baud set per expected baud rate of the sensor.
+  PLUART::setBaud(BAUD_RATE);
+  // Disable passing raw bytes to user app.
+  PLUART::setUseByteStreamBuffer(false);
+  // Enable parsing lines and passing to user app.
+  /// Warning: PLUART only stores a single line at a time. If your attached payload sends lines
+  /// faster than the app reads them, they will be overwritten and data will be lost.
+  PLUART::setUseLineBuffer(true);
+  // Set a line termination character per protocol of the sensor.
+  PLUART::setTerminationCharacter(LINE_TERM);
+  // Turn on the UART.
+  PLUART::enable();
+
   _parser.init();
 
   // Get sensor logging configuration
-  if (getConfigUint(SENSOR_BM_LOG_ENABLE, &_sensorBmLogEnable) != pdPASS) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE), &_sensorBmLogEnable)) {
     _sensorBmLogEnable = 0;
   }
 }
@@ -65,7 +82,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
 
       if (conductivity.type != TYPE_DOUBLE || temperature.type != TYPE_DOUBLE ||
           salinity.type != TYPE_DOUBLE || water_density.type != TYPE_DOUBLE ||
-          sound_speed.type != TYPE_DOUBLE || depth.type != TYPE_FLOAT) {
+          sound_speed.type != TYPE_DOUBLE || depth.type != TYPE_DOUBLE) {
         printf("Parsed invalid conductivity data: types: %d,%d,%d,%d,%d,%d\n",
                conductivity.type, temperature.type, salinity.type,
                water_density.type, sound_speed.type, depth.type);
@@ -77,7 +94,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
         d.salinity_psu = salinity.data.double_val;
         d.water_density_kg_m3 = water_density.data.double_val;
         d.sound_speed_m_s = sound_speed.data.double_val;
-        d.depth_m = depth.data.float_val;
+        d.depth_m = depth.data.double_val;
         success = true;
       }
     } else {

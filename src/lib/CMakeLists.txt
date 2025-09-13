@@ -99,7 +99,6 @@ set(LIB_FILES
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
     ${LIB_DIR}/sensor_sampler/pressureSampler.cpp
-    ${LIB_DIR}/sensor_app_interface/SensorAppUtils.cpp
     ${TINYUSB_FILES}
     ${BM_SERIAL_FILES}
     ${BM_INTEGRATION_FILES}
@@ -123,12 +122,12 @@ endif()
 
 if(APP_NAME MATCHES "aanderaa_conductivity")
     list(APPEND LIB_FILES
-        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity/AanderaaConductivityApp.cpp
-        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity/AanderaaConductivitySensor.cpp
-        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity/AanderaaConductivitySensorUtil.cpp
+        ${LIB_DIR}/sensor_app_interface/sensor_app_user.cpp
+        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity_sensor.cpp
+        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity_sensor_util.cpp
     )
     list(APPEND LIB_INCLUDES
-        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity
+        ${LIB_DIR}/sensor_app_interface
     )
 endif()
 

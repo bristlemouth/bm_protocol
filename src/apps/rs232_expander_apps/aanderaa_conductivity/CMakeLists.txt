@@ -2,17 +2,12 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    # Include shared sensor app interface files directly
-    ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface/aanderaa_conductivity/AanderaaConductivityApp.cpp
-    ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface/aanderaa_conductivity/AanderaaConductivitySensor.cpp
-    ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface/aanderaa_conductivity/AanderaaConductivitySensorUtil.cpp
 )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
     # Include shared sensor app interface headers
-    ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface/aanderaa_conductivity
     ${CMAKE_SOURCE_DIR}/src/lib/sensor_app_interface
 )
 

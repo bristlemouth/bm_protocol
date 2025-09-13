@@ -11,13 +11,12 @@ target_include_directories(aanderaa_conductivity_sensor_util_tests
     ${SRC_DIR}/lib/sys
     ${SRC_DIR}/third_party/FreeRTOS/Source/include
     ${SRC_DIR}/third_party/tinycbor/src
-    ${SRC_DIR}/apps/bristleback_apps/aanderaa_conductivity/user_code
-    ${SRC_DIR}/apps/rs232_expander_apps/aanderaa_conductivity/user_code
+    ${SRC_DIR}/lib/sensor_app_interface
     )
 
 target_sources(aanderaa_conductivity_sensor_util_tests
     PRIVATE
-    ${SRC_DIR}/apps/bristleback_apps/aanderaa_conductivity/user_code/aanderaa_conductivity_sensor_util.cpp
+    ${SRC_DIR}/lib/sensor_app_interface/aanderaa_conductivity_sensor_util.cpp
     aanderaa_conductivity_sensor_util_ut.cpp)
 
 target_link_libraries(aanderaa_conductivity_sensor_util_tests gmock gtest_main)

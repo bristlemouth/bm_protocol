@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "OrderedSeparatorLineParser.h"
 #include "aanderaa_conductivity_msg.h"
-#include "AanderaaConductivitySensorUtil.h"
+#include "aanderaa_conductivity_sensor_util.h"
 
 class AanderaaConductivitySensor {
   public:
