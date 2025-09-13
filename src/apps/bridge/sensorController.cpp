@@ -52,6 +52,7 @@ static void runController(void *param);
 static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                const char *service, size_t reply_len, uint8_t *reply_data);
 static void abstractSensorAddSensorSub(AbstractSensor *sensor);
+static bool initializeConductivitySensorConfig(bool &save);
 /*!
  * @brief Initialize the sensor controller.
  * This controller is responsible for identifying & detecting sensor nodes and subscribing to them.
@@ -120,20 +121,7 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     save = true;
   }
 
-  _ctx.aanderaa_conductivity_reading_period_ms = DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-                       strlen(AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS),
-                       &_ctx.aanderaa_conductivity_reading_period_ms)) {
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Failed to get aanderaa_conductivity reading period from config, using default "
-                   "value and writing "
-                   "to config: %" PRIu32 "ms\n",
-                   _ctx.aanderaa_conductivity_reading_period_ms);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-                    strlen(AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS),
-                    _ctx.aanderaa_conductivity_reading_period_ms);
-    save = true;
-  }
+  initializeConductivitySensorConfig(save);
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
@@ -373,4 +361,23 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
     vPortFree(reply.app_name);
   }
   return rval;
+}
+
+static bool initializeConductivitySensorConfig(bool &save) {
+  _ctx.aanderaa_conductivity_reading_period_ms = DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+                       strlen(AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS),
+                       &_ctx.aanderaa_conductivity_reading_period_ms)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get aanderaa_conductivity reading period from config, using default "
+                   "value and writing "
+                   "to config: %" PRIu32 "ms\n",
+                   _ctx.aanderaa_conductivity_reading_period_ms);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+                    strlen(AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS),
+                    _ctx.aanderaa_conductivity_reading_period_ms);
+    save = true;
+    return true;
+  }
+  return false;
 }

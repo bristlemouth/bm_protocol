@@ -135,6 +135,75 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
 }
 
 /**
+ * @brief Add conductivity sensor samples to the sensor report.
+ * @param context The context for the sensor report encoder.
+ * @param sensor_data Pointer to the sensor data for the report.
+ * @param sample_index The index of the sensor data to be copied into the sensor report.
+ * @return true if successful, false otherwise.
+ */
+static bool addSamplesToReport_conductivitySensor(sensor_report_encoder_context_t &context,
+                                                  void *sensor_data, uint32_t sample_index) {
+  bool rval = false;
+  aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
+      (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
+  if (sensor_report_encoder_open_sample(context, AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
+                                        "bm_aanderaa_conductivity_v0") != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to open aanderaa_conductivity sample in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_add_sample_member(
+          context, encode_double_sample_member,
+          &aanderaa_conductivity_sample.conductivity_mean_ms_cm) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_add_sample_member(
+          context, encode_double_sample_member,
+          &aanderaa_conductivity_sample.temperature_mean_deg_c) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_add_sample_member(
+          context, encode_double_sample_member,
+          &aanderaa_conductivity_sample.salinity_mean_psu) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_add_sample_member(
+          context, encode_double_sample_member,
+          &aanderaa_conductivity_sample.water_density_mean_kg_m3) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_add_sample_member(
+          context, encode_double_sample_member,
+          &aanderaa_conductivity_sample.sound_speed_mean_m_s) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_add_sample_member(
+          context, encode_double_sample_member,
+          &aanderaa_conductivity_sample.depth_mean_m) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+    return false;
+  }
+  if (sensor_report_encoder_close_sample(context) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to close sample in addSamplesToReport\n");
+    return false;
+  }
+  rval = true;
+  return rval;
+}
+
+/**
  * @brief Adds samples to the sensor report.
  *
  * This function takes the sensor data and adds the samples to the sensor report. The samples are added based on the sensor type and the number of samples.
@@ -355,62 +424,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-    aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
-        (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
-    if (sensor_report_encoder_open_sample(context, AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
-                                          "bm_aanderaa_conductivity_v0") != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to open aanderaa_conductivity sample in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_add_sample_member(
-            context, encode_double_sample_member,
-            &aanderaa_conductivity_sample.conductivity_mean_ms_cm) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_add_sample_member(
-            context, encode_double_sample_member,
-            &aanderaa_conductivity_sample.temperature_mean_deg_c) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_add_sample_member(
-            context, encode_double_sample_member,
-            &aanderaa_conductivity_sample.salinity_mean_psu) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_add_sample_member(
-            context, encode_double_sample_member,
-            &aanderaa_conductivity_sample.water_density_mean_kg_m3) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_add_sample_member(
-            context, encode_double_sample_member,
-            &aanderaa_conductivity_sample.sound_speed_mean_m_s) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_add_sample_member(
-            context, encode_double_sample_member,
-            &aanderaa_conductivity_sample.depth_mean_m) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-      break;
-    }
-    if (sensor_report_encoder_close_sample(context) != CborNoError) {
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                     "Failed to close sample in addSamplesToReport\n");
-      break;
-    }
-    rval = true;
+    rval = addSamplesToReport_conductivitySensor(context, sensor_data, sample_index);
     break;
   }
   case SENSOR_TYPE_PME_DO: {

@@ -24,6 +24,8 @@ private:
               uint32_t sample_counter);
   void addSampleToElement(report_builder_element_t *element, uint8_t sensor_type,
                           void *sensor_data, uint32_t sample_counter);
+  void setupConductivitySensorPointers(report_builder_element_t *element,
+                                       const void **nan_sample, void **dst);
 
   report_builder_element_t *head;
   size_t size;
