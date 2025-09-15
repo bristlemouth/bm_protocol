@@ -57,7 +57,7 @@ private:
     static constexpr char SENSOR_CELL_COEFF[] = "cellCoeff";
 
     uint32_t _sensorBmLogEnable = 0;
-    float _sensorDepth = 0.0f;
+    float _sensorDepthM = 0.0f;
     float _pressureKpa = 0.0f;
 	uint32_t _intervalS = 2;
     uint32_t _cellCoeff = 0;

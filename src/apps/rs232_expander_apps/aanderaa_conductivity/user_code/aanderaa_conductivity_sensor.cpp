@@ -18,20 +18,20 @@ void AanderaaConductivitySensor::init() {
                   &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
-  // reading interval
+  // reading interval in seconds
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_INTERVAL_S, strlen(SENSOR_INTERVAL_S),
                    &_intervalS);
   printf("readingIntervalS: %" PRIu32 "\n", _intervalS);
 
-  // sensor depth or pressure??
+  // sensor depth in meters
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
-                   &_sensorDepth);
-  printf("sensorDepthM: %f\n", _sensorDepth);
+                   &_sensorDepthM);
+  printf("sensorDepthM: %f\n", _sensorDepthM);
   // convert depth in meters to pressure in kPa; Pressure = 10 * depth
-  _pressureKpa = _sensorDepth * 10.0f;
-  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
+  _pressureKpa = _sensorDepthM * 10.0f;
+  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
 
-  // calibration coefficients
+  // calibration coefficients [PLACE HOLDER]
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_CELL_COEFF, strlen(SENSOR_CELL_COEFF),
                    &_cellCoeff);
   printf("cellCoeff: %" PRIu32 "\n", _cellCoeff);
@@ -71,7 +71,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   char interval_cmd[32];
   snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _intervalS);
   PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  vTaskDelay(pdMS_TO_TICKS(100));
 
   // enable Temperature
   PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
@@ -106,11 +106,11 @@ void AanderaaConductivitySensor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(100));
 
   // set pressure command
-  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepth, _pressureKpa);
+  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
   char pressure_cmd[32];
   snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
   PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(100));
 
   // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
@@ -195,7 +195,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
           d.salinity_psu = salinity.data.double_val;
           d.water_density_kg_m3 = water_density.data.double_val;
           d.sound_speed_m_s = sound_speed.data.double_val;
-          d.depth_m = _sensorDepth;
+          d.depth_m = _sensorDepthM;
           success = true;
 
           printf("conductivity: %.3f mS/cm, temperature: %.3f C, salinity: %.3f PSU, water density: %.3f kg/m3, sound speed: %.3f m/s, depth: %.3f m\n", d.conductivity_ms_cm, d.temperature_deg_c, d.salinity_psu, d.water_density_kg_m3, d.sound_speed_m_s, d.depth_m);
