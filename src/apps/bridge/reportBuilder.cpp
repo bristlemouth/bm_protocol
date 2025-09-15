@@ -1,6 +1,10 @@
+// cppcheck-suppress missingInclude
 #include "reportBuilder.h"
+// cppcheck-suppress missingInclude
 #include "FreeRTOS.h"
+// cppcheck-suppress missingInclude
 #include "aanderaaSensor.h"
+// cppcheck-suppress missingInclude
 #include "aanderaaConductivitySensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
@@ -65,9 +69,20 @@ static QueueHandle_t _report_builder_queue = NULL;
 
 static void report_builder_task(void *parameters);
 
-CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
+/**
+ * @brief Encode a buffer sample member into a CBOR byte string
+ *
+ * Takes a buffer of data and encodes it as a CBOR byte string in the provided
+ * encoder. Used for encoding binary data or string data from sensors.
+ *
+ * @param sample_array CBOR encoder for the array being built
+ * @param sample_member Pointer to the buffer data to encode
+ * @param size Size of the buffer in bytes
+ * @return CborError encoding result (CborNoError on success)
+ */
+CborError encode_buffer_sample_member(CborEncoder &sample_array, const void *sample_member,
                                       uint32_t size) {
-  const uint8_t *local_sample_member = (const uint8_t *)sample_member;
+  const uint8_t *local_sample_member = static_cast<const uint8_t *>(sample_member);
   CborError err = CborNoError;
   if (size && local_sample_member) {
     err = cbor_encode_byte_string(&sample_array, local_sample_member, size);
@@ -77,19 +92,41 @@ CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_me
   return err;
 }
 
-CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
+/**
+ * @brief Encode a double-precision floating point sample member into CBOR
+ *
+ * Takes a double value and encodes it as a CBOR floating point number.
+ * Used for encoding sensor readings like temperature, conductivity, etc.
+ *
+ * @param sample_array CBOR encoder for the array being built
+ * @param sample_member Pointer to the double value to encode
+ * @param size Size parameter (unused for double encoding)
+ * @return CborError encoding result (CborNoError on success)
+ */
+CborError encode_double_sample_member(CborEncoder &sample_array, const void *sample_member,
                                       uint32_t size) {
   (void)size;
-  double local_sample_member = *(double *)sample_member;
+  double local_sample_member = *static_cast<const double *>(sample_member);
   CborError err = CborNoError;
   err = cbor_encode_double(&sample_array, local_sample_member);
   return err;
 }
 
-CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
+/**
+ * @brief Encode an unsigned integer sample member into CBOR
+ *
+ * Takes a uint32_t value and encodes it as a CBOR unsigned integer.
+ * Used for encoding integer sensor readings or counters.
+ *
+ * @param sample_array CBOR encoder for the array being built
+ * @param sample_member Pointer to the uint32_t value to encode
+ * @param size Size parameter (unused for uint32_t encoding)
+ * @return CborError encoding result (CborNoError on success)
+ */
+CborError encode_uint_sample_member(CborEncoder &sample_array, const void *sample_member,
                                     uint32_t size) {
   (void)size;
-  uint32_t local_sample_member = *(uint32_t *)sample_member;
+  uint32_t local_sample_member = *static_cast<const uint32_t *>(sample_member);
   CborError err = CborNoError;
   err = cbor_encode_uint(&sample_array, local_sample_member);
   return err;
@@ -110,7 +147,7 @@ CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_memb
  * If the message type is REPORT_BUILDER_INCREMENT_SAMPLE_COUNT or REPORT_BUILDER_CHECK_CRC, these parameters are ignored and default values are used instead
  * since they are not needed for these message types.
  */
-void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor_data,
+void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, const void *sensor_data,
                              uint32_t sensor_data_size, report_builder_message_e msg_type) {
   report_builder_queue_item_t item;
   item.message_type = msg_type;
@@ -133,72 +170,143 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
   }
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
 }
+typedef struct {
+  sensor_report_encoder_context_t &context;
+  void *sensor_data;
+  uint32_t sample_index;
+  const char *failText;
+  const char *sampleType;
+  uint32_t numSampleMembers;
+  aanderaa_conductivity_aggregations_t &sample;
+/**
+ * @brief Parameters for building complete sensor reports
+ *
+ * Contains all information needed to construct a sensor report including
+ * context, sensor data, and metadata for CBOR encoding. Used by the report
+ * builder system to process sensor data in a structured way.
+ *
+ * TODO: Move sensor-specific definitions to individual sensor classes
+ * once we implement a sensor registry API that allows ReportBuilder to
+ * access sensor metadata without tight coupling to SensorController.
+ */
+} report_params_t;
 
+/**
+ * @brief Parameters for encoding individual sample members (fields) within sensor data
+ *
+ * Used to pass sample member data and encoding information to the CBOR functions.
+ * Each sensor reading typically contains multiple fields (e.g., temperature, conductivity)
+ * that need to be encoded with their appropriate encoder callbacks.
+ *
+ * TODO: Move to sensor-specific classes when sensor registry API is implemented.
+ */
+typedef struct {
+    void *sampleMember;                ///< Pointer to the actual data value
+    sample_encoder_cb sampleMemberEncoderCb; ///< Callback function for encoding this data type
+    uint32_t size;                     ///< Size of the data (for buffer types)
+    report_params_t &params;           ///< Reference to parent report parameters
+} sample_member_params_t;
+
+/**
+ * @brief Open a new sample in the sensor report encoder
+ *
+ * Initializes a new sample entry in the CBOR report with the specified
+ * number of sample members and sample type identifier.
+ *
+ * @param params Report parameters containing context and metadata
+ * @return true if successful, false on encoding error
+ */
+bool report_open_sample(report_params_t &params) {
+  if (sensor_report_encoder_open_sample(params.context, params.numSampleMembers,
+                                        params.sampleType) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Close the current sample in the sensor report encoder
+ *
+ * Finalizes the current sample entry in the CBOR report. Must be called
+ * after all sample members have been added.
+ *
+ * @param params Report parameters containing context
+ * @return true if successful, false on encoding error
+ */
+bool report_close_sample(report_params_t &params) {
+  if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
+    return false;
+  }
+  return true;
+}
+/**
+ * @brief Add a sample member (field) to the current sample
+ *
+ * Encodes a single data field from the sensor reading into the CBOR report
+ * using the appropriate encoder callback. This function handles the encoding
+ * of individual sensor values like temperature, conductivity, etc.
+ *
+ * @param s Sample member parameters containing data pointer, encoder, and context
+ * @return true if successful, false on encoding error
+ */
+bool report_add_sample_member(sample_member_params_t &s) {
+  if (sensor_report_encoder_add_sample_member(s.params.context, s.sampleMemberEncoderCb,
+                                              s.sampleMember, s.size) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, s.params.failText);
+    return false;
+  }
+  return true;
+}
 /**
  * @brief Add conductivity sensor samples to the sensor report.
  * @param context The context for the sensor report encoder.
  * @param sensor_data Pointer to the sensor data for the report.
  * @param sample_index The index of the sensor data to be copied into the sensor report.
  * @return true if successful, false otherwise.
+ * TODO: This function does not need to exist! Same pattern for every other sensor. Create a common function driven by report_params_t and sample_member_params_t.
+ * TODO: report_params_t and sample_member_params_t definition can be delegated to SpecificSensor class. However, ReportBuilder does not currently have a way to
+ *       access sensor-specific information from SensorController.
  */
 static bool addSamplesToReport_conductivitySensor(sensor_report_encoder_context_t &context,
                                                   void *sensor_data, uint32_t sample_index) {
   bool rval = false;
   aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
       (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
-  if (sensor_report_encoder_open_sample(context, AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
-                                        "bm_aanderaa_conductivity_v0") != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to open aanderaa_conductivity sample in addSamplesToReport\n");
+
+  static report_params_t params = {
+    .context = context,
+    .sensor_data = sensor_data,
+    .sample_index = sample_index,
+    .failText = "Failed to open aanderaa_conductivity sample in addSamplesToReport\n",
+    .sampleType = "bm_aanderaa_conductivity_v0",
+    .numSampleMembers = AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
+    .sample = aanderaa_conductivity_sample
+  };
+  if (!report_open_sample(params)) {
     return false;
   }
-  if (sensor_report_encoder_add_sample_member(
-          context, encode_double_sample_member,
-          &aanderaa_conductivity_sample.conductivity_mean_ms_cm) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
+
+
+  static sample_member_params_t sampleMemberParams [] = {
+    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
+    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
+    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
+    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
+    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
+    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
+  };
+
+  for (auto &sampleMemberParam : sampleMemberParams) {
+    if (!report_add_sample_member(sampleMemberParam)) {
+      return false;
+    }
+  }
+  if (!report_close_sample(params)) {
     return false;
   }
-  if (sensor_report_encoder_add_sample_member(
-          context, encode_double_sample_member,
-          &aanderaa_conductivity_sample.temperature_mean_deg_c) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-    return false;
-  }
-  if (sensor_report_encoder_add_sample_member(
-          context, encode_double_sample_member,
-          &aanderaa_conductivity_sample.salinity_mean_psu) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-    return false;
-  }
-  if (sensor_report_encoder_add_sample_member(
-          context, encode_double_sample_member,
-          &aanderaa_conductivity_sample.water_density_mean_kg_m3) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-    return false;
-  }
-  if (sensor_report_encoder_add_sample_member(
-          context, encode_double_sample_member,
-          &aanderaa_conductivity_sample.sound_speed_mean_m_s) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-    return false;
-  }
-  if (sensor_report_encoder_add_sample_member(
-          context, encode_double_sample_member,
-          &aanderaa_conductivity_sample.depth_mean_m) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to add aanderaa_conductivity sample member in addSamplesToReport\n");
-    return false;
-  }
-  if (sensor_report_encoder_close_sample(context) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                   "Failed to close sample in addSamplesToReport\n");
-    return false;
-  }
+
   rval = true;
   return rval;
 }

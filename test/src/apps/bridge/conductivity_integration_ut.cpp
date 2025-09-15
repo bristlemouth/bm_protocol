@@ -39,8 +39,8 @@ void verifyAggregatedDataIntegrity(const aanderaa_conductivity_aggregations_t* a
  * These tests verify the integration between CBOR message handling
  * and bridge data aggregation (ReportBuilderLinkedList).
  *
- * This completes the missing 40% of integration testing that wasn't
- * covered by the existing report_builder_ut.cpp tests.
+ * This adds testing testing that wasn't covered by the existing
+ * report_builder_ut.cpp tests.
  */
 
 // Test CBOR encoding/decoding integration
@@ -200,5 +200,4 @@ TEST(ConductivityIntegration, EndToEndDataFlow) {
 
     // This test demonstrates the complete integration:
     // Network CBOR → Sensor Processing → Bridge Aggregation → Report Generation
-    // It fills the missing 40% gap in integration testing!
 }
