@@ -112,6 +112,19 @@ void AanderaaConductivitySensor::configureSensor(void) {
   PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
   vTaskDelay(pdMS_TO_TICKS(100));
 
+  /*
+  // Access toHigh Level protected parameters need passkey 1000
+  PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
+  // get cell coefficient command
+  PLUART::write((uint8_t *)CMD_GET_CELL_COEFF, strlen(CMD_GET_CELL_COEFF));
+  if (PLUART::lineAvailable()) {
+    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+    printf("%.*s\n", read_len, _payload_buffer);
+  }
+  vTaskDelay(pdMS_TO_TICKS(2000));
+  // set cell coefficient command
+  */
+
   // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
   vTaskDelay(pdMS_TO_TICKS(8000));

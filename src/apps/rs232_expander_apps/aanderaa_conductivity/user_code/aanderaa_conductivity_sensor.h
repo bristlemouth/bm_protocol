@@ -9,6 +9,7 @@
 #define CMD_STOP                        "Stop\r\n"
 #define CMD_START                       "Start\r\n"
 #define CMD_SET_PASSKEY_1               "Set Passkey(1)\r\n"
+#define CMD_SET_PASSKEY_1000            "Set Passkey(1000)\r\n"
 #define CMD_ENABLE_CONDUCTIVITY_YES     "Set Enable Conductivity(Yes)\r\n"
 #define CMD_ENABLE_SLEEP_YES            "Set Enable Sleep(Yes)\r\n"
 #define CMD_ENABLE_POLLEDMODE_NO        "Set Enable Polled Mode(No)\r\n"
@@ -27,7 +28,8 @@
 #define CMD_GET_ALL                     "Get_All\r\n"
 #define CMD_GET_ALL_PARAMS              "Get_All Parameters\r\n"
 #define CMD_SET_PRESSURE                "Set Pressure(%.2f)\r\n"
-#define CMD_COMM_TIMEOUT               "Set Comm TimeOut(1 min)\r\n"
+#define CMD_SET_CELL_COEFF              "Set CellCoef(%" PRIu32 ")\r\n"
+#define CMD_GET_CELL_COEFF              "Get CellCoef\r\n"
 
 
 class AanderaaConductivitySensor {
