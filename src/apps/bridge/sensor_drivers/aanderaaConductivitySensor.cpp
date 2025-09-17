@@ -6,20 +6,20 @@
  * conductivity sensor data. It manages CBOR message reception, statistical
  * aggregation, and integration with the bridge reporting system.
  */
-
+#include "FreeRTOS.h"
 #include "aanderaaConductivitySensor.h"
-#include "app_config.h"
-#include "avgSampler.h"
-#include "spotter.h"
-#include "pubsub.h"
 #include "aanderaa_conductivity_msg.h"
+#include "app_config.h"
+#include "app_util.h"
+#include "avgSampler.h"
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "semphr.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <new>
 
 /** @brief Default sensor reading period in milliseconds */
@@ -275,12 +275,18 @@ std::vector<sample_member_params_t> AanderaaConductivitySensor::getSampleMemberP
   aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
       (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
   std::vector<sample_member_params_t> sampleMemberParams = {
-    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm, 
+        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c, 
+        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu, 
+        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3, 
+        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s, 
+        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m, 
+        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
   };
   return sampleMemberParams;
 }
@@ -298,4 +304,12 @@ report_params_t AanderaaConductivitySensor::getReportParams(sensor_report_encode
     .sampleMembers = AanderaaConductivitySensor::getSampleMemberParams(sensor_data, sample_index)
   };
   return params;
+}
+
+void AanderaaConductivitySensor::setupConductivitySensorPointers(report_builder_element_t *element,
+                                                              const void **nan_sample,
+                                                              void **dst) {
+  *nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
+  *dst = &(static_cast<aanderaa_conductivity_aggregations_t *>(
+      element->sensor_data))[element->sample_counter];
 }

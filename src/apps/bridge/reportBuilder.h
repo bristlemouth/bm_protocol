@@ -44,6 +44,7 @@ typedef struct {
  * context, sensor data, and metadata for CBOR encoding. Used by the report
  * builder system to process sensor data in a structured way.
  */
+ // cppcheck-suppress unusedStructMember
  typedef struct {
   /// Context for CBOR encoding
   sensor_report_encoder_context_t &context;

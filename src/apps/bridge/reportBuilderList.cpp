@@ -7,6 +7,7 @@
 #include "pmeDissolvedOxygenSensor.h"
 #include "rbrCodaSensor.h"
 #include "seapointTurbiditySensor.h"
+#include "sensor_drivers/aanderaaConductivitySensor.h"
 #include "softSensor.h"
 #include <cmath>
 
@@ -78,20 +79,6 @@ void ReportBuilderLinkedList::removeElement(report_builder_element_t *element) {
 }
 
 /**
- * @brief Helper function to set up conductivity sensor data pointers.
- * @param element Pointer to the element in the linked list.
- * @param nan_sample Pointer to store the NAN sample reference.
- * @param dst Pointer to store the destination data reference.
- */
-void ReportBuilderLinkedList::setupConductivitySensorPointers(report_builder_element_t *element,
-                                                              const void **nan_sample,
-                                                              void **dst) {
-  *nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
-  *dst = &(static_cast<aanderaa_conductivity_aggregations_t *>(
-      element->sensor_data))[element->sample_counter];
-}
-
-/**
  * @brief Adds sensor data to a specific element in the report builder linked list.
  *
  * This function takes a pointer to an element in the linked list and adds the sensor data to that element. The sensor data is added at the position specified by the sample counter.
@@ -132,7 +119,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-    setupConductivitySensorPointers(element, &nan_sample, &dst);
+    AanderaaConductivitySensor::setupConductivitySensorPointers(element, &nan_sample, &dst);
     break;
   }
   case SENSOR_TYPE_PME_DO: {

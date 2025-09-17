@@ -20,11 +20,11 @@
  */
 
 #pragma once
-#include "FreeRTOS.h"
 #include "abstractSensor.h"
 #include "avgSampler.h"
-#include "reportBuilder.h"
 #include "sensorController.h"
+#include "reportBuilder.h"
+#include "reportBuilderList.h"
 #include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
@@ -117,6 +117,16 @@ public:
    */
   static report_params_t getReportParams(sensor_report_encoder_context_t &context,
                                                   void *sensor_data, uint32_t sample_index);
+
+  /**
+ * @brief Helper function to set up conductivity sensor data pointers.
+ * @param element Pointer to the element in the linked list.
+ * @param nan_sample Pointer to store the NAN sample reference.
+ * @param dst Pointer to store the destination data reference.
+ */
+  static void setupConductivitySensorPointers(report_builder_element_t *element,
+                                                              const void **nan_sample,
+                                                              void **dst);
   /**
    * @brief Default aggregation structure with NaN values
    * Used when no valid data is available for aggregation
