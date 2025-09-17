@@ -9,9 +9,6 @@ add_subdirectory(${LIB_DIR}/bm_integration)
 # Include BM_NCP files
 add_subdirectory(${LIB_DIR}/bm_ncp)
 
-# Sensor app interface libraries are included directly by apps
-# add_subdirectory(${LIB_DIR}/sensor_app_interface)
-
 # Set bm_serial specific defines and add to project
 set(BM_SERIAL_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LIB_DIR}/bm_serial/CMakeLists.txt)
@@ -120,16 +117,7 @@ if(APP_NAME MATCHES "bringup")
     )
 endif()
 
-if(APP_NAME MATCHES "aanderaa_conductivity")
-    list(APPEND LIB_FILES
-        ${LIB_DIR}/sensor_app_interface/sensor_app_user.cpp
-        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity_sensor.cpp
-        ${LIB_DIR}/sensor_app_interface/aanderaa_conductivity_sensor_util.cpp
-    )
-    list(APPEND LIB_INCLUDES
-        ${LIB_DIR}/sensor_app_interface
-    )
-endif()
+
 
 if(APP_NAME MATCHES "bringup_mote")
     list(APPEND LIB_FILES
@@ -174,7 +162,6 @@ set(LIB_INCLUDES
     ${LIB_DIR}/memfault
     ${LIB_DIR}/middleware
     ${LIB_DIR}/sensor_sampler
-    ${LIB_DIR}/sensor_app_interface
     ${LIB_DIR}/sys/
     ${SRC_DIR}/third_party/
     ${SRC_DIR}/third_party/aligned_malloc/
