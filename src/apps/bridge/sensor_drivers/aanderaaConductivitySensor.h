@@ -23,6 +23,7 @@
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
 #include "avgSampler.h"
+#include "reportBuilder.h"
 #include "sensorController.h"
 #include <cmath>
 #include <stdint.h>
@@ -105,6 +106,9 @@ public:
    * @brief Aggregate collected sensor data and add to report queue
    */
   void aggregate(void);
+
+  static bool addSamplesToReport(sensor_report_encoder_context_t &context,
+                                                  void *sensor_data, uint32_t sample_index);
 
   /**
    * @brief Default aggregation structure with NaN values

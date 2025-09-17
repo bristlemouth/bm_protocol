@@ -16,7 +16,6 @@
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
-#include "reportBuilder.h"
 #include "semphr.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
@@ -269,4 +268,60 @@ AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t
   new_sub->reading_count = 0;
 
   return new_sub;
+}
+
+std::vector<sample_member_params_t>& getSampleMemberParams(void *sensor_data, uint32_t sample_index ) {
+  aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
+      (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
+  static std::vector<sample_member_params_t> sampleMemberParams = {
+    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
+  };
+  return sampleMemberParams;
+}
+report_params_t& getReportParams(sensor_report_encoder_context_t &context, void *sensor_data, uint32_t sample_index) {
+
+  static report_params_t params = {
+    .context = context,
+    .sensor_data = sensor_data,
+    .sample_index = sample_index,
+    // TODO: fail text should probably be on sample member
+    .failText = "Failed to open aanderaa_conductivity sample in addSamplesToReport\n",
+    .sampleType = "bm_aanderaa_conductivity_v0",
+    // TOOD: Either keep this or get rid of vector
+    .numSampleMembers = AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
+    // TODO: Should I add the vector<sample_member_params_t> to the report_params_t struct?
+    .sampleMembers = getSampleMemberParams(sensor_data, sample_index)
+  };
+  return params;
+}
+bool addSamplesToReportHelper(report_params_t &params) {
+
+    if (!report_builder_open_sample(params)) {
+      return false;
+    }
+    for (auto &s : params.sampleMembers) {
+      if (!report_builder_add_sample_member(params, s)) {
+        return false;
+      }
+    }
+    if (!report_builder_close_sample(params)) {
+      return false;
+    }
+    return true;
+}
+
+bool AanderaaConductivitySensor::addSamplesToReport(sensor_report_encoder_context_t &context,
+                                                  void *sensor_data, uint32_t sample_index) {
+
+  report_params_t &params = getReportParams(context, sensor_data, sample_index);
+
+  if (!addSamplesToReportHelper(params)) {
+    return false;
+  }
+  return true;
 }
