@@ -1,10 +1,6 @@
-// cppcheck-suppress missingInclude
 #include "reportBuilder.h"
-// cppcheck-suppress missingInclude
 #include "FreeRTOS.h"
-// cppcheck-suppress missingInclude
 #include "aanderaaSensor.h"
-// cppcheck-suppress missingInclude
 #include "aanderaaConductivitySensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
@@ -69,20 +65,10 @@ static QueueHandle_t _report_builder_queue = NULL;
 
 static void report_builder_task(void *parameters);
 
-/**
- * @brief Encode a buffer sample member into a CBOR byte string
- *
- * Takes a buffer of data and encodes it as a CBOR byte string in the provided
- * encoder. Used for encoding binary data or string data from sensors.
- *
- * @param sample_array CBOR encoder for the array being built
- * @param sample_member Pointer to the buffer data to encode
- * @param size Size of the buffer in bytes
- * @return CborError encoding result (CborNoError on success)
- */
-CborError encode_buffer_sample_member(CborEncoder &sample_array, const void *sample_member,
+CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
-  const uint8_t *local_sample_member = static_cast<const uint8_t *>(sample_member);
+  const uint8_t *local_sample_member = static_cast<uint8_t *>(sample_member);
+
   CborError err = CborNoError;
   if (size && local_sample_member) {
     err = cbor_encode_byte_string(&sample_array, local_sample_member, size);
@@ -92,41 +78,20 @@ CborError encode_buffer_sample_member(CborEncoder &sample_array, const void *sam
   return err;
 }
 
-/**
- * @brief Encode a double-precision floating point sample member into CBOR
- *
- * Takes a double value and encodes it as a CBOR floating point number.
- * Used for encoding sensor readings like temperature, conductivity, etc.
- *
- * @param sample_array CBOR encoder for the array being built
- * @param sample_member Pointer to the double value to encode
- * @param size Size parameter (unused for double encoding)
- * @return CborError encoding result (CborNoError on success)
- */
-CborError encode_double_sample_member(CborEncoder &sample_array, const void *sample_member,
+CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
   (void)size;
-  double local_sample_member = *static_cast<const double *>(sample_member);
+  double local_sample_member = *(static_cast<double*>(sample_member));
   CborError err = CborNoError;
   err = cbor_encode_double(&sample_array, local_sample_member);
   return err;
 }
 
-/**
- * @brief Encode an unsigned integer sample member into CBOR
- *
- * Takes a uint32_t value and encodes it as a CBOR unsigned integer.
- * Used for encoding integer sensor readings or counters.
- *
- * @param sample_array CBOR encoder for the array being built
- * @param sample_member Pointer to the uint32_t value to encode
- * @param size Size parameter (unused for uint32_t encoding)
- * @return CborError encoding result (CborNoError on success)
- */
-CborError encode_uint_sample_member(CborEncoder &sample_array, const void *sample_member,
+
+CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
                                     uint32_t size) {
   (void)size;
-  uint32_t local_sample_member = *static_cast<const uint32_t *>(sample_member);
+  uint32_t local_sample_member = *(static_cast<uint32_t*>(sample_member));
   CborError err = CborNoError;
   err = cbor_encode_uint(&sample_array, local_sample_member);
   return err;
@@ -147,7 +112,7 @@ CborError encode_uint_sample_member(CborEncoder &sample_array, const void *sampl
  * If the message type is REPORT_BUILDER_INCREMENT_SAMPLE_COUNT or REPORT_BUILDER_CHECK_CRC, these parameters are ignored and default values are used instead
  * since they are not needed for these message types.
  */
-void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, const void *sensor_data,
+void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor_data,
                              uint32_t sensor_data_size, report_builder_message_e msg_type) {
   report_builder_queue_item_t item;
   item.message_type = msg_type;
