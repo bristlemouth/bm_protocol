@@ -12,6 +12,7 @@
 #include "pmeDissolvedOxygenSensor.h"
 #include "queue.h"
 #include "rbrCodaSensor.h"
+#include "reportBuilder.h"
 #include "reportBuilderList.h"
 #include "seapointTurbiditySensor.h"
 #include "semphr.h"
@@ -135,42 +136,6 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
   }
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
 }
-typedef struct {
-  sensor_report_encoder_context_t &context;
-  void *sensor_data;
-  uint32_t sample_index;
-  const char *failText;
-  const char *sampleType;
-  uint32_t numSampleMembers;
-  aanderaa_conductivity_aggregations_t &sample;
-/**
- * @brief Parameters for building complete sensor reports
- *
- * Contains all information needed to construct a sensor report including
- * context, sensor data, and metadata for CBOR encoding. Used by the report
- * builder system to process sensor data in a structured way.
- *
- * TODO: Move sensor-specific definitions to individual sensor classes
- * once we implement a sensor registry API that allows ReportBuilder to
- * access sensor metadata without tight coupling to SensorController.
- */
-} report_params_t;
-
-/**
- * @brief Parameters for encoding individual sample members (fields) within sensor data
- *
- * Used to pass sample member data and encoding information to the CBOR functions.
- * Each sensor reading typically contains multiple fields (e.g., temperature, conductivity)
- * that need to be encoded with their appropriate encoder callbacks.
- *
- * TODO: Move to sensor-specific classes when sensor registry API is implemented.
- */
-typedef struct {
-    void *sampleMember;                ///< Pointer to the actual data value
-    sample_encoder_cb sampleMemberEncoderCb; ///< Callback function for encoding this data type
-    uint32_t size;                     ///< Size of the data (for buffer types)
-    report_params_t &params;           ///< Reference to parent report parameters
-} sample_member_params_t;
 
 /**
  * @brief Open a new sample in the sensor report encoder
@@ -181,7 +146,7 @@ typedef struct {
  * @param params Report parameters containing context and metadata
  * @return true if successful, false on encoding error
  */
-bool report_open_sample(report_params_t &params) {
+bool report_builder_open_sample(report_params_t &params) {
   if (sensor_report_encoder_open_sample(params.context, params.numSampleMembers,
                                         params.sampleType) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
@@ -199,7 +164,7 @@ bool report_open_sample(report_params_t &params) {
  * @param params Report parameters containing context
  * @return true if successful, false on encoding error
  */
-bool report_close_sample(report_params_t &params) {
+bool report_builder_close_sample(report_params_t &params) {
   if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
     return false;
@@ -216,64 +181,13 @@ bool report_close_sample(report_params_t &params) {
  * @param s Sample member parameters containing data pointer, encoder, and context
  * @return true if successful, false on encoding error
  */
-bool report_add_sample_member(sample_member_params_t &s) {
-  if (sensor_report_encoder_add_sample_member(s.params.context, s.sampleMemberEncoderCb,
+bool report_builder_add_sample_member(report_params_t &params, sample_member_params_t &s) {
+  if (sensor_report_encoder_add_sample_member(params.context, s.sampleMemberEncoderCb,
                                               s.sampleMember, s.size) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, s.params.failText);
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
     return false;
   }
   return true;
-}
-/**
- * @brief Add conductivity sensor samples to the sensor report.
- * @param context The context for the sensor report encoder.
- * @param sensor_data Pointer to the sensor data for the report.
- * @param sample_index The index of the sensor data to be copied into the sensor report.
- * @return true if successful, false otherwise.
- * TODO: This function does not need to exist! Same pattern for every other sensor. Create a common function driven by report_params_t and sample_member_params_t.
- * TODO: report_params_t and sample_member_params_t definition can be delegated to SpecificSensor class. However, ReportBuilder does not currently have a way to
- *       access sensor-specific information from SensorController.
- */
-static bool addSamplesToReport_conductivitySensor(sensor_report_encoder_context_t &context,
-                                                  void *sensor_data, uint32_t sample_index) {
-  bool rval = false;
-  aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
-      (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
-
-  static report_params_t params = {
-    .context = context,
-    .sensor_data = sensor_data,
-    .sample_index = sample_index,
-    .failText = "Failed to open aanderaa_conductivity sample in addSamplesToReport\n",
-    .sampleType = "bm_aanderaa_conductivity_v0",
-    .numSampleMembers = AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
-    .sample = aanderaa_conductivity_sample
-  };
-  if (!report_open_sample(params)) {
-    return false;
-  }
-
-
-  static sample_member_params_t sampleMemberParams [] = {
-    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
-    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
-    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
-    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
-    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
-    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m, .sampleMemberEncoderCb = encode_double_sample_member, .size = 0, .params = params},
-  };
-
-  for (auto &sampleMemberParam : sampleMemberParams) {
-    if (!report_add_sample_member(sampleMemberParam)) {
-      return false;
-    }
-  }
-  if (!report_close_sample(params)) {
-    return false;
-  }
-
-  rval = true;
-  return rval;
 }
 
 /**
@@ -497,7 +411,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-    rval = addSamplesToReport_conductivitySensor(context, sensor_data, sample_index);
+    rval = AanderaaConductivitySensor::addSamplesToReport(context, sensor_data, sample_index);
     break;
   }
   case SENSOR_TYPE_PME_DO: {
