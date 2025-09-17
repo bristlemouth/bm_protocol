@@ -34,8 +34,6 @@ typedef struct {
     sample_encoder_cb sampleMemberEncoderCb;
     /// Size of the data
     uint32_t size;
-    /// Reference to parent report parameters
-    // report_params_t &params;
 } sample_member_params_t;
 
 
@@ -84,6 +82,7 @@ bool report_builder_get_transmit_aggregations(void);
  * @return true if successful, false on encoding error
  */
 bool report_builder_open_sample(report_params_t &params);
+
 /**
  * @brief Add a sample member (field) to the current sample
  *
@@ -96,6 +95,7 @@ bool report_builder_open_sample(report_params_t &params);
  * @return true if successful, false on encoding error
  */
 bool report_builder_add_sample_member(report_params_t &params, sample_member_params_t &s);
+
 /**
  * @brief Close the current sample in the sensor report encoder
  *
@@ -106,6 +106,18 @@ bool report_builder_add_sample_member(report_params_t &params, sample_member_par
  * @return true if successful, false on encoding error
  */
 bool report_builder_close_sample(report_params_t &params);
+
+/**
+ * @brief Add all sample members from a report to the encoder
+ *
+ * Convenience function that opens a sample, adds all sample members from
+ * the report parameters, and closes the sample. This is the main function
+ * sensors should use to add their data to reports.
+ *
+ * @param params Report parameters containing sample members and context
+ * @return true if successful, false on encoding error
+ */
+bool report_builder_add_samples(report_params_t &params);
 
 CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);

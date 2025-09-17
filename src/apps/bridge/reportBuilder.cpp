@@ -137,15 +137,6 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
 }
 
-/**
- * @brief Open a new sample in the sensor report encoder
- *
- * Initializes a new sample entry in the CBOR report with the specified
- * number of sample members and sample type identifier.
- *
- * @param params Report parameters containing context and metadata
- * @return true if successful, false on encoding error
- */
 bool report_builder_open_sample(report_params_t &params) {
   if (sensor_report_encoder_open_sample(params.context, params.numSampleMembers,
                                         params.sampleType) != CborNoError) {
@@ -155,15 +146,6 @@ bool report_builder_open_sample(report_params_t &params) {
   return true;
 }
 
-/**
- * @brief Close the current sample in the sensor report encoder
- *
- * Finalizes the current sample entry in the CBOR report. Must be called
- * after all sample members have been added.
- *
- * @param params Report parameters containing context
- * @return true if successful, false on encoding error
- */
 bool report_builder_close_sample(report_params_t &params) {
   if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
@@ -171,22 +153,31 @@ bool report_builder_close_sample(report_params_t &params) {
   }
   return true;
 }
-/**
- * @brief Add a sample member (field) to the current sample
- *
- * Encodes a single data field from the sensor reading into the CBOR report
- * using the appropriate encoder callback. This function handles the encoding
- * of individual sensor values like temperature, conductivity, etc.
- *
- * @param s Sample member parameters containing data pointer, encoder, and context
- * @return true if successful, false on encoding error
- */
+
 bool report_builder_add_sample_member(report_params_t &params, sample_member_params_t &s) {
   if (sensor_report_encoder_add_sample_member(params.context, s.sampleMemberEncoderCb,
                                               s.sampleMember, s.size) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
     return false;
   }
+  return true;
+}
+
+bool report_builder_add_samples(report_params_t &params) {
+  if (!report_builder_open_sample(params)) {
+    return false;
+  }
+
+  for (auto &s : params.sampleMembers) {
+    if (!report_builder_add_sample_member(params, s)) {
+      return false;
+    }
+  }
+
+  if (!report_builder_close_sample(params)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -411,7 +402,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-    rval = AanderaaConductivitySensor::addSamplesToReport(context, sensor_data, sample_index);
+    report_params_t params = AanderaaConductivitySensor::getReportParams(context, sensor_data, sample_index);
+    rval = report_builder_add_samples(params);
     break;
   }
   case SENSOR_TYPE_PME_DO: {

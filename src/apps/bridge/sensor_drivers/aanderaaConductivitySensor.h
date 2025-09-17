@@ -40,13 +40,13 @@
  * in the bridge's report system.
  */
 typedef struct aanderaa_conductivity_aggregations_s {
-  double conductivity_mean_ms_cm;      ///< Mean conductivity in mS/cm
-  double temperature_mean_deg_c;       ///< Mean temperature in degrees Celsius
-  double salinity_mean_psu;            ///< Mean salinity in Practical Salinity Units
-  double water_density_mean_kg_m3;     ///< Mean water density in kg/m³
-  double sound_speed_mean_m_s;         ///< Mean sound speed in m/s
-  double depth_mean_m;                 ///< Mean depth in meters
-  uint32_t reading_count;              ///< Number of readings used in aggregation
+  double conductivity_mean_ms_cm = NAN;      ///< Mean conductivity in mS/cm
+  double temperature_mean_deg_c = NAN;       ///< Mean temperature in degrees Celsius
+  double salinity_mean_psu = NAN;            ///< Mean salinity in Practical Salinity Units
+  double water_density_mean_kg_m3 = NAN;     ///< Mean water density in kg/m³
+  double sound_speed_mean_m_s = NAN;         ///< Mean sound speed in m/s
+  double depth_mean_m = NAN;                 ///< Mean depth in meters
+  uint32_t reading_count = 0;              ///< Number of readings used in aggregation
 } aanderaa_conductivity_aggregations_t;
 
 /**
@@ -107,22 +107,22 @@ public:
    */
   void aggregate(void);
 
-  static bool addSamplesToReport(sensor_report_encoder_context_t &context,
-                                                  void *sensor_data, uint32_t sample_index);
+  /**
+   * @brief Get sample member parameters for encoding sensor data
+   */
+  static std::vector<sample_member_params_t> getSampleMemberParams(void *sensor_data, uint32_t sample_index );
 
+  /**
+   * @brief Get report parameters for encoding sensor data
+   */
+  static report_params_t getReportParams(sensor_report_encoder_context_t &context,
+                                                  void *sensor_data, uint32_t sample_index);
   /**
    * @brief Default aggregation structure with NaN values
    * Used when no valid data is available for aggregation
+   * Default values pulled from aanderaa_conductivity_aggregations_t definition
    */
-  static constexpr aanderaa_conductivity_aggregations_t aanderaa_conductivity_NAN_AGG = {
-      .conductivity_mean_ms_cm = NAN,
-      .temperature_mean_deg_c = NAN,
-      .salinity_mean_psu = NAN,
-      .water_density_mean_kg_m3 = NAN,
-      .sound_speed_mean_m_s = NAN,
-      .depth_mean_m = NAN,
-      .reading_count = 0,
-  };
+  static constexpr aanderaa_conductivity_aggregations_t aanderaa_conductivity_NAN_AGG = {};
 
 private:
   /**
