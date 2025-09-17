@@ -45,8 +45,8 @@ src/apps/*/aanderaa_conductivity/user_code/  # ✅ Minimal platform-specific cod
 ```cpp
 class SensorAppUser {
 public:
-    void setup_with_pins(IOPinHandle_t* vbus_en_pin, 
-                         IOPinHandle_t* pl_buck_en_pin, 
+    void setup_with_pins(IOPinHandle_t* vbus_en_pin,
+                         IOPinHandle_t* pl_buck_en_pin,
                          uint32_t vbus_settle_time_ms);
     void loop(void);
 
@@ -76,7 +76,7 @@ private:
 #include "sensor_app_user.h"
 extern SensorAppUser app;
 
-// user_code.cpp  
+// user_code.cpp
 #include "user_code.h"
 #include "bsp.h"
 
@@ -97,7 +97,7 @@ void loop(void) {
 // Bristleback
 app.setup_with_pins(&BB_VBUS_EN, &BB_PL_BUCK_EN, 500);
 
-// RS232 Expander  
+// RS232 Expander
 app.setup_with_pins(&VBUS_EN, &PL_BUCK_EN, 500);
 ```
 
@@ -118,7 +118,7 @@ public:
     void init();
     bool getData(AanderaaConductivityMsg::Data &d);
     void flush(void);
-    
+
 private:
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
@@ -131,7 +131,7 @@ private:
 
 **Contents:**
 - Data validation functions
-- Unit conversion utilities  
+- Unit conversion utilities
 - Sensor-specific constants
 - Helper functions for data processing
 
@@ -146,13 +146,13 @@ private:
 **Solution:** Pass pins as parameters to `setup_with_pins()`:
 
 ```cpp
-void SensorAppUser::setup_with_pins(IOPinHandle_t* vbus_en_pin, 
-                                    IOPinHandle_t* pl_buck_en_pin, 
+void SensorAppUser::setup_with_pins(IOPinHandle_t* vbus_en_pin,
+                                    IOPinHandle_t* pl_buck_en_pin,
                                     uint32_t vbus_settle_time_ms) {
     this->vbus_en_pin = vbus_en_pin;           // Store platform-specific pin
     this->pl_buck_en_pin = pl_buck_en_pin;     // Store platform-specific pin
     this->vbus_settle_time_ms = vbus_settle_time_ms;
-    
+
     // Use stored pins in sensor logic
     IOPinHandle_t::set(vbus_en_pin, true);
     // ... rest of setup
@@ -167,16 +167,16 @@ void SensorAppUser::loop(void) {
     // 1. Enable power
     IOPinHandle_t::set(vbus_en_pin, true);
     IOPinHandle_t::set(pl_buck_en_pin, true);
-    
+
     // 2. Wait for power to settle
     vTaskDelay(pdMS_TO_TICKS(vbus_settle_time_ms));
-    
+
     // 3. Read sensor data
     if (aanderaa_conductivity_sensor.getData(data)) {
         // 4. Process and publish data
         publishSensorData(data);
     }
-    
+
     // 5. Disable power
     IOPinHandle_t::set(pl_buck_en_pin, false);
     IOPinHandle_t::set(vbus_en_pin, false);

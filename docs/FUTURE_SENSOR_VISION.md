@@ -5,15 +5,15 @@ This document outlines the long-term vision for a **config-driven sensor system*
 ## Current State vs Future Vision
 
 ### **Current State (Post-Refactoring)**
-✅ **Achieved:** Aanderaa Conductivity sensor uses shared architecture  
-✅ **Benefits:** 57% code reduction, clean class-based design  
-❌ **Limitation:** Pattern must be manually implemented for each sensor type  
-❌ **Duplication:** AbstractSensor concrete classes still have duplicated patterns  
+✅ **Achieved:** Aanderaa Conductivity sensor uses shared architecture
+✅ **Benefits:** 57% code reduction, clean class-based design
+❌ **Limitation:** Pattern must be manually implemented for each sensor type
+❌ **Duplication:** AbstractSensor concrete classes still have duplicated patterns
 
 ### **Future Vision**
-🎯 **Goal:** **Fully config-driven sensor system**  
-🎯 **Benefit:** Add new sensors with **zero code changes**  
-🎯 **Architecture:** Data-driven sensor definitions with automatic code generation  
+🎯 **Goal:** **Fully config-driven sensor system**
+🎯 **Benefit:** Add new sensors with **zero code changes**
+🎯 **Architecture:** Data-driven sensor definitions with automatic code generation
 
 ## Vision Architecture
 
@@ -25,12 +25,12 @@ sensor:
   name: "aanderaa_conductivity"
   type: "SENSOR_TYPE_AANDERAA_CONDUCTIVITY"
   version: "v1.0"
-  
+
 communication:
   protocol: "uart"
   baud_rate: 115200
   line_terminator: "\n"
-  
+
 data_format:
   parser: "csv"
   separator: ","
@@ -39,12 +39,12 @@ data_format:
       type: "double"
       unit: "S/m"
       cbor_key: "conductivity"
-    - name: "temperature" 
+    - name: "temperature"
       type: "double"
       unit: "°C"
       cbor_key: "temperature"
     - name: "salinity"
-      type: "double" 
+      type: "double"
       unit: "PSU"
       cbor_key: "salinity"
     - name: "water_density"
@@ -53,7 +53,7 @@ data_format:
       cbor_key: "water_density"
     - name: "sound_speed"
       type: "double"
-      unit: "m/s" 
+      unit: "m/s"
       cbor_key: "sound_speed"
     - name: "depth"
       type: "double"
@@ -65,7 +65,7 @@ power_management:
   power_sequence:
     - pin: "vbus_en"
       state: true
-    - pin: "pl_buck_en" 
+    - pin: "pl_buck_en"
       state: true
     - delay_ms: 500
     - action: "read_data"
@@ -78,7 +78,7 @@ bridge_integration:
   cbor_message_name: "bm_aanderaa_conductivity_v0"
   aggregation_type: "statistical"
   sample_padding: 10
-  
+
 platforms:
   bristleback:
     pins:
@@ -86,7 +86,7 @@ platforms:
       pl_buck_en: "BB_PL_BUCK_EN"
   rs232_expander:
     pins:
-      vbus_en: "VBUS_EN" 
+      vbus_en: "VBUS_EN"
       pl_buck_en: "PL_BUCK_EN"
 ```
 
@@ -97,18 +97,18 @@ platforms:
 class ConfigDrivenSensor {
 public:
     ConfigDrivenSensor(const SensorConfig& config);
-    
+
     // Unified interface for all sensors
     void init();
     bool getData(SensorData& data);
     void flush();
-    
+
     // Bridge integration
-    bool addSamplesToReport(sensor_report_encoder_context_t& context, 
+    bool addSamplesToReport(sensor_report_encoder_context_t& context,
                            void* sensor_data, uint32_t sample_index);
     void setupReportBuilderPointers(report_builder_element_t* element,
                                    const void** nan_sample, void** dst);
-    
+
 private:
     SensorConfig _config;
     std::unique_ptr<DataParser> _parser;
@@ -124,7 +124,7 @@ public:
     static void registerSensor(const std::string& config_file);
     static ConfigDrivenSensor* createSensor(const std::string& sensor_name);
     static std::vector<std::string> getAvailableSensors();
-    
+
 private:
     static std::map<std::string, SensorConfig> _sensor_configs;
 };
@@ -140,7 +140,7 @@ private:
 # Generated files:
 src/generated/
 ├── sensor_types.h          # Enum definitions
-├── sensor_factory.cpp      # Factory methods  
+├── sensor_factory.cpp      # Factory methods
 ├── cbor_encoders.cpp       # CBOR encoding functions
 └── aggregation_types.h     # Data structures
 ```
@@ -155,13 +155,13 @@ case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
 
 bool ConfigDrivenSensor::addSamplesToReport_AanderaaConductivity(
     sensor_report_encoder_context_t& context, void* sensor_data, uint32_t sample_index) {
-    
+
     auto sample = static_cast<aanderaa_conductivity_aggregations_t*>(sensor_data)[sample_index];
-    
+
     if (sensor_report_encoder_open_sample(context, 6, "bm_aanderaa_conductivity_v0") != CborNoError) {
         return false;
     }
-    
+
     // Auto-generated field encoding based on config
     ENCODE_FIELD(conductivity, sample.conductivity, TYPE_DOUBLE);
     ENCODE_FIELD(temperature, sample.temperature, TYPE_DOUBLE);
@@ -169,7 +169,7 @@ bool ConfigDrivenSensor::addSamplesToReport_AanderaaConductivity(
     ENCODE_FIELD(water_density, sample.water_density, TYPE_DOUBLE);
     ENCODE_FIELD(sound_speed, sample.sound_speed, TYPE_DOUBLE);
     ENCODE_FIELD(depth, sample.depth, TYPE_DOUBLE);
-    
+
     return sensor_report_encoder_close_sample(context) == CborNoError;
 }
 ```
@@ -205,7 +205,7 @@ configure_sensor_app(${SENSOR_CONFIG_NAME} ${PLATFORM_NAME})
 
 ## Implementation Phases
 
-### **Phase 1: Sensor Framework Foundation** 
+### **Phase 1: Sensor Framework Foundation**
 - [ ] Create `ConfigDrivenSensor` base class
 - [ ] Implement YAML configuration parser
 - [ ] Create sensor registry system
@@ -288,7 +288,7 @@ configure_sensor_app(${SENSOR_CONFIG_NAME} ${PLATFORM_NAME})
 The config-driven sensor system represents the **ultimate evolution** of the current shared sensor architecture. By moving from code-based to data-based sensor definitions, we can achieve:
 
 - **🎯 Zero-code sensor addition**
-- **🔄 Automatic platform support** 
+- **🔄 Automatic platform support**
 - **📊 Dramatic code reduction**
 - **🛡️ Improved reliability**
 - **🚀 Enhanced developer productivity**

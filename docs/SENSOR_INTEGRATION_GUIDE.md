@@ -148,17 +148,17 @@ public:
     YourSensor_t(uint64_t node_id, uint32_t sample_duration_ms, uint32_t max_samples);
     bool subscribe() override;
     void aggregate() override;
-    
+
     static constexpr uint32_t N_SAMPLES_PAD = 10;
     static const your_sensor_aggregations_t YOUR_SENSOR_NAN_AGG;
-    
+
 private:
-    static void yourSensorSubCallback(uint64_t node_id, const char *topic, 
-                                     uint16_t topic_len, const uint8_t *data, 
+    static void yourSensorSubCallback(uint64_t node_id, const char *topic,
+                                     uint16_t topic_len, const uint8_t *data,
                                      uint16_t data_len, uint8_t type, uint8_t version);
 };
 
-YourSensor_t *createYourSensorSub(uint64_t node_id, uint32_t sample_duration_ms, 
+YourSensor_t *createYourSensorSub(uint64_t node_id, uint32_t sample_duration_ms,
                                   uint32_t max_samples);
 ```
 
@@ -174,23 +174,23 @@ case SENSOR_TYPE_YOUR_SENSOR: {
 
 static bool addSamplesToReport_yourSensor(sensor_report_encoder_context_t &context,
                                           void *sensor_data, uint32_t sample_index) {
-    your_sensor_aggregations_t sample = 
+    your_sensor_aggregations_t sample =
         (static_cast<your_sensor_aggregations_t *>(sensor_data))[sample_index];
-    
+
     if (sensor_report_encoder_open_sample(context, YOUR_SENSOR_NUM_SAMPLE_MEMBERS,
                                           "bm_your_sensor_v0") != CborNoError) {
         return false;
     }
-    
+
     // Add each sensor measurement
-    if (sensor_report_encoder_add_sample_member(context, "measurement1", 
+    if (sensor_report_encoder_add_sample_member(context, "measurement1",
                                                 &sample.measurement1,
                                                 SENSOR_REPORT_ENCODER_SAMPLE_MEMBER_TYPE_DOUBLE) != CborNoError) {
         return false;
     }
-    
+
     // ... add other measurements
-    
+
     return sensor_report_encoder_close_sample(context) == CborNoError;
 }
 ```

@@ -9,7 +9,7 @@
 # Create sensor driver
 touch src/lib/sensor_app_interface/your_sensor.h
 touch src/lib/sensor_app_interface/your_sensor.cpp
-touch src/lib/sensor_app_interface/your_sensor_util.h  
+touch src/lib/sensor_app_interface/your_sensor_util.h
 touch src/lib/sensor_app_interface/your_sensor_util.cpp
 ```
 
@@ -20,7 +20,7 @@ mkdir -p src/apps/bristleback_apps/your_sensor/user_code
 touch src/apps/bristleback_apps/your_sensor/user_code/user_code.h
 touch src/apps/bristleback_apps/your_sensor/user_code/user_code.cpp
 
-# RS232 Expander  
+# RS232 Expander
 mkdir -p src/apps/rs232_expander_apps/your_sensor/user_code
 touch src/apps/rs232_expander_apps/your_sensor/user_code/user_code.h
 touch src/apps/rs232_expander_apps/your_sensor/user_code/user_code.cpp
@@ -33,7 +33,7 @@ touch src/apps/bridge/sensor_drivers/yourSensor.h
 touch src/apps/bridge/sensor_drivers/yourSensor.cpp
 
 # Add to reportBuilder.cpp
-# Add to reportBuilderList.cpp  
+# Add to reportBuilderList.cpp
 # Add to sensorController.cpp
 ```
 
@@ -48,7 +48,7 @@ touch test/src/apps/your_sensor/your_sensor_util_ut.cpp
 ```bash
 # Test all platforms
 cmake .. -DBSP=bridge_v1_0 -DAPP=bridge && make
-cmake .. -DBSP=bm_mote_bristleback_v1_0 -DAPP=your_sensor && make  
+cmake .. -DBSP=bm_mote_bristleback_v1_0 -DAPP=your_sensor && make
 cmake .. -DBSP=bm_mote_rs232 -DAPP=your_sensor && make
 
 # Run tests
@@ -107,7 +107,7 @@ public:
     YourSensor_t(uint64_t node_id, uint32_t sample_duration_ms, uint32_t max_samples);
     bool subscribe() override;
     void aggregate() override;
-    
+
     static constexpr uint32_t N_SAMPLES_PAD = 10;
     static const your_sensor_aggregations_t YOUR_SENSOR_NAN_AGG;
 };
@@ -166,16 +166,16 @@ case SENSOR_TYPE_YOUR_SENSOR: {
 
 static bool addSamplesToReport_yourSensor(sensor_report_encoder_context_t &context,
                                           void *sensor_data, uint32_t sample_index) {
-    your_sensor_aggregations_t sample = 
+    your_sensor_aggregations_t sample =
         (static_cast<your_sensor_aggregations_t *>(sensor_data))[sample_index];
-    
+
     if (sensor_report_encoder_open_sample(context, NUM_FIELDS, "bm_your_sensor_v0") != CborNoError) {
         return false;
     }
-    
+
     ENCODE_FIELD("field1", sample.field1, TYPE_DOUBLE);
     ENCODE_FIELD("field2", sample.field2, TYPE_DOUBLE);
-    
+
     return sensor_report_encoder_close_sample(context) == CborNoError;
 }
 ```
@@ -190,7 +190,7 @@ set_tests_properties(your_sensor_util_tests PROPERTIES LABELS "unit;your_sensor"
 ### **Test Discovery:**
 ```bash
 ctest -L your_sensor    # Run your sensor tests
-ctest -L unit          # Run all unit tests  
+ctest -L unit          # Run all unit tests
 ctest -L integration   # Run integration tests
 ```
 
@@ -210,7 +210,7 @@ your_sensor/
 ├── src/apps/bristleback_apps/your_sensor/user_code/
 │   ├── user_code.h                 # extern SensorAppUser app;
 │   └── user_code.cpp               # BB_VBUS_EN, BB_PL_BUCK_EN
-├── src/apps/rs232_expander_apps/your_sensor/user_code/  
+├── src/apps/rs232_expander_apps/your_sensor/user_code/
 │   ├── user_code.h                 # extern SensorAppUser app;
 │   └── user_code.cpp               # VBUS_EN, PL_BUCK_EN
 ├── src/apps/bridge/sensor_drivers/
@@ -230,7 +230,7 @@ your_sensor/
 # Bridge
 cmake .. -DBSP=bridge_v1_0 -DAPP=bridge && make bridge_v1_0-bridge-dbg.elf
 
-# Bristleback  
+# Bristleback
 cmake .. -DBSP=bm_mote_bristleback_v1_0 -DAPP=your_sensor && make bm_mote_bristleback_v1_0-your_sensor-dbg.elf
 
 # RS232 Expander
