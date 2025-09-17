@@ -242,4 +242,3 @@ add_test(
     COMMAND
     lineParsers
 )
-set_tests_properties(lineParsers PROPERTIES LABELS "conductivity;parsing;unit")
