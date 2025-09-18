@@ -110,6 +110,15 @@
             }
         },
         {
+            "name": "arpa-e_example",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_APP_TYPE": "BMDK",
+                "APP": "arpa-e_example",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
             "name": "loadcell",
             "inherits": "hello-world",
             "cacheVariables": {
@@ -301,6 +310,11 @@
         {
             "configurePreset": "hello-world",
             "name": "hello-world",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "arpa-e_example",
+            "name": "arpa-e_example",
             "jobs": 8
         },
         {

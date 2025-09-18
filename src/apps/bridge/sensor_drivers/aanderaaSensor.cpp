@@ -1,16 +1,16 @@
 #include "aanderaaSensor.h"
-#include "aanderaa_data_msg.h"
+#include "aanderaa_current_meter_msg.h"
 #include "app_config.h"
+#include "app_util.h"
 #include "avgSampler.h"
-#include "spotter.h"
-#include "pubsub.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <new>
 
 // TODO - get this from the sensor node itself
@@ -36,11 +36,12 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
   (void)version;
   printf("Aanderaa data received from node %016" PRIx64 " On topic: %.*s\n", node_id, topic_len,
          topic);
-  Aanderaa_t *aanderaa = static_cast<Aanderaa_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_AANDERAA));
+  Aanderaa_t *aanderaa =
+      static_cast<Aanderaa_t *>(sensorControllerFindSensorById(node_id, SENSOR_TYPE_AANDERAA));
   if (aanderaa && aanderaa->type == SENSOR_TYPE_AANDERAA) {
     if (xSemaphoreTake(aanderaa->_mutex, portMAX_DELAY)) {
-      static AanderaaDataMsg::Data d;
-      if (AanderaaDataMsg::decode(d, data, data_len) == CborNoError) {
+      static AanderaaCurrentMeterMsg::Data d;
+      if (AanderaaCurrentMeterMsg::decode(d, data, data_len) == CborNoError) {
         char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
         configASSERT(log_buf);
         aanderaa->abs_speed_cm_s.addSample(d.abs_speed_cm_s);
@@ -58,12 +59,14 @@ void AanderaaSensor::aanderaSubCallback(uint64_t node_id, const char *topic, uin
         uint32_t sensor_reading_time_millis = d.header.sensor_reading_time_ms % 1000U;
 
         uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if ((current_timestamp - aanderaa->last_timestamp > DEFAULT_AANDERAA_READING_PERIOD_MS + 30000u) ||
+        if ((current_timestamp - aanderaa->last_timestamp >
+             DEFAULT_AANDERAA_READING_PERIOD_MS + 30000u) ||
             aanderaa->reading_count == 1U) {
           printf("Updating aanderaa %016" PRIx64 " node position, current_time = %" PRIu32
                  ", last_time = %" PRIu32 ", reading count: %" PRIu32 "\n",
                  node_id, current_timestamp, aanderaa->last_timestamp, aanderaa->reading_count);
-          aanderaa->node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+          aanderaa->node_position =
+              topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
         }
         aanderaa->last_timestamp = current_timestamp;
 

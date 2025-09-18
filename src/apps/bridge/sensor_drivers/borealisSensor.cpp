@@ -369,10 +369,10 @@ BmErr BorealisSensor::hydrotwinSendSpotterLog(const uint8_t *data, uint16_t data
       } else if (type == HYDROTWIN_HDR) {
         static constexpr uint8_t hydrotwin_message_version = 1;
         SensorHeaderMsg::Data header = {
-            hydrotwin_message_version,
-            uptimeGetMs(),
-            rtcGetMicrosecondsSimple(),
-            rtcGetMicrosecondsSimple(),
+            .version = hydrotwin_message_version,
+            .reading_time_utc_ms = rtcGetMicrosecondsSimple() / 1000,
+            .reading_uptime_millis = uptimeGetMs(),
+            .sensor_reading_time_ms = rtcGetMicrosecondsSimple() / 1000,
         };
         err = send_spotter_log_individual(
             "hydrotwin", header,
