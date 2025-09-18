@@ -54,6 +54,8 @@ public:
   uint32_t getTotalConversionTimeMs();
   uint16_t getAddr();
 
+  bool initialized = false;
+
 private:
   bool setCfgBits(uint16_t bits, uint8_t mask, uint8_t shift);
   bool readReg(Reg_t reg, uint16_t *val);

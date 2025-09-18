@@ -7,7 +7,7 @@
 
 set(GIT_CMD git)
 set(GIT_ARGS_SHA describe --match ForceNone --abbrev=8 --always)
-execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS_SHA}
+execute_process(COMMAND ${GIT_CMD} -C ${CMAKE_CURRENT_LIST_DIR} ${GIT_ARGS_SHA}
                 OUTPUT_VARIABLE GIT_SHA
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -25,6 +25,7 @@ if(NOT VERSION_STR)
     set(GIT_ARGS_TAG describe --always --dirty --abbrev=8)
 
     execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS_TAG}
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/..
                     OUTPUT_VARIABLE VERSION_STR
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()

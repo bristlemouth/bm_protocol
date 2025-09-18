@@ -4,6 +4,7 @@
 #include "avgSampler.h"
 #include "sensorController.h"
 
+#include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -27,10 +28,19 @@ typedef struct SeapointTurbiditySensor : public AbstractSensor {
   // 2 minutes is the minimum bridge on period and the turbidity sensor by default is sampling at 1Hz. So 1*120 + 30 = 150.
   static constexpr uint32_t N_SAMPLES_PAD = 150;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
+  static constexpr double S_SAMPLE_MEMBER_MIN = 0.0;
+  static constexpr double S_SAMPLE_MEMBER_MAX = 20971.48;
+  static constexpr double R_SAMPLE_MEMBER_MIN = 0.0;
+  static constexpr double R_SAMPLE_MEMBER_MAX = 163800.00;
 
 public:
   bool subscribe() override;
   void aggregate(void);
+  static constexpr seapoint_turbidity_aggregations_t seapoint_turbidity_NAN_AGG = {
+      .turbidity_s_mean_ftu = NAN,
+      .turbidity_r_mean_ftu = NAN,
+      .reading_count = 0,
+  };
 
 private:
   static void seapointTurbiditySubCallback(uint64_t node_id, const char *topic,

@@ -1,15 +1,13 @@
+#include "seapoint_turbidity_sensor.h"
 #include "FreeRTOS.h"
-#include "bm_printf.h"
+#include "app_util.h"
 #include "configuration.h"
 #include "payload_uart.h"
-#include "seapoint_turbidity_sensor.h"
 #include "serial.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
-
-extern cfg::Configuration *systemConfigurationPartition;
 
 /**
  * @brief Initializes the Seapoint Turbidity Sensor.
@@ -27,10 +25,9 @@ extern cfg::Configuration *systemConfigurationPartition;
  * - Enables the PLUART, effectively turning on the UART.
  */
 void SeapointTurbiditySensor::init() {
-  configASSERT(systemConfigurationPartition);
   _parser.init();
-  systemConfigurationPartition->getConfig(SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
-                                          _sensorBmLogEnable);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
+                  &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
   PLUART::init(USER_TASK_PRIORITY);
@@ -69,13 +66,14 @@ bool SeapointTurbiditySensor::getData(BmSeapointTurbidityDataMsg::Data &d) {
     rtcPrint(rtc_time_str, NULL);
 
     if (_sensorBmLogEnable) {
-      bm_fprintf(0, SEAPOINT_TURBIDITY_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
-                 uptimeGetMs(), rtc_time_str, read_len, _payload_buffer);
+      spotter_log(0, SEAPOINT_TURBIDITY_RAW_LOG, USE_TIMESTAMP,
+                 "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
+                 read_len, _payload_buffer);
     }
-    bm_printf(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+    spotter_log_console(0, "turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtc_time_str, read_len, _payload_buffer);
-    printf("turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-           rtc_time_str, read_len, _payload_buffer);
+    printf("turbidity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
+           read_len, _payload_buffer);
 
     if (_parser.parseLine(_payload_buffer, read_len)) {
       Value s_signal = _parser.getValue(0);

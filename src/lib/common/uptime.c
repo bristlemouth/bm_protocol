@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "util.h"
+#include "app_util.h"
 #include "stm32_rtc.h"
 
 static bool _uptimeFromRTC;

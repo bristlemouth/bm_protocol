@@ -3,9 +3,8 @@
 */
 
 #include "loadCellSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
+#include "spotter.h"
+#include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
 #include "sensorSampler.h"
@@ -16,17 +15,18 @@
 #include <stdint.h>
 
 static NAU7802 *_loadCell;
-bool successful_lc_read = false;
-uint64_t read_attempt_duration = 100;
-uint64_t read_start_time;
+static bool successful_lc_read = false;
+static uint64_t read_attempt_duration = 100;
+static uint64_t read_start_time;
 
-uint32_t cellular_send_read_counter;
-float mean_force;
-float mean_sum;
-float max_force;
-float min_force;
-uint32_t num_reads = 240; //This should be 4 minutes
-LoadCellConfig_t _cfg;
+static bool negative_factor = false;
+static uint32_t cellular_send_read_counter;
+static float mean_force;
+static float mean_sum;
+static float max_force;
+static float min_force;
+static uint32_t num_reads = 240; //This should be 4 minutes
+static LoadCellConfig_t _cfg;
 
 #define INA_STR_LEN 80
 
@@ -46,7 +46,7 @@ static bool loadCellSample() {
 
   bool rval = true;
   int32_t reading = _loadCell->getReading();
-  float weight = _loadCell->getWeight();
+  float weight = _loadCell->getWeight(negative_factor);
   float calFactor = _loadCell->getCalibrationFactor();
   int32_t zeroOffset = _loadCell->getZeroOffset();
 
@@ -64,25 +64,25 @@ static bool loadCellSample() {
   while ((!successful_lc_read) &&
          (((uptimeGetMicroSeconds() / 1000) - read_start_time) < read_attempt_duration)) {
     if (_loadCell->available()) {
-      printf("%llu | reading: %d\n", uptimeGetMicroSeconds() / 1000, reading);
+      printf("%llu | reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, reading);
       // printf("%llu | reading corrs: %d\n", uptimeGetMicroSeconds()/1000, reading-333900);
       _loadCell->getInternalOffsetCal();
 
       // prints to SD card file
-      bm_fprintf(0, "loadcell.log", USE_TIMESTAMP,
+      spotter_log(0, "loadcell.log", USE_TIMESTAMP,
                  "tick: %llu, rtc: %s, reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000,
                  rtcTimeBuffer, reading);
-      bm_fprintf(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, weight: %f\n",
+      spotter_log(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, weight: %f\n",
                  uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
 
       // prints to Spotter console
-      bm_printf(0, "loadcell | tick: %llu, rtc: %s, reading: %" PRId32 "\n",
+      spotter_log_console(0, "loadcell | tick: %llu, rtc: %s, reading: %" PRId32 "\n",
                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
-      bm_printf(0, "loadcell | tick: %llu, rtc: %s, weight: %f\n",
+      spotter_log_console(0, "loadcell | tick: %llu, rtc: %s, weight: %f\n",
                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
       printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
       printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
-      printf("%llu | zeroOffset: %d\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
+      printf("%llu | zeroOffset: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
       successful_lc_read = true;
     } else {
       vTaskDelay(pdMS_TO_TICKS(10));
@@ -109,7 +109,7 @@ static bool loadCellSample() {
     sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f", mean_force,
             max_force, min_force);
 
-    spotter_tx_data(data_string, 100, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK);
+    spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
 
     // printf(data_string);
 
@@ -135,8 +135,11 @@ static bool loadCellInit() {
   rval = _loadCell->begin();
   _loadCell->setCalibrationFactor(_cfg.calibration_factor);
   _loadCell->setZeroOffset(_cfg.zero_offset);
+  if (_cfg.calibration_factor < 0.0) {
+      negative_factor = true;
+  }
 
-  printf("loadCell init rval: %u\n", rval);
+  printf("loadCell init rval: %d\n", rval);
   return rval;
 
   // initial vals for force averaging.

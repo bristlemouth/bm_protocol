@@ -1,6 +1,6 @@
 #include <string.h>
 #include "w25.h"
-#include "util.h"
+#include "app_util.h"
 #include <cstdio>
 #include "watchdog.h"
 #include "crc.h"
@@ -512,7 +512,7 @@ bool W25::_eraseSector(uint32_t addr) {
 }
 
 uint32_t W25::getAlignmentBytes(void) {
-    return W25Q64JVXGIQ_ALIGNMENT_BYTES; 
+    return W25Q64JVXGIQ_ALIGNMENT_BYTES;
 }
 
 uint32_t W25::getStorageSizeBytes(void) {
@@ -530,7 +530,7 @@ bool W25::erase(uint32_t addr, size_t len, uint32_t timeoutMs) {
     uint32_t erase_start_addr = addr;
     if((addr % W25_SECTOR_SIZE) != 0) {
         erase_start_addr = addr - (addr % W25_SECTOR_SIZE);
-    }    
+    }
     configASSERT(erase_start_addr + len + (len % W25_SECTOR_SIZE) < W25_MAX_ADDRESS);
     bool rval = false;
     if(xSemaphoreTake(_mutex, pdMS_TO_TICKS(timeoutMs)) == pdTRUE) {

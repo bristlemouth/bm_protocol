@@ -8,14 +8,14 @@
 #include "stream_buffer.h"
 #include "task.h"
 #include "task_priorities.h"
-#include "util.h"
+#include "app_util.h"
 
 // Enable echo
 const bool bEcho = true;
 
 static void processConsoleRxByte(void *serialHandle, uint8_t byte);
 
-static SerialMessage_t xConsoleOutputMessage = {NULL, 0, NULL};
+static SerialMessage_t xConsoleOutputMessage = {NULL, 0, NULL, NULL};
 
 static uint8_t *ulConsoleRxBuff;
 static uint32_t ulConsoleBuffIdx;

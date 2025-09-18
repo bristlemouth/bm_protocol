@@ -1,8 +1,8 @@
 #include "payload_uart.h"
-#include "bm_printf.h"
+#include "spotter.h"
+#include "stm32_io.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
-#include "stm32_io.h"
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
@@ -80,7 +80,9 @@ bool endTransaction(uint32_t wait_ms) {
   _transactionInProgress = false;
   // If there were no writes during the transaction, don't wait for writes to complete.
   if (!_writeDuringTransaction) {
-    if (_postTxFunction != nullptr) _postTxFunction(); // Safely call the function
+    if (_postTxFunction != nullptr) {
+      _postTxFunction(); // Safely call the function
+    }
     return true;
   }
   // After each transmission compeltes, TC interrupt will call pluartPostTransactionCb,
@@ -93,7 +95,9 @@ bool endTransaction(uint32_t wait_ms) {
     ret_value = false; // TODO - maybe better to assert(false) here?
   }
   // Call the post-transaction function after the final transmission is fully complete
-  if (_postTxFunction != nullptr) _postTxFunction();
+  if (_postTxFunction != nullptr) {
+    _postTxFunction();
+  }
   return ret_value;
 }
 
@@ -119,24 +123,32 @@ static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
     SerialLineBuffer_t *lineBuffer = reinterpret_cast<SerialLineBuffer_t *>(handle->data);
     // We need a buffer to use!
     configASSERT(lineBuffer->buffer != NULL);
-    lineBuffer->buffer[lineBuffer->idx] = byte;
-    if (lineBuffer->buffer[lineBuffer->idx] == terminationCharacter) {
-      // Zero terminate the line
-      if ((lineBuffer->idx + 1) < lineBuffer->len) {
-        lineBuffer->buffer[lineBuffer->idx + 1] = 0;
-      }
-      if (lineBuffer->lineCallback != NULL) {
-        lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
-      }
-      // Reset buffer index
-      lineBuffer->idx = 0;
-      //    printf("buffer reset!\n");
+
+    // ignore spurious NULs, observed in Rx-LIVE RS-485 setup – Evan 2025-08-20
+    // As this feature is only intended for valid ASCII line protocols, this shouldn't cause any
+    //  ill effects. However, if an oddball protocol intentionally uses NUL as a termination
+    //  character, this will need to be adjusted accordingly.
+    if (byte == 0x00) {
     } else {
-      lineBuffer->idx++;
-      // Heavy handed way of dealing with overflow for now
-      // Later we can just purge the buffer
-      // TODO - log error and clear buffer instead
-      configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
+      lineBuffer->buffer[lineBuffer->idx] = byte;
+      if (lineBuffer->buffer[lineBuffer->idx] == terminationCharacter) {
+        // Zero terminate the line
+        if ((lineBuffer->idx + 1) < lineBuffer->len) {
+          lineBuffer->buffer[lineBuffer->idx + 1] = 0;
+        }
+        if (lineBuffer->lineCallback != NULL) {
+          lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
+        }
+        // Reset buffer index
+        lineBuffer->idx = 0;
+        //    printf("buffer reset!\n");
+      } else {
+        lineBuffer->idx++;
+        // Heavy handed way of dealing with overflow for now
+        // Later we can just purge the buffer
+        // TODO - log error and clear buffer instead
+        configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
+      }
     }
   }
 
@@ -240,53 +252,52 @@ void write(uint8_t *buffer, size_t len) {
   // Note - multiple writes will likely be grouped in the same UART Tx transmission if there is no
   //  delay between them in the transaction in the user thread.
   xSemaphoreTake(_postTxSemaphore, 0);
-  serialWrite(&PLUART::uart_handle, buffer, len);
+  serialWrite(&PLUART::uart_handle, buffer, len, NULL);
 }
 
 void setBaud(uint32_t new_baud_rate) {
   LL_LPUART_SetBaudRate(static_cast<USART_TypeDef *>(uart_handle.device),
                         LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
-                        LL_LPUART_PRESCALER_DIV64, new_baud_rate);
+                        LL_LPUART_PRESCALER_DIV8, new_baud_rate);
 }
 
-void setEvenParity(void){
+void setEvenParity(void) {
   LL_LPUART_Disable(static_cast<USART_TypeDef *>(uart_handle.device));
-  LL_LPUART_SetParity(static_cast<USART_TypeDef *>(uart_handle.device),
-                      LL_LPUART_PARITY_EVEN);
+  LL_LPUART_SetParity(static_cast<USART_TypeDef *>(uart_handle.device), LL_LPUART_PARITY_EVEN);
   LL_LPUART_Enable(static_cast<USART_TypeDef *>(uart_handle.device));
 }
 
-void enableDataInversion(void){
+void enableDataInversion(void) {
   LL_LPUART_Disable(static_cast<USART_TypeDef *>(uart_handle.device));
   LL_LPUART_SetTXPinLevel(static_cast<USART_TypeDef *>(uart_handle.device),
-                       LL_LPUART_TXPIN_LEVEL_INVERTED);
+                          LL_LPUART_TXPIN_LEVEL_INVERTED);
   LL_LPUART_Enable(static_cast<USART_TypeDef *>(uart_handle.device));
 }
 
 // Configuring TX as a GPIO
 void setTxPinOutputLevel(void) {
-  if(uart_handle.txPin) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_SetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   }
 }
 
-void resetTxPinOutputLevel(void){
-  if(uart_handle.txPin) {
+void resetTxPinOutputLevel(void) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_ResetOutputPin((GPIO_TypeDef *)pin->gpio, pin->pinmask);
   }
 }
 
-void configTxPinOutput(void){
-  if(uart_handle.txPin) {
+void configTxPinOutput(void) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_OUTPUT);
   }
 }
 
-void configTxPinAlternate(void){
-  if(uart_handle.txPin) {
+void configTxPinAlternate(void) {
+  if (uart_handle.txPin) {
     STM32Pin_t *pin = (STM32Pin_t *)uart_handle.txPin->pin;
     LL_GPIO_SetPinMode((GPIO_TypeDef *)pin->gpio, pin->pinmask, LL_GPIO_MODE_ALTERNATE);
   }
@@ -320,6 +331,7 @@ SerialHandle_t uart_handle = {
     .processByte =
         processLineBufferedRxByte, // This is where we tell it the callback to call when we get a new byte
     .data = &lpUART1LineBuffer, // Pointer to the line buffer this handle should use
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,

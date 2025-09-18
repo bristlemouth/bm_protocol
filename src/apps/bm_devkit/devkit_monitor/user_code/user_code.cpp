@@ -10,11 +10,9 @@
  */
 
 #include "user_code.h"
+#include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
@@ -22,12 +20,13 @@
 #include "lwip/inet.h"
 #include "powerSampler.h"
 #include "pressureSampler.h"
+#include "pubsub.h"
 #include "sensorSampler.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
-#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -90,8 +89,8 @@ void setup() {
   hum_stats.initBuffer(MAX_SENSOR_SAMPLES);
   pressure_stats.initBuffer(MAX_SENSOR_SAMPLES);
   rtcGet(&statsStartRtc);
-  userConfigurationPartition->getConfig("sensorAggPeriodMin", strlen("sensorAggPeriodMin"),
-                                        sensor_agg_period_min);
+  get_config_float(BM_CFG_PARTITION_USER, "sensorAggPeriodMin", strlen("sensorAggPeriodMin"),
+                   &sensor_agg_period_min);
 }
 
 void loop(void) {
@@ -115,7 +114,7 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &statsStartRtc);
     uint32_t statsEndTick = uptimeGetMs();
     sprintf(stats_print_buffer,
-            "rtc_start: %s, tick_start: %u, tick_end: %u, "
+            "rtc_start: %s, tick_start: %lu, tick_end: %lu, "
             "temp_n: %u, temp_min: %.4f, temp_max: %.4f, temp_mean: %.4f, "
             "temp_std: %.4f, "
             "hum_n: %u, hum_min: %.4f, hum_max: %.4f, hum_mean: %.4f, hum_std: "
@@ -135,8 +134,8 @@ void loop(void) {
             current_tx_data.mean, current_tx_data.stdev, pressure_tx_data.sample_count,
             pressure_tx_data.min, pressure_tx_data.max, pressure_tx_data.mean,
             pressure_tx_data.stdev);
-    bm_fprintf(0, "bmdk_sensor_agg.log", USE_TIMESTAMP, "%s\n", stats_print_buffer);
-    bm_printf(0, "[sensor-agg] | %s", stats_print_buffer);
+    spotter_log(0, "bmdk_sensor_agg.log", USE_TIMESTAMP, "%s\n", stats_print_buffer);
+    spotter_log_console(0, "[sensor-agg] | %s", stats_print_buffer);
     printf("[sensor-agg] | %s\n", stats_print_buffer);
     // Update variables tracking start time of agg period in ticks and RTC.
     statsStartTick = statsEndTick;
@@ -156,7 +155,7 @@ void loop(void) {
              N_STAT_ELEM_BYTES);
     }
     //
-    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BmNetworkTypeCellularIriFallback)) {
       printf("%llut - %s | Sucessfully sent Spotter transmit data request\n", uptimeGetMs(),
              rtcTimeBuffer);
     } else {
@@ -166,27 +165,27 @@ void loop(void) {
   }
 
   if (pressure_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    printf("ERR - No more room in pressure stats buffer, already have %lu readings!\n",
+    printf("ERR - No more room in pressure stats buffer, already have %" PRIu64 " readings!\n",
            MAX_SENSOR_SAMPLES);
   } else {
     float temperature, pressure = 0.0;
     if (pressureSamplerGetLatest(pressure, temperature)) {
       pressure_stats.addSample(pressure);
-      printf("pressure stats | count: %u/%lu, min: %f, max: %f\n",
+      printf("pressure stats | count: %lu/%llu, min: %f, max: %f\n",
              pressure_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, pressure_stats.getMin(),
              pressure_stats.getMax());
     }
   }
 
   if (hum_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    printf("ERR - No more room in hum/temp stats buffer, already have %lu readings!\n",
+    printf("ERR - No more room in hum/temp stats buffer, already have %" PRIu64 " readings!\n",
            MAX_SENSOR_SAMPLES);
   } else {
     float temperature, humidity = 0.0;
     if (htuSamplerGetLatest(humidity, temperature)) {
       hum_stats.addSample(humidity);
       temp_stats.addSample(temperature);
-      printf("hum-temp stats | count: %u/%lu, min_T: %f, max_T: %f, min_H: %f, "
+      printf("hum-temp stats | count: %lu/%llu, min_T: %f, max_T: %f, min_H: %f, "
              "max_H: %f\n",
              hum_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10, temp_stats.getMin(),
              temp_stats.getMax(), hum_stats.getMin(), hum_stats.getMax());
@@ -194,8 +193,7 @@ void loop(void) {
   }
 
   if (power_voltage_stats.getNumSamples() >= MAX_SENSOR_SAMPLES) {
-    printf("ERR - No more room in power stats buffer, already have %lu "
-           "readings!\n",
+    printf("ERR - No more room in power stats buffer, already have %" PRIu64 " readings!\n",
            MAX_SENSOR_SAMPLES);
   } else {
     float voltage_mote, current_mote = 0.0;
@@ -204,7 +202,7 @@ void loop(void) {
       power_voltage_stats.addSample(voltage_mote);
       power_current_stats.addSample(current_mote);
 
-      printf("power stats | count: %u/%lu, min_V: %f, max_V: %f, min_I: %f, max_I: "
+      printf("power stats | count: %lu/%llu, min_V: %f, max_V: %f, min_I: %f, max_I: "
              "%f\n",
              power_voltage_stats.getNumSamples(), MAX_SENSOR_SAMPLES - 10,
              power_voltage_stats.getMin(), power_voltage_stats.getMax(),
@@ -212,10 +210,6 @@ void loop(void) {
     }
   }
 
-  /// This section demonstrates a simple non-blocking bare metal method for rollover-safe timed tasks,
-  ///   like blinking an LED.
-  /// More canonical (but more arcane) modern methods of implementing this kind functionality
-  ///   would bee to use FreeRTOS tasks or hardware timer ISRs.
   static uint32_t ledPulseTimer = uptimeGetMs();
   static uint32_t ledOnTimer = 0;
   static bool ledState = false;

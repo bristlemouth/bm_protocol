@@ -71,12 +71,19 @@
             }
         },
         {
+            "name": "bridge-raw-pressure",
+            "inherits": "bridge",
+            "cacheVariables": {
+                "RAW_PRESSURE_ENABLE": "1"
+            }
+        },
+        {
             "name": "bringup-bridge",
             "inherits": "default",
             "cacheVariables": {
                 "APP": "bringup_bridge",
                 "BSP": "bridge_v1_0"
-            }
+                }
         },
         {
             "name": "bringup-mote",
@@ -99,6 +106,15 @@
             "cacheVariables": {
                 "CMAKE_APP_TYPE": "BMDK",
                 "APP": "hello_world",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
+            "name": "arpa-e_example",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_APP_TYPE": "BMDK",
+                "APP": "arpa-e_example",
                 "BSP": "bm_mote_v1.0"
             }
         },
@@ -139,6 +155,20 @@
             }
         },
         {
+            "name": "pme-do-sensor",
+            "inherits": "serial-payload-example-bristleback",
+            "cacheVariables": {
+                "APP": "pme_do_sensor"
+            }
+        },
+        {
+            "name": "pub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "pub_example"
+            }
+        },
+        {
             "name": "rbr-bristleback",
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
@@ -160,10 +190,17 @@
             }
         },
         {
-            "name": "rx-live",
+            "name": "rx-live-example",
             "inherits": "hello-world",
             "cacheVariables": {
                 "APP": "rx_live_example"
+            }
+        },
+        {
+            "name": "sdi12-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sdi12_example"
             }
         },
         {
@@ -171,6 +208,13 @@
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
                 "APP": "seapoint_turbidity"
+            }
+        },
+        {
+            "name": "serial-bridge",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "serial_bridge"
             }
         },
         {
@@ -202,6 +246,13 @@
             "cacheVariables": {
                 "APP": "bm_soft_module",
                 "BSP": "bm_mote_spi_v1_0"
+            }
+        },
+        {
+            "name": "sub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "sub_example"
             }
         }
     ],
@@ -237,6 +288,11 @@
             "jobs": 8
         },
         {
+            "configurePreset": "bridge-raw-pressure",
+            "name": "bridge-raw-pressure",
+            "jobs": 8
+        },
+        {
             "configurePreset": "bringup-bridge",
             "name": "bringup-bridge",
             "jobs": 8
@@ -254,6 +310,11 @@
         {
             "configurePreset": "hello-world",
             "name": "hello-world",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "arpa-e_example",
+            "name": "arpa-e_example",
             "jobs": 8
         },
         {
@@ -282,6 +343,16 @@
             "jobs": 8
         },
         {
+            "configurePreset": "pme-do-sensor",
+            "name": "pme-do-sensor",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "pub-example",
+            "name": "pub-example",
+            "jobs": 8
+        },
+        {
             "configurePreset": "rbr-bristleback",
             "name": "rbr-bristleback",
             "jobs": 8
@@ -297,13 +368,23 @@
             "jobs": 8
         },
         {
-            "configurePreset": "rx-live",
-            "name": "rx-live",
+            "configurePreset": "rx-live-example",
+            "name": "rx-live-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sdi12-example",
+            "name": "sdi12-example",
             "jobs": 8
         },
         {
             "configurePreset": "seapoint-turbidity-bristleback",
             "name": "seapoint-turbidity-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "serial-bridge",
+            "name": "serial-bridge",
             "jobs": 8
         },
         {
@@ -324,6 +405,11 @@
         {
             "configurePreset": "soft",
             "name": "soft",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "sub-example",
+            "name": "sub-example",
             "jobs": 8
         }
     ]

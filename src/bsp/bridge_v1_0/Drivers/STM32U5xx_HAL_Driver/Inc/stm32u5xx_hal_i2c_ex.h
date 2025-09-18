@@ -99,57 +99,57 @@ typedef struct
 /** @defgroup I2CEx_AutonomousMode_TriggerSelection I2C Extended Autonomous Mode Trigger Selection
   * @{
   */
-#define I2C_TRIG_GRP1                   (0x10000000U)                    /*!< Trigger Group for I2C1, I2C2 and I2C4 */
+#define I2C_TRIG_GRP1                   (0x10000000U)                    /*!< Trigger Group for I2C1, I2C2, I2C4, I2C5, I2C6 (depends on Product) */
 #define I2C_TRIG_GRP2                   (0x20000000U)                    /*!< Trigger Group for I2C3 */
 
-#define I2C_GRP1_GPDMA_CH0_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x00000000U))
+#define I2C_GRP1_GPDMA_CH0_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x00000000UL))
 /*!< HW Trigger signal is GPDMA_CH0_TRG     */
-#define I2C_GRP1_GPDMA_CH1_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x1U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_GPDMA_CH1_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x1UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is GPDMA_CH1_TRG     */
-#define I2C_GRP1_GPDMA_CH2_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x2U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_GPDMA_CH2_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x2UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is GPDMA_CH2_TRG     */
-#define I2C_GRP1_GPDMA_CH3_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x3U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_GPDMA_CH3_TCF_TRG      (uint32_t)(I2C_TRIG_GRP1 | (0x3UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is GPDMA_CH3_TRG     */
-#define I2C_GRP1_EXTI5_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x4U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_EXTI5_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x4UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is EXTI5_TRG         */
-#define I2C_GRP1_EXTI9_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x5U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_EXTI9_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x5UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is EXTI9_TRG         */
-#define I2C_GRP1_LPTIM1_CH1_TRG         (uint32_t)(I2C_TRIG_GRP1 | (0x6U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_LPTIM1_CH1_TRG         (uint32_t)(I2C_TRIG_GRP1 | (0x6UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPTIM1_CH1_TRG    */
-#define I2C_GRP1_LPTIM2_CH1_TRG         (uint32_t)(I2C_TRIG_GRP1 | (0x7U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_LPTIM2_CH1_TRG         (uint32_t)(I2C_TRIG_GRP1 | (0x7UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPTIM2_CH1_TRG    */
-#define I2C_GRP1_COMP1_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x8U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_COMP1_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x8UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is COMP1_TRG         */
-#define I2C_GRP1_COMP2_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x9U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_COMP2_TRG              (uint32_t)(I2C_TRIG_GRP1 | (0x9UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is COMP2_TRG         */
-#define I2C_GRP1_RTC_ALRA_TRG           (uint32_t)(I2C_TRIG_GRP1 | (0xAU << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_RTC_ALRA_TRG           (uint32_t)(I2C_TRIG_GRP1 | (0xAUL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is RTC_ALRA_TRG      */
-#define I2C_GRP1_RTC_WUT_TRG            (uint32_t)(I2C_TRIG_GRP1 | (0xBU << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP1_RTC_WUT_TRG            (uint32_t)(I2C_TRIG_GRP1 | (0xBUL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is RTC_WUT_TRG       */
 
-#define I2C_GRP2_LPDMA_CH0_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x00000000U))
+#define I2C_GRP2_LPDMA_CH0_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x00000000UL))
 /*!< HW Trigger signal is LPDMA_CH0_TRG     */
-#define I2C_GRP2_LPDMA_CH1_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x1U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_LPDMA_CH1_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x1UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPDMA_CH1_TRG     */
-#define I2C_GRP2_LPDMA_CH2_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x2U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_LPDMA_CH2_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x2UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPDMA_CH2_TRG     */
-#define I2C_GRP2_LPDMA_CH3_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x3U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_LPDMA_CH3_TCF_TRG      (uint32_t)(I2C_TRIG_GRP2 | (0x3UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPDMA_CH3_TRG     */
-#define I2C_GRP2_EXTI5_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x4U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_EXTI5_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x4UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is EXTI5_TRG         */
-#define I2C_GRP2_EXTI8_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x5U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_EXTI8_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x5UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is EXTI8_TRG         */
-#define I2C_GRP2_LPTIM1_CH1_TRG         (uint32_t)(I2C_TRIG_GRP2 | (0x6U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_LPTIM1_CH1_TRG         (uint32_t)(I2C_TRIG_GRP2 | (0x6UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPTIM1_CH1_TRG    */
-#define I2C_GRP2_LPTIM3_CH1_TRG         (uint32_t)(I2C_TRIG_GRP2 | (0x7U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_LPTIM3_CH1_TRG         (uint32_t)(I2C_TRIG_GRP2 | (0x7UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is LPTIM3_CH1_TRG    */
-#define I2C_GRP2_COMP1_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x8U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_COMP1_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x8UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is COMP1_TRG         */
-#define I2C_GRP2_COMP2_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x9U << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_COMP2_TRG              (uint32_t)(I2C_TRIG_GRP2 | (0x9UL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is COMP2_TRG         */
-#define I2C_GRP2_RTC_ALRA_TRG           (uint32_t)(I2C_TRIG_GRP2 | (0xAU << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_RTC_ALRA_TRG           (uint32_t)(I2C_TRIG_GRP2 | (0xAUL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is RTC_ALRA_TRG      */
-#define I2C_GRP2_RTC_WUT_TRG            (uint32_t)(I2C_TRIG_GRP2 | (0xBU << I2C_AUTOCR_TRIGSEL_Pos))
+#define I2C_GRP2_RTC_WUT_TRG            (uint32_t)(I2C_TRIG_GRP2 | (0xBUL << I2C_AUTOCR_TRIGSEL_Pos))
 /*!< HW Trigger signal is RTC_WUT_TRG       */
 /**
   * @}
@@ -212,8 +212,10 @@ HAL_StatusTypeDef HAL_I2CEx_ConfigFastModePlus(I2C_HandleTypeDef *hi2c, uint32_t
 /** @addtogroup I2CEx_Exported_Functions_Group4 Autonomous Mode Functions
   * @{
   */
-HAL_StatusTypeDef HAL_I2CEx_SetConfigAutonomousMode(I2C_HandleTypeDef *hi2c, I2C_AutonomousModeConfTypeDef *sConfig);
-HAL_StatusTypeDef HAL_I2CEx_GetConfigAutonomousMode(I2C_HandleTypeDef *hi2c, I2C_AutonomousModeConfTypeDef *sConfig);
+HAL_StatusTypeDef HAL_I2CEx_SetConfigAutonomousMode(I2C_HandleTypeDef *hi2c,
+                                                    const I2C_AutonomousModeConfTypeDef *sConfig);
+HAL_StatusTypeDef HAL_I2CEx_GetConfigAutonomousMode(const I2C_HandleTypeDef *hi2c,
+                                                    I2C_AutonomousModeConfTypeDef *sConfig);
 HAL_StatusTypeDef HAL_I2CEx_ClearConfigAutonomousMode(I2C_HandleTypeDef *hi2c);
 /**
   * @}
@@ -276,6 +278,9 @@ HAL_StatusTypeDef HAL_I2CEx_ClearConfigAutonomousMode(I2C_HandleTypeDef *hi2c);
                                               ((__SOURCE__) == I2C_GRP2_COMP2_TRG          ) || \
                                               ((__SOURCE__) == I2C_GRP2_RTC_ALRA_TRG       ) || \
                                               ((__SOURCE__) == I2C_GRP2_RTC_WUT_TRG        ))
+
+#define IS_I2C_TRIG_INPUT_INSTANCE(__INSTANCE__)    (IS_I2C_GRP1_INSTANCE(__INSTANCE__) || \
+                                                     IS_I2C_GRP2_INSTANCE(__INSTANCE__))
 
 #define IS_I2C_AUTO_MODE_TRG_POL(__POLARITY__)      (((__POLARITY__) == I2C_TRIG_POLARITY_RISING) || \
                                                      ((__POLARITY__) == I2C_TRIG_POLARITY_FALLING))

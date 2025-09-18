@@ -17,11 +17,12 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "bm_l2.h"
 #include "bootloader_helper.h"
 #include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
+#include "configuration.h"
 #include "debug.h"
 #include "debug_adin_raw.h"
 #include "debug_configuration.h"
@@ -42,6 +43,7 @@
 #include "lpm.h"
 #include "memfault_platform_core.h"
 #include "ms5803.h"
+#include "nvmPartition.h"
 #include "pca9535.h"
 #include "ram_partitions.h"
 #include "serial.h"
@@ -74,6 +76,7 @@ SerialHandle_t usart1 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -96,6 +99,7 @@ SerialHandle_t usbCLI = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -117,13 +121,16 @@ SerialHandle_t usbPcap = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
 };
 
-static const DebugI2C_t debugI2CInterfaces[] = {{1, &i2c1}};
+static const DebugI2C_t debugI2CInterfaces[] = {
+    {1, &i2c1},
+};
 
 static const DebugSPI_t debugSPIInterfaces[] = {
     {2, &spi2},
@@ -202,6 +209,10 @@ extern "C" int main(void) {
 
 extern SerialHandle_t usart3;
 
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
+
 static void defaultTask(void *parameters) {
 
   (void)parameters;
@@ -224,7 +235,6 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
-  startIWDGTask();
   startSerial();
 
   startCLI();
@@ -247,14 +257,11 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(debug_user_partition, ram_user_configuration,
-                                              RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(
-      debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
-                         &debug_configuration_system);
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
+  config_init();
+  debugConfigurationInit();
   usart3.txPin = &BM_MOSI_TX3;
   usart3.rxPin = &BM_SCK_RX3;
   startDebugUart();

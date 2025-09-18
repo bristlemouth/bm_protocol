@@ -41,13 +41,6 @@ void boot_port_init( void ) {
 
   // Enable null pointer dereference protection
   // memfault_enable_mpu();
-
-  LL_GPIO_SetOutputPin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
-  LL_GPIO_SetOutputPin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
-  LL_GPIO_SetOutputPin(LED_RED_GPIO_Port, LED_RED_Pin);
-
-  LL_GPIO_ResetOutputPin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
-  LL_GPIO_ResetOutputPin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 }
 
 static void start_app(uint32_t pc, uint32_t sp) {

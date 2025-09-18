@@ -5,13 +5,11 @@
 
 // TODO - Will we eventually need this - probably for ota updates etc..
 // #include "bm_dfu_message_structs.h"
-#include "bsp.h"
-#include "serial.h"
-#include "nvmPartition.h"
 #include "bridgePowerController.h"
+#include "bsp.h"
 #include "configuration.h"
-
-#define NCP_BUFF_LEN 2048
+#include "nvmPartition.h"
+#include "serial.h"
 
 // unused for now, but will be needed for bridge power sampling/interrupt driven uart comms
 typedef struct {
@@ -20,6 +18,7 @@ typedef struct {
   // TODO - Define other bridge configs?
 } NCPConfig_t;
 
-void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition, BridgePowerController *power_controller,
-  cfg::Configuration* usr_cfg, cfg::Configuration* sys_cfg, cfg::Configuration* hw_cfg);
+void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
+             BridgePowerController *power_controller);
+bool ncp_negotiate_baud_rate(uint32_t baud);
 // bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?

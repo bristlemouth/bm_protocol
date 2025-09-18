@@ -29,7 +29,7 @@
 #include "sd.h"
 #include "stm32_rtc.h"
 #include "stm32l4xx_hal.h"
-#include "util.h"
+#include "app_util.h"
 #include "version.h"
 
 // static sMfltCoredumpRegion s_coredump_regions[16];
@@ -42,7 +42,7 @@ static SemaphoreHandle_t s_memfault_packetizer_mutex;
 
 // Note: reboot tracking needs to be placed in a noinit region
 // because metadata across resets is tracked
-MEMFAULT_PUT_IN_SECTION(".noinit")
+MEMFAULT_PUT_IN_SECTION(".noinit.s_reboot_tracking")
 static uint8_t s_reboot_tracking[MEMFAULT_REBOOT_TRACKING_REGION_SIZE];
 
 void memfault_platform_log(eMemfaultPlatformLogLevel level, const char *fmt, ...) {
@@ -105,7 +105,7 @@ void memfault_platform_get_device_info(sMemfaultDeviceInfo *info) {
   *info = (sMemfaultDeviceInfo) {
     .device_serial = getUIDStr(),
     .software_type = APP_NAME,
-    .software_version = getFWVersionStr(),
+    .software_version = getFwVersionStrSemVer(),
     // TODO - read hwid pins
     .hardware_version = BSP_NAME,
   };

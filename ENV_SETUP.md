@@ -109,8 +109,10 @@ $ mkdir -p cmake-build/bridge
 $ cd cmake-build/bridge
 ```
 
-Then you run cmake and tell it where the toolchain file is located, which BSP(board support package) to use, as well as which application. Pay attention to the `../` relative paths in the args - depending on how your cmake build directories are set up, you might have to replace them with `../..`.
+Then you run cmake and tell it where the toolchain file is located, which BSP(board support package) to use, as well as which application.
 
+In order to build an application located inside of the `bm_protocol` repository,
+run the following command:
 
 ```
 # If you have individual top-level build directores for each app
@@ -120,6 +122,19 @@ $  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge
 $  cmake ../.. -DCMAKE_TOOLCHAIN_FILE=../../cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Debug
 ```
 
+Pay attention to the `../` relative paths in the args - depending on how your cmake build directories are set up, you might have to replace them with `../..`.
+You can optionally set the build type to release (it defaults to Debug) by appending `-DCMAKE_BUILD_TYPE=Release` to the command.
+
+### Configure CMake For External Projects
+
+In order to build an application located outside of the `bm_protocol` repository,
+run the following command:
+
+```
+cmake relative/path/to/bm_protocol -DCMAKE_TOOLCHAIN_FILE=relative/path/to/bm_protocol/cmake/arm-none-eabi-gcc.cmake -DCMAKE_APP_TYPE=BMDK -DBSP=bm_mote_v1.0 -DAPP=full/path/to/project -DCMAKE_BUILD_TYPE=Debug
+```
+
+Pay close attention to the paths in the associated arguments in the above cmake command.
 You can optionally set the build type to release (it defaults to Debug) by appending `-DCMAKE_BUILD_TYPE=Release` to the command.
 
 ### Building the Project
@@ -301,3 +316,22 @@ if you're developing in the Sofar organization:
 finally
 
 `memfault coredump`
+
+### Pulling memfault coredump from flash and uploading manually
+Connection to the device via USB is required for this.
+If a device has experienced a crash,
+after the device reboots,
+place the device into dfu bootloader via:
+
+- `bootloader` console command
+- holding the boot button while pressing and releasing the reset button
+
+Run the following `dfu-util` command:
+
+```
+dfu-util -a 0 -s 0x813E000: -U path/to/coredump.bin
+```
+
+Once `dfu-util` has written the coredump,
+navigate to the issues tab in memfault and select `Upload Manually` in the top left corner.
+From here the coredump can be uploaded in order to be inspected.

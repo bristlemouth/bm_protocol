@@ -1,23 +1,23 @@
-#include "user_code.h"
+#include "LineParser.h"
 #include "OrderedKVPLineParser.h"
-#include "aanderaa_data_msg.h"
+#include "aanderaa_current_meter_msg.h"
+#include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
-#include "bm_network.h"
-#include "bm_printf.h"
-#include "bm_pubsub.h"
 #include "bsp.h"
+#include "configuration.h"
 #include "debug.h"
 #include "device_info.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "sensorWatchdog.h"
 #include "sensors.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -112,9 +112,6 @@ static AveragingSampler current_data[NUM_PARAMS_TO_AGG];
 static char *stats_print_buffer; // Buffer to store debug print data for the stats aggregation.
 static RTCTimeAndDate_t statsEndRtc =
     {}; // Timestamp that tracks the end of aggregation periods.
-
-// app_main passes a handle to the user config partition in NVM.
-extern cfg::Configuration *systemConfigurationPartition;
 
 /*
  * Setup a LineParser to turn the ASCII serial data from the Aanderaa into numbers
@@ -227,21 +224,20 @@ static int createAanderaaDataTopic(void) {
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Retrieve user-set config values out of NVM.
-  configASSERT(systemConfigurationPartition);
-  systemConfigurationPartition->getConfig(
-      s_current_agg_period_min, strlen(s_current_agg_period_min), current_agg_period_min);
-  systemConfigurationPartition->getConfig(s_n_skip_readings, strlen(s_n_skip_readings),
-                                          n_skip_readings);
-  systemConfigurationPartition->getConfig(s_reading_interval_ms, strlen(s_reading_interval_ms),
-                                          reading_interval_ms);
-  systemConfigurationPartition->getConfig(s_payload_wd_to_s, strlen(s_payload_wd_to_s),
-                                          payload_wd_to_s);
-  systemConfigurationPartition->getConfig(s_pl_uart_baud_rate, strlen(s_pl_uart_baud_rate),
-                                          baud_rate);
-  systemConfigurationPartition->getConfig(s_mfg_tx_test_enable, strlen(s_mfg_tx_test_enable),
-                                          mfg_tx_test_enable);
-  systemConfigurationPartition->getConfig(s_sensor_bm_log_enable,
-                                          strlen(s_sensor_bm_log_enable), sensorBmLogEnable);
+  get_config_float(BM_CFG_PARTITION_SYSTEM, s_current_agg_period_min,
+                   strlen(s_current_agg_period_min), &current_agg_period_min);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_n_skip_readings, strlen(s_n_skip_readings),
+                  &n_skip_readings);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_reading_interval_ms, strlen(s_reading_interval_ms),
+                  &reading_interval_ms);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_payload_wd_to_s, strlen(s_payload_wd_to_s),
+                  &payload_wd_to_s);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_pl_uart_baud_rate, strlen(s_pl_uart_baud_rate),
+                  &baud_rate);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_mfg_tx_test_enable, strlen(s_mfg_tx_test_enable),
+                  &mfg_tx_test_enable);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, s_sensor_bm_log_enable,
+                  strlen(s_sensor_bm_log_enable), &sensorBmLogEnable);
 
   max_readings_in_agg =
       (((uint64_t)CURRENT_AGG_PERIOD_MS / reading_interval_ms) + N_SAMPLES_PAD);
@@ -281,13 +277,13 @@ void setup(void) {
   printf("App configs:\n");
   printf("\tcurrent_agg_period_min: %f\n", current_agg_period_min);
   printf("\tCURRENT_AGG_PERIOD_MS: %f\n", CURRENT_AGG_PERIOD_MS);
-  printf("\tn_skip_readings: %u\n", n_skip_readings);
-  printf("\treading_interval_ms: %u\n", reading_interval_ms);
+  printf("\tn_skip_readings: %lu\n", n_skip_readings);
+  printf("\treading_interval_ms: %lu\n", reading_interval_ms);
   printf("\tmax_readings_in_agg: %llu\n", max_readings_in_agg);
-  printf("\tpayload_wd_to_s: %u\n", payload_wd_to_s);
-  printf("\tbaud_rate: %u\n", baud_rate);
-  printf("\tmfg_tx_test_enable: %u\n", mfg_tx_test_enable);
-  printf("\tsensorBmLogEnable: %u\n", sensorBmLogEnable);
+  printf("\tpayload_wd_to_s: %lu\n", payload_wd_to_s);
+  printf("\tbaud_rate: %lu\n", baud_rate);
+  printf("\tmfg_tx_test_enable: %lu\n", mfg_tx_test_enable);
+  printf("\tsensorBmLogEnable: %lu\n", sensorBmLogEnable);
 
   SensorWatchdog::SensorWatchdogAdd(AANDERAA_WATCHDOG_ID, PAYLOAD_WATCHDOG_TIMEOUT_MS,
                                     aanderaaSensorWatchdogHandler,
@@ -336,7 +332,7 @@ void loop(void) {
     rtcPrint(rtcTimeBuffer, &statsEndRtc);
     uint32_t statsEndTick = uptimeGetMs();
     int buffer_offset =
-        sprintf(stats_print_buffer, "rtc_end: %s, tick_start: %u, tick_end: %u | ",
+        sprintf(stats_print_buffer, "rtc_end: %s, tick_start: %lu, tick_end: %lu | ",
                 rtcTimeBuffer, statsStartTick, statsEndTick);
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       buffer_offset +=
@@ -346,8 +342,8 @@ void loop(void) {
                   current_tx_data[i].max, current_tx_data[i].mean, current_tx_data[i].stdev);
     }
     printf("DEBUG - wrote %d chars to buffer.", buffer_offset);
-    bm_fprintf(0, "aanderaa_agg.log", USE_TIMESTAMP, "%s\n", stats_print_buffer);
-    bm_printf(0, "[aanderaa-agg] | %s", stats_print_buffer);
+    spotter_log(0, "aanderaa_agg.log", USE_TIMESTAMP, "%s\n", stats_print_buffer);
+    spotter_log_console(0, "[aanderaa-agg] | %s", stats_print_buffer);
     printf("[aanderaa-agg] | %s\n", stats_print_buffer);
     // Update variables tracking start time of agg period in ticks and RTC.
     statsStartTick = statsEndTick;
@@ -364,7 +360,7 @@ void loop(void) {
              N_STAT_ELEM_BYTES);
     }
     //    //
-    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BM_NETWORK_TYPE_CELLULAR_IRI_FALLBACK)) {
+    if (spotter_tx_data(tx_data, N_TX_DATA_BYTES, BmNetworkTypeCellularIriFallback)) {
       printf("%" PRIu64 "t - %s | Sucessfully sent %" PRIu16
              " bytes Spotter transmit data request\n",
              uptimeGetMs(), rtcTimeBuffer, N_TX_DATA_BYTES);
@@ -407,7 +403,7 @@ void loop(void) {
 #ifdef FAKE_AANDERAA
   (void)readings_skipped;
   spoof_aanderaa();
-#else // FAKE_AANDERAA
+#else  // FAKE_AANDERAA
 
   // Manufacturing TX test mode
   if (mfg_tx_test_enable) {
@@ -426,11 +422,12 @@ void loop(void) {
     char rtcTimeBuffer[32] = {};
     rtcPrint(rtcTimeBuffer, NULL);
     if (sensorBmLogEnable) {
-      bm_fprintf(0, AANDERAA_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
-                 rtcTimeBuffer, read_len, payload_buffer);
+      spotter_log(0, AANDERAA_RAW_LOG, USE_TIMESTAMP,
+                  "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
+                  read_len, payload_buffer);
     }
-    bm_printf(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
-              rtcTimeBuffer, read_len, payload_buffer);
+    spotter_log_console(0, "[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+                        rtcTimeBuffer, read_len, payload_buffer);
     printf("[aanderaa] | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(),
            rtcTimeBuffer, read_len, payload_buffer);
 
@@ -447,11 +444,11 @@ void loop(void) {
     }
 
     // Publish individual reading.
-    static AanderaaDataMsg::Data d;
+    static AanderaaCurrentMeterMsg::Data d;
     size_t bufsize =
         sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
     size_t encoded_len = 0;
-    d.header.version = AanderaaDataMsg::VERSION;
+    d.header.version = AanderaaCurrentMeterMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();
     d.abs_speed_cm_s = getDoubleOrNaN(parser.getValue(ABS_SPEED));
     d.abs_speed_cm_s = getDoubleOrNaN(parser.getValue(ABS_SPEED));
@@ -472,10 +469,10 @@ void loop(void) {
       d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
     }
 
-    if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
-                                &encoded_len) == CborNoError) {
+    if (AanderaaCurrentMeterMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
+                                        &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
-                encoded_len, 0);
+                encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode Aanderaa data message\n");
     }
@@ -483,7 +480,8 @@ void loop(void) {
     // Now let's aggregate those values into statistics
     if (current_data[0].getNumSamples() >= max_readings_in_agg &&
         max_readings_in_agg > N_SAMPLES_PAD) {
-      printf("ERR - No more room in current reading buffer, already have %d readings!\n",
+      printf("ERR - No more room in current reading buffer, already have %" PRIu64
+             " readings!\n",
              max_readings_in_agg);
       return;
     }
@@ -492,7 +490,7 @@ void loop(void) {
     for (uint8_t i = 0; i < NUM_PARAMS_TO_AGG; i++) {
       double param_reading = parser.getValue(i).data.double_val;
       current_data[i].addSample(param_reading);
-      printf("\t%s | value: %f, count: %u/%llu, min: %f, max: %f\n", keys[i], param_reading,
+      printf("\t%s | value: %f, count: %lu/%llu, min: %f, max: %f\n", keys[i], param_reading,
              current_data[i].getNumSamples(), max_readings_in_agg - N_SAMPLES_PAD,
              current_data[i].getMin(), current_data[i].getMax());
     }
@@ -508,7 +506,7 @@ static void spoof_aanderaa() {
     fake_stats_timer_start = uptimeGetMs();
     SensorWatchdog::SensorWatchdogPet(AANDERAA_WATCHDOG_ID);
     // Publish individual reading.
-    static AanderaaDataMsg::Data d;
+    static AanderaaCurrentMeterMsg::Data d;
     size_t bufsize =
         sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
     size_t encoded_len = 0;
@@ -517,7 +515,7 @@ static void spoof_aanderaa() {
       d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
       srand(d.header.reading_time_utc_ms & 0xFFFFFFFF);
     }
-    d.header.version = AanderaaDataMsg::VERSION;
+    d.header.version = AanderaaCurrentMeterMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();
     // Fill with random values in the range of 0-data from sensor log.
     d.abs_speed_cm_s = 50 + (rand() % 10);
@@ -533,10 +531,10 @@ static void spoof_aanderaa() {
     d.std_tilt_deg = 5 + (rand() % 30);
     d.temperature_deg_c = 20 + (rand() % 5);
 
-    if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
-                                &encoded_len) == CborNoError) {
+    if (AanderaaCurrentMeterMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
+                                        &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
-                encoded_len, 0);
+                encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
       printf("Failed to encode Aanderaa data message\n");
     }

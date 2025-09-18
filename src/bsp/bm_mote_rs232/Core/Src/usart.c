@@ -26,8 +26,7 @@
 
 /* LPUART1 init function */
 
-void MX_LPUART1_UART_Init(void)
-{
+void MX_LPUART1_UART_Init(void) {
 
   /* USER CODE BEGIN LPUART1_Init 0 */
 
@@ -41,9 +40,8 @@ void MX_LPUART1_UART_Init(void)
   /** Initializes the peripherals clock
   */
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_LPUART1;
-  PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_PCLK3;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
+  PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_HSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
     Error_Handler();
   }
 
@@ -55,7 +53,7 @@ void MX_LPUART1_UART_Init(void)
   PA2   ------> LPUART1_TX
   PA3   ------> LPUART1_RX
   */
-  GPIO_InitStruct.Pin = PAYLOAD_TX_Pin|PAYLOAD_RX_Pin;
+  GPIO_InitStruct.Pin = PAYLOAD_TX_Pin | PAYLOAD_RX_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -64,13 +62,13 @@ void MX_LPUART1_UART_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* LPUART1 interrupt Init */
-  NVIC_SetPriority(LPUART1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
+  NVIC_SetPriority(LPUART1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 6, 0));
   NVIC_EnableIRQ(LPUART1_IRQn);
 
   /* USER CODE BEGIN LPUART1_Init 1 */
 
   /* USER CODE END LPUART1_Init 1 */
-  LPUART_InitStruct.PrescalerValue = LL_LPUART_PRESCALER_DIV64;
+  LPUART_InitStruct.PrescalerValue = LL_LPUART_PRESCALER_DIV8;
   LPUART_InitStruct.BaudRate = 209700;
   LPUART_InitStruct.DataWidth = LL_LPUART_DATAWIDTH_8B;
   LPUART_InitStruct.StopBits = LL_LPUART_STOPBITS_1;
@@ -84,8 +82,13 @@ void MX_LPUART1_UART_Init(void)
   LL_LPUART_Enable(LPUART1);
   /* USER CODE BEGIN LPUART1_Init 2 */
 
-  /* USER CODE END LPUART1_Init 2 */
+  // Enable LPUART autonomous operation in STOP mode.
+  __HAL_RCC_LPUART1_CLKAM_ENABLE();
+  LL_LPUART_EnableInStopMode(LPUART1);
+  // Enable HSI clock in stop mode.
+  LL_RCC_HSI_EnableInStopMode();
 
+  /* USER CODE END LPUART1_Init 2 */
 }
 
 /* USER CODE BEGIN 1 */

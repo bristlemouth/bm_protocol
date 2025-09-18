@@ -4,6 +4,7 @@
 #include "avgSampler.h"
 #include "sensorController.h"
 
+#include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -31,14 +32,19 @@ typedef struct SoftSensor : public AbstractSensor {
 public:
   bool subscribe() override;
   void aggregate(void);
+  static constexpr soft_aggregations_t SOFT_NAN_AGG = {
+      .temp_mean_deg_c = NAN,
+      .reading_count = 0,
+  };
 
 private:
   static void softSubCallback(uint64_t node_id, const char *topic, uint16_t topic_len,
-                             const uint8_t *data, uint16_t data_len, uint8_t type,
-                             uint8_t version);
+                              const uint8_t *data, uint16_t data_len, uint8_t type,
+                              uint8_t version);
 
 private:
   static constexpr char subtag[] = "/sofar/bm_soft_temp";
 } Soft_t;
 
-Soft_t* createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms, uint32_t averager_max_samples);
+Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
+                      uint32_t averager_max_samples);

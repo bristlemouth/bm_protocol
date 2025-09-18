@@ -1,8 +1,8 @@
-#include "abstract_configuration.h"
+#include "configuration.h"
 
 class SMConfigCRCList {
 public:
-  SMConfigCRCList(cfg::AbstractConfiguration *cfg);
+  SMConfigCRCList(BmConfigPartition partition);
 
   static constexpr char KEY[] = "smConfigurationCrc";
   static constexpr size_t KEY_LEN = sizeof(KEY) - 1;
@@ -19,7 +19,7 @@ public:
   uint32_t *alloc_list(uint32_t &num_crcs);
 
 private:
-  cfg::AbstractConfiguration *_cfg;
+  BmConfigPartition _cfg;
   uint32_t _crc_list[MAX_LIST_SIZE];
   size_t _num_crcs;
 

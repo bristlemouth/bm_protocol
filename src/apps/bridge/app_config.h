@@ -17,6 +17,8 @@ constexpr const char *ALIGNMENT_INTERVAL_5MIN = "alignmentInterval5Min";
 constexpr const char *TRANSMIT_AGGREGATIONS = "transmitAggregations";
 constexpr const char *SAMPLES_PER_REPORT = "samplesPerReport";
 constexpr const char *CURRENT_READING_PERIOD_MS = "currentReadingPeriodMs";
+constexpr const char *PME_DISSOLVED_OXYGEN_PERIOD_S = "samplingIntervalS";
+constexpr const char *PME_WIPER_READING_PERIOD_MS = "wipeIntervalMin";
 constexpr const char *SOFT_READING_PERIOD_MS = "softReadingPeriodMs";
 constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
 constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
@@ -36,7 +38,7 @@ struct power_config_s {
       ticksSamplingEnabled;
 };
 
-power_config_s getPowerConfigs(cfg::Configuration &syscfg);
+power_config_s getPowerConfigs(void);
 
 #ifdef RAW_PRESSURE_ENABLE
 struct raw_pressure_config_s {
@@ -44,5 +46,5 @@ struct raw_pressure_config_s {
   float rawDepthThresholdUbar;
 };
 
-raw_pressure_config_s getRawPressureConfigs(cfg::Configuration &syscfg);
+raw_pressure_config_s getRawPressureConfigs(void);
 #endif // RAW_PRESSURE_ENABLE

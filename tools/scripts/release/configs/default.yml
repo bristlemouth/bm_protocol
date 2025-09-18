@@ -109,3 +109,21 @@
     bsp: bm_mote_rs232
     build_type: Release
   sign: true
+
+- name: pme_do_sensor_release
+  type: build_fw
+  args:
+    app: pme_do_sensor
+    bsp: bm_mote_bristleback_v1_0
+    build_type: Release
+  sign: false
+
+- name: borealis
+  type: ext_fw
+  repo: git@github.com:appliedoceansciences/borealis_mote_firmware.git
+  sha: 4c61e0c
+  args:
+    app: borealis
+    bsp: bm_mote_v1.0
+    build_type: Release
+  sign: false

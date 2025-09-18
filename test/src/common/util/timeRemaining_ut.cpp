@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "util.h"
+#include "app_util.h"
 
 // The fixture for testing class Foo.
 class UTILTimeRemainingTest : public ::testing::Test {

@@ -2,10 +2,8 @@
 #include "FreeRTOS.h"
 #include "cbor.h"
 
-SMConfigCRCList::SMConfigCRCList(cfg::AbstractConfiguration *cfg)
-    : _cfg(cfg), _crc_list{0}, _num_crcs(0) {
-  configASSERT(_cfg != nullptr);
-}
+SMConfigCRCList::SMConfigCRCList(BmConfigPartition partition)
+    : _cfg(partition), _crc_list{0}, _num_crcs(0) {}
 
 /*!
   \brief Check whether the list contains the given CRC.
@@ -108,7 +106,7 @@ void SMConfigCRCList::decode() {
   do {
     uint8_t cbor_buffer[MAX_BUFFER_SIZE];
     size_t cbor_buffer_size = MAX_BUFFER_SIZE;
-    if (!_cfg->getConfigCbor(KEY, KEY_LEN, cbor_buffer, cbor_buffer_size)) {
+    if (!get_config_cbor(_cfg, KEY, KEY_LEN, cbor_buffer, &cbor_buffer_size)) {
       should_clear = true;
       break;
     }
@@ -196,6 +194,6 @@ void SMConfigCRCList::encode() {
     }
 
     size_t buffer_size = cbor_encoder_get_buffer_size(&encoder, buffer);
-    _cfg->setConfigCbor(KEY, KEY_LEN, buffer, buffer_size);
+    set_config_cbor(_cfg, KEY, KEY_LEN, buffer, buffer_size);
   } while (0);
 }

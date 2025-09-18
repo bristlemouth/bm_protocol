@@ -10,6 +10,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "lpm.h"
+#include "watchdog.h"
 
 #define SUPPORT_VREG_RANGES_1_THROUGH_3
 
@@ -151,6 +152,10 @@ void lpmPreSleepProcessing() {
 }
 
 void lpmPostSleepProcessing() {
+  // reference xMaximumSuppressedTicks, the maximum amount of time we can sleep
+  // is 1998 ticks (or ms, ref configTICK_RATE_HZ). Feed the watchdog here
+  // before moving onto next tasks
+  watchdogFeed();
   if (SCB->SCR & SCB_SCR_SLEEPDEEP_Msk)
    {
       //      We may have been in deep sleep.  If we were, the RCC cleared several enable bits in the CR, and

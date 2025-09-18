@@ -24,21 +24,21 @@ bool NAU7802::begin() {
   bool rval = true;
   {
     rval &= reset(); // Reset all registers
-    printf("Post Reset rval: %u\n", rval);
+    printf("Post Reset rval: %d\n", rval);
     rval &= powerUp(); // Power on analog and digital sections of the scale
-    printf("Post Power Up rval: %u\n", rval);
+    printf("Post Power Up rval: %d\n", rval);
     rval &= setLDO(NAU7802_LDO_3V3); // Set LDO to 3.3V
-    printf("Post setLDO rval: %u\n", rval);
+    printf("Post setLDO rval: %d\n", rval);
     rval &= setGain(NAU7802_GAIN_128); // Set gain to 128
-    printf("post setGain rval: %u\n", rval);
+    printf("post setGain rval: %d\n", rval);
     rval &= setSampleRate(NAU7802_SPS_80); // Set samples per second to 10
-    printf("post setSampleRate rval: %u\n", rval);
+    printf("post setSampleRate rval: %d\n", rval);
     // Turn off CLK_CHP. From 9.1 power on sequencing.
     rval &= setRegister(NAU7802_ADC, 0x30);
-    printf("post setRegister rval: %u\n", rval);
+    printf("post setRegister rval: %d\n", rval);
     // Enable 330pF decoupling cap on chan 2. From 9.14 application circuit note.
     rval &= setBit(NAU7802_PGA_PWR_PGA_CAP_EN, NAU7802_PGA_PWR);
-    printf("post setBit rval: %u\n", rval);
+    printf("post setBit rval: %d\n", rval);
 
     // This call is disabled because it gives a really different result every time
     // (same every time on arduino). Risk of consequences but going ahead.
@@ -351,15 +351,18 @@ void NAU7802::setCalibrationFactor(float newCalFactor) {
 float NAU7802::getCalibrationFactor() { return (_calibrationFactor); }
 
 // Returns the y of y = mx + b using the current weight on scale, the cal factor, and the offset.
-float NAU7802::getWeight(bool allowNegativeWeights, uint8_t samplesToTake) {
+float NAU7802::getWeight(bool negativeScale, uint8_t samplesToTake) {
   int32_t onScale = getAverage(samplesToTake);
 
   // Prevent the current reading from being less than zero offset
   // This happens when the scale is zero'd, unloaded, and the load cell reports a value slightly less than zero value
   // causing the weight to be negative or jump to millions of pounds
-  if (allowNegativeWeights == false) {
+  if (negativeScale == false) {
     if (onScale < _zeroOffset)
       onScale = _zeroOffset; // Force reading to zero
+  } else {
+    if (onScale > _zeroOffset)
+      onScale = _zeroOffset;
   }
 
   float weight = (onScale - _zeroOffset) / _calibrationFactor;

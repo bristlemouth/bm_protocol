@@ -17,13 +17,11 @@
 
 #include "app_config.h"
 #include "app_pub_sub.h"
-#include "bcmp_neighbors.h"
-#include "bm_l2.h"
-#include "bm_pubsub.h"
+#include "app_util.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
-#include "bristlemouth.h"
+#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
 #include "config_cbor_map_service.h"
@@ -44,12 +42,15 @@
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "l2.h"
 #include "memfault_platform_core.h"
+#include "messages/neighbors.h"
 #include "ncp_uart.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
 #include "printf.h"
+#include "pubsub.h"
 #include "ram_partitions.h"
 #include "reportBuilder.h"
 #include "sensorController.h"
@@ -62,7 +63,6 @@
 #include "timer_callback_handler.h"
 #include "topology_sampler.h"
 #include "usb.h"
-#include "util.h"
 #include "w25.h"
 #include "watchdog.h"
 #ifdef RAW_PRESSURE_ENABLE
@@ -108,6 +108,7 @@ SerialHandle_t usart3 = {
     .getTxBytesFromISR = serialGenericGetTxBytesFromISR,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -129,6 +130,7 @@ SerialHandle_t usbCLI = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -149,6 +151,7 @@ SerialHandle_t usbPcap = {
     .getTxBytesFromISR = NULL,
     .processByte = NULL,
     .data = NULL,
+    .arg = NULL,
     .enabled = false,
     .flags = 0,
     .preTxCb = NULL,
@@ -157,14 +160,21 @@ SerialHandle_t usbPcap = {
 
 uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
-static IOPinHandle_t *usb_io = &LED_G;
+// TODO - make a getter API for these
+NvmPartition *userConfigurationPartition = NULL;
+NvmPartition *systemConfigurationPartition = NULL;
+NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
+static IOPinHandle_t *usb_io = NULL;
 
 static bool usb_is_connected() {
   uint8_t vusb = 0;
+  uint8_t vusb2 = 0;
 
-  IORead(usb_io, &vusb);
+  IORead(&VUSB_DETECT, &vusb);
+  IORead(&LED_G, &vusb2);
 
-  return (bool)vusb;
+  return (bool)(vusb | vusb2);
 }
 
 extern "C" int main(void) {
@@ -216,10 +226,12 @@ bool buttonPress(const void *pinHandle, uint8_t value, void *args) {
 
   if (value) {
     bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_ON,
-           sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE);
+           sizeof(APP_PUB_SUB_BUTTON_CMD_ON) - 1, APP_PUB_SUB_BUTTON_TYPE,
+           BM_COMMON_PUB_SUB_VERSION);
   } else {
     bm_pub(APP_PUB_SUB_BUTTON_TOPIC, APP_PUB_SUB_BUTTON_CMD_OFF,
-           sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE);
+           sizeof(APP_PUB_SUB_BUTTON_CMD_OFF) - 1, APP_PUB_SUB_BUTTON_TYPE,
+           BM_COMMON_PUB_SUB_VERSION);
   }
 
   return false;
@@ -309,7 +321,7 @@ static const DebugGpio_t debugGpioPins[] = {
     {"tp10", &TP10, GPIO_OUT},
 };
 
-static void neighborDiscoveredCb(bool discovered, bm_neighbor_t *neighbor) {
+static void neighborDiscoveredCb(bool discovered, BcmpNeighbor *neighbor) {
   configASSERT(neighbor);
   const char *action = (discovered) ? "added" : "lost";
   bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
@@ -331,7 +343,6 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
-  startIWDGTask();
   startSerial();
   startSerialConsole(&usbCLI);
   // Serial device will be enabled automatically when console connects
@@ -367,23 +378,20 @@ static void defaultTask(void *parameters) {
   NvmPartition debug_user_partition(debugW25, user_configuration);
   NvmPartition debug_hardware_partition(debugW25, hardware_configuration);
   NvmPartition debug_system_partition(debugW25, system_configuration);
-  cfg::Configuration debug_configuration_user(debug_user_partition, ram_user_configuration,
-                                              RAM_USER_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_hardware(
-      debug_hardware_partition, ram_hardware_configuration, RAM_HARDWARE_CONFIG_SIZE_BYTES);
-  cfg::Configuration debug_configuration_system(
-      debug_system_partition, ram_system_configuration, RAM_SYSTEM_CONFIG_SIZE_BYTES);
-  debugConfigurationInit(&debug_configuration_user, &debug_configuration_hardware,
-                         &debug_configuration_system);
-  debug_configuration_system.getConfig("sensorsPollIntervalMs", strlen("sensorsPollIntervalMs"),
-                                       sys_cfg_sensorsPollIntervalMs);
-  debug_configuration_system.getConfig("sensorsCheckIntervalS", strlen("sensorsCheckIntervalS"),
-                                       sys_cfg_sensorsCheckIntervalS);
+  userConfigurationPartition = &debug_user_partition;
+  systemConfigurationPartition = &debug_system_partition;
+  hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
+  dfu_partition_global = &dfu_partition;
+  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
+  debugDfuInit(&dfu_partition);
+  bcl_init();
+  bm_l2_netif_enable_disable_port(2, false);
+
   uint32_t hw_version = 0;
-  debug_configuration_hardware.getConfig(AppConfig::HARDWARE_VERSION,
-                                         strlen(AppConfig::HARDWARE_VERSION), hw_version);
+  get_config_uint(BM_CFG_PARTITION_HARDWARE, AppConfig::HARDWARE_VERSION,
+                  strlen(AppConfig::HARDWARE_VERSION), &hw_version);
 
   if (hw_version >= 7) {
     usb_io = &VUSB_DETECT;
@@ -392,9 +400,11 @@ static void defaultTask(void *parameters) {
   setHwVersion(hw_version);
 
   usbInit(usb_io, usb_is_connected);
-  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
-  debugDfuInit(&dfu_partition);
-  bcl_init(&dfu_partition, &debug_configuration_user, &debug_configuration_system);
+  debugConfigurationInit();
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
+                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
+                  strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
 
   sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
@@ -403,26 +413,30 @@ static void defaultTask(void *parameters) {
   sensorsInit();
 
   printf("Using bridge power controller.\n");
-  IOWrite(&BOOST_EN, 1);
-  power_config_s pwrcfg = getPowerConfigs(debug_configuration_system);
-  BridgePowerController bridge_power_controller(
-      VBUS_SW_EN, pwrcfg.sampleIntervalMs, pwrcfg.sampleDurationMs, pwrcfg.subsampleIntervalMs,
-      pwrcfg.subsampleDurationMs, static_cast<bool>(pwrcfg.subsampleEnabled),
-      static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
-      (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S),
-      static_cast<bool>(pwrcfg.ticksSamplingEnabled));
+  power_config_s pwrcfg = getPowerConfigs();
+  BridgePowerController::Config config = {
+      .BusLoadSwitchEnablePin = VBUS_SW_EN,
+      .BoostEnablePin = BOOST_EN,
+      .sampleIntervalMs = pwrcfg.sampleIntervalMs,
+      .sampleDurationMs = pwrcfg.sampleDurationMs,
+      .subsampleIntervalMs = pwrcfg.subsampleIntervalMs,
+      .subsampleDurationMs = pwrcfg.subsampleDurationMs,
+      .subsamplingEnabled = static_cast<bool>(pwrcfg.subsampleEnabled),
+      .powerControllerEnabled = static_cast<bool>(pwrcfg.bridgePowerControllerEnabled),
+      .alignmentS =
+          (pwrcfg.alignmentInterval5Min * BridgePowerController::ALIGNMENT_INCREMENT_S),
+      .ticksSamplingEnabled = static_cast<bool>(pwrcfg.ticksSamplingEnabled),
+  };
+  BridgePowerController bridge_power_controller(config);
 
-  ncpInit(&usart3, &dfu_partition, &bridge_power_controller, &debug_configuration_user,
-          &debug_configuration_system, &debug_configuration_hardware);
-  topology_sampler_init(&bridge_power_controller, &debug_configuration_hardware,
-                        &debug_configuration_system);
+  ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
+  topology_sampler_init(&bridge_power_controller);
   debug_ncp_init();
   debugBmServiceInit();
-  sys_info_service_init(debug_configuration_system);
-  reportBuilderInit(&debug_configuration_system);
-  sensorControllerInit(&bridge_power_controller, &debug_configuration_system);
-  config_cbor_map_service_init(debug_configuration_hardware, debug_configuration_system,
-                               debug_configuration_user);
+  sys_info_service_init();
+  reportBuilderInit();
+  sensorControllerInit(&bridge_power_controller);
+  config_cbor_map_service_init();
   IOWrite(&ALARM_OUT, 1);
   IOWrite(&LED_BLUE, LED_OFF);
 
@@ -437,9 +451,9 @@ static void defaultTask(void *parameters) {
 #endif
 
 #ifdef RAW_PRESSURE_ENABLE
-  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs(debug_configuration_system);
+  raw_pressure_config_s raw_pressure_cfg = getRawPressureConfigs();
   rbrPressureProcessorInit(raw_pressure_cfg.rawSampleS, raw_pressure_cfg.maxRawReports,
-                           raw_pressure_cfg.rawDepthThresholdUbar, &debug_configuration_user,
+                           raw_pressure_cfg.rawDepthThresholdUbar,
                            raw_pressure_cfg.rbrCodaReadingPeriodMs);
 #endif // RAW_PRESSURE_ENABLE
 

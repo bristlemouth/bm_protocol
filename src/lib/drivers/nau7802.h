@@ -159,7 +159,7 @@ public:
   float getCalibrationFactor();
 
   // Once you've set zero offset and cal factor, you can ask the library to do the calculations for you.
-  float getWeight(bool allowNegativeWeights = false, uint8_t samplesToTake = 8);
+  float getWeight(bool negativeScale = false, uint8_t samplesToTake = 8);
 
   // Set the gain. x1, 2, 4, 8, 16, 32, 64, 128 are available
   bool setGain(uint8_t gainValue);

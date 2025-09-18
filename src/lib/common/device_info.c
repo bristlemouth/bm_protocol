@@ -10,7 +10,7 @@ extern uint8_t __start_gnu_build_id_start[];
 const ElfNoteSection_t *g_note_build_id = (ElfNoteSection_t *)__start_gnu_build_id_start;
 const uint32_t *UID = (const uint32_t *)(UID_BASE); // 96-bit unique hardware id
 
-static char fwVersionStr[128];
+static char fwVersionStr[132];
 static char uidStr[25];
 static char nodeidStr[17];
 static uint8_t hwVersion = 0;
@@ -120,16 +120,27 @@ const char *getFWVersionStr(void) {
     if (fwIsEng(getVersionInfo())) {
       const uint8_t *buildId;
       getBuildId(&buildId);
-      snprintf(fwVersionStr, sizeof(fwVersionStr), "ENG-%s+%02x%02x%02x%02x",
+      snprintf(fwVersionStr, sizeof(fwVersionStr), "%s@ENG-%s+%02x%02x%02x%02x", APP_NAME,
                versionNote.info.versionStr, buildId[0], buildId[1], buildId[2], buildId[3]);
     } else {
-      snprintf(fwVersionStr, sizeof(fwVersionStr), "%s", versionNote.info.versionStr);
+      snprintf(fwVersionStr, sizeof(fwVersionStr), "%s@%s", APP_NAME,
+               versionNote.info.versionStr);
     }
     versionStrGenerated = true;
   }
 
   return fwVersionStr;
 }
+
+/*!
+ * @brief Get Firmware Version Following Semantic Version 2.0.0
+ *
+ * @details Get firmware version as string without the application name that follows
+ * semantic versioning 
+ *
+ * @returns pointer to firmare version string
+ */
+const char *getFwVersionStrSemVer(void) { return versionNote.info.versionStr; }
 
 /*!
   Get pointer to build-id in memory
