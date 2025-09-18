@@ -158,7 +158,7 @@ public:
    * @brief Get the size of the aggregation data structure.
    * @return Size of the aggregation data structure.
    */
-  static void size_t getAggregationSize() {
+  static size_t getAggregationSize() {
     return sizeof(aanderaa_conductivity_aggregations_t);
   };
 
