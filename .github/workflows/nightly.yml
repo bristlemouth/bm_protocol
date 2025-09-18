@@ -56,7 +56,7 @@ jobs:
       # Obtain nightly tag name
       - name: Get Nightly Tag Name
         if: steps.check_commits.outputs.should_run == 'true'
-        run: echo "RELEASE_VERSION=$(git tag --sort=-v:refname | head -n 1)-nightly_$(date +'%Y_%m_%d')" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)-nightly_$(date +'%Y_%m_%d')" >> $GITHUB_ENV
 
       # Run auto_build.py to generate release packages (zipped)
       - name: Build and Package
