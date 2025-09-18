@@ -160,7 +160,7 @@ public:
    */
   static void size_t getAggregationSize() {
     return sizeof(aanderaa_conductivity_aggregations_t);
-  }
+  };
 
 
   /**
