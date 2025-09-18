@@ -53,6 +53,7 @@ target_sources(report_builder_tests
     PRIVATE
     ${TEST_DIR}/stubs/mock_bridgeLog.cpp
     ${SRC_DIR}/apps/bridge/reportBuilderList.cpp
+    ${TEST_DIR}/stubs/aanderaaConductivitySensor_minimal_stub.cpp
     report_builder_ut.cpp)
 
 target_link_libraries(report_builder_tests gmock gtest_main)
@@ -81,8 +82,9 @@ target_include_directories(conductivity_integration_tests
 
 target_sources(conductivity_integration_tests
     PRIVATE
-    ${TEST_DIR}/stubs/mock_bridgeLog.cpp
+    ${TEST_DIR}/stubs/simple_bridgeLog_stub.cpp
     ${SRC_DIR}/apps/bridge/reportBuilderList.cpp
+    ${TEST_DIR}/stubs/aanderaaConductivitySensor_minimal_stub.cpp
     ${SRC_DIR}/lib/bm_core/bm_common_messages/aanderaa_conductivity_msg.cpp
     ${SRC_DIR}/lib/bm_core/bm_common_messages/sensor_header_msg.cpp
     ${SRC_DIR}/lib/bm_core/bm_common_messages/sensor_header_msg.c

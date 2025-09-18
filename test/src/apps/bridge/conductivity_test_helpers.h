@@ -1,7 +1,9 @@
 #pragma once
 
 #include "aanderaa_conductivity_msg.h"
+#include "aanderaaConductivitySensor.h"
 #include "gtest/gtest.h"
+#include <stdint.h>
 
 /**
  * @file conductivity_test_helpers.h
