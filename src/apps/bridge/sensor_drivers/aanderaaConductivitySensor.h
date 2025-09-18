@@ -153,6 +153,16 @@ public:
   static void setupSensorPointers(report_builder_element_t *element,
                                       const void **nan_sample,
                                       void **dst);
+
+  /**
+   * @brief Get the size of the aggregation data structure.
+   * @return Size of the aggregation data structure.
+   */
+  static void size_t getAggregationSize() {
+    return sizeof(aanderaa_conductivity_aggregations_t);
+  }
+
+
   /**
    * @brief Default aggregation structure with NaN values
    * Used when no valid data is available for aggregation
@@ -176,7 +186,7 @@ private:
                                               uint16_t data_len, uint8_t type, uint8_t version);
 
 private:
-  /// @Topic subtag for conductivity sensor data
+  /// Subtag for conductivity sensor data
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
 } AanderaaConductivity_t;
 

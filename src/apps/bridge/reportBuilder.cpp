@@ -1,27 +1,28 @@
 #include "reportBuilder.h"
 #include "FreeRTOS.h"
-#include "aanderaaSensor.h"
-#include "aanderaaConductivitySensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bm_serial.h"
-#include "borealisSensor.h"
 #include "bridgeLog.h"
 #include "cbor_sensor_report_encoder.h"
 #include "device_info.h"
-#include "pmeDissolvedOxygenSensor.h"
 #include "queue.h"
-#include "rbrCodaSensor.h"
-#include "reportBuilder.h"
 #include "reportBuilderList.h"
-#include "seapointTurbiditySensor.h"
 #include "semphr.h"
-#include "softSensor.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
 #include "timers.h"
 #include "topology_sampler.h"
+#include "aanderaaSensor.h"
+// Sensor drivers
+#include "sensor_drivers/aanderaaConductivitySensor.h"
+#include "sensor_drivers/borealisSensor.h"
+#include "sensor_drivers/pmeDissolvedOxygenSensor.h"
+#include "sensor_drivers/rbrCodaSensor.h"
+#include "sensor_drivers/seapointTurbiditySensor.h"
+#include "sensor_drivers/softSensor.h"
+
 #include <inttypes.h>
 #include <string.h>
 
@@ -137,6 +138,7 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
 }
 
+// Initialize a new sample entry in the CBOR report
 bool report_builder_open_sample(report_params_t &params) {
   if (sensor_report_encoder_open_sample(params.context, params.numSampleMembers,
                                         params.sampleType) != CborNoError) {
@@ -146,6 +148,7 @@ bool report_builder_open_sample(report_params_t &params) {
   return true;
 }
 
+// Finalize the current sample entry in the CBOR report
 bool report_builder_close_sample(report_params_t &params) {
   if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
@@ -154,6 +157,7 @@ bool report_builder_close_sample(report_params_t &params) {
   return true;
 }
 
+// Encode a single data field from the sensor reading into the CBOR report
 bool report_builder_add_sample_member(report_params_t &params, sample_member_params_t &s) {
   if (sensor_report_encoder_add_sample_member(params.context, s.sampleMemberEncoderCb,
                                               s.sampleMember) != CborNoError) {
@@ -582,7 +586,7 @@ static void report_builder_task(void *parameters) {
                         break;
                       }
                       case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-                        size = sizeof(aanderaa_conductivity_aggregations_t);
+                        size = AanderaaConductivitySensor::getAggregationSize();
                         break;
                       }
                       case SENSOR_TYPE_PME_DO: {
