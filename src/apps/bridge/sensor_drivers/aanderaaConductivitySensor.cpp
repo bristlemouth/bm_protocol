@@ -275,17 +275,17 @@ std::vector<sample_member_params_t> AanderaaConductivitySensor::getSampleMemberP
   aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
       (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
   std::vector<sample_member_params_t> sampleMemberParams = {
-    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm, 
+    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm,
         .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c, 
+    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c,
         .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu, 
+    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu,
         .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3, 
+    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3,
         .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s, 
+    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s,
         .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m, 
+    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m,
         .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
   };
   return sampleMemberParams;
@@ -306,7 +306,7 @@ report_params_t AanderaaConductivitySensor::getReportParams(sensor_report_encode
   return params;
 }
 
-void AanderaaConductivitySensor::setupConductivitySensorPointers(report_builder_element_t *element,
+void AanderaaConductivitySensor::setupSensorPointers(report_builder_element_t *element,
                                                               const void **nan_sample,
                                                               void **dst) {
   *nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;

@@ -22,10 +22,9 @@ typedef struct {
  * @brief Parameters for encoding individual sample members (fields) within sensor data
  *
  * Used to pass sample member data and encoding information to the CBOR functions.
- * Each sensor reading typically contains multiple fields (e.g., temperature, conductivity)
+ * Each sensor reading typically contains multiple sample members (e.g., temperature, conductivity)
  * that need to be encoded with their appropriate encoder callbacks.
  *
- * TODO: Move to sensor-specific classes when sensor registry API is implemented.
  */
 typedef struct {
     /// Pointer to the data value to be encoded

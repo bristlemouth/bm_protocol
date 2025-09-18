@@ -117,8 +117,6 @@ if(APP_NAME MATCHES "bringup")
     )
 endif()
 
-
-
 if(APP_NAME MATCHES "bringup_mote")
     list(APPEND LIB_FILES
         ${LIB_DIR}/bristlefin/bristlefin.cpp

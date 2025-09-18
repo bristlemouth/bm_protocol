@@ -156,7 +156,7 @@ bool report_builder_close_sample(report_params_t &params) {
 
 bool report_builder_add_sample_member(report_params_t &params, sample_member_params_t &s) {
   if (sensor_report_encoder_add_sample_member(params.context, s.sampleMemberEncoderCb,
-                                              s.sampleMember, s.size) != CborNoError) {
+                                              s.sampleMember) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
     return false;
   }

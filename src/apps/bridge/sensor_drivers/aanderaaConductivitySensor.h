@@ -40,13 +40,20 @@
  * in the bridge's report system.
  */
 typedef struct aanderaa_conductivity_aggregations_s {
-  double conductivity_mean_ms_cm = NAN;      ///< Mean conductivity in mS/cm
-  double temperature_mean_deg_c = NAN;       ///< Mean temperature in degrees Celsius
-  double salinity_mean_psu = NAN;            ///< Mean salinity in Practical Salinity Units
-  double water_density_mean_kg_m3 = NAN;     ///< Mean water density in kg/m³
-  double sound_speed_mean_m_s = NAN;         ///< Mean sound speed in m/s
-  double depth_mean_m = NAN;                 ///< Mean depth in meters
-  uint32_t reading_count = 0;              ///< Number of readings used in aggregation
+  /// Mean conductivity in mS/cm
+  double conductivity_mean_ms_cm = NAN;
+  /// Mean temperature in degrees Celsius
+  double temperature_mean_deg_c = NAN;
+  /// Mean salinity in Practical Salinity Units
+  double salinity_mean_psu = NAN;
+  /// Mean water density in kg/m³
+  double water_density_mean_kg_m3 = NAN;
+  /// Mean sound speed in m/s
+  double sound_speed_mean_m_s = NAN;
+  /// Mean depth in meters
+  double depth_mean_m = NAN;
+  /// Number of readings used in aggregation
+  uint32_t reading_count = 0;
 } aanderaa_conductivity_aggregations_t;
 
 /**
@@ -62,19 +69,29 @@ typedef struct aanderaa_conductivity_aggregations_s {
  * - Configurable aggregation periods
  */
 typedef struct AanderaaConductivitySensor : public AbstractSensor {
-  uint32_t current_agg_period_ms;      ///< Current aggregation period in milliseconds
+  /// Aggregation period in milliseconds
+  uint32_t current_agg_period_ms;
 
   // Statistical samplers for each sensor parameter
-  AveragingSampler conductivity_ms_cm;     ///< Conductivity sampler (mS/cm)
-  AveragingSampler temperature_deg_c;      ///< Temperature sampler (°C)
-  AveragingSampler salinity_psu;           ///< Salinity sampler (PSU)
-  AveragingSampler water_density_kg_m3;    ///< Water density sampler (kg/m³)
-  AveragingSampler sound_speed_m_s;        ///< Sound speed sampler (m/s)
-  AveragingSampler depth_m;                ///< Depth sampler (m)
+  /// Conductivity sampler (mS/cm)
+  AveragingSampler conductivity_ms_cm;
+  /// Temperature sampler (°C)
+  AveragingSampler temperature_deg_c;
+  /// Salinity sampler (PSU)
+  AveragingSampler salinity_psu;
+  /// Water density sampler (kg/m³)
+  AveragingSampler water_density_kg_m3;
+  /// Sound speed sampler (m/s)
+  AveragingSampler sound_speed_m_s;
+  /// Depth sampler (m)
+  AveragingSampler depth_m;
 
-  uint32_t reading_count;              ///< Total number of readings received
-  int8_t node_position;                ///< Position of this node in sensor array
-  uint32_t last_timestamp;             ///< Timestamp of last received reading
+  /// Total number of readings received
+  uint32_t reading_count;
+  /// Position of this node in sensor array
+  int8_t node_position;
+  /// Timestamp of last received reading
+  uint32_t last_timestamp;
 
   /**
    * @brief Sample buffer padding for timing variations
@@ -93,7 +110,8 @@ typedef struct AanderaaConductivitySensor : public AbstractSensor {
    */
   AanderaaConductivitySensor()
       : conductivity_ms_cm(), temperature_deg_c(), salinity_psu(), water_density_kg_m3(),
-        sound_speed_m_s(), depth_m(), reading_count(0), node_position(-1), last_timestamp(0) {}
+        sound_speed_m_s(), depth_m(), reading_count(0),
+        node_position(-1), last_timestamp(0) {}
 
 public:
   /**
@@ -109,14 +127,22 @@ public:
 
   /**
    * @brief Get sample member parameters for encoding sensor data
+   * @param sensor_data Pointer to sensor data
+   * @param sample_index Index of sample to encode
+   * @return Vector of sample member parameters
+   * TODO: remove vector
    */
   static std::vector<sample_member_params_t> getSampleMemberParams(void *sensor_data, uint32_t sample_index );
 
   /**
    * @brief Get report parameters for encoding sensor data
+   * @param context Encoder context
+   * @param sensor_data Pointer to sensor data
+   * @param sample_index Index of sample to encode
+   * @return Report parameters
    */
   static report_params_t getReportParams(sensor_report_encoder_context_t &context,
-                                                  void *sensor_data, uint32_t sample_index);
+                                            void *sensor_data, uint32_t sample_index);
 
   /**
  * @brief Helper function to set up conductivity sensor data pointers.
@@ -124,9 +150,9 @@ public:
  * @param nan_sample Pointer to store the NAN sample reference.
  * @param dst Pointer to store the destination data reference.
  */
-  static void setupConductivitySensorPointers(report_builder_element_t *element,
-                                                              const void **nan_sample,
-                                                              void **dst);
+  static void setupSensorPointers(report_builder_element_t *element,
+                                      const void **nan_sample,
+                                      void **dst);
   /**
    * @brief Default aggregation structure with NaN values
    * Used when no valid data is available for aggregation
@@ -150,7 +176,7 @@ private:
                                               uint16_t data_len, uint8_t type, uint8_t version);
 
 private:
-  /** @brief Topic subtag for conductivity sensor data */
+  /// @Topic subtag for conductivity sensor data
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
 } AanderaaConductivity_t;
 
