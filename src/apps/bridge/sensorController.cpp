@@ -1,6 +1,6 @@
 #include "sensorController.h"
-#include "aanderaaSensor.h"
 #include "aanderaaConductivitySensor.h"
+#include "aanderaaSensor.h"
 #include "abstractSensor.h"
 #include "app_config.h"
 #include "app_util.h"
@@ -23,7 +23,7 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
-#define DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
+#define DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS 30000 // default is 30 seconds
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -368,7 +368,9 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 
       // TODO(bjh): Observation: it would be more efficient to do a hash table lookup of app_name
       //    and then map to the sensor_subscription_config_t.
-      if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
+      if (createAndConfigureSensorSubscription(aanderaa_conductivity_config, reply, sample_duration_ms)) {
+        // Aanderaa conductivity handled by helper function
+      } else if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
           0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
           uint32_t AVERAGER_MAX_SAMPLES =
@@ -414,8 +416,6 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
           }
         }
-      } else if (createAndConfigureSensorSubscription(aanderaa_conductivity_config, reply, sample_duration_ms)) {
-        // Aanderaa conductivity handled by helper function
       } else if (strncmp(reply.app_name, "pme_do_sensor",
                          MIN(reply.app_name_strlen, strlen("pme_do_sensor"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
