@@ -7,7 +7,6 @@
 #include "pmeDissolvedOxygenSensor.h"
 #include "rbrCodaSensor.h"
 #include "seapointTurbiditySensor.h"
-#include "sensor_drivers/aanderaaConductivitySensor.h"
 #include "softSensor.h"
 #include <cmath>
 

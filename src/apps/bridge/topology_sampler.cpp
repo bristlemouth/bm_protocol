@@ -817,7 +817,10 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
   (void)app_name_len;
   for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
     if (_node_list.nodes[i] == node_id) {
-      if (strncmp(app_name, "aanderaa", strlen("aanderaa")) == 0) {
+      if (strncmp(app_name, "aanderaa_conductivity", strlen("aanderaa_conductivity")) == 0) {
+        _node_list.sensor_type[i] = SENSOR_TYPE_AANDERAA_CONDUCTIVITY;
+        break;
+      } else if (strncmp(app_name, "aanderaa", strlen("aanderaa")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_AANDERAA;
         break;
       } else if (strncmp(app_name, "bm_soft_module", strlen("bm_soft_module")) == 0) {
@@ -828,9 +831,6 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
         break;
       } else if (strncmp(app_name, "seapoint_turbidity", strlen("seapoint_turbidity")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_SEAPOINT_TURBIDITY;
-        break;
-      } else if (strncmp(app_name, "aanderaa_conductivity", strlen("aanderaa_conductivity")) == 0) {
-        _node_list.sensor_type[i] = SENSOR_TYPE_AANDERAA_CONDUCTIVITY;
         break;
       } else if (strncmp(app_name, "pme_do_sensor", strlen("pme_do_sensor")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_PME_DO;
