@@ -111,7 +111,7 @@ static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
             NULL,
             NULL,
             0,
-        },
+        }
 };
 
 static void assign_info_node_ids(void) {
