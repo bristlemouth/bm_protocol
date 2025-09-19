@@ -253,7 +253,7 @@ RxLiveStatusCode RxLiveSensor::run(const uint8_t *rx_data, const size_t rx_len) 
           printf("\t\tCode Char: %c\n", parsed_tag_id.code_char);
           printf("\t\tCode Freq: %u\n", parsed_tag_id.code_freq);
           printf("\t\tCode Channel: %u\n", parsed_tag_id.code_channel);
-          printf("\t\tTag Serial no: %u\n", parsed_tag_id.tag_serial_no);
+          printf("\t\tTag Serial no: %lu\n", parsed_tag_id.tag_serial_no);
           _latest_detection = parsed_tag_id;
           return RX_CODE_DETECTION;
         } else {
