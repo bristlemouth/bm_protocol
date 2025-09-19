@@ -111,6 +111,7 @@ private:
   int64_t _state_timeout_timer;
   int64_t _state_action_timer;
   OrderedSeparatorLineParser _std_parser;
+  OrderedSeparatorLineParser _std_no_adc_parser;
   OrderedSeparatorLineParser _sts_parser;
   TagID _latest_detection;
 
@@ -124,6 +125,21 @@ private:
     TYPE_STRING,   // code space
     TYPE_UINT64,    // *** Tag ID ***
     TYPE_UINT64,    // ADC value
+    TYPE_INVALID,   // Signal Level dB
+    TYPE_INVALID,   // Noise Level dB
+    TYPE_INVALID,   // Channel
+    TYPE_INVALID    // Checksum
+  };
+
+  // Value types for a Sensor Tag (with no ADC) Detection line
+  // Example: 457042,025,2024-09-24 13:49:44.705,A69-9001,65134,S=82.0,N=22.0,C=0,#88\r\n
+  // Set string values we don't care about to TYPE_INVALID to save memory.
+  static constexpr ValueType STD_NO_ADC_PARSER_VALUE_TYPES[] = {
+    TYPE_UINT64,    // serial number
+    TYPE_UINT64,    // sequence number
+    TYPE_INVALID,   // datetime string
+    TYPE_STRING,   // code space
+    TYPE_UINT64,    // *** Tag ID ***
     TYPE_INVALID,   // Signal Level dB
     TYPE_INVALID,   // Noise Level dB
     TYPE_INVALID,   // Channel

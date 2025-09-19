@@ -1,6 +1,6 @@
 #include "user_code.h"
 #include "OrderedKVPLineParser.h"
-#include "aanderaa_data_msg.h"
+#include "aanderaa_current_meter_msg.h"
 #include "app_util.h"
 #include "array_utils.h"
 #include "avgSampler.h"
@@ -407,11 +407,11 @@ void loop(void) {
     }
 
     // Publish individual reading.
-    static AanderaaDataMsg::Data d;
+    static AanderaaCurrentMeterMsg::Data d;
     size_t bufsize =
         sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
     size_t encoded_len = 0;
-    d.header.version = AanderaaDataMsg::VERSION;
+    d.header.version = AanderaaCurrentMeterMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();
     d.abs_speed_cm_s = getDoubleOrNaN(parser.getValue(ABS_SPEED));
     d.abs_speed_cm_s = getDoubleOrNaN(parser.getValue(ABS_SPEED));
@@ -432,8 +432,8 @@ void loop(void) {
       d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
     }
 
-    if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
-                                &encoded_len) == CborNoError) {
+    if (AanderaaCurrentMeterMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
+                                        &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
                 encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
@@ -469,7 +469,7 @@ static void spoof_aanderaa() {
     fake_stats_timer_start = uptimeGetMs();
     SensorWatchdog::SensorWatchdogPet(AANDERAA_WATCHDOG_ID);
     // Publish individual reading.
-    static AanderaaDataMsg::Data d;
+    static AanderaaCurrentMeterMsg::Data d;
     size_t bufsize =
         sizeof(payload_buffer); // Re-use the payload buffer since we don't need it anymore.
     size_t encoded_len = 0;
@@ -478,7 +478,7 @@ static void spoof_aanderaa() {
       d.header.reading_time_utc_ms = (rtcGetMicroSeconds(&datetime) / 1e3);
       srand(d.header.reading_time_utc_ms & 0xFFFFFFFF);
     }
-    d.header.version = AanderaaDataMsg::VERSION;
+    d.header.version = AanderaaCurrentMeterMsg::VERSION;
     d.header.reading_uptime_millis = uptimeGetMs();
     // Fill with random values in the range of 0-data from sensor log.
     d.abs_speed_cm_s = 50 + (rand() % 10);
@@ -494,8 +494,8 @@ static void spoof_aanderaa() {
     d.std_tilt_deg = 5 + (rand() % 30);
     d.temperature_deg_c = 20 + (rand() % 5);
 
-    if (AanderaaDataMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
-                                &encoded_len) == CborNoError) {
+    if (AanderaaCurrentMeterMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
+                                        &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
                 encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
