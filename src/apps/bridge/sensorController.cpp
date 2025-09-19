@@ -1,6 +1,6 @@
 #include "sensorController.h"
-#include "aanderaaConductivitySensor.h"
 #include "aanderaaSensor.h"
+#include "aanderaaConductivitySensor.h"
 #include "abstractSensor.h"
 #include "app_config.h"
 #include "app_util.h"
@@ -23,7 +23,7 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
-#define DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS 30000 // default is 30 seconds
+#define DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -43,6 +43,20 @@ typedef struct sensorControllerCtx {
   uint32_t pme_wiper_reading_period_ms;
 } sensorsControllerCtx_t;
 
+/**
+ * @brief Definition of a sensor's configuration.
+ */
+typedef struct {
+  /// Pointer to the context field in _ctx that holds the sensor's reading period
+  uint32_t* ctx_field;
+  /// Default value to use if the configuration is not found
+  uint32_t default_value;
+  /// Key to use to store the configuration
+  const char* config_key;
+  /// Name of the sensor to use in log messages
+  const char* sensor_name;
+} sensor_config_def_t;
+
 static sensorsControllerCtx_t _ctx;
 
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
@@ -52,7 +66,23 @@ static void runController(void *param);
 static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                const char *service, size_t reply_len, uint8_t *reply_data);
 static void abstractSensorAddSensorSub(AbstractSensor *sensor);
-static bool initializeConductivitySensorConfig(bool &save);
+
+/**
+ * @brief Load a sensor's configuration from the config store.
+ * @param config_def The definition of the sensor's configuration.
+ * @return true if the configuration was not found and was set to the default value, false otherwise.
+ */
+static bool loadSensorConfig(sensor_config_def_t &config_def) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key, strlen(config_def.config_key), config_def.ctx_field)) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Failed to get %s reading period from config, using default "
+                   "value and writing to config: %" PRIu32 "ms\n",
+                   config_def.sensor_name, *config_def.ctx_field);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key, strlen(config_def.config_key), *config_def.ctx_field);
+    return true; // indicates save is needed
+  }
+  return false;
+}
 /*!
  * @brief Initialize the sensor controller.
  * This controller is responsible for identifying & detecting sensor nodes and subscribing to them.
@@ -121,7 +151,16 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     save = true;
   }
 
-  initializeConductivitySensorConfig(save);
+  // If we like this pattern:
+  // option 1: extend to other sensors, place structs in an array, iterate over array
+  // option 2: delegate definition to sensor classes, like we did for AanderaaConductivitySensor::getReportParams
+  sensor_config_def_t conductivity_config = {
+    &_ctx.aanderaa_conductivity_reading_period_ms,
+    DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+    AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+    "aanderaa_conductivity"
+  };
+  loadSensorConfig(conductivity_config);
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
@@ -268,20 +307,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_ENABLED,
                       strlen(AppConfig::SUBSAMPLE_ENABLED), &subsample_enabled);
 
-      if (strncmp(reply.app_name, "aanderaa_conductivity",
-                  MIN(reply.app_name_strlen, strlen("aanderaa_conductivity"))) == 0) {
-        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA_CONDUCTIVITY)) {
-          uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.aanderaa_conductivity_reading_period_ms) +
-              AanderaaConductivity_t::N_SAMPLES_PAD;
-          AanderaaConductivity_t *aanderaa_conductivity_sub = createAanderaaConductivitySub(
-              reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
-          if (aanderaa_conductivity_sub) {
-            abstractSensorAddSensorSub(aanderaa_conductivity_sub);
-          }
-        }
-      } else if (strncmp(reply.app_name, "aanderaa",
-                         MIN(reply.app_name_strlen, strlen("aanderaa"))) == 0) {
+      if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
+          0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
@@ -326,6 +353,18 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
           }
         }
+      } else if (strncmp(reply.app_name, "aanderaa_conductivity",
+                         MIN(reply.app_name_strlen, strlen("aanderaa_conductivity"))) == 0) {
+        if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA_CONDUCTIVITY)) {
+          uint32_t AVERAGER_MAX_SAMPLES =
+              (sample_duration_ms / _ctx.aanderaa_conductivity_reading_period_ms) +
+              AanderaaConductivity_t::N_SAMPLES_PAD;
+          AanderaaConductivity_t *aanderaa_conductivity_sub = createAanderaaConductivitySub(
+              reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          if (aanderaa_conductivity_sub) {
+            abstractSensorAddSensorSub(aanderaa_conductivity_sub);
+          }
+        }
       } else if (strncmp(reply.app_name, "pme_do_sensor",
                          MIN(reply.app_name_strlen, strlen("pme_do_sensor"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_PME_DO)) {
@@ -361,24 +400,4 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
     vPortFree(reply.app_name);
   }
   return rval;
-}
-
-static bool initializeConductivitySensorConfig(bool &save) {
-  _ctx.aanderaa_conductivity_reading_period_ms =
-      DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM,
-                       AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-                       strlen(AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS),
-                       &_ctx.aanderaa_conductivity_reading_period_ms)) {
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Failed to get aanderaa_conductivity reading period from config, using "
-                   "default value and writing to config: %" PRIu32 "ms\n",
-                   _ctx.aanderaa_conductivity_reading_period_ms);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-                    strlen(AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS),
-                    _ctx.aanderaa_conductivity_reading_period_ms);
-    save = true;
-    return true;
-  }
-  return false;
 }
