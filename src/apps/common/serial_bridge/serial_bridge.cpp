@@ -140,9 +140,7 @@ void serial_bridge_init(void) {
 
  @param args Unused
  */
-void serial_bridge_handle(void *args) {
-  (void)args;
-
+void serial_bridge_handle(void) {
   while (PLUART::byteAvailable()) {
     const uint8_t b = PLUART::readByte();
     ctx.rx.buffer[ctx.rx.idx++] = b;
