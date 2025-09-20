@@ -22,8 +22,6 @@
 #include "topology_sampler.h"
 #include <new>
 
-/** @brief Default sensor reading period in milliseconds */
-#define DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS 1000 // 1 second
 
 bool AanderaaConductivitySensor::subscribe() {
   bool rval = false;

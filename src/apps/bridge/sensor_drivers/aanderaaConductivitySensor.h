@@ -170,6 +170,14 @@ public:
    */
   static constexpr aanderaa_conductivity_aggregations_t aanderaa_conductivity_NAN_AGG = {};
 
+  /**
+   * @brief Get the default reading period for the sensor in milliseconds.
+   * @return Default reading period in milliseconds.
+   */
+  static uint32_t getDefaultReadingPeriodMs() {
+    return DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
+  }
+
 private:
   /**
    * @brief Static callback for handling incoming conductivity sensor data
@@ -188,6 +196,10 @@ private:
 private:
   /// Subtag for conductivity sensor data
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
+
+  /** @brief Default sensor reading period in milliseconds */
+  static constexpr uint32_t DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS = 30000; // default is 30 seconds
+
 } AanderaaConductivity_t;
 
 /**
