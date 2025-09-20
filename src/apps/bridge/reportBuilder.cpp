@@ -138,6 +138,13 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
 }
 
+// =============================================================================================================================
+// ----------------------------------  report_builder helper functions  --------------------------------------------------------
+// =============================================================================================================================
+// Helper functions to build sensor reports. Consider moving to a separate file.
+// Used in conjunction with report_params_t and report_params_t, to make addSamplesToReport() data driven and remove the huge
+// if/else statements.
+
 // Initialize a new sample entry in the CBOR report
 bool report_builder_open_sample(report_params_t &params) {
   if (sensor_report_encoder_open_sample(params.context, params.numSampleMembers,
@@ -167,6 +174,9 @@ bool report_builder_add_sample_member(report_params_t &params, sample_member_par
   return true;
 }
 
+/// Helper function that opens a sample, adds all sample members from
+/// the report parameters, and closes the sample.
+/// This is the main function sensors should use to add their data to reports.
 bool report_builder_add_samples(report_params_t &params) {
   if (!report_builder_open_sample(params)) {
     return false;
@@ -184,6 +194,8 @@ bool report_builder_add_samples(report_params_t &params) {
 
   return true;
 }
+// =============================================================================================================================
+
 
 /**
  * @brief Adds samples to the sensor report.
@@ -406,6 +418,18 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
+    /// TODO(bjh): This pattern will significantly reduce the amount of duplicated code in the switch statement
+    ///     Step 1:
+    ///             * Add `getReportParams()` to each sensor
+    ///             * Call `report_builder_add_samples()` with the params
+    ///     Step 2:
+    ///             * Create an array or map of of sensor types to report_params_t generators ie SensorX::getReportParams()
+    ///             * simply call
+    ///               ```
+    ///               if (sensorReportBuilders[sensor_type]) {
+    ///                   sensorReportBuilders[sensor_type](context, sensor_data, sample_index);
+    ///               }
+    ///               ```
     report_params_t params = AanderaaConductivitySensor::getReportParams(context, sensor_data, sample_index);
     rval = report_builder_add_samples(params);
     break;
