@@ -25,6 +25,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'develop'
+          fetch-tags: true
 
       # Determine if pushes have happened in last 24 hours, if not stop the
       # workflow, else continue with a release
@@ -56,9 +57,7 @@ jobs:
       # Obtain nightly tag name
       - name: Get Nightly Tag Name
         if: steps.check_commits.outputs.should_run == 'true'
-        run: |
-          git fetch origin --tags
-          echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)-nightly_$(date +'%Y_%m_%d')" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)-nightly_$(date +'%Y_%m_%d')" >> $GITHUB_ENV
 
       # Run auto_build.py to generate release packages (zipped)
       - name: Build and Package
