@@ -44,6 +44,7 @@ jobs:
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "No new commits found in the last $THRESHOLD seconds. Skipping Nightly build."
+            echo "TODO: change line below to false..."
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           fi
 
