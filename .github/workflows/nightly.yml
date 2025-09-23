@@ -25,6 +25,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'develop'
+          fetch-depth: 0
           fetch-tags: true
 
       # Determine if pushes have happened in last 24 hours, if not stop the
