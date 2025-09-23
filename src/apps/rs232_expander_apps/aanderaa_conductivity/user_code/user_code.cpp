@@ -25,7 +25,6 @@ static int createAanderaaConductivityDataTopic(void) {
 void setup(void) {
   aanderaa_conductivity_sensor.init();
   aanderaa_conductivity_topic_str_len = createAanderaaConductivityDataTopic();
-  vTaskDelay(pdMS_TO_TICKS(2000)); // delay for development
   IOWrite(&VBUS_EN, 0);
   vTaskDelay(pdMS_TO_TICKS(100)); // Wait for Vbus to stabilize
   IOWrite(&PL_BUCK_EN, 0);

@@ -54,15 +54,14 @@ private:
     static constexpr ValueType PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
-    static constexpr char SENSOR_PRESSURE_KPA[] = "pressureKpa";
-    static constexpr char SENSOR_INTERVAL_S[] = "readingIntervalS";
-    static constexpr char SENSOR_CELL_COEFF[] = "cellCoeff";
+    static constexpr char SENSOR_INTERVAL_S[] = "readingPeriodS";
+    static constexpr char SENSOR_CELL_COEF[] = "cellCoef";
 
     uint32_t _sensorBmLogEnable = 0;
     float _sensorDepthM = 0.0f;
     float _pressureKpa = 0.0f;
-	uint32_t _intervalS = 2;
-    uint32_t _cellCoeff = 0;
+	uint32_t _readingPeriodS = 2;
+    uint32_t _cellCoef = 0;
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
 

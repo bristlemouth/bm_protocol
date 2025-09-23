@@ -18,10 +18,10 @@ void AanderaaConductivitySensor::init() {
                   &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
-  // reading interval in seconds
+  // reading period in seconds
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_INTERVAL_S, strlen(SENSOR_INTERVAL_S),
-                   &_intervalS);
-  printf("readingIntervalS: %" PRIu32 "\n", _intervalS);
+                   &_readingPeriodS);
+  printf("readingPeriodS: %" PRIu32 "\n", _readingPeriodS);
 
   // sensor depth in meters
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
@@ -31,10 +31,10 @@ void AanderaaConductivitySensor::init() {
   _pressureKpa = _sensorDepthM * 10.0f;
   printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
 
-  // calibration coefficients [PLACE HOLDER]
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_CELL_COEFF, strlen(SENSOR_CELL_COEFF),
-                   &_cellCoeff);
-  printf("cellCoeff: %" PRIu32 "\n", _cellCoeff);
+  // calibration coefficient
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_CELL_COEF, strlen(SENSOR_CELL_COEF),
+                   &_cellCoef);
+  printf("cellCoef: %" PRIu32 "\n", _cellCoef);
 
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
@@ -49,7 +49,6 @@ void AanderaaConductivitySensor::init() {
 }
 
 void AanderaaConductivitySensor::configureSensor(void) {
-  //timeout is 60000 ms, looks like we gotta wake the senor and then send any commands after this.
   uint16_t read_len = 0;
   vTaskDelay(pdMS_TO_TICKS(3000));
   PLUART::write((uint8_t *)"0", strlen("0")); //wake
@@ -69,7 +68,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
   // set interval, define default interval
   char interval_cmd[32];
-  snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _intervalS);
+  snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _readingPeriodS);
   PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
   vTaskDelay(pdMS_TO_TICKS(100));
 
@@ -116,7 +115,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   // Access toHigh Level protected parameters need passkey 1000
   PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
   // get cell coefficient command
-  PLUART::write((uint8_t *)CMD_GET_CELL_COEFF, strlen(CMD_GET_CELL_COEFF));
+  PLUART::write((uint8_t *)CMD_GET_CELL_COEF, strlen(CMD_GET_CELL_COEF));
   if (PLUART::lineAvailable()) {
     read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
     printf("%.*s\n", read_len, _payload_buffer);
