@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "OrderedSeparatorLineParser.h"
 #include "aanderaa_conductivity_msg.h"
+#include <math.h>
 
 #define CMD_STOP                        "Stop\r\n"
 #define CMD_START                       "Start\r\n"
@@ -28,14 +29,17 @@
 #define CMD_GET_ALL                     "Get_All\r\n"
 #define CMD_GET_ALL_PARAMS              "Get_All Parameters\r\n"
 #define CMD_SET_PRESSURE                "Set Pressure(%.2f)\r\n"
-#define CMD_SET_CELL_COEFF              "Set CellCoef(%" PRIu32 ")\r\n"
-#define CMD_GET_CELL_COEFF              "Get CellCoef\r\n"
+#define CMD_SET_CELL_COEF              "Set CellCoef(%" PRIu32 ")\r\n"
+#define CMD_GET_CELL_COEF              "Get CellCoef\r\n"
+#define CMD_GET_CONDUCTIVITY           "Get Conductivity\r\n"
 
 
 class AanderaaConductivitySensor {
 public:
     AanderaaConductivitySensor()
-        : _parser("\t", 256, PARSER_VALUE_TYPE, 5) {};
+        : _parser("\t", 256, PARSER_VALUE_TYPE, 5),
+          _configParser("\t", 256, CONFIG_PARSER_VALUE_TYPE, 4) {};
+
     void init();
     void configureSensor(void);
     bool getData(AanderaaConductivityMsg::Data &d);
@@ -43,6 +47,7 @@ public:
     void clearPayloadBuffer(void);
     void resetSensor(void);
     void startStreaming(void);
+    void calibrateCellCoef(void);
 
     static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_conductivity_raw.log";
 
@@ -52,17 +57,23 @@ private:
 
     //conductivity  temperature  salinity  waterdensity  soundspeed depth
     static constexpr ValueType PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
+    // For config responses like "cellCoef\t5990\t67\t4.585078E+00"
+    static constexpr ValueType CONFIG_PARSER_VALUE_TYPE[] = {TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_DOUBLE};
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
     static constexpr char SENSOR_INTERVAL_S[] = "readingPeriodS";
-    static constexpr char SENSOR_CELL_COEF[] = "cellCoef";
+    static constexpr char EXTERNAL_REFERENCE_CONDUCTIVITY[] = "referenceConductivity";
+
 
     uint32_t _sensorBmLogEnable = 0;
     float _sensorDepthM = 0.0f;
     float _pressureKpa = 0.0f;
 	uint32_t _readingPeriodS = 2;
-    uint32_t _cellCoef = 0;
     OrderedSeparatorLineParser _parser;
     char _payload_buffer[2048];
 
+    OrderedSeparatorLineParser _configParser;
+    float _cellCoef = 0.000f;
+    float _referenceConductivity = NAN;
+    float _measuredConductivity = NAN;
 };

@@ -14,6 +14,7 @@
 
 void AanderaaConductivitySensor::init() {
   _parser.init();
+  _configParser.init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
                   &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
@@ -31,11 +32,6 @@ void AanderaaConductivitySensor::init() {
   _pressureKpa = _sensorDepthM * 10.0f;
   printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
 
-  // calibration coefficient
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_CELL_COEF, strlen(SENSOR_CELL_COEF),
-                   &_cellCoef);
-  printf("cellCoef: %" PRIu32 "\n", _cellCoef);
-
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
   PLUART::setBaud(BAUD_RATE);
@@ -49,6 +45,7 @@ void AanderaaConductivitySensor::init() {
 }
 
 void AanderaaConductivitySensor::configureSensor(void) {
+  // takes sensor a few ms between each commands
   uint32_t command_delay_ticks = pdMS_TO_TICKS(25);
   uint16_t read_len = 0;
   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -209,4 +206,69 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
       }
     }
   return success;
+}
+
+void AanderaaConductivitySensor::calibrateCellCoef(void) {
+  // read sys config referenceConductivity
+  get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY),
+                   &_referenceConductivity);
+
+  // if referenceConductivity is not NAN, continue and perform cellCoef adjustment
+  if (!isnan(_referenceConductivity)) {
+    // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
+    if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
+      printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
+      return;
+    } else {
+      printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
+      // char calibrate_cmd[32];
+      PLUART::write((uint8_t *)"\r\n", strlen("\r\n"));
+      vTaskDelay(pdMS_TO_TICKS(500));
+      // Set passkey(1000)
+      PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
+      vTaskDelay(pdMS_TO_TICKS(500));
+      // read cellCoef from the sensor
+      PLUART::write((uint8_t *)CMD_GET_CELL_COEF, strlen(CMD_GET_CELL_COEF));
+      vTaskDelay(pdMS_TO_TICKS(5));
+      if (PLUART::lineAvailable()) {
+        // cellCoef\t5990\t67\t4.585078E+00
+        uint16_t read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+        if (read_len > 0 && _configParser.parseLine(_payload_buffer, read_len)) {
+          Value cellCoefValue = _configParser.getValue(3);
+          _cellCoef = cellCoefValue.data.double_val;
+          printf("Cell Coefficient: %f\n", _cellCoef);
+        }
+      }
+      vTaskDelay(pdMS_TO_TICKS(5000)); //debug delay
+      // read conductivity
+      PLUART::write((uint8_t *)CMD_GET_CONDUCTIVITY, strlen(CMD_GET_CONDUCTIVITY));
+      vTaskDelay(pdMS_TO_TICKS(5));
+      if (PLUART::lineAvailable()) {
+        // Conductivity[mS/cm]\t5990\t67\t0.001
+        uint16_t read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+        if (read_len > 0 && _configParser.parseLine(_payload_buffer, read_len)) {
+          Value conductivityValue = _configParser.getValue(3);
+          _measuredConductivity = conductivityValue.data.double_val;
+          printf("Measured Conductivity: %f\n", _measuredConductivity);
+        }
+      }
+      vTaskDelay(pdMS_TO_TICKS(500));
+
+      // calculate new cellCoef
+      printf("old cellCoef: %f\n", _cellCoef);
+      // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
+      _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity); 
+      printf("new cellCoef: %f\n", _cellCoef);
+
+      // write new cellCoef, wanna wait for while.. don't want to delete yet
+      // snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_CALIBRATE_CELL_COEF, _cellCoef);
+      // PLUART::write((uint8_t *)calibrate_cmd, strlen(calibrate_cmd));
+
+      // reset sensor
+      resetSensor();
+      // remove referenceConductivity from the config
+      remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
+      save_config(BM_CFG_PARTITION_SYSTEM, true);
+    }
+  }
 }

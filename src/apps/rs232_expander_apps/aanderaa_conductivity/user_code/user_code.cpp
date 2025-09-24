@@ -43,4 +43,7 @@ void loop(void) {
       printf("Failed to encode conductivity data message\n");
     }
   }
+
+  vTaskDelay(pdMS_TO_TICKS(10));
+  aanderaa_conductivity_sensor.calibrateCellCoef();
 }
