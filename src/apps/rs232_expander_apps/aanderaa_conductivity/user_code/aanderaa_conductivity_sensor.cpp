@@ -49,8 +49,9 @@ void AanderaaConductivitySensor::init() {
 }
 
 void AanderaaConductivitySensor::configureSensor(void) {
+  uint32_t command_delay_ticks = pdMS_TO_TICKS(25);
   uint16_t read_len = 0;
-  vTaskDelay(pdMS_TO_TICKS(3000));
+  vTaskDelay(pdMS_TO_TICKS(1000));
   PLUART::write((uint8_t *)"0", strlen("0")); //wake
   vTaskDelay(pdMS_TO_TICKS(50));
 
@@ -60,82 +61,72 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
   // passkey command
   PLUART::write((uint8_t *)CMD_SET_PASSKEY_1, strlen(CMD_SET_PASSKEY_1));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // enable sleep
   PLUART::write((uint8_t *)CMD_ENABLE_SLEEP_YES, strlen(CMD_ENABLE_SLEEP_YES));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // set interval, define default interval
   char interval_cmd[32];
   snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _readingPeriodS);
   PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // enable Temperature
   PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // disable rawdata
   PLUART::write((uint8_t *)CMD_ENABLE_RAWDATA_NO, strlen(CMD_ENABLE_RAWDATA_NO));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // disable RawCond1
   PLUART::write((uint8_t *)CMD_ENABLE_RAWCOND1_NO, strlen(CMD_ENABLE_RAWCOND1_NO));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // enable conductivity
   PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES, strlen(CMD_ENABLE_CONDUCTIVITY_YES));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   //  disable Polled Mode
   PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO, strlen(CMD_ENABLE_POLLEDMODE_NO));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // disable text
   PLUART::write((uint8_t *)CMD_ENABLE_TEXT_NO, strlen(CMD_ENABLE_TEXT_NO));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // enable decimalformat
   PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // enable derived parameters
   PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES, strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
-  vTaskDelay(pdMS_TO_TICKS(100));
+  vTaskDelay(command_delay_ticks);
 
   // set pressure command
   printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
   char pressure_cmd[32];
   snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
   PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  /*
-  // Access toHigh Level protected parameters need passkey 1000
-  PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
-  // get cell coefficient command
-  PLUART::write((uint8_t *)CMD_GET_CELL_COEF, strlen(CMD_GET_CELL_COEF));
-  if (PLUART::lineAvailable()) {
-    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-    printf("%.*s\n", read_len, _payload_buffer);
-  }
-  vTaskDelay(pdMS_TO_TICKS(2000));
-  // set cell coefficient command
-  */
+  vTaskDelay(command_delay_ticks);
 
   // save
   PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
-  vTaskDelay(pdMS_TO_TICKS(8000));
+  vTaskDelay(pdMS_TO_TICKS(8000)); // needs about 7 seconds to save successfully
 
-  // send get_all command and cross check if they were saved.
+  // send get_all command
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
-  uint16_t line_count = 0;
-  while (line_count < 25) {
+  uint32_t read_duration_ms = 1000;
+  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
     if (PLUART::lineAvailable()) {
-    read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-    printf("%.*s\n", read_len, _payload_buffer);
-    line_count++;
+      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+      if (read_len > 0) {
+        printf("%.*s\n", read_len, _payload_buffer);
+        clearPayloadBuffer();
+      }
     }
   }
 
