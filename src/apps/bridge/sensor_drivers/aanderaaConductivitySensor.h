@@ -40,7 +40,7 @@
  * This structure is used for storing and transmitting aggregated sensor data
  * in the bridge's report system.
  */
-typedef struct {
+typedef struct AanderaaConductivityAggregations {
   /// Mean conductivity in mS/cm
   double conductivity_mean_ms_cm = NAN;
   /// Mean temperature in degrees Celsius
@@ -280,5 +280,5 @@ private:
  * @param averager_max_samples Maximum samples for averaging
  * @return Pointer to configured sensor instance, or nullptr on failure
  */
-AanderaaConductivity_t *create(uint64_t node_id, uint32_t agg_period_ms,
+AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms,
                                                       uint32_t averager_max_samples);

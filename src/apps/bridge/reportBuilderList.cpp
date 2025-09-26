@@ -118,7 +118,7 @@ void ReportBuilderLinkedList::addSampleToElement(report_builder_element_t *eleme
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-    AanderaaConductivitySensor::setupSensorPointers(element, &nan_sample, &dst);
+    AanderaaConductivitySensor::setup_sensor_pointers(element, &nan_sample, &dst);
     break;
   }
   case SENSOR_TYPE_PME_DO: {

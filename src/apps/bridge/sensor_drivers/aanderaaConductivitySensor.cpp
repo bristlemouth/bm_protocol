@@ -84,6 +84,21 @@ void AanderaaConductivitySensor::aggregate(void) {
       conductivity_aggs.reading_count = reading_count;
     }
 
+    BmErr err = send_spotter_log_aggregate(
+        "pme_do_sensor", conductivity_aggs.reading_count,
+        "%.4f,"                  // conductivity_mean_ms_cm
+        "%.3f,"                  // temperature_mean_deg_c
+        "%.3f,"                  // salinity_mean_psu
+        "%.3f,"                  // water_density_mean_kg_m3
+        "%.3f,"                  // sound_speed_mean_m_s
+        "%.3f\n",                // depth_mean_m
+        conductivity_aggs.conductivity_mean_ms_cm, conductivity_aggs.temperature_mean_deg_c,
+        conductivity_aggs.salinity_mean_psu, conductivity_aggs.water_density_mean_kg_m3,
+        conductivity_aggs.sound_speed_mean_m_s, conductivity_aggs.depth_mean_m);
+    if (err != BmOK) {
+      bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to AGG log, err: %d\n", err);
+    }
+
     // Submit aggregated data to bridge reporting system
     reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA_CONDUCTIVITY, static_cast<void *>(&conductivity_aggs),
         sizeof(AanderaaConductivityAggregations), REPORT_BUILDER_SAMPLE_MESSAGE);
@@ -187,7 +202,6 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
           }
         }
         conductivity_sensor->reading_count++;
-        // conductivity_sensor->log_individual(composite_cbor_msg);
 
         // Send individual reading to spotter log
         BmErr err = conductivity_sensor->send_spotter_log_individual(
@@ -225,8 +239,8 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
 /// we could use it to build dummy/mock sensors for testing. Or, if we wanted to use it
 /// to force a Singleton (single instance). Perthaps at one time, it served a purpose to
 /// ensure that the malloc would use FreeRTOS pvPortMalloc instead of just the default
-/// new operator. But FreeRTOS overrides new to specify us of pvPortMalloc. 
-AanderaaConductivity_t *create(uint64_t node_id, uint32_t agg_period_ms,
+/// new operator. But FreeRTOS overrides new to specify us of pvPortMalloc.
+AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms,
                                                       uint32_t averager_max_samples) {
   // Allocate memory and construct sensor instance
   AanderaaConductivity_t *new_sub =

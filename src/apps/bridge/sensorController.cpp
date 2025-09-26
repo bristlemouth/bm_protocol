@@ -47,7 +47,7 @@ typedef struct sensorControllerCtx {
 /**
  * @brief Definition of a sensor's configuration.
  * TODO(bjh): Consider consolidating sensorsControllerCtx_t,
- * SensorConfigDef, and sensor_subscription_config_t
+ * SensorConfigDef, and SensorSubscriptionConfig
  */
 typedef struct {
   /// Pointer to the context field in _ctx that holds the sensor's reading period
@@ -74,7 +74,7 @@ typedef struct {
   uint32_t samples_pad;
   /// Factory function to create the sensor subscription
   AbstractSensor* (*create_fn)(uint64_t node_id, uint32_t sample_duration_ms, uint32_t max_samples);
-} sensor_subscription_config_t;
+} SensorSubscriptionConfig;
 
 static sensorsControllerCtx_t _ctx;
 
@@ -101,6 +101,31 @@ static void load_sensor_config(SensorConfigDef &config_def, bool &save) {
     save = true; // indicates save is needed
   }
 }
+
+/**
+ * @brief Helper function to create and configure a sensor subscription
+ * @param subscription_config The sensor subscription configuration
+ * @param reply The decoded system info reply
+ * @param sample_duration_ms Sample duration in milliseconds
+ * @return true if sensor was processed (subscribed or already exists), false otherwise
+ */
+static bool create_and_configure_sensor_subscription(const SensorSubscriptionConfig& subscription_config,
+    const SysInfoReplyData& reply, uint32_t sample_duration_ms) {
+  if (strncmp(reply.app_name, subscription_config.app_name,
+              MIN(reply.app_name_strlen, strlen(subscription_config.app_name))) == 0) {
+    if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type)) {
+      uint32_t AVERAGER_MAX_SAMPLES =
+          (sample_duration_ms / *subscription_config.reading_period_ms) + subscription_config.samples_pad;
+      AbstractSensor* sensor_sub = subscription_config.create_fn(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+      if (sensor_sub) {
+        abstractSensorAddSensorSub(sensor_sub);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 /*!
  * @brief Initialize the sensor controller.
  * This controller is responsible for identifying & detecting sensor nodes and subscribing to them.
@@ -240,8 +265,8 @@ static void runController(void *param) {
                 static_cast<SeapointTurbiditySensor *>(curr);
             seapoint_turbidity->aggregate();
           } else if (curr->type == SENSOR_TYPE_AANDERAA_CONDUCTIVITY) {
-            // TODO(bjh): I'm pretty certain the cast is futile since AbstractSensor forces
-            //    the aggregate function. We should be able to collapse this loop to just:
+            // TODO(bjh): This cast _could be_ futile if AbstractSensor added
+            //    aggregate as a virtual function. We should be able to collapse this loop to just:
             //    while { curr->aggregate(); cur = curr->next; }
             //    The only apparent value may be the check on curr->type, but that can be
             //    removed if we =
@@ -300,30 +325,6 @@ AbstractSensor *sensorControllerFindSensorById(uint64_t node_id, abstractSensorT
   return ret;
 }
 
-/**
- * @brief Helper function to create and configure a sensor subscription
- * @param subscription_config The sensor subscription configuration
- * @param reply The decoded system info reply
- * @param sample_duration_ms Sample duration in milliseconds
- * @return true if sensor was processed (subscribed or already exists), false otherwise
- */
-static bool createAndConfigureSensorSubscription(const sensor_subscription_config_t& subscription_config,
-    const SysInfoReplyData& reply, uint32_t sample_duration_ms) {
-  if (strncmp(reply.app_name, subscription_config.app_name,
-              MIN(reply.app_name_strlen, strlen(subscription_config.app_name))) == 0) {
-    if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type)) {
-      uint32_t AVERAGER_MAX_SAMPLES =
-          (sample_duration_ms / *subscription_config.reading_period_ms) + subscription_config.samples_pad;
-      AbstractSensor* sensor_sub = subscription_config.create_fn(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
-      if (sensor_sub) {
-        abstractSensorAddSensorSub(sensor_sub);
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
 static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                                const char *service, size_t reply_len, uint8_t *reply_data) {
   (void)service_strlen;
@@ -358,19 +359,20 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                       strlen(AppConfig::SUBSAMPLE_ENABLED), &subsample_enabled);
 
       // Define Aanderaa conductivity subscription config
-      static const sensor_subscription_config_t aanderaa_conductivity_config = {
+      static const SensorSubscriptionConfig aanderaa_conductivity_config = {
         .app_name = "aanderaa_conductivity",
         .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
         .reading_period_ms = &_ctx.aanderaa_conductivity_reading_period_ms,
         .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
         .create_fn = [](uint64_t node_id, uint32_t duration, uint32_t samples) -> AbstractSensor* {
-          return create(node_id, duration, samples);
+          return createAanderaaConductivitySub(node_id, duration, samples);
         }
+        // .create_fn = &createAanderaaConductivitySub//(node_id, duration, samples)
       };
 
       // TODO(bjh): Observation: it would be more efficient to do a hash table lookup of app_name
-      //    and then map to the sensor_subscription_config_t.
-      if (createAndConfigureSensorSubscription(aanderaa_conductivity_config, reply, sample_duration_ms)) {
+      //    and then map to the SensorSubscriptionConfig.
+      if (create_and_configure_sensor_subscription(aanderaa_conductivity_config, reply, sample_duration_ms)) {
         // Aanderaa conductivity handled by helper function
       } else if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
           0) {
