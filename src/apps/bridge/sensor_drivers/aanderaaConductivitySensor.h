@@ -21,16 +21,17 @@
 
 #pragma once
 #include "abstractSensor.h"
+#include "aanderaa_conductivity_msg.h"
 #include "avgSampler.h"
 #include "sensorController.h"
 #include "reportBuilder.h"
 #include "reportBuilderList.h"
+#include <array>
 #include <cmath>
 #include <stdint.h>
 #include <stdlib.h>
+#include <variant>
 
-/** @brief Number of sensor parameters measured by the Aanderaa conductivity sensor */
-#define AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS 6
 
 /**
  * @brief Aggregated conductivity sensor data structure
@@ -69,22 +70,81 @@ typedef struct {
  * - Configurable aggregation periods
  */
 typedef struct AanderaaConductivitySensor : public AbstractSensor {
+
+private:
   /// Aggregation period in milliseconds
   uint32_t current_agg_period_ms;
 
-  // Statistical samplers for each sensor parameter
-  /// Conductivity sampler (mS/cm)
-  AveragingSampler conductivity_ms_cm;
-  /// Temperature sampler (°C)
-  AveragingSampler temperature_deg_c;
-  /// Salinity sampler (PSU)
-  AveragingSampler salinity_psu;
-  /// Water density sampler (kg/m³)
-  AveragingSampler water_density_kg_m3;
-  /// Sound speed sampler (m/s)
-  AveragingSampler sound_speed_m_s;
-  /// Depth sampler (m)
-  AveragingSampler depth_m;
+  /// Enum identifying each type of sampler we track. The last entry "Count"
+  /// is used to size arrays (it is not an actual sampler).
+  enum class SamplerType {
+    Conductivity_ms_cm,
+    Temperature_deg_c,
+    Salinity_psu,
+    Water_density_kg_m3,
+    Sound_speed_m_s,
+    Depth_m,
+    Count
+  };
+
+  
+  // Container for all samplers, indexed by SamplerType.
+  // Provides operator[] overloads so we can write samplers[SamplerType::X]
+  // instead of manually casting enum values to array indices.
+  struct SamplerSet {
+      std::array<AveragingSampler, static_cast<size_t>(SamplerType::Count)> data{};
+
+      AveragingSampler& operator[](SamplerType type) {
+          return data[static_cast<size_t>(type)];
+      }
+      const AveragingSampler& operator[](SamplerType type) const {
+          return data[static_cast<size_t>(type)];
+      }
+  };
+
+  // the actual collection of samplers
+  SamplerSet samplers;
+
+  // Mapping table from a SamplerType to the corresponding "mean" field
+  // inside AanderaaConductivityAggregations. Used when copying sampler
+  // statistics back into the aggregation struct.
+  struct MapSamplerToAggregation {
+    SamplerType type;
+    double AanderaaConductivityAggregations::* mean_ptr;
+  };
+
+  static constexpr MapSamplerToAggregation kMapSamplerToAggregation[] = {
+    {SamplerType::Conductivity_ms_cm,  &AanderaaConductivityAggregations::conductivity_mean_ms_cm},
+    {SamplerType::Temperature_deg_c,   &AanderaaConductivityAggregations::temperature_mean_deg_c},
+    {SamplerType::Salinity_psu,        &AanderaaConductivityAggregations::salinity_mean_psu},
+    {SamplerType::Water_density_kg_m3, &AanderaaConductivityAggregations::water_density_mean_kg_m3},
+    {SamplerType::Sound_speed_m_s,     &AanderaaConductivityAggregations::sound_speed_mean_m_s},
+    {SamplerType::Depth_m,             &AanderaaConductivityAggregations::depth_mean_m},
+  };
+
+  // Convenience aliases for pointer-to-member types into the CBOR message:
+  // DPtr points to a double field, FPtr points to a float field.
+  using DPtr = double AanderaaConductivityMsg::Data::*;
+  using FPtr = float  AanderaaConductivityMsg::Data::*;  // for depth_m
+
+  // Mapping table from a SamplerType to the corresponding field in the
+  // AanderaaConductivityMsg::Data struct (decoded from CBOR).
+  // Because some fields are double and one (depth) is float, we store them
+  // in a std::variant<DPtr,FPtr>. Later, std::visit is used to extract the
+  // field, promoting float to double for consistent sampler input.
+  struct MapSamplerToCbor {
+      SamplerType type;
+      std::variant<DPtr, FPtr> value_ptr;
+  };
+
+  static constexpr MapSamplerToCbor kMapSamplerToCbor[] = {
+      {SamplerType::Conductivity_ms_cm,  &AanderaaConductivityMsg::Data::conductivity_ms_cm},
+      {SamplerType::Temperature_deg_c,   &AanderaaConductivityMsg::Data::temperature_deg_c},
+      {SamplerType::Salinity_psu,      &AanderaaConductivityMsg::Data::salinity_psu},
+      {SamplerType::Water_density_kg_m3,  &AanderaaConductivityMsg::Data::water_density_kg_m3},
+      {SamplerType::Sound_speed_m_s,    &AanderaaConductivityMsg::Data::sound_speed_m_s},
+      {SamplerType::Depth_m,         &AanderaaConductivityMsg::Data::depth_m}, // cast to double below
+  };
 
   /// Total number of readings received
   uint32_t reading_count;
@@ -92,6 +152,10 @@ typedef struct AanderaaConductivitySensor : public AbstractSensor {
   int8_t node_position;
   /// Timestamp of last received reading
   uint32_t last_timestamp;
+  public:
+
+  /** @brief Number of sensor parameters measured by the Aanderaa conductivity sensor */
+  static constexpr uint32_t AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS = 6;
 
   /**
    * @brief Sample buffer padding for timing variations
@@ -115,10 +179,8 @@ typedef struct AanderaaConductivitySensor : public AbstractSensor {
   /**
    * @brief Constructor - initializes all samplers and counters
    */
-  AanderaaConductivitySensor(void)
-      : conductivity_ms_cm(), temperature_deg_c(), salinity_psu(), water_density_kg_m3(),
-        sound_speed_m_s(), depth_m(), reading_count(0),
-        node_position(-1), last_timestamp(0) {}
+  AanderaaConductivitySensor(uint64_t node_id, uint32_t agg_period_ms,
+                                                      uint32_t averager_max_samples);
 
   /**
    * @brief Subscribe to conductivity sensor data topic

@@ -25,96 +25,85 @@
 #include "util.h"
 #include <new>
 
+AanderaaConductivitySensor::AanderaaConductivitySensor(uint64_t node_id, uint32_t agg_period_ms,
+                                                      uint32_t averager_max_samples) {
+
+  // Initialize samplers
+  for (auto& sampler : samplers.data) {
+    sampler.initBuffer(averager_max_samples);
+  }
+
+  reading_count = 0;
+  last_timestamp = 0;
+  _mutex = xSemaphoreCreateMutex();
+  configASSERT(_mutex);
+
+    // Create mutex for thread-safe access
+  _mutex = xSemaphoreCreateMutex();
+  configASSERT(_mutex);
+
+  // Configure sensor parameters
+  node_id = node_id;
+  type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY;
+  next = NULL;
+  current_agg_period_ms = agg_period_ms;
+
+}
+
 /// @details This function is called when the report builder is subscribing to the sensor data topic
 bool AanderaaConductivitySensor::subscribe(void) {
   bool rval = false;
-  char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
+  char *sub = static_cast<char *>(bm_malloc(BM_TOPIC_MAX_LEN));
   configASSERT(sub);
   int topic_strlen =
       snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
     rval = bm_sub_wl(sub, topic_strlen, sub_callback) == BmOK;
   }
-  vPortFree(sub);
+  bm_free(sub);
   return rval;
 }
 
 /// @details This function is called when the report builder is aggregating sensor data
 void AanderaaConductivitySensor::aggregate(void) {
-  char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
+  char *log_buf = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
   configASSERT(log_buf);
 
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
-    size_t log_buflen = 0;
 
     // Initialize aggregation structure with NaN values (invalid data indicator)
     AanderaaConductivityAggregations conductivity_aggs = {};
 
     // Only calculate means if we have sufficient data points
-    if (conductivity_ms_cm.getNumSamples() > MIN_READINGS_FOR_AGGREGATION) {
-      conductivity_aggs.conductivity_mean_ms_cm = conductivity_ms_cm.getMean();
-      conductivity_aggs.temperature_mean_deg_c = temperature_deg_c.getMean();
-      conductivity_aggs.salinity_mean_psu = salinity_psu.getMean();
-      conductivity_aggs.water_density_mean_kg_m3 = water_density_kg_m3.getMean();
-      conductivity_aggs.sound_speed_mean_m_s = sound_speed_m_s.getMean();
-      conductivity_aggs.depth_mean_m = depth_m.getMean();
+    if (samplers[SamplerType::Conductivity_ms_cm].getNumSamples() > MIN_READINGS_FOR_AGGREGATION) {
+
+      // Update conductivity_aggs from AverageSamplers
+      for (const auto& f : kMapSamplerToAggregation) {
+        (conductivity_aggs.*(f.mean_ptr)) = samplers[f.type].getMean();
+      }
       conductivity_aggs.reading_count = reading_count;
     }
 
     // Submit aggregated data to bridge reporting system
     reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA_CONDUCTIVITY, static_cast<void *>(&conductivity_aggs),
-                            sizeof(AanderaaConductivityAggregations), REPORT_BUILDER_SAMPLE_MESSAGE);
+        sizeof(AanderaaConductivityAggregations), REPORT_BUILDER_SAMPLE_MESSAGE);
 
-    static constexpr uint8_t TIME_STR_BUFSIZE = 50;
-    char time_str[TIME_STR_BUFSIZE];
-    if (!logRtcGetTimeStr(time_str, TIME_STR_BUFSIZE, true)) {
-      printf("Failed to get RTC time string for Aanderaa Conductivity aggregation\n");
-      snprintf(time_str, TIME_STR_BUFSIZE, "0");
-    }
-
-    int8_t node_position = topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
-
-    log_buflen =
-        snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                 "%016" PRIx64 ","        // Node Id
-                 "%" PRIi8 ","            // node_position
-                 "aanderaa_conductivity," // node_app_name
-                 "%s,"                    // timestamp(ticks/UTC)
-                 "%" PRIu32 ","           // reading_count
-                 "%.4f,"                  // conductivity_mean_ms_cm
-                 "%.3f,"                  // temperature_mean_deg_c
-                 "%.3f,"                  // salinity_mean_psu
-                 "%.3f,"                  // water_density_mean_kg_m3
-                 "%.3f,"                  // sound_speed_mean_m_s
-                 "%.3f\n",                // depth_mean_m
-                 node_id, node_position, time_str, conductivity_aggs.reading_count,
-                 conductivity_aggs.conductivity_mean_ms_cm, conductivity_aggs.temperature_mean_deg_c,
-                 conductivity_aggs.salinity_mean_psu, conductivity_aggs.water_density_mean_kg_m3,
-                 conductivity_aggs.sound_speed_mean_m_s, conductivity_aggs.depth_mean_m);
-    if (log_buflen > 0) {
-      BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_AGG, log_buf, log_buflen);
-    } else {
-      printf("ERROR: Failed to print Aanderaa Conductivity aggregation to log\n");
-    }
 
     // Clear the buffers
-    conductivity_ms_cm.clear();
-    temperature_deg_c.clear();
-    salinity_psu.clear();
-    water_density_kg_m3.clear();
-    sound_speed_m_s.clear();
-    depth_m.clear();
+    for (auto& sampler : samplers.data) {
+      sampler.clear();
+    }
     reading_count = 0;
     xSemaphoreGive(_mutex);
   } else {
-    printf("Failed to get the Aanderaa Conductivity mutex while trying to aggregate\n");
+    bm_debug("Failed to get the Aanderaa Conductivity mutex while trying to aggregate\n");
   }
-  vPortFree(log_buf);
+  bm_free(log_buf);
 }
 
 /// @details This function is called when the report builder is setting up the sample member parameters
 void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data, uint32_t sample_index, SampleMemberParams *params) {
-    AanderaaConductivityAggregations aanderaa_conductivity_sample =
+    AanderaaConductivityAggregations& aanderaa_conductivity_sample =
       (static_cast<AanderaaConductivityAggregations *>(sensor_data))[sample_index];
 
     // sampleMemberParams is allocated as a fixed-size array in report_params_t (stack-based, no heap allocation)
@@ -170,7 +159,7 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
   (void)type;    // Unused parameter
   (void)version; // Unused parameter
 
-  printf("Aanderaa Conductivity data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
+  bm_debug("Aanderaa Conductivity data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
          topic_len, topic);
 
   // Find the sensor instance for this node
@@ -179,18 +168,26 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
 
   if (conductivity_sensor && conductivity_sensor->type == SENSOR_TYPE_AANDERAA_CONDUCTIVITY) {
     if (xSemaphoreTake(conductivity_sensor->_mutex, portMAX_DELAY)) {
-      static AanderaaConductivityMsg::Data composite_cbor_msg;
-
+      AanderaaConductivityMsg::Data composite_cbor_msg;
       // Decode CBOR message
       if (AanderaaConductivityMsg::decode(composite_cbor_msg, data, data_len) == CborNoError) {
         // Add sensor readings to statistical samplers for aggregation
-        conductivity_sensor->conductivity_ms_cm.addSample(composite_cbor_msg.conductivity_ms_cm);
-        conductivity_sensor->temperature_deg_c.addSample(composite_cbor_msg.temperature_deg_c);
-        conductivity_sensor->salinity_psu.addSample(composite_cbor_msg.salinity_psu);
-        conductivity_sensor->water_density_kg_m3.addSample(composite_cbor_msg.water_density_kg_m3);
-        conductivity_sensor->sound_speed_m_s.addSample(composite_cbor_msg.sound_speed_m_s);
-        conductivity_sensor->depth_m.addSample(composite_cbor_msg.depth_m);
+        for (const auto& f : kMapSamplerToCbor) {
+          // This is a bit "extra" because AanderaaConductivityMsg::Data defines depth_m as float, but others are double
+          // std::visit is used to dereference whichever type of member pointer is stored.
+          // Each value is cast to `double` before being passed into the sampler, so all samplers
+          // consistently operate on `double` input
+          const double v = std::visit([&](auto ptr) {
+            return static_cast<double>(composite_cbor_msg.*ptr);  // depth_m (float) becomes double here
+          }, f.value_ptr);
+
+          // Skip invalid values -- can may be unset, uninitialized, or explicitly encoded as “NaN” (not-a-number) to mean “no reading”.
+          if (!std::isnan(v)) {
+            conductivity_sensor->samplers[f.type].addSample(v);
+          }
+        }
         conductivity_sensor->reading_count++;
+        // conductivity_sensor->log_individual(composite_cbor_msg);
 
         // Send individual reading to spotter log
         BmErr err = conductivity_sensor->send_spotter_log_individual(
@@ -211,43 +208,34 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
             composite_cbor_msg.depth_m);
 
         if (err != BmOK) {
-          printf("ERROR: Failed to send Aanderaa Conductivity individual log to spotter, err: %d\n", err);
+          bm_debug("ERROR: Failed to send Aanderaa Conductivity individual log to spotter, err: %d\n", err);
         }
-
-
+      } else {
+        bm_debug("ERROR: Failed to decode CBOR message from node %016" PRIx64 "\n", node_id);
       }
       xSemaphoreGive(conductivity_sensor->_mutex);
+    } else {
+      bm_debug("Failed to take mutex for Aanderaa Conductivity after getting a new reading\n");
     }
   }
 }
 
 /// @details Factory function to create and configure a conductivity sensor instance
+/// TODO(bjh): This pattern does not seem necessary. Perhaps if we wanted real factory,
+/// we could use it to build dummy/mock sensors for testing. Or, if we wanted to use it
+/// to force a Singleton (single instance). Perthaps at one time, it served a purpose to
+/// ensure that the malloc would use FreeRTOS pvPortMalloc instead of just the default
+/// new operator. But FreeRTOS overrides new to specify us of pvPortMalloc. 
 AanderaaConductivity_t *create(uint64_t node_id, uint32_t agg_period_ms,
                                                       uint32_t averager_max_samples) {
   // Allocate memory and construct sensor instance
   AanderaaConductivity_t *new_sub =
-      static_cast<AanderaaConductivity_t *>(pvPortMalloc(sizeof(AanderaaConductivity_t)));
-  new_sub = new (new_sub) AanderaaConductivity_t();
+      static_cast<AanderaaConductivity_t *>(bm_malloc(sizeof(AanderaaConductivity_t)));
+  configASSERT(new_sub);
+  new_sub = new (new_sub) AanderaaConductivity_t(node_id, agg_period_ms, averager_max_samples);
   configASSERT(new_sub);
 
-  // Create mutex for thread-safe access
-  new_sub->_mutex = xSemaphoreCreateMutex();
-  configASSERT(new_sub->_mutex);
-
-  // Configure sensor parameters
-  new_sub->node_id = node_id;
-  new_sub->type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY;
-  new_sub->next = NULL;
-  new_sub->current_agg_period_ms = agg_period_ms;
-
-  // Initialize statistical samplers for each sensor parameter
-  new_sub->conductivity_ms_cm.initBuffer(averager_max_samples);
-  new_sub->temperature_deg_c.initBuffer(averager_max_samples);
-  new_sub->salinity_psu.initBuffer(averager_max_samples);
-  new_sub->water_density_kg_m3.initBuffer(averager_max_samples);
-  new_sub->sound_speed_m_s.initBuffer(averager_max_samples);
-  new_sub->depth_m.initBuffer(averager_max_samples);
-  new_sub->reading_count = 0;
+  // Moved everything else to the constructor
 
   return new_sub;
 }
