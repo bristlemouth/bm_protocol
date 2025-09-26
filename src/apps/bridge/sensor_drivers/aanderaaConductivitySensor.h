@@ -106,6 +106,13 @@ typedef struct AanderaaConductivitySensor : public AbstractSensor {
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
 
   /**
+   * @brief Default aggregation structure with NaN values
+   * Used when no valid data is available for aggregation
+   * Default values pulled from AanderaaConductivityAggregations definition
+   */
+  static constexpr AanderaaConductivityAggregations aanderaa_conductivity_NAN_AGG = {};
+
+  /**
    * @brief Constructor - initializes all samplers and counters
    */
   AanderaaConductivitySensor(void)
@@ -113,7 +120,6 @@ typedef struct AanderaaConductivitySensor : public AbstractSensor {
         sound_speed_m_s(), depth_m(), reading_count(0),
         node_position(-1), last_timestamp(0) {}
 
-public:
   /**
    * @brief Subscribe to conductivity sensor data topic
    * @return true if subscription successful, false otherwise
@@ -121,8 +127,12 @@ public:
   bool subscribe(void) override;
 
   /**
-   * @brief Aggregate collected sensor data and add to report queue
-   */
+    * @brief Aggregate collected sensor data and submit to report builder
+    *
+    * This function calculates statistical means for all sensor parameters
+    * and submits the aggregated data to the bridge's reporting system.
+    * Only aggregates if minimum number of readings have been collected.
+    */
   void aggregate(void);
 
   /**
@@ -131,7 +141,7 @@ public:
    * @param sample_index Index of sample to encode
    * @param sampleMemberParams
    */
-  static void getSampleMemberParams(void *sensor_data, uint32_t sample_index, SampleMemberParams *params);
+  static void get_sample_member_params(void *sensor_data, uint32_t sample_index, SampleMemberParams *params);
 
   /**
    * @brief Get report parameters for encoding sensor data
@@ -140,7 +150,7 @@ public:
    * @param sample_index Index of sample to encode
    * @return Report parameters
    */
-  static ReportParams getReportParams(sensor_report_encoder_context_t &context,
+  static ReportParams get_report_params(sensor_report_encoder_context_t &context,
                                             void *sensor_data, uint32_t sample_index);
 
   /**
@@ -149,7 +159,7 @@ public:
  * @param nan_sample Pointer to store the NAN sample reference.
  * @param dst Pointer to store the destination data reference.
  */
-  static void setupSensorPointers(report_builder_element_t *element,
+  static void setup_sensor_pointers(report_builder_element_t *element,
                                       const void **nan_sample,
                                       void **dst);
 
@@ -157,29 +167,26 @@ public:
    * @brief Get the size of the aggregation data structure.
    * @return Size of the aggregation data structure.
    */
-  static size_t getAggregationSize(void) {
+  static size_t get_aggregation_size(void) {
     return sizeof(AanderaaConductivityAggregations);
   };
-
-
-  /**
-   * @brief Default aggregation structure with NaN values
-   * Used when no valid data is available for aggregation
-   * Default values pulled from AanderaaConductivityAggregations definition
-   */
-  static constexpr AanderaaConductivityAggregations aanderaa_conductivity_NAN_AGG = {};
 
   /**
    * @brief Get the default reading period for the sensor in milliseconds.
    * @return Default reading period in milliseconds.
    */
-  static uint32_t getDefaultReadingPeriodMs(void) {
+  static uint32_t get_default_reading_period_ms(void) {
     return DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
   }
 
 private:
   /**
    * @brief Static callback for handling incoming conductivity sensor data
+   *
+   * @details This function is called when CBOR-encoded conductivity sensor data is received
+   * via the pub/sub system. It decodes the data and adds samples to the appropriate
+   * sensor's statistical aggregators.
+   *
    * @param node_id Source node ID
    * @param topic MQTT topic string
    * @param topic_len Length of topic string
@@ -188,11 +195,10 @@ private:
    * @param type Message type (unused)
    * @param version Message version (unused)
    */
-  static void subCallback(uint64_t node_id, const char *topic,
+  static void sub_callback(uint64_t node_id, const char *topic,
                                               uint16_t topic_len, const uint8_t *data,
                                               uint16_t data_len, uint8_t type, uint8_t version);
 
-private:
   /// Subtag for conductivity sensor data
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
 
@@ -203,6 +209,10 @@ private:
 
 /**
  * @brief Factory function to create and configure a conductivity sensor instance
+ *
+ * @details Allocates memory for a new conductivity sensor, initializes all statistical
+ * samplers, and configures the sensor for the specified node and parameters.
+ *
  * @param node_id Target node ID to monitor
  * @param agg_period_ms Aggregation period in milliseconds
  * @param averager_max_samples Maximum samples for averaging
