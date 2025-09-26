@@ -38,7 +38,7 @@ class AanderaaConductivitySensor {
 public:
     AanderaaConductivitySensor()
         : _parser("\t", 256, PARSER_VALUE_TYPE, 5),
-          _configParser("\t", 256, CONFIG_PARSER_VALUE_TYPE, 4) {};
+          _configParser("\t", 256, CONFIG_PARSER_VALUE_TYPE, 1) {};
 
     void init();
     void configureSensor(void);
@@ -58,7 +58,7 @@ private:
     //conductivity  temperature  salinity  waterdensity  soundspeed depth
     static constexpr ValueType PARSER_VALUE_TYPE[] = {TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE, TYPE_DOUBLE};
     // For config responses like "cellCoef\t5990\t67\t4.585078E+00"
-    static constexpr ValueType CONFIG_PARSER_VALUE_TYPE[] = {TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_DOUBLE};
+    static constexpr ValueType CONFIG_PARSER_VALUE_TYPE[] = {TYPE_DOUBLE};
     static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
     static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
     static constexpr char SENSOR_INTERVAL_S[] = "readingPeriodS";
@@ -76,4 +76,5 @@ private:
     float _cellCoef = 0.000f;
     float _referenceConductivity = NAN;
     float _measuredConductivity = NAN;
+	char _config_payload_buffer[256];
 };

@@ -222,24 +222,41 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
     } else {
       printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
       // char calibrate_cmd[32];
+	  clearPayloadBuffer();
+	  uint16_t read_len = 0;
       PLUART::write((uint8_t *)"\r\n", strlen("\r\n"));
       vTaskDelay(pdMS_TO_TICKS(500));
       // Set passkey(1000)
       PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
+	if (PLUART::lineAvailable()) {
+      		read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+}
       vTaskDelay(pdMS_TO_TICKS(500));
+
       // read cellCoef from the sensor
+uint32_t read_duration_ms = 1000;
+  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
       PLUART::write((uint8_t *)CMD_GET_CELL_COEF, strlen(CMD_GET_CELL_COEF));
-      vTaskDelay(pdMS_TO_TICKS(5));
-      if (PLUART::lineAvailable()) {
-        // cellCoef\t5990\t67\t4.585078E+00
-        uint16_t read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-        if (read_len > 0 && _configParser.parseLine(_payload_buffer, read_len)) {
-          Value cellCoefValue = _configParser.getValue(3);
-          _cellCoef = cellCoefValue.data.double_val;
-          printf("Cell Coefficient: %f\n", _cellCoef);
-        }
-      }
-      vTaskDelay(pdMS_TO_TICKS(5000)); //debug delay
+	 while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+   		 if (PLUART::lineAvailable()) {
+      		read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+      		if (read_len > 0) {
+        	printf("%.*s\n", read_len, _payload_buffer);
+        	clearPayloadBuffer();
+     		 }
+    	}
+  	}
+
+	// while (PLUART::lineAvailable()) {
+  	  // if (PLUART::lineAvailable()) {
+		// cellCoef\t5990\t67\t4.585078E+00
+    //	read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+    //	printf("Read line for cellCoef: %.*s\n", read_len, _payload_buffer);
+	  //}
+	  vTaskDelay(pdMS_TO_TICKS(500));
+
+  	/*
+
       // read conductivity
       PLUART::write((uint8_t *)CMD_GET_CONDUCTIVITY, strlen(CMD_GET_CONDUCTIVITY));
       vTaskDelay(pdMS_TO_TICKS(5));
@@ -252,7 +269,7 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
           printf("Measured Conductivity: %f\n", _measuredConductivity);
         }
       }
-      vTaskDelay(pdMS_TO_TICKS(500));
+      vTaskDelay(pdMS_TO_TICKS(500));*/
 
       // calculate new cellCoef
       printf("old cellCoef: %f\n", _cellCoef);
