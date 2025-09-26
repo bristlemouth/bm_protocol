@@ -171,10 +171,10 @@ void sensorControllerInit(BridgePowerController *power_controller) {
 
   // If we like this pattern:
   // option 1: extend to other sensors, place structs in an array, iterate over array
-  // option 2: delegate definition to sensor classes, like we did for AanderaaConductivitySensor::getReportParams
+  // option 2: delegate definition to sensor classes, like we did for AanderaaConductivitySensor::get_report_params
   SensorConfigDef conductivity_config = {
     .ctx_field = &_ctx.aanderaa_conductivity_reading_period_ms,
-    .default_value = AanderaaConductivitySensor::getDefaultReadingPeriodMs(),
+    .default_value = AanderaaConductivitySensor::get_default_reading_period_ms(),
     .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
     .sensor_name = "aanderaa_conductivity"
   };

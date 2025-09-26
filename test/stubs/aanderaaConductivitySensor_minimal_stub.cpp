@@ -10,8 +10,8 @@
 
 // Note: aanderaa_conductivity_NAN_AGG is already defined as constexpr in the header
 
-// Minimal implementation of setupSensorPointers for tests
-void AanderaaConductivitySensor::setupSensorPointers(report_builder_element_t *element,
+// Minimal implementation of setup_sensor_pointers for tests
+void AanderaaConductivitySensor::setup_sensor_pointers(report_builder_element_t *element,
                                                      const void **nan_sample,
                                                      void **dst) {
     *nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;

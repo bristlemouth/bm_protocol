@@ -468,17 +468,17 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
     /// TODO(bjh): This pattern will significantly reduce the amount of duplicated code in the switch statement
     ///     Step 1:
-    ///             * Add `getReportParams()` to each sensor
+    ///             * Add `get_report_params()` to each sensor
     ///             * Call `report_builder_add_samples()` with the params
     ///     Step 2:
-    ///             * Create an array or map of of sensor types to report_params_t generators ie SensorX::getReportParams()
+    ///             * Create an array or map of of sensor types to report_params_t generators ie SensorX::get_report_params()
     ///             * simply call
     ///               ```
     ///               if (sensorReportBuilders[sensor_type]) {
     ///                   sensorReportBuilders[sensor_type](context, sensor_data, sample_index);
     ///               }
     ///               ```
-    ReportParams params = AanderaaConductivitySensor::getReportParams(context, sensor_data, sample_index);
+    ReportParams params = AanderaaConductivitySensor::get_report_params(context, sensor_data, sample_index);
     rval = report_builder_add_samples(params);
     break;
   }
@@ -658,9 +658,9 @@ static void report_builder_task(void *parameters) {
                         break;
                       }
                       case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-                        /// If we force each sensor to implement a getAggregationSize() function, we can remove the switch statement
-                        /// eg, sensorHandlers[sensor_type]->getAggregationSize()
-                        size = AanderaaConductivitySensor::getAggregationSize();
+                        /// If we force each sensor to implement a get_aggregation_size() function, we can remove the switch statement
+                        /// eg, sensorHandlers[sensor_type]->get_aggregation_size()
+                        size = AanderaaConductivitySensor::get_aggregation_size();
                         break;
                       }
                       case SENSOR_TYPE_PME_DO: {
