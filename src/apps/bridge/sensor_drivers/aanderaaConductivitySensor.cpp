@@ -123,6 +123,9 @@ void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data, uin
 /// @details This function is called when the report builder is setting up the report parameters
 ReportParams AanderaaConductivitySensor::get_report_params(sensor_report_encoder_context_t &context, void *sensor_data, uint32_t sample_index) {
 
+  // TODO(bjh): This is problematic if we have more than one sensor of this type!!
+  static SampleMemberParams sample_members[AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS];
+
   ReportParams params = {
     .context = context,
     .sensor_data = sensor_data,
@@ -131,7 +134,7 @@ ReportParams AanderaaConductivitySensor::get_report_params(sensor_report_encoder
     .fail_text = "Failed to open aanderaa_conductivity sample in addSamplesToReport\n",
     .sample_type = "bm_aanderaa_conductivity_v0",
     .num_sample_members = AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
-    .sample_members = {}  // Initialize empty, fill below
+    .sample_members = sample_members
   };
 
   // Fill the sample members array using the existing function

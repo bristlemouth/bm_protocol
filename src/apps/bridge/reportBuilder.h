@@ -34,10 +34,6 @@ typedef struct {
     uint32_t size;
 } SampleMemberParams;
 
-
-/// @brief Maximum number of sample members across all sensor types
-/// Based on max across all sensors (currently 8, with some headroom)
-#define MAX_SAMPLE_MEMBERS 10
 /**
  * @brief Parameters for building complete sensor reports
  *
@@ -59,9 +55,9 @@ typedef struct {
   const char *sample_type;
   /// Number of sample members (fields) in the sensor data
   uint32_t num_sample_members;
-  /// Fixed-size array of sample member parameters (no heap allocation)
-  SampleMemberParams sample_members[MAX_SAMPLE_MEMBERS];
-
+  /// Pointer to sensor-specific array of sample member parameters
+  /// Delegate construction and size to sensor
+  SampleMemberParams *sample_members;
 } ReportParams;
 
 void reportBuilderInit(void);
