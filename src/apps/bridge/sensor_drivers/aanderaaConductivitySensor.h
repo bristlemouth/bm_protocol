@@ -108,7 +108,7 @@ typedef struct AanderaaConductivitySensor : public AbstractSensor {
   /**
    * @brief Constructor - initializes all samplers and counters
    */
-  AanderaaConductivitySensor()
+  AanderaaConductivitySensor(void)
       : conductivity_ms_cm(), temperature_deg_c(), salinity_psu(), water_density_kg_m3(),
         sound_speed_m_s(), depth_m(), reading_count(0),
         node_position(-1), last_timestamp(0) {}
@@ -118,7 +118,7 @@ public:
    * @brief Subscribe to conductivity sensor data topic
    * @return true if subscription successful, false otherwise
    */
-  bool subscribe() override;
+  bool subscribe(void) override;
 
   /**
    * @brief Aggregate collected sensor data and add to report queue
@@ -129,10 +129,9 @@ public:
    * @brief Get sample member parameters for encoding sensor data
    * @param sensor_data Pointer to sensor data
    * @param sample_index Index of sample to encode
-   * @return Vector of sample member parameters
-   * TODO: remove vector
+   * @param sampleMemberParams
    */
-  static std::vector<sample_member_params_t> getSampleMemberParams(void *sensor_data, uint32_t sample_index );
+  static void getSampleMemberParams(void *sensor_data, uint32_t sample_index, SampleMemberParams *params);
 
   /**
    * @brief Get report parameters for encoding sensor data
@@ -141,7 +140,7 @@ public:
    * @param sample_index Index of sample to encode
    * @return Report parameters
    */
-  static report_params_t getReportParams(sensor_report_encoder_context_t &context,
+  static ReportParams getReportParams(sensor_report_encoder_context_t &context,
                                             void *sensor_data, uint32_t sample_index);
 
   /**
@@ -158,7 +157,7 @@ public:
    * @brief Get the size of the aggregation data structure.
    * @return Size of the aggregation data structure.
    */
-  static size_t getAggregationSize() {
+  static size_t getAggregationSize(void) {
     return sizeof(aanderaa_conductivity_aggregations_t);
   };
 
@@ -174,7 +173,7 @@ public:
    * @brief Get the default reading period for the sensor in milliseconds.
    * @return Default reading period in milliseconds.
    */
-  static uint32_t getDefaultReadingPeriodMs() {
+  static uint32_t getDefaultReadingPeriodMs(void) {
     return DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
   }
 

@@ -23,7 +23,7 @@
 #include <new>
 
 
-bool AanderaaConductivitySensor::subscribe() {
+bool AanderaaConductivitySensor::subscribe(void) {
   bool rval = false;
   char *sub = static_cast<char *>(pvPortMalloc(BM_TOPIC_MAX_LEN));
   configASSERT(sub);
@@ -268,39 +268,42 @@ AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t
   return new_sub;
 }
 
-/// TODO: vector is for bootstrapping, may switch to statically allocated contiguous array
-std::vector<sample_member_params_t> AanderaaConductivitySensor::getSampleMemberParams(void *sensor_data, uint32_t sample_index ) {
-  aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
+
+void AanderaaConductivitySensor::getSampleMemberParams(void *sensor_data, uint32_t sample_index, SampleMemberParams *params) {
+    aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
       (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
-  std::vector<sample_member_params_t> sampleMemberParams = {
-    {.sampleMember = &aanderaa_conductivity_sample.conductivity_mean_ms_cm,
-        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.temperature_mean_deg_c,
-        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.salinity_mean_psu,
-        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.water_density_mean_kg_m3,
-        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.sound_speed_mean_m_s,
-        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-    {.sampleMember = &aanderaa_conductivity_sample.depth_mean_m,
-        .sampleMemberEncoderCb = encode_double_sample_member, .size = 0},
-  };
-  return sampleMemberParams;
+
+    // sampleMemberParams is allocated as a fixed-size array in report_params_t (stack-based, no heap allocation)
+    params[0] = {.sample_member = &aanderaa_conductivity_sample.conductivity_mean_ms_cm,
+      .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
+    params[1] = {.sample_member = &aanderaa_conductivity_sample.temperature_mean_deg_c,
+      .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
+    params[2] = {.sample_member = &aanderaa_conductivity_sample.salinity_mean_psu,
+      .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
+    params[3] = {.sample_member = &aanderaa_conductivity_sample.water_density_mean_kg_m3,
+      .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
+    params[4] = {.sample_member = &aanderaa_conductivity_sample.sound_speed_mean_m_s,
+      .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
+    params[5] = {.sample_member = &aanderaa_conductivity_sample.depth_mean_m,
+      .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
 }
 
-report_params_t AanderaaConductivitySensor::getReportParams(sensor_report_encoder_context_t &context, void *sensor_data, uint32_t sample_index) {
+ReportParams AanderaaConductivitySensor::getReportParams(sensor_report_encoder_context_t &context, void *sensor_data, uint32_t sample_index) {
 
-  report_params_t params = {
+  ReportParams params = {
     .context = context,
     .sensor_data = sensor_data,
     .sample_index = sample_index,
     // TODO: fail text should probably be on sample member
-    .failText = "Failed to open aanderaa_conductivity sample in addSamplesToReport\n",
-    .sampleType = "bm_aanderaa_conductivity_v0",
-    .numSampleMembers = AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
-    .sampleMembers = AanderaaConductivitySensor::getSampleMemberParams(sensor_data, sample_index)
+    .fail_text = "Failed to open aanderaa_conductivity sample in addSamplesToReport\n",
+    .sample_type = "bm_aanderaa_conductivity_v0",
+    .num_sample_members = AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS,
+    .sample_members = {}  // Initialize empty, fill below
   };
+
+  // Fill the sample members array using the existing function
+  getSampleMemberParams(sensor_data, sample_index, params.sample_members);
+
   return params;
 }
 

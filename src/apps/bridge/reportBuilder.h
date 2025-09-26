@@ -2,7 +2,6 @@
 
 #include "abstractSensor.h"
 #include "cbor_sensor_report_encoder.h"
-#include <vector>
 
 typedef enum {
   REPORT_BUILDER_INCREMENT_SAMPLE_COUNT,
@@ -28,14 +27,17 @@ typedef struct {
  */
 typedef struct {
     /// Pointer to the data value to be encoded
-    void *sampleMember;
+    void *sample_member;
     /// Callback function to encode the sample member data
-    sample_encoder_cb sampleMemberEncoderCb;
+    sample_encoder_cb sample_member_encoder_cb;
     /// Size of the data
     uint32_t size;
-} sample_member_params_t;
+} SampleMemberParams;
 
 
+/// @brief Maximum number of sample members across all sensor types
+/// Based on max across all sensors (currently 8, with some headroom)
+#define MAX_SAMPLE_MEMBERS 10
 /**
  * @brief Parameters for building complete sensor reports
  *
@@ -52,15 +54,15 @@ typedef struct {
   /// Index of the sample to be encoded
   uint32_t sample_index;
   /// Failure text for logging
-  const char *failText;
+  const char *fail_text;
   /// Sample type identifier
-  const char *sampleType;
+  const char *sample_type;
   /// Number of sample members (fields) in the sensor data
-  uint32_t numSampleMembers;
-  /// Vector of sample member parameters
-  std::vector<sample_member_params_t> sampleMembers;
+  uint32_t num_sample_members;
+  /// Fixed-size array of sample member parameters (no heap allocation)
+  SampleMemberParams sample_members[MAX_SAMPLE_MEMBERS];
 
-} report_params_t;
+} ReportParams;
 
 void reportBuilderInit(void);
 
@@ -71,53 +73,6 @@ uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
 uint32_t report_builder_get_samples_per_report(void);
 
 bool report_builder_get_transmit_aggregations(void);
-
-/**
- * @brief Open a new sample in the sensor report encoder
- *
- * Initializes a new sample entry in the CBOR report with the specified
- * number of sample members and sample type identifier.
- *
- * @param params Report parameters containing context and metadata
- * @return true if successful, false on encoding error
- */
-bool report_builder_open_sample(report_params_t &params);
-
-/**
- * @brief Add a sample member (field) to the current sample
- *
- * Encodes a single data field from the sensor reading into the CBOR report
- * using the appropriate encoder callback. This function handles the encoding
- * of individual sensor values like temperature, conductivity, etc.
- *
- * @param params Report parameters containing context and metadata
- * @param s Sample member parameters containing data pointer, encoder, and context
- * @return true if successful, false on encoding error
- */
-bool report_builder_add_sample_member(report_params_t &params, sample_member_params_t &s);
-
-/**
- * @brief Close the current sample in the sensor report encoder
- *
- * Finalizes the current sample entry in the CBOR report. Must be called
- * after all sample members have been added.
- *
- * @param params Report parameters containing context
- * @return true if successful, false on encoding error
- */
-bool report_builder_close_sample(report_params_t &params);
-
-/**
- * @brief Add all sample members from a report to the encoder
- *
- * Convenience function that opens a sample, adds all sample members from
- * the report parameters, and closes the sample. This is the main function
- * sensors should use to add their data to reports.
- *
- * @param params Report parameters containing sample members and context
- * @return true if successful, false on encoding error
- */
-bool report_builder_add_samples(report_params_t &params);
 
 CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);
