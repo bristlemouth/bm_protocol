@@ -12,6 +12,8 @@
 #include "app_config.h"
 #include "app_util.h"
 #include "avgSampler.h"
+#include "bm_config.h"
+#include "bm_os.h"
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
@@ -20,6 +22,7 @@
 #include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
+#include "util.h"
 #include <new>
 
 
@@ -44,7 +47,7 @@ bool AanderaaConductivitySensor::subscribe(void) {
  * sensor's statistical aggregators.
  *
  * @param node_id Source node ID
- * @param topic MQTT topic string
+ * @param topic Bristlemouth topic string
  * @param topic_len Length of topic string
  * @param data CBOR-encoded sensor data buffer
  * @param data_len Length of data buffer
@@ -72,9 +75,6 @@ void AanderaaConductivitySensor::aanderaaConductivitySubCallback(uint64_t node_i
 
       // Decode CBOR message
       if (AanderaaConductivityMsg::decode(composite_cbor_msg, data, data_len) == CborNoError) {
-        char *log_buf = static_cast<char *>(pvPortMalloc(SENSOR_LOG_BUF_SIZE));
-        configASSERT(log_buf);
-
         // Add sensor readings to statistical samplers for aggregation
         conductivity_sensor->conductivity_ms_cm.addSample(composite_cbor_msg.conductivity_ms_cm);
         conductivity_sensor->temperature_deg_c.addSample(composite_cbor_msg.temperature_deg_c);
@@ -84,57 +84,29 @@ void AanderaaConductivitySensor::aanderaaConductivitySubCallback(uint64_t node_i
         conductivity_sensor->depth_m.addSample(composite_cbor_msg.depth_m);
         conductivity_sensor->reading_count++;
 
-        // Prepare timestamp formatting for logging
-        // Large floats get formatted in scientific notation,
-        // so we print integer seconds and millis separately.
-        uint64_t reading_time_sec = composite_cbor_msg.header.reading_time_utc_ms / 1000U;
-        uint32_t reading_time_millis = composite_cbor_msg.header.reading_time_utc_ms % 1000U;
-        uint64_t sensor_reading_time_sec = composite_cbor_msg.header.sensor_reading_time_ms / 1000U;
-        uint32_t sensor_reading_time_millis =
-            composite_cbor_msg.header.sensor_reading_time_ms % 1000U;
+        // Send individual reading to spotter log
+        BmErr err = conductivity_sensor->send_spotter_log_individual(
+            "aanderaa_conductivity",                    // app_name
+            composite_cbor_msg.header,                  // SensorHeaderMsg::Data header
+            DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS + 1000U,  // max_reading_period_ms
+            "%.4f,"   // conductivity_ms_cm
+            "%.3f,"   // temperature_deg_c
+            "%.3f,"   // salinity_psu
+            "%.3f,"   // water_density_kg_m3
+            "%.3f,"   // sound_speed_m_s
+            "%.3f\n", // depth_m
+            composite_cbor_msg.conductivity_ms_cm,
+            composite_cbor_msg.temperature_deg_c,
+            composite_cbor_msg.salinity_psu,
+            composite_cbor_msg.water_density_kg_m3,
+            composite_cbor_msg.sound_speed_m_s,
+            composite_cbor_msg.depth_m);
 
-        uint32_t current_timestamp = pdTICKS_TO_MS(xTaskGetTickCount());
-        if (current_timestamp - conductivity_sensor->last_timestamp >
-                DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS + 1000U ||
-            conductivity_sensor->reading_count == 1U) {
-          printf("Updating Aanderaa Conductivity %016" PRIx64
-                 " node position, current_time = %" PRIu32 ", last_time = %" PRIu32
-                 ", reading count: %" PRIu32 "\n",
-                 node_id, current_timestamp, conductivity_sensor->last_timestamp,
-                 conductivity_sensor->reading_count);
-          conductivity_sensor->node_position =
-              topology_sampler_get_node_position(node_id, pdTICKS_TO_MS(5000));
+        if (err != BmOK) {
+          printf("ERROR: Failed to send Aanderaa Conductivity individual log to spotter, err: %d\n", err);
         }
-        conductivity_sensor->last_timestamp = current_timestamp;
 
-        size_t log_buflen =
-            snprintf(log_buf, SENSOR_LOG_BUF_SIZE,
-                     "%016" PRIx64 ","        // Node Id
-                     "%" PRIi8 ","            // node_position
-                     "aanderaa_conductivity," // node_app_name
-                     "%" PRIu64 ","           // reading_uptime_millis
-                     "%" PRIu64 "."           // reading_time_utc_ms seconds part
-                     "%03" PRIu32 ","         // reading_time_utc_ms millis part
-                     "%" PRIu64 "."           // sensor_reading_time_ms seconds part
-                     "%03" PRIu32 ","         // sensor_reading_time_ms millis part
-                     "%.4f,"                  // conductivity_ms_cm
-                     "%.3f,"                  // temperature_deg_c
-                     "%.3f,"                  // salinity_psu
-                     "%.3f,"                  // water_density_kg_m3
-                     "%.3f,"                  // sound_speed_m_s
-                     "%.3f\n",                // depth_m
-                     node_id, conductivity_sensor->node_position,
-                     composite_cbor_msg.header.reading_uptime_millis, reading_time_sec,
-                     reading_time_millis, sensor_reading_time_sec, sensor_reading_time_millis,
-                     composite_cbor_msg.conductivity_ms_cm, composite_cbor_msg.temperature_deg_c,
-                     composite_cbor_msg.salinity_psu, composite_cbor_msg.water_density_kg_m3,
-                     composite_cbor_msg.sound_speed_m_s, composite_cbor_msg.depth_m);
-        if (log_buflen > 0) {
-          BRIDGE_SENSOR_LOG_PRINTN(BM_COMMON_IND, log_buf, log_buflen);
-        } else {
-          printf("ERROR: Failed to print Aanderaa Conductivity data\n");
-        }
-        vPortFree(log_buf);
+
       }
       xSemaphoreGive(conductivity_sensor->_mutex);
     }
