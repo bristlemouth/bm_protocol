@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
+#include "bm_config.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "device_info.h"
@@ -227,16 +228,24 @@ bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &
  */
 bool report_builder_add_samples(ReportParams &params) {
   if (!report_builder_open_sample(params)) {
+    bm_debug("%s: Failed to open sample\n", __func__);
+    return false;
+  }
+
+  if (params.sample_members == NULL) {
+    bm_debug("%s: sample_members is NULL\n", __func__);
     return false;
   }
 
   for (uint32_t i = 0; i < params.num_sample_members; i++) {
     if (!report_builder_add_sample_member(params, params.sample_members[i])) {
+      bm_debug("%s: Failed to add sample member\n", __func__);
       return false;
     }
   }
 
   if (!report_builder_close_sample(params)) {
+    bm_debug("%s: Failed to close sample\n", __func__);
     return false;
   }
 
