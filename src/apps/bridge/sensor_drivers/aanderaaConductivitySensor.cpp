@@ -33,7 +33,7 @@ bool AanderaaConductivitySensor::subscribe(void) {
   int topic_strlen =
       snprintf(sub, BM_TOPIC_MAX_LEN, "sensor/%016" PRIx64 "%s", node_id, subtag);
   if (topic_strlen > 0) {
-    rval = bm_sub_wl(sub, topic_strlen, aanderaaConductivitySubCallback) == BmOK;
+    rval = bm_sub_wl(sub, topic_strlen, subCallback) == BmOK;
   }
   vPortFree(sub);
   return rval;
@@ -54,7 +54,7 @@ bool AanderaaConductivitySensor::subscribe(void) {
  * @param type Message type (unused)
  * @param version Message version (unused)
  */
-void AanderaaConductivitySensor::aanderaaConductivitySubCallback(uint64_t node_id, const char *topic,
+void AanderaaConductivitySensor::subCallback(uint64_t node_id, const char *topic,
                                                                  uint16_t topic_len,
                                                                  const uint8_t *data,
                                                                  uint16_t data_len, uint8_t type,
@@ -128,7 +128,7 @@ void AanderaaConductivitySensor::aggregate(void) {
     size_t log_buflen = 0;
 
     // Initialize aggregation structure with NaN values (invalid data indicator)
-    aanderaa_conductivity_aggregations_t conductivity_aggs = {
+    AanderaaConductivityAggregations conductivity_aggs = {
         .conductivity_mean_ms_cm = NAN,
         .temperature_mean_deg_c = NAN,
         .salinity_mean_psu = NAN,
@@ -150,7 +150,7 @@ void AanderaaConductivitySensor::aggregate(void) {
 
     // Submit aggregated data to bridge reporting system
     reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA_CONDUCTIVITY, static_cast<void *>(&conductivity_aggs),
-                            sizeof(aanderaa_conductivity_aggregations_t), REPORT_BUILDER_SAMPLE_MESSAGE);
+                            sizeof(AanderaaConductivityAggregations), REPORT_BUILDER_SAMPLE_MESSAGE);
 
     static constexpr uint8_t TIME_STR_BUFSIZE = 50;
     char time_str[TIME_STR_BUFSIZE];
@@ -210,7 +210,7 @@ void AanderaaConductivitySensor::aggregate(void) {
  * @param averager_max_samples Maximum samples for each statistical sampler
  * @return Pointer to configured sensor instance, or nullptr on failure
  */
-AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms,
+AanderaaConductivity_t *create(uint64_t node_id, uint32_t agg_period_ms,
                                                       uint32_t averager_max_samples) {
   // Allocate memory and construct sensor instance
   AanderaaConductivity_t *new_sub =
@@ -242,8 +242,8 @@ AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t
 
 
 void AanderaaConductivitySensor::getSampleMemberParams(void *sensor_data, uint32_t sample_index, SampleMemberParams *params) {
-    aanderaa_conductivity_aggregations_t aanderaa_conductivity_sample =
-      (static_cast<aanderaa_conductivity_aggregations_t *>(sensor_data))[sample_index];
+    AanderaaConductivityAggregations aanderaa_conductivity_sample =
+      (static_cast<AanderaaConductivityAggregations *>(sensor_data))[sample_index];
 
     // sampleMemberParams is allocated as a fixed-size array in report_params_t (stack-based, no heap allocation)
     params[0] = {.sample_member = &aanderaa_conductivity_sample.conductivity_mean_ms_cm,
@@ -283,6 +283,6 @@ void AanderaaConductivitySensor::setupSensorPointers(report_builder_element_t *e
                                                               const void **nan_sample,
                                                               void **dst) {
   *nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
-  *dst = &(static_cast<aanderaa_conductivity_aggregations_t *>(
+  *dst = &(static_cast<AanderaaConductivityAggregations *>(
       element->sensor_data))[element->sample_counter];
 }

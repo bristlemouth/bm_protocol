@@ -39,7 +39,7 @@
  * This structure is used for storing and transmitting aggregated sensor data
  * in the bridge's report system.
  */
-typedef struct aanderaa_conductivity_aggregations_s {
+typedef struct {
   /// Mean conductivity in mS/cm
   double conductivity_mean_ms_cm = NAN;
   /// Mean temperature in degrees Celsius
@@ -54,7 +54,7 @@ typedef struct aanderaa_conductivity_aggregations_s {
   double depth_mean_m = NAN;
   /// Number of readings used in aggregation
   uint32_t reading_count = 0;
-} aanderaa_conductivity_aggregations_t;
+} AanderaaConductivityAggregations;
 
 /**
  * @brief Aanderaa Conductivity Sensor Bridge Driver Class
@@ -158,16 +158,16 @@ public:
    * @return Size of the aggregation data structure.
    */
   static size_t getAggregationSize(void) {
-    return sizeof(aanderaa_conductivity_aggregations_t);
+    return sizeof(AanderaaConductivityAggregations);
   };
 
 
   /**
    * @brief Default aggregation structure with NaN values
    * Used when no valid data is available for aggregation
-   * Default values pulled from aanderaa_conductivity_aggregations_t definition
+   * Default values pulled from AanderaaConductivityAggregations definition
    */
-  static constexpr aanderaa_conductivity_aggregations_t aanderaa_conductivity_NAN_AGG = {};
+  static constexpr AanderaaConductivityAggregations aanderaa_conductivity_NAN_AGG = {};
 
   /**
    * @brief Get the default reading period for the sensor in milliseconds.
@@ -188,7 +188,7 @@ private:
    * @param type Message type (unused)
    * @param version Message version (unused)
    */
-  static void aanderaaConductivitySubCallback(uint64_t node_id, const char *topic,
+  static void subCallback(uint64_t node_id, const char *topic,
                                               uint16_t topic_len, const uint8_t *data,
                                               uint16_t data_len, uint8_t type, uint8_t version);
 
@@ -208,5 +208,5 @@ private:
  * @param averager_max_samples Maximum samples for averaging
  * @return Pointer to configured sensor instance, or nullptr on failure
  */
-AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms,
+AanderaaConductivity_t *create(uint64_t node_id, uint32_t agg_period_ms,
                                                       uint32_t averager_max_samples);

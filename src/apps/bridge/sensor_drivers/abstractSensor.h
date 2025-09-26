@@ -37,8 +37,8 @@ private:
   } m_position;
 
 public:
-  AbstractSensor();
-  virtual bool subscribe() = 0;
+  AbstractSensor(void);
+  virtual bool subscribe(void) = 0;
   int8_t update_node_position(uint32_t max_reading_period_ms);
   BmErr send_spotter_log_individual(const char *app_name, SensorHeaderMsg::Data header,
                                     uint32_t sensor_max_reading_ms, const char *fmt, ...);

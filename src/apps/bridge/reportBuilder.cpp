@@ -172,7 +172,7 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
 bool report_builder_open_sample(ReportParams &params) {
   if (sensor_report_encoder_open_sample(params.context, params.num_sample_members,
                                         params.sample_type) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
     return false;
   }
   return true;
@@ -189,7 +189,7 @@ bool report_builder_open_sample(ReportParams &params) {
  */
 bool report_builder_close_sample(ReportParams &params) {
   if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
     return false;
   }
   return true;
@@ -207,9 +207,9 @@ bool report_builder_close_sample(ReportParams &params) {
  * @return true if successful, false on encoding error
  */
 bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &s) {
-  if (sensor_report_encoder_add_sample_member(params.context, s.sampleMemberEncoderCb,
-                                              s.sampleMember) != CborNoError) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.failText);
+  if (sensor_report_encoder_add_sample_member(params.context, s.sample_member_encoder_cb,
+                                              s.sample_member) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
     return false;
   }
   return true;
@@ -231,7 +231,7 @@ bool report_builder_add_samples(ReportParams &params) {
   }
 
   for (uint32_t i = 0; i < params.num_sample_members; i++) {
-    if (!report_builder_add_sample_member(params, params.sampleMembers[i])) {
+    if (!report_builder_add_sample_member(params, params.sample_members[i])) {
       return false;
     }
   }

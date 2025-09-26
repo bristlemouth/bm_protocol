@@ -23,7 +23,6 @@
 #define DEFAULT_CURRENT_READING_PERIOD_MS 60 * 1000       // default is 1 minute: 60,000 ms
 #define DEFAULT_SOFT_READING_PERIOD_MS 500                // default is 500 ms (2 HZ)
 #define DEFAULT_SEAPOINT_TURBIDITY_READING_PERIOD_MS 1000 // default is 1 second: 1000 ms (1 HZ)
-#define DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS 30000 // default is 30 seconds
 
 TaskHandle_t sensor_controller_task_handle = NULL;
 
@@ -34,6 +33,8 @@ typedef struct sensorControllerCtx {
   uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   bool _initialized;
   BridgePowerController *_bridge_power_controller;
+  // TODO(bjh): Too tightly coupled to the sensor types. We can delegate a
+  // function getReadingPeriodMs() to AbstractSensor and then call that function.
   uint32_t current_reading_period_ms;
   uint32_t soft_reading_period_ms;
   uint32_t rbr_coda_reading_period_ms;
@@ -45,6 +46,8 @@ typedef struct sensorControllerCtx {
 
 /**
  * @brief Definition of a sensor's configuration.
+ * TODO(bjh): Consider consolidating sensorsControllerCtx_t,
+ * SensorConfigDef, and sensor_subscription_config_t
  */
 typedef struct {
   /// Pointer to the context field in _ctx that holds the sensor's reading period
@@ -55,7 +58,7 @@ typedef struct {
   const char* config_key;
   /// Name of the sensor to use in log messages
   const char* sensor_name;
-} sensor_config_def_t;
+} SensorConfigDef;
 
 /**
  * @brief Definition of a sensor subscription configuration.
@@ -86,18 +89,17 @@ static void abstractSensorAddSensorSub(AbstractSensor *sensor);
 /**
  * @brief Load a sensor's configuration from the config store.
  * @param config_def The definition of the sensor's configuration.
- * @return true if the configuration was not found and was set to the default value, false otherwise.
+ * @param save Reference to a boolean that indicates if a save is needed.
  */
-static bool loadSensorConfig(sensor_config_def_t &config_def) {
+static void load_sensor_config(SensorConfigDef &config_def, bool &save) {
   if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key, strlen(config_def.config_key), config_def.ctx_field)) {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get %s reading period from config, using default "
                    "value and writing to config: %" PRIu32 "ms\n",
                    config_def.sensor_name, *config_def.ctx_field);
     set_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key, strlen(config_def.config_key), *config_def.ctx_field);
-    return true; // indicates save is needed
+    save = true; // indicates save is needed
   }
-  return false;
 }
 /*!
  * @brief Initialize the sensor controller.
@@ -170,13 +172,13 @@ void sensorControllerInit(BridgePowerController *power_controller) {
   // If we like this pattern:
   // option 1: extend to other sensors, place structs in an array, iterate over array
   // option 2: delegate definition to sensor classes, like we did for AanderaaConductivitySensor::getReportParams
-  sensor_config_def_t conductivity_config = {
-    &_ctx.aanderaa_conductivity_reading_period_ms,
-    DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-    AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-    "aanderaa_conductivity"
+  SensorConfigDef conductivity_config = {
+    .ctx_field = &_ctx.aanderaa_conductivity_reading_period_ms,
+    .default_value = AanderaaConductivitySensor::getDefaultReadingPeriodMs(),
+    .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+    .sensor_name = "aanderaa_conductivity"
   };
-  loadSensorConfig(conductivity_config);
+  load_sensor_config(conductivity_config, save);
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
@@ -357,12 +359,12 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 
       // Define Aanderaa conductivity subscription config
       static const sensor_subscription_config_t aanderaa_conductivity_config = {
-        "aanderaa_conductivity",
-        SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
-        &_ctx.aanderaa_conductivity_reading_period_ms,
-        AanderaaConductivity_t::N_SAMPLES_PAD,
-        [](uint64_t node_id, uint32_t duration, uint32_t samples) -> AbstractSensor* {
-          return createAanderaaConductivitySub(node_id, duration, samples);
+        .app_name = "aanderaa_conductivity",
+        .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
+        .reading_period_ms = &_ctx.aanderaa_conductivity_reading_period_ms,
+        .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
+        .create_fn = [](uint64_t node_id, uint32_t duration, uint32_t samples) -> AbstractSensor* {
+          return create(node_id, duration, samples);
         }
       };
 

@@ -15,6 +15,6 @@ void AanderaaConductivitySensor::setupSensorPointers(report_builder_element_t *e
                                                      const void **nan_sample,
                                                      void **dst) {
     *nan_sample = &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
-    *dst = &(static_cast<aanderaa_conductivity_aggregations_t *>(
+    *dst = &(static_cast<AanderaaConductivityAggregations *>(
         element->sensor_data))[element->sample_counter];
 }

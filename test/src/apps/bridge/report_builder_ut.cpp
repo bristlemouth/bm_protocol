@@ -42,7 +42,7 @@ static void *get_turbidity_agg(void *data, uint8_t idx) {
 }
 
 static void *get_conductivity_agg(void *data, uint8_t idx) {
-  return &(static_cast<aanderaa_conductivity_aggregations_t *>(data))[idx];
+  return &(static_cast<AanderaaConductivityAggregations *>(data))[idx];
 }
 
 static void *get_borealis_agg(void *data, uint8_t idx) {
@@ -92,7 +92,7 @@ static void initialize_sensor_info() {
       &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
   info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].converter = get_conductivity_agg;
   info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].data = NULL;
-  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].size = sizeof(aanderaa_conductivity_aggregations_t);
+  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].size = sizeof(AanderaaConductivityAggregations);
 
   info[SENSOR_TYPE_BOREALIS].node_id = 0;
   info[SENSOR_TYPE_BOREALIS].nan_struct = &BorealisSensor::AOS_BOREALIS_NAN_AGG;
