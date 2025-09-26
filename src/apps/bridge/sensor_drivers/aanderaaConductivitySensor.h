@@ -196,7 +196,7 @@ private:
    * @param sample_index Index of sample to encode
    * @param sampleMemberParams
    */
-  static void get_sample_member_params(void *sensor_data, uint32_t sample_index, SampleMemberParams *params);
+  static void get_sample_member_params(void *sensor_data, uint32_t sample_index, ReportParams &report_params);
 
   /**
    * @brief Get report parameters for encoding sensor data

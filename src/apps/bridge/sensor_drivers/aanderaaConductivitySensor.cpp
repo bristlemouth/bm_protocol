@@ -101,23 +101,29 @@ void AanderaaConductivitySensor::aggregate(void) {
 }
 
 /// @details This function is called when the report builder is setting up the sample member parameters
-void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data, uint32_t sample_index, SampleMemberParams *params) {
+void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data, uint32_t sample_index, ReportParams &report_params) {
     AanderaaConductivityAggregations& aanderaa_conductivity_sample =
       (static_cast<AanderaaConductivityAggregations *>(sensor_data))[sample_index];
 
+    SampleMemberParams *params = report_params.sample_members;
+    uint32_t sample_member_count = 0;
+
     // sampleMemberParams is allocated as a fixed-size array in report_params_t (stack-based, no heap allocation)
-    params[0] = {.sample_member = &aanderaa_conductivity_sample.conductivity_mean_ms_cm,
+    params[sample_member_count++] = {.sample_member = &aanderaa_conductivity_sample.conductivity_mean_ms_cm,
       .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
-    params[1] = {.sample_member = &aanderaa_conductivity_sample.temperature_mean_deg_c,
+    params[sample_member_count++] = {.sample_member = &aanderaa_conductivity_sample.temperature_mean_deg_c,
       .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
-    params[2] = {.sample_member = &aanderaa_conductivity_sample.salinity_mean_psu,
+    params[sample_member_count++] = {.sample_member = &aanderaa_conductivity_sample.salinity_mean_psu,
       .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
-    params[3] = {.sample_member = &aanderaa_conductivity_sample.water_density_mean_kg_m3,
+    params[sample_member_count++] = {.sample_member = &aanderaa_conductivity_sample.water_density_mean_kg_m3,
       .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
-    params[4] = {.sample_member = &aanderaa_conductivity_sample.sound_speed_mean_m_s,
+    params[sample_member_count++] = {.sample_member = &aanderaa_conductivity_sample.sound_speed_mean_m_s,
       .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
-    params[5] = {.sample_member = &aanderaa_conductivity_sample.depth_mean_m,
+    params[sample_member_count++] = {.sample_member = &aanderaa_conductivity_sample.depth_mean_m,
       .sample_member_encoder_cb = encode_double_sample_member, .size = 0};
+
+    configASSERT_EXTRA(sample_member_count == report_params.num_sample_members,
+        "ERROR: Incorrect number of sample members for Aanderaa Conductivity\n");
 }
 
 /// @details This function is called when the report builder is setting up the report parameters
@@ -138,7 +144,7 @@ ReportParams AanderaaConductivitySensor::get_report_params(sensor_report_encoder
   };
 
   // Fill the sample members array using the existing function
-  get_sample_member_params(sensor_data, sample_index, params.sample_members);
+  get_sample_member_params(sensor_data, sample_index, params);
 
   return params;
 }
