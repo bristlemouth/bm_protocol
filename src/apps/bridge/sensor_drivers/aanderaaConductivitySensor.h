@@ -120,8 +120,13 @@ private:
   //      Later, std::visit is used to extract the field, promoting float
   //      to double for consistent sampler input.
   struct SamplerMap {
+    /// The SamplerType this entry corresponds to
     SamplerType type;
+    /// Pointer to the "mean" field in AanderaaConductivityAggregations
     double AanderaaConductivityAggregations::* aggr_ptr;
+    /// Pointer to the corresponding field in AanderaaConductivityMsg::Data
+    /// std::variant is like a union, but safer with features! std::visit
+    /// provides safe access to the field.
     std::variant<DPtr, FPtr> cbor_ptr;
   };
 
@@ -228,6 +233,20 @@ private:
   static uint32_t get_default_reading_period_ms(void) {
     return DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
   }
+
+  /**
+   * @brief Format and send individual sensor reading to spotter log via AbstractSensor
+   * @param m Sensor data
+   * @return BmErr error code
+   */
+  BmErr send_spotter_log_individual(const AanderaaConductivityMsg::Data& m);
+
+  /**
+   * @brief Format and send aggregated sensor data to spotter log via AbstractSensor
+   * @param agg Aggregated data
+   * @return BmErr error code
+   */
+  BmErr send_spotter_log_aggregate(const AanderaaConductivityAggregations& agg);
 
 private:
   /**

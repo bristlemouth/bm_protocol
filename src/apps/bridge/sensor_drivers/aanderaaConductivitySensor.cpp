@@ -8,10 +8,8 @@
  */
 #include "FreeRTOS.h"
 #include "aanderaaConductivitySensor.h"
-#include "aanderaa_conductivity_msg.h"
 #include "app_config.h"
 #include "app_util.h"
-#include "avgSampler.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
@@ -83,31 +81,17 @@ void AanderaaConductivitySensor::aggregate(void) {
       }
       conductivity_aggs.reading_count = reading_count;
     }
-
-    BmErr err = send_spotter_log_aggregate(
-        "pme_do_sensor", conductivity_aggs.reading_count,
-        "%.4f,"                  // conductivity_mean_ms_cm
-        "%.3f,"                  // temperature_mean_deg_c
-        "%.3f,"                  // salinity_mean_psu
-        "%.3f,"                  // water_density_mean_kg_m3
-        "%.3f,"                  // sound_speed_mean_m_s
-        "%.3f\n",                // depth_mean_m
-        conductivity_aggs.conductivity_mean_ms_cm, conductivity_aggs.temperature_mean_deg_c,
-        conductivity_aggs.salinity_mean_psu, conductivity_aggs.water_density_mean_kg_m3,
-        conductivity_aggs.sound_speed_mean_m_s, conductivity_aggs.depth_mean_m);
-    if (err != BmOK) {
-      bm_debug("ERROR: Failed to print PME Dissolved Oxygen data to AGG log, err: %d\n", err);
-    }
+    send_spotter_log_aggregate(conductivity_aggs);
 
     // Submit aggregated data to bridge reporting system
     reportBuilderAddToQueue(node_id, SENSOR_TYPE_AANDERAA_CONDUCTIVITY, static_cast<void *>(&conductivity_aggs),
         sizeof(AanderaaConductivityAggregations), REPORT_BUILDER_SAMPLE_MESSAGE);
 
-
     // Clear the buffers
     for (auto& sampler : samplers.data) {
       sampler.clear();
     }
+
     reading_count = 0;
     xSemaphoreGive(_mutex);
   } else {
@@ -165,6 +149,58 @@ void AanderaaConductivitySensor::setup_sensor_pointers(report_builder_element_t 
       element->sensor_data))[element->sample_counter];
 }
 
+BmErr AanderaaConductivitySensor::send_spotter_log_individual(const AanderaaConductivityMsg::Data& m) {
+    BmErr err = AbstractSensor::send_spotter_log_individual(
+        "aanderaa_conductivity",
+        m.header,
+        DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS + 1000U,
+        "%.4f,"   // conductivity_ms_cm
+        "%.3f,"   // temperature_deg_c
+        "%.3f,"   // salinity_psu
+        "%.3f,"   // water_density_kg_m3
+        "%.3f,"   // sound_speed_m_s
+        "%.3f\n", // depth_m
+        m.conductivity_ms_cm,
+        m.temperature_deg_c,
+        m.salinity_psu,
+        m.water_density_kg_m3,
+        m.sound_speed_m_s,
+        static_cast<double>(m.depth_m));
+
+    if (err != BmOK) {
+        bm_debug("ERROR: Failed to send Aanderaa Conductivity individual log to spotter, err: %d\n", err);
+    }
+
+    return err;
+}
+
+BmErr AanderaaConductivitySensor::send_spotter_log_aggregate(const AanderaaConductivityAggregations& agg) {
+
+    BmErr err = AbstractSensor::send_spotter_log_aggregate(
+        "aanderaa_conductivity",
+        agg.reading_count,
+        "%.4f,"                  // conductivity_mean_ms_cm
+        "%.3f,"                  // temperature_mean_deg_c
+        "%.3f,"                  // salinity_mean_psu
+        "%.3f,"                  // water_density_mean_kg_m3
+        "%.3f,"                  // sound_speed_mean_m_s
+        "%.3f\n",                // depth_mean_m
+        agg.conductivity_mean_ms_cm,
+        agg.temperature_mean_deg_c,
+        agg.salinity_mean_psu,
+        agg.water_density_mean_kg_m3,
+        agg.sound_speed_mean_m_s,
+        agg.depth_mean_m);
+
+    if (err != BmOK) {
+        bm_debug(
+            "ERROR: Failed to send PME DO aggregate log to spotter, err: %d\n",
+            err);
+    }
+
+    return err;
+}
+
 /// @details This function is called when CBOR-encoded conductivity sensor data is received
 void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topic,
                                                                  uint16_t topic_len,
@@ -203,27 +239,8 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
         }
         conductivity_sensor->reading_count++;
 
-        // Send individual reading to spotter log
-        BmErr err = conductivity_sensor->send_spotter_log_individual(
-            "aanderaa_conductivity",                    // app_name
-            composite_cbor_msg.header,                  // SensorHeaderMsg::Data header
-            DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS + 1000U,  // max_reading_period_ms
-            "%.4f,"   // conductivity_ms_cm
-            "%.3f,"   // temperature_deg_c
-            "%.3f,"   // salinity_psu
-            "%.3f,"   // water_density_kg_m3
-            "%.3f,"   // sound_speed_m_s
-            "%.3f\n", // depth_m
-            composite_cbor_msg.conductivity_ms_cm,
-            composite_cbor_msg.temperature_deg_c,
-            composite_cbor_msg.salinity_psu,
-            composite_cbor_msg.water_density_kg_m3,
-            composite_cbor_msg.sound_speed_m_s,
-            composite_cbor_msg.depth_m);
+        conductivity_sensor->send_spotter_log_individual(composite_cbor_msg);
 
-        if (err != BmOK) {
-          bm_debug("ERROR: Failed to send Aanderaa Conductivity individual log to spotter, err: %d\n", err);
-        }
       } else {
         bm_debug("ERROR: Failed to decode CBOR message from node %016" PRIx64 "\n", node_id);
       }
