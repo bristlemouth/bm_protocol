@@ -105,45 +105,33 @@ private:
   // the actual collection of samplers
   SamplerSet samplers;
 
-  // Mapping table from a SamplerType to the corresponding "mean" field
-  // inside AanderaaConductivityAggregations. Used when copying sampler
-  // statistics back into the aggregation struct.
-  struct MapSamplerToAggregation {
-    SamplerType type;
-    double AanderaaConductivityAggregations::* mean_ptr;
-  };
-
-  static constexpr MapSamplerToAggregation kMapSamplerToAggregation[] = {
-    {SamplerType::Conductivity_ms_cm,  &AanderaaConductivityAggregations::conductivity_mean_ms_cm},
-    {SamplerType::Temperature_deg_c,   &AanderaaConductivityAggregations::temperature_mean_deg_c},
-    {SamplerType::Salinity_psu,        &AanderaaConductivityAggregations::salinity_mean_psu},
-    {SamplerType::Water_density_kg_m3, &AanderaaConductivityAggregations::water_density_mean_kg_m3},
-    {SamplerType::Sound_speed_m_s,     &AanderaaConductivityAggregations::sound_speed_mean_m_s},
-    {SamplerType::Depth_m,             &AanderaaConductivityAggregations::depth_mean_m},
-  };
-
   // Convenience aliases for pointer-to-member types into the CBOR message:
   // DPtr points to a double field, FPtr points to a float field.
   using DPtr = double AanderaaConductivityMsg::Data::*;
   using FPtr = float  AanderaaConductivityMsg::Data::*;  // for depth_m
 
-  // Mapping table from a SamplerType to the corresponding field in the
-  // AanderaaConductivityMsg::Data struct (decoded from CBOR).
-  // Because some fields are double and one (depth) is float, we store them
-  // in a std::variant<DPtr,FPtr>. Later, std::visit is used to extract the
-  // field, promoting float to double for consistent sampler input.
-  struct MapSamplerToCbor {
-      SamplerType type;
-      std::variant<DPtr, FPtr> value_ptr;
+  // Mapping table from a SamplerType to the corresponding:
+  //   a) "mean" field inside AanderaaConductivityAggregations.
+  //      Used when copying sampler statistics back into the
+  //      aggregation struct.
+  //   b) corresponding field in the AanderaaConductivityMsg::Data struct
+  //      decoded from CBOR payload. Because some fields are double and one
+  //      (depth) is float, we store them in a std::variant<DPtr,FPtr>.
+  //      Later, std::visit is used to extract the field, promoting float
+  //      to double for consistent sampler input.
+  struct SamplerMap {
+    SamplerType type;
+    double AanderaaConductivityAggregations::* aggr_ptr;
+    std::variant<DPtr, FPtr> cbor_ptr;
   };
 
-  static constexpr MapSamplerToCbor kMapSamplerToCbor[] = {
-      {SamplerType::Conductivity_ms_cm,  &AanderaaConductivityMsg::Data::conductivity_ms_cm},
-      {SamplerType::Temperature_deg_c,   &AanderaaConductivityMsg::Data::temperature_deg_c},
-      {SamplerType::Salinity_psu,      &AanderaaConductivityMsg::Data::salinity_psu},
-      {SamplerType::Water_density_kg_m3,  &AanderaaConductivityMsg::Data::water_density_kg_m3},
-      {SamplerType::Sound_speed_m_s,    &AanderaaConductivityMsg::Data::sound_speed_m_s},
-      {SamplerType::Depth_m,         &AanderaaConductivityMsg::Data::depth_m}, // cast to double below
+  static constexpr SamplerMap kSamplerMap[] = {
+    {SamplerType::Conductivity_ms_cm,  &AanderaaConductivityAggregations::conductivity_mean_ms_cm, &AanderaaConductivityMsg::Data::conductivity_ms_cm},
+    {SamplerType::Temperature_deg_c,   &AanderaaConductivityAggregations::temperature_mean_deg_c, &AanderaaConductivityMsg::Data::temperature_deg_c},
+    {SamplerType::Salinity_psu,        &AanderaaConductivityAggregations::salinity_mean_psu, &AanderaaConductivityMsg::Data::salinity_psu},
+    {SamplerType::Water_density_kg_m3, &AanderaaConductivityAggregations::water_density_mean_kg_m3, &AanderaaConductivityMsg::Data::water_density_kg_m3},
+    {SamplerType::Sound_speed_m_s,     &AanderaaConductivityAggregations::sound_speed_mean_m_s, &AanderaaConductivityMsg::Data::sound_speed_m_s},
+    {SamplerType::Depth_m,             &AanderaaConductivityAggregations::depth_mean_m, &AanderaaConductivityMsg::Data::depth_m},
   };
 
   /// Total number of readings received

@@ -78,8 +78,8 @@ void AanderaaConductivitySensor::aggregate(void) {
     if (samplers[SamplerType::Conductivity_ms_cm].getNumSamples() > MIN_READINGS_FOR_AGGREGATION) {
 
       // Update conductivity_aggs from AverageSamplers
-      for (const auto& f : kMapSamplerToAggregation) {
-        (conductivity_aggs.*(f.mean_ptr)) = samplers[f.type].getMean();
+      for (const auto& f : kSamplerMap) {
+        (conductivity_aggs.*(f.aggr_ptr)) = samplers[f.type].getMean();
       }
       conductivity_aggs.reading_count = reading_count;
     }
@@ -187,14 +187,14 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
       // Decode CBOR message
       if (AanderaaConductivityMsg::decode(composite_cbor_msg, data, data_len) == CborNoError) {
         // Add sensor readings to statistical samplers for aggregation
-        for (const auto& f : kMapSamplerToCbor) {
+        for (const auto& f : kSamplerMap) {
           // This is a bit "extra" because AanderaaConductivityMsg::Data defines depth_m as float, but others are double
           // std::visit is used to dereference whichever type of member pointer is stored.
           // Each value is cast to `double` before being passed into the sampler, so all samplers
           // consistently operate on `double` input
           const double v = std::visit([&](auto ptr) {
             return static_cast<double>(composite_cbor_msg.*ptr);  // depth_m (float) becomes double here
-          }, f.value_ptr);
+          }, f.cbor_ptr);
 
           // Skip invalid values -- can may be unset, uninitialized, or explicitly encoded as “NaN” (not-a-number) to mean “no reading”.
           if (!std::isnan(v)) {
