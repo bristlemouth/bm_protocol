@@ -18,7 +18,7 @@ static int aanderaa_conductivity_topic_str_len;
 // Configurable VOUT off duration when we want to reboot the RBR sensor.
 // We do this to recover from FTL: Failure To Launch.
 static constexpr char CFG_FTL_RECOVERY_MS[] = "ftlRecoveryMs";
-static uint32_t ftl_recovery_ms = 800;
+static uint32_t ftl_recovery_ms = 1000;
 
 static int createAanderaaConductivityDataTopic(void) {
   int topic_str_len = snprintf(aanderaa_conductivity_topic, BM_TOPIC_MAX_LEN,
@@ -32,7 +32,8 @@ void setup(void) {
 
   aanderaa_conductivity_sensor.init();
   aanderaa_conductivity_topic_str_len = createAanderaaConductivityDataTopic();
-  // power bleeding 
+
+  // power bleeding
   IOWrite(&DISCHARGE_ON, 1);
   IOWrite(&PL_BUCK_EN, 1);
   vTaskDelay(pdMS_TO_TICKS(ftl_recovery_ms));
