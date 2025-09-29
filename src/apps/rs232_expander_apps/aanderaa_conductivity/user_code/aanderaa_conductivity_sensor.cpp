@@ -14,7 +14,6 @@
 
 void AanderaaConductivitySensor::init() {
   _parser.init();
-  _configParser.init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
                   &_sensorBmLogEnable);
   printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
@@ -209,6 +208,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
 }
 
 void AanderaaConductivitySensor::calibrateCellCoef(void) {
+  // cfg sys set referenceConductivity f 0.0001
   // read sys config referenceConductivity
   get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY),
                    &_referenceConductivity);
@@ -226,50 +226,63 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
 	  uint16_t read_len = 0;
       PLUART::write((uint8_t *)"\r\n", strlen("\r\n"));
       vTaskDelay(pdMS_TO_TICKS(500));
-      // Set passkey(1000)
+
       PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
-	if (PLUART::lineAvailable()) {
-      		read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-}
+	  if (PLUART::lineAvailable()) {
+      	read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+	  	if (read_len > 0) {
+        	printf("Read line for passkey 1000: %.*s\n", read_len, _payload_buffer);
+     	 }
+	  }
       vTaskDelay(pdMS_TO_TICKS(500));
+      clearPayloadBuffer();
 
       // read cellCoef from the sensor
-uint32_t read_duration_ms = 1000;
-  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+	  uint32_t read_duration_ms = 1000;
+  	  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
       PLUART::write((uint8_t *)CMD_GET_CELL_COEF, strlen(CMD_GET_CELL_COEF));
-	 while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+	  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
    		 if (PLUART::lineAvailable()) {
       		read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      		if (read_len > 0) {
-        	printf("%.*s\n", read_len, _payload_buffer);
-        	clearPayloadBuffer();
-     		 }
-    	}
-  	}
-
-	// while (PLUART::lineAvailable()) {
-  	  // if (PLUART::lineAvailable()) {
-		// cellCoef\t5990\t67\t4.585078E+00
-    //	read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-    //	printf("Read line for cellCoef: %.*s\n", read_len, _payload_buffer);
-	  //}
-	  vTaskDelay(pdMS_TO_TICKS(500));
-
-  	/*
+      		if (read_len > 5) {
+        	  printf("%.*s\n", read_len, _payload_buffer);
+      		  // cellCoef\t5990\t67\t4.585078E+00\r\n
+              // _cellCoef = 4.585078E+00
+      		  // Find the last tab character
+      		  char *last_tab = strrchr(_payload_buffer, '\t');
+      		  if (last_tab != NULL) {
+      		    _cellCoef = strtof(last_tab + 1, NULL); // +1 to skip the tab
+      		    printf("Measured cellCoef: %f\n", _cellCoef);
+      		  } else {
+      		    printf("Failed to find tab separator\n");
+      		  }
+        	  clearPayloadBuffer();
+      	   }
+        }
+  	  }
 
       // read conductivity
+      start_time = pdTICKS_TO_MS(xTaskGetTickCount());
       PLUART::write((uint8_t *)CMD_GET_CONDUCTIVITY, strlen(CMD_GET_CONDUCTIVITY));
-      vTaskDelay(pdMS_TO_TICKS(5));
-      if (PLUART::lineAvailable()) {
-        // Conductivity[mS/cm]\t5990\t67\t0.001
-        uint16_t read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-        if (read_len > 0 && _configParser.parseLine(_payload_buffer, read_len)) {
-          Value conductivityValue = _configParser.getValue(3);
-          _measuredConductivity = conductivityValue.data.double_val;
-          printf("Measured Conductivity: %f\n", _measuredConductivity);
+      while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+        if (PLUART::lineAvailable()) {
+          read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+          if (read_len > 5) {
+            printf("Payload Buffer %.*s\n", read_len, _payload_buffer);
+            // Conductivity[mS/cm]\t5990\t67\t0.002\r\n
+            // _measuredConductivity = 0.002
+            // Find the last tab character
+            char *last_tab = strrchr(_payload_buffer, '\t');
+            if (last_tab != NULL) {
+              _measuredConductivity = strtof(last_tab + 1, NULL); // +1 to skip the tab
+              printf("Measured Conductivity: %.3f\n", _measuredConductivity);
+            } else {
+              printf("Failed to find tab separator\n");
+            }
+            clearPayloadBuffer();
+          }
         }
       }
-      vTaskDelay(pdMS_TO_TICKS(500));*/
 
       // calculate new cellCoef
       printf("old cellCoef: %f\n", _cellCoef);
