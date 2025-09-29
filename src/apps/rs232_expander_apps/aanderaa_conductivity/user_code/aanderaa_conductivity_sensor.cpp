@@ -29,7 +29,7 @@ void AanderaaConductivitySensor::init() {
   printf("sensorDepthM: %f\n", _sensorDepthM);
   // convert depth in meters to pressure in kPa; Pressure = 10 * depth
   _pressureKpa = _sensorDepthM * 10.0f;
-  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
+  printf("Calculated pressure for depth %.2f m is %f kPa\n", _sensorDepthM, _pressureKpa);
 
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
@@ -208,12 +208,9 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
 }
 
 void AanderaaConductivitySensor::calibrateCellCoef(void) {
-  // cfg sys set referenceConductivity f 0.0001
   // read sys config referenceConductivity
-  get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY),
-                   &_referenceConductivity);
+  get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY), &_referenceConductivity);
 
-  // if referenceConductivity is not NAN, continue and perform cellCoef adjustment
   if (!isnan(_referenceConductivity)) {
     // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
     if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
@@ -248,7 +245,6 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
         	  printf("%.*s\n", read_len, _payload_buffer);
       		  // cellCoef\t5990\t67\t4.585078E+00\r\n
               // _cellCoef = 4.585078E+00
-      		  // Find the last tab character
       		  char *last_tab = strrchr(_payload_buffer, '\t');
       		  if (last_tab != NULL) {
       		    _cellCoef = strtof(last_tab + 1, NULL); // +1 to skip the tab
@@ -268,14 +264,13 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
         if (PLUART::lineAvailable()) {
           read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
           if (read_len > 5) {
-            printf("Payload Buffer %.*s\n", read_len, _payload_buffer);
+            printf("%.*s\n", read_len, _payload_buffer);
             // Conductivity[mS/cm]\t5990\t67\t0.002\r\n
             // _measuredConductivity = 0.002
-            // Find the last tab character
             char *last_tab = strrchr(_payload_buffer, '\t');
             if (last_tab != NULL) {
               _measuredConductivity = strtof(last_tab + 1, NULL); // +1 to skip the tab
-              printf("Measured Conductivity: %.3f\n", _measuredConductivity);
+              printf("Measured Conductivity: %.3f mS/cm\n", _measuredConductivity);
             } else {
               printf("Failed to find tab separator\n");
             }
@@ -284,21 +279,29 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
         }
       }
 
+      if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
+        /* calibration failed but the loop() in user_code.cpp will run this function again to
+         * attempt doing it again and then remove referenceConductivity from the configs */
+        printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
+        return;
+      } else {
       // calculate new cellCoef
-      printf("old cellCoef: %f\n", _cellCoef);
-      // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
-      _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity); 
-      printf("new cellCoef: %f\n", _cellCoef);
+        printf("old cellCoef: %f\n", _cellCoef);
+        // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
+        _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
+        printf("new cellCoef: %f\n", _cellCoef);
 
-      // write new cellCoef, wanna wait for while.. don't want to delete yet
-      // snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_CALIBRATE_CELL_COEF, _cellCoef);
-      // PLUART::write((uint8_t *)calibrate_cmd, strlen(calibrate_cmd));
+        // write new cellCoef to sensor
+        char calibrate_cmd[32];
+        snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_SET_CELL_COEF, _cellCoef);
+        PLUART::write((uint8_t *)calibrate_cmd, strlen(calibrate_cmd));
 
-      // reset sensor
-      resetSensor();
-      // remove referenceConductivity from the config
-      remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
-      save_config(BM_CFG_PARTITION_SYSTEM, true);
+        // reset sensor
+        resetSensor();
+        // remove referenceConductivity from the config
+        remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
+        save_config(BM_CFG_PARTITION_SYSTEM, true);
+      }
     }
   }
 }

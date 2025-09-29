@@ -28,8 +28,8 @@
 #define ACK                             "#\r\n"
 #define CMD_GET_ALL                     "Get_All\r\n"
 #define CMD_GET_ALL_PARAMS              "Get_All Parameters\r\n"
-#define CMD_SET_PRESSURE                "Set Pressure(%.2f)\r\n"
-#define CMD_SET_CELL_COEF              "Set CellCoef(%" PRIu32 ")\r\n"
+#define CMD_SET_PRESSURE                "Set Pressure(%f)\r\n"
+#define CMD_SET_CELL_COEF              "Set CellCoef(%f)\r\n"
 #define CMD_GET_CELL_COEF              "Get CellCoef\r\n"
 #define CMD_GET_CONDUCTIVITY           "Get Conductivity\r\n"
 
