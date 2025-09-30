@@ -7,8 +7,9 @@
 
 name: nightly
 on:
+  # Schedule at 2AM UTC
   schedule:
-    - cron: '0 18 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch:
   pull_request:
 jobs:
