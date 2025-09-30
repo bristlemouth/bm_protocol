@@ -44,36 +44,20 @@ typedef struct sensorControllerCtx {
   uint32_t pme_wiper_reading_period_ms;
 } sensorsControllerCtx_t;
 
-/**
- * @brief Definition of a sensor's configuration.
- * TODO(bjh): Consider consolidating sensorsControllerCtx_t,
- * SensorConfigDef, and SensorSubscriptionConfig
- */
 typedef struct {
-  /// Pointer to the context field in _ctx that holds the sensor's reading period
-  uint32_t* ctx_field;
-  /// Default value to use if the configuration is not found
+  uint32_t *ctx_field;
   uint32_t default_value;
-  /// Key to use to store the configuration
-  const char* config_key;
-  /// Name of the sensor to use in log messages
-  const char* sensor_name;
+  const char *config_key;
+  const char *sensor_name;
 } SensorConfigDef;
 
-/**
- * @brief Definition of a sensor subscription configuration.
- */
 typedef struct {
-  /// App name to match against
-  const char* app_name;
-  /// Sensor type enum
+  const char *app_name;
   abstractSensorType_e sensor_type;
-  /// Pointer to the context field that holds the sensor's reading period
-  uint32_t* reading_period_ms;
-  /// Padding constant for sample buffer
+  uint32_t *reading_period_ms;
   uint32_t samples_pad;
-  /// Factory function to create the sensor subscription
-  AbstractSensor* (*create_fn)(uint64_t node_id, uint32_t sample_duration_ms, uint32_t max_samples);
+  AbstractSensor *(*create_fn)(uint64_t node_id, uint32_t sample_duration_ms,
+                               uint32_t max_samples);
 } SensorSubscriptionConfig;
 
 static sensorsControllerCtx_t _ctx;
@@ -92,12 +76,15 @@ static void abstractSensorAddSensorSub(AbstractSensor *sensor);
  * @param save Reference to a boolean that indicates if a save is needed.
  */
 static void load_sensor_config(SensorConfigDef &config_def, bool &save) {
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key, strlen(config_def.config_key), config_def.ctx_field)) {
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key,
+                       strlen(config_def.config_key), config_def.ctx_field)) {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get %s reading period from config, using default "
                    "value and writing to config: %" PRIu32 "ms\n",
                    config_def.sensor_name, *config_def.ctx_field);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key, strlen(config_def.config_key), *config_def.ctx_field);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key,
+                    strlen(config_def.config_key), config_def.default_value);
+    *config_def.ctx_field = config_def.default_value;
     save = true; // indicates save is needed
   }
 }
@@ -109,14 +96,19 @@ static void load_sensor_config(SensorConfigDef &config_def, bool &save) {
  * @param sample_duration_ms Sample duration in milliseconds
  * @return true if sensor was processed (subscribed or already exists), false otherwise
  */
-static bool create_and_configure_sensor_subscription(const SensorSubscriptionConfig& subscription_config,
-    const SysInfoReplyData& reply, uint32_t sample_duration_ms) {
+static bool
+create_and_configure_sensor_subscription(const SensorSubscriptionConfig &subscription_config,
+                                         const SysInfoReplyData &reply,
+                                         uint32_t sample_duration_ms) {
   if (strncmp(reply.app_name, subscription_config.app_name,
               MIN(reply.app_name_strlen, strlen(subscription_config.app_name))) == 0) {
-    if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type)) {
+    if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type) &&
+        *subscription_config.reading_period_ms) {
       uint32_t AVERAGER_MAX_SAMPLES =
-          (sample_duration_ms / *subscription_config.reading_period_ms) + subscription_config.samples_pad;
-      AbstractSensor* sensor_sub = subscription_config.create_fn(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          (sample_duration_ms / *subscription_config.reading_period_ms) +
+          subscription_config.samples_pad;
+      AbstractSensor *sensor_sub = subscription_config.create_fn(
+          reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
       if (sensor_sub) {
         abstractSensorAddSensorSub(sensor_sub);
       }
@@ -198,11 +190,10 @@ void sensorControllerInit(BridgePowerController *power_controller) {
   // option 1: extend to other sensors, place structs in an array, iterate over array
   // option 2: delegate definition to sensor classes, like we did for AanderaaConductivitySensor::get_report_params
   SensorConfigDef conductivity_config = {
-    .ctx_field = &_ctx.aanderaa_conductivity_reading_period_ms,
-    .default_value = AanderaaConductivitySensor::get_default_reading_period_ms(),
-    .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-    .sensor_name = "aanderaa_conductivity"
-  };
+      .ctx_field = &_ctx.aanderaa_conductivity_reading_period_ms,
+      .default_value = AanderaaConductivitySensor::get_default_reading_period_ms(),
+      .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+      .sensor_name = "aanderaa_conductivity"};
   load_sensor_config(conductivity_config, save);
 
   if (save) {
@@ -360,22 +351,24 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
 
       // Define Aanderaa conductivity subscription config
       static const SensorSubscriptionConfig aanderaa_conductivity_config = {
-        .app_name = "aanderaa_conductivity",
-        .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
-        .reading_period_ms = &_ctx.aanderaa_conductivity_reading_period_ms,
-        .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
-        .create_fn = [](uint64_t node_id, uint32_t duration, uint32_t samples) -> AbstractSensor* {
-          return createAanderaaConductivitySub(node_id, duration, samples);
-        }
-        // .create_fn = &createAanderaaConductivitySub//(node_id, duration, samples)
+          .app_name = "aanderaa_conductivity",
+          .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
+          .reading_period_ms = &_ctx.aanderaa_conductivity_reading_period_ms,
+          .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
+          .create_fn = [](uint64_t node_id, uint32_t duration,
+                          uint32_t samples) -> AbstractSensor * {
+            return createAanderaaConductivitySub(node_id, duration, samples);
+          }
+          // .create_fn = &createAanderaaConductivitySub//(node_id, duration, samples)
       };
 
       // TODO(bjh): Observation: it would be more efficient to do a hash table lookup of app_name
       //    and then map to the SensorSubscriptionConfig.
-      if (create_and_configure_sensor_subscription(aanderaa_conductivity_config, reply, sample_duration_ms)) {
+      if (create_and_configure_sensor_subscription(aanderaa_conductivity_config, reply,
+                                                   sample_duration_ms)) {
         // Aanderaa conductivity handled by helper function
-      } else if (strncmp(reply.app_name, "aanderaa", MIN(reply.app_name_strlen, strlen("aanderaa"))) ==
-          0) {
+      } else if (strncmp(reply.app_name, "aanderaa",
+                         MIN(reply.app_name_strlen, strlen("aanderaa"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
           uint32_t AVERAGER_MAX_SAMPLES =
               (sample_duration_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
