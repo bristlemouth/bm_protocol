@@ -11,7 +11,6 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
-  pull_request:
 jobs:
   Nightly:
     runs-on:
@@ -46,7 +45,7 @@ jobs:
           else
             echo "No new commits found in the last $THRESHOLD seconds. Skipping Nightly build."
             echo "TODO: change line below to false..."
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: conda-incubator/setup-miniconda@v2
