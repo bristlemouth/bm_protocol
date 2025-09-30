@@ -307,7 +307,7 @@ static void defaultTask(void *parameters) {
   MX_USB_OTG_FS_PCD_Init();
   MX_GPDMA1_Init();
   MX_ICACHE_Init();
-  MX_IWDG_Init();
+  //MX_IWDG_Init();
 
   usbMspInit();
 
