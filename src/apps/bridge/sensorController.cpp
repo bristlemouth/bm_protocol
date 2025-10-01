@@ -1,3 +1,6 @@
+extern "C" {
+#include "util.h"
+}
 #include "sensorController.h"
 #include "aanderaaConductivitySensor.h"
 #include "aanderaaSensor.h"
@@ -109,8 +112,8 @@ static bool
 create_and_configure_sensor_subscription(const SensorSubscriptionCtx<T> &subscription_config,
                                          const SysInfoReplyData &reply,
                                          uint32_t sample_duration_ms) {
-  if (strncmp(reply.app_name, subscription_config.app_name,
-              MIN(reply.app_name_strlen, strlen(subscription_config.app_name))) == 0) {
+  if (bm_wildcard_match(reply.app_name, reply.app_name_strlen, subscription_config.app_name,
+                        strlen(subscription_config.app_name))) {
     if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type) &&
         *subscription_config.reading_period.ms) {
       uint32_t AVERAGER_MAX_SAMPLES =

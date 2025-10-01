@@ -9,7 +9,7 @@
  * Sensor Data:
  * - Conductivity (mS/cm)
  * - Temperature (°C)
- * - Salinity (PSU)
+ * - Salinity (PSU and Std. Deviation)
  * - Water density (kg/m³)
  * - Sound speed (m/s)
  * - Depth (m)
@@ -25,7 +25,6 @@
 #include "avgSampler.h"
 #include "reportBuilder.h"
 #include "reportBuilderList.h"
-#include "sensorController.h"
 #include <array>
 #include <cmath>
 #include <stdint.h>
@@ -40,19 +39,13 @@
  * in the bridge's report system.
  */
 typedef struct AanderaaConductivityAggregations {
-  /// Mean conductivity in mS/cm
   double conductivity_mean_ms_cm = NAN;
-  /// Mean temperature in degrees Celsius
   double temperature_mean_deg_c = NAN;
-  /// Mean salinity in Practical Salinity Units
   double salinity_mean_psu = NAN;
-  /// Mean water density in kg/m³
+  double salinity_std_dev = NAN;
   double water_density_mean_kg_m3 = NAN;
-  /// Mean sound speed in m/s
   double sound_speed_mean_m_s = NAN;
-  /// Mean depth in meters
   double depth_mean_m = NAN;
-  /// Number of readings used in aggregation
   uint32_t reading_count = 0;
 } AanderaaConductivityAggregations;
 
@@ -154,7 +147,7 @@ private:
   int8_t node_position;
   uint32_t last_timestamp;
 
-  static constexpr uint32_t AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS = 6;
+  static constexpr uint32_t AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS = 7;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
   static constexpr uint32_t DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS = 30000;

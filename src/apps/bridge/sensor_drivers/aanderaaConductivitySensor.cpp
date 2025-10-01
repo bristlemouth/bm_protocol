@@ -14,6 +14,7 @@
 #include "cbor.h"
 #include "pubsub.h"
 #include "semphr.h"
+#include "sensorController.h"
 #include "spotter.h"
 #include "util.h"
 #include <new>
@@ -84,6 +85,7 @@ void AanderaaConductivitySensor::aggregate(void) {
       for (const auto &f : kSamplerMap) {
         (conductivity_aggs.*(f.aggr_ptr)) = samplers[f.type].getMean();
       }
+      conductivity_aggs.salinity_std_dev = samplers[SamplerType::Salinity_psu].getStd();
       conductivity_aggs.reading_count = reading_count;
     }
     send_spotter_log_aggregate(conductivity_aggs);
@@ -137,6 +139,11 @@ void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data,
   };
   params[sample_member_count++] = {
       .sample_member = &aanderaa_conductivity_sample.salinity_mean_psu,
+      .sample_member_encoder_cb = encode_double_sample_member,
+      .size = 0,
+  };
+  params[sample_member_count++] = {
+      .sample_member = &aanderaa_conductivity_sample.salinity_std_dev,
       .sample_member_encoder_cb = encode_double_sample_member,
       .size = 0,
   };
