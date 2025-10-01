@@ -15,7 +15,7 @@ static AanderaaConductivitySensor aanderaa_conductivity_sensor;
 static char aanderaa_conductivity_topic[BM_TOPIC_MAX_LEN];
 static int aanderaa_conductivity_topic_str_len;
 
-// Configurable VOUT off duration when we want to reboot the RBR sensor.
+// Configurable VOUT off duration when we want to reboot the Aanderaa sensor.
 // We do this to recover from FTL: Failure To Launch.
 static constexpr char CFG_FTL_RECOVERY_MS[] = "ftlRecoveryMs";
 static uint32_t ftl_recovery_ms = 1000;
@@ -55,7 +55,7 @@ void loop(void) {
     if (AanderaaConductivityMsg::encode(d, cbor_buf, sizeof(cbor_buf), &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaa_conductivity_topic, aanderaa_conductivity_topic_str_len, cbor_buf, encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
-      printf("Failed to encode conductivity data message\n");
+      debug_printf("Failed to encode conductivity data message\n");
     }
   }
 

@@ -12,24 +12,30 @@
 #include "task_priorities.h"
 #include "uptime.h"
 
+#if __has_include ("debug.h")
+#include "debug.h"
+#else
+#define debug_printf printf
+#endif
+
 void AanderaaConductivitySensor::init() {
   _parser.init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
                   &_sensorBmLogEnable);
-  printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
+  debug_printf("sensorBmLogEnable: %" PRIu32 "\n", _sensorBmLogEnable);
 
   // reading period in seconds
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_INTERVAL_S, strlen(SENSOR_INTERVAL_S),
                    &_readingPeriodS);
-  printf("readingPeriodS: %" PRIu32 "\n", _readingPeriodS);
+  debug_printf("readingPeriodS: %" PRIu32 "\n", _readingPeriodS);
 
   // sensor depth in meters
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
                    &_sensorDepthM);
-  printf("sensorDepthM: %f\n", _sensorDepthM);
+  debug_printf("sensorDepthM: %f\n", _sensorDepthM);
   // convert depth in meters to pressure in kPa; Pressure = 10 * depth
   _pressureKpa = _sensorDepthM * 10.0f;
-  printf("Calculated pressure for depth %.2f m is %f kPa\n", _sensorDepthM, _pressureKpa);
+  debug_printf("Calculated pressure for depth %.2f m is %f kPa\n", _sensorDepthM, _pressureKpa);
 
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
@@ -102,7 +108,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   vTaskDelay(command_delay_ticks);
 
   // set pressure command
-  printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
+  debug_printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
   char pressure_cmd[32];
   snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
   PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
@@ -120,7 +126,11 @@ void AanderaaConductivitySensor::configureSensor(void) {
     if (PLUART::lineAvailable()) {
       read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
       if (read_len > 0) {
-        printf("%.*s\n", read_len, _payload_buffer);
+        debug_printf("%.*s\n", read_len, _payload_buffer);
+        if (_sensorBmLogEnable) {
+          spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+                     "tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), read_len, _payload_buffer);
+        }
         clearPayloadBuffer();
       }
     }
@@ -163,7 +173,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
     }
     spotter_log_console(0, "conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtc_time_str, read_len, _payload_buffer);
-    printf("conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
+    debug_printf("conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
            read_len, _payload_buffer);
 
     if (read_len > 10 && _payload_buffer[0] == 0x13 && _payload_buffer[1] == 0x11){
@@ -175,7 +185,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
           if (data_start) {
             data_start++; // Move past the tab
           } else {
-            printf("Failed to find expected tabs in data\n");
+            debug_printf("Failed to find expected tabs in data\n");
             return success;
           }
         }
@@ -197,9 +207,9 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
           d.depth_m = _sensorDepthM;
           success = true;
 
-          printf("conductivity: %.3f mS/cm, temperature: %.3f C, salinity: %.3f PSU, water density: %.3f kg/m3, sound speed: %.3f m/s, depth: %.3f m\n", d.conductivity_ms_cm, d.temperature_deg_c, d.salinity_psu, d.water_density_kg_m3, d.sound_speed_m_s, d.depth_m);
+          debug_printf("conductivity: %.3f mS/cm, temperature: %.3f C, salinity: %.3f PSU, water density: %.3f kg/m3, sound speed: %.3f m/s, depth: %.3f m\n", d.conductivity_ms_cm, d.temperature_deg_c, d.salinity_psu, d.water_density_kg_m3, d.sound_speed_m_s, d.depth_m);
         } else {
-          printf("Failed to parse 5 double values from conductivity data\n");
+          debug_printf("Failed to parse 5 double values from conductivity data\n");
         }
         clearPayloadBuffer();
       }
@@ -214,10 +224,10 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
   if (!isnan(_referenceConductivity)) {
     // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
     if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
-      printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
+      debug_printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
       return;
     } else {
-      printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
+      debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
       // char calibrate_cmd[32];
 	  clearPayloadBuffer();
 	  uint16_t read_len = 0;
@@ -228,7 +238,7 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
 	  if (PLUART::lineAvailable()) {
       	read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
 	  	if (read_len > 0) {
-        	printf("Read line for passkey 1000: %.*s\n", read_len, _payload_buffer);
+        	debug_printf("Read line for passkey 1000: %.*s\n", read_len, _payload_buffer);
      	 }
 	  }
       vTaskDelay(pdMS_TO_TICKS(500));
@@ -242,15 +252,15 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
    		 if (PLUART::lineAvailable()) {
       		read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
       		if (read_len > 5) {
-        	  printf("%.*s\n", read_len, _payload_buffer);
+        	  debug_printf("%.*s\n", read_len, _payload_buffer);
       		  // cellCoef\t5990\t67\t4.585078E+00\r\n
               // _cellCoef = 4.585078E+00
       		  char *last_tab = strrchr(_payload_buffer, '\t');
       		  if (last_tab != NULL) {
       		    _cellCoef = strtof(last_tab + 1, NULL); // +1 to skip the tab
-      		    printf("Measured cellCoef: %f\n", _cellCoef);
+      		    debug_printf("Measured cellCoef: %f\n", _cellCoef);
       		  } else {
-      		    printf("Failed to find tab separator\n");
+      		    debug_printf("Failed to find tab separator\n");
       		  }
         	  clearPayloadBuffer();
       	   }
@@ -264,15 +274,15 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
         if (PLUART::lineAvailable()) {
           read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
           if (read_len > 5) {
-            printf("%.*s\n", read_len, _payload_buffer);
+            debug_printf("%.*s\n", read_len, _payload_buffer);
             // Conductivity[mS/cm]\t5990\t67\t0.002\r\n
             // _measuredConductivity = 0.002
             char *last_tab = strrchr(_payload_buffer, '\t');
             if (last_tab != NULL) {
               _measuredConductivity = strtof(last_tab + 1, NULL); // +1 to skip the tab
-              printf("Measured Conductivity: %.3f mS/cm\n", _measuredConductivity);
+              debug_printf("Measured Conductivity: %.3f mS/cm\n", _measuredConductivity);
             } else {
-              printf("Failed to find tab separator\n");
+              debug_printf("Failed to find tab separator\n");
             }
             clearPayloadBuffer();
           }
@@ -282,14 +292,14 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
       if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
         /* calibration failed but the loop() in user_code.cpp will run this function again to
          * attempt doing it again and then remove referenceConductivity from the configs */
-        printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
+        debug_printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
         return;
       } else {
       // calculate new cellCoef
-        printf("old cellCoef: %f\n", _cellCoef);
+        debug_printf("old cellCoef: %f\n", _cellCoef);
         // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
         _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
-        printf("new cellCoef: %f\n", _cellCoef);
+        debug_printf("new cellCoef: %f\n", _cellCoef);
 
         // write new cellCoef to sensor
         char calibrate_cmd[32];

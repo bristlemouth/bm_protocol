@@ -48,7 +48,7 @@ public:
     void startStreaming(void);
     void calibrateCellCoef(void);
 
-    static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_conductivity_raw.log";
+    static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_cond_raw.log";
 
 private:
     static constexpr uint32_t BAUD_RATE = 9600;
