@@ -54,6 +54,7 @@
 #include "serial.h"
 #include "serial_console.h"
 #include "stm32_rtc.h"
+#include "stress.h"
 #include "tca9546a.h"
 #include "timer_callback_handler.h"
 #include "usb.h"
@@ -68,6 +69,7 @@
 NvmPartition *userConfigurationPartition = NULL;
 NvmPartition *systemConfigurationPartition = NULL;
 NvmPartition *hardwareConfigurationPartition = NULL;
+NvmPartition *dfu_partition_global = NULL;
 
 static void defaultTask(void *parameters);
 #ifndef DEBUG_USE_LPUART1
@@ -361,11 +363,13 @@ static void defaultTask(void *parameters) {
   debugConfigurationInit();
 
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
-  NvmPartition dfu_cli_partition(debugW25, dfu_configuration);
-  debugNvmCliInit(&debug_cli_partition, &dfu_cli_partition);
+  NvmPartition dfu_partition(debugW25, dfu_configuration);
+  dfu_partition_global = &dfu_partition;
+  debugNvmCliInit(&debug_cli_partition, &dfu_partition);
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
 #endif
+  bcl_init();
   debugRTCInit();
 
   // Commenting out while we test usart1
