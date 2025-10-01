@@ -33,8 +33,6 @@ typedef struct sensorControllerCtx {
   uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
   bool _initialized;
   BridgePowerController *_bridge_power_controller;
-  // TODO(bjh): Too tightly coupled to the sensor types. We can delegate a
-  // function getReadingPeriodMs() to AbstractSensor and then call that function.
   uint32_t current_reading_period_ms;
   uint32_t soft_reading_period_ms;
   uint32_t rbr_coda_reading_period_ms;
@@ -44,23 +42,32 @@ typedef struct sensorControllerCtx {
   uint32_t pme_wiper_reading_period_ms;
 } sensorsControllerCtx_t;
 
-typedef struct {
-  uint32_t *ctx_field;
-  uint32_t default_value;
-  const char *config_key;
-  const char *sensor_name;
-} SensorConfigDef;
-
-typedef struct {
+template <typename T> struct SensorSubscriptionCtx {
   const char *app_name;
   abstractSensorType_e sensor_type;
-  uint32_t *reading_period_ms;
+  struct {
+    const char *config_key;
+    uint32_t *ms;
+    uint32_t default_ms;
+  } reading_period;
   uint32_t samples_pad;
-  AbstractSensor *(*create_fn)(uint64_t node_id, uint32_t sample_duration_ms,
-                               uint32_t max_samples);
-} SensorSubscriptionConfig;
+  T *(*create_fn)(uint64_t node_id, uint32_t sample_duration_ms, uint32_t max_samples);
+};
 
 static sensorsControllerCtx_t _ctx;
+
+static const SensorSubscriptionCtx<AanderaaConductivity_t> aanderaa_conductivity_ctx = {
+    .app_name = "aanderaa_conductivity",
+    .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
+    .reading_period =
+        {
+            .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+            .ms = &_ctx.aanderaa_conductivity_reading_period_ms,
+            .default_ms = AanderaaConductivitySensor::get_default_reading_period_ms(),
+        },
+    .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
+    .create_fn = createAanderaaConductivitySub,
+};
 
 static constexpr uint32_t TOPO_TIMEOUT_MS = 10 * 1000;
 static constexpr uint32_t NODE_INFO_TIMEOUT_MS = 1000;
@@ -75,16 +82,17 @@ static void abstractSensorAddSensorSub(AbstractSensor *sensor);
  * @param config_def The definition of the sensor's configuration.
  * @param save Reference to a boolean that indicates if a save is needed.
  */
-static void load_sensor_config(SensorConfigDef &config_def, bool &save) {
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key,
-                       strlen(config_def.config_key), config_def.ctx_field)) {
+template <typename T>
+static void load_sensor_config(const SensorSubscriptionCtx<T> &ctx, bool &save) {
+  *ctx.reading_period.ms = ctx.reading_period.default_ms;
+  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, ctx.reading_period.config_key,
+                       strlen(ctx.reading_period.config_key), ctx.reading_period.ms)) {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Failed to get %s reading period from config, using default "
                    "value and writing to config: %" PRIu32 "ms\n",
-                   config_def.sensor_name, *config_def.ctx_field);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, config_def.config_key,
-                    strlen(config_def.config_key), config_def.default_value);
-    *config_def.ctx_field = config_def.default_value;
+                   ctx.app_name, *ctx.reading_period.ms);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, ctx.reading_period.config_key,
+                    strlen(ctx.reading_period.config_key), ctx.reading_period.default_ms);
     save = true; // indicates save is needed
   }
 }
@@ -96,16 +104,17 @@ static void load_sensor_config(SensorConfigDef &config_def, bool &save) {
  * @param sample_duration_ms Sample duration in milliseconds
  * @return true if sensor was processed (subscribed or already exists), false otherwise
  */
+template <typename T>
 static bool
-create_and_configure_sensor_subscription(const SensorSubscriptionConfig &subscription_config,
+create_and_configure_sensor_subscription(const SensorSubscriptionCtx<T> &subscription_config,
                                          const SysInfoReplyData &reply,
                                          uint32_t sample_duration_ms) {
   if (strncmp(reply.app_name, subscription_config.app_name,
               MIN(reply.app_name_strlen, strlen(subscription_config.app_name))) == 0) {
     if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type) &&
-        *subscription_config.reading_period_ms) {
+        *subscription_config.reading_period.ms) {
       uint32_t AVERAGER_MAX_SAMPLES =
-          (sample_duration_ms / *subscription_config.reading_period_ms) +
+          (sample_duration_ms / *subscription_config.reading_period.ms) +
           subscription_config.samples_pad;
       AbstractSensor *sensor_sub = subscription_config.create_fn(
           reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
@@ -186,15 +195,7 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     save = true;
   }
 
-  // If we like this pattern:
-  // option 1: extend to other sensors, place structs in an array, iterate over array
-  // option 2: delegate definition to sensor classes, like we did for AanderaaConductivitySensor::get_report_params
-  SensorConfigDef conductivity_config = {
-      .ctx_field = &_ctx.aanderaa_conductivity_reading_period_ms,
-      .default_value = AanderaaConductivitySensor::get_default_reading_period_ms(),
-      .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
-      .sensor_name = "aanderaa_conductivity"};
-  load_sensor_config(conductivity_config, save);
+  load_sensor_config(aanderaa_conductivity_ctx, save);
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);
@@ -256,14 +257,6 @@ static void runController(void *param) {
                 static_cast<SeapointTurbiditySensor *>(curr);
             seapoint_turbidity->aggregate();
           } else if (curr->type == SENSOR_TYPE_AANDERAA_CONDUCTIVITY) {
-            // TODO(bjh): This cast _could be_ futile if AbstractSensor added
-            //    aggregate as a virtual function. We should be able to collapse this loop to just:
-            //    while { curr->aggregate(); cur = curr->next; }
-            //    The only apparent value may be the check on curr->type, but that can be
-            //    removed if we =
-            //      a) trust the sensor creation or
-            //      b) we can keep an array of valid sensor types, or
-            //      c) we change the sensor types from #defines to enums.
             AanderaaConductivity_t *aanderaa_conductivity =
                 static_cast<AanderaaConductivity_t *>(curr);
             aanderaa_conductivity->aggregate();
@@ -349,22 +342,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::SUBSAMPLE_ENABLED,
                       strlen(AppConfig::SUBSAMPLE_ENABLED), &subsample_enabled);
 
-      // Define Aanderaa conductivity subscription config
-      static const SensorSubscriptionConfig aanderaa_conductivity_config = {
-          .app_name = "aanderaa_conductivity",
-          .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
-          .reading_period_ms = &_ctx.aanderaa_conductivity_reading_period_ms,
-          .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
-          .create_fn = [](uint64_t node_id, uint32_t duration,
-                          uint32_t samples) -> AbstractSensor * {
-            return createAanderaaConductivitySub(node_id, duration, samples);
-          }
-          // .create_fn = &createAanderaaConductivitySub//(node_id, duration, samples)
-      };
-
-      // TODO(bjh): Observation: it would be more efficient to do a hash table lookup of app_name
-      //    and then map to the SensorSubscriptionConfig.
-      if (create_and_configure_sensor_subscription(aanderaa_conductivity_config, reply,
+      if (create_and_configure_sensor_subscription(aanderaa_conductivity_ctx, reply,
                                                    sample_duration_ms)) {
         // Aanderaa conductivity handled by helper function
       } else if (strncmp(reply.app_name, "aanderaa",

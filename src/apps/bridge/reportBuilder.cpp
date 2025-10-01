@@ -1,5 +1,6 @@
 #include "reportBuilder.h"
 #include "FreeRTOS.h"
+#include "aanderaaSensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "bm_config.h"
@@ -14,7 +15,6 @@
 #include "timer_callback_handler.h"
 #include "timers.h"
 #include "topology_sampler.h"
-#include "aanderaaSensor.h"
 // Sensor drivers
 #include "sensor_drivers/aanderaaConductivitySensor.h"
 #include "sensor_drivers/borealisSensor.h"
@@ -97,17 +97,16 @@ CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_me
 CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
   (void)size;
-  double local_sample_member = *(static_cast<double*>(sample_member));
+  double local_sample_member = *(static_cast<double *>(sample_member));
   CborError err = CborNoError;
   err = cbor_encode_double(&sample_array, local_sample_member);
   return err;
 }
 
-
 CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
                                     uint32_t size) {
   (void)size;
-  uint32_t local_sample_member = *(static_cast<uint32_t*>(sample_member));
+  uint32_t local_sample_member = *(static_cast<uint32_t *>(sample_member));
   CborError err = CborNoError;
   err = cbor_encode_uint(&sample_array, local_sample_member);
   return err;
@@ -151,15 +150,6 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
   }
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
 }
-
-// =============================================================================================================================
-// ----------------------------------  report_builder helper functions  --------------------------------------------------------
-// =============================================================================================================================
-
-
-// Helper functions to build sensor reports. Consider moving to a separate file.
-// Used in conjunction with report_params_t and report_params_t, to make addSamplesToReport() data driven and remove the huge
-// if/else statements.
 
 /**
  * @brief Open a new sample in the sensor report encoder
@@ -251,8 +241,6 @@ bool report_builder_add_samples(ReportParams &params) {
 
   return true;
 }
-// =============================================================================================================================
-
 
 /**
  * @brief Adds samples to the sensor report.
@@ -475,7 +463,7 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     break;
   }
   case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
-    /// TODO(bjh): This pattern will significantly reduce the amount of duplicated code in the switch statement
+    /// TODO: This pattern will significantly reduce the amount of duplicated code in the switch statement
     ///     Step 1:
     ///             * Add `get_report_params()` to each sensor
     ///             * Call `report_builder_add_samples()` with the params
@@ -487,7 +475,8 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     ///                   sensorReportBuilders[sensor_type](context, sensor_data, sample_index);
     ///               }
     ///               ```
-    ReportParams params = AanderaaConductivitySensor::get_report_params(context, sensor_data, sample_index);
+    ReportParams params =
+        AanderaaConductivitySensor::get_report_params(context, sensor_data, sample_index);
     rval = report_builder_add_samples(params);
     break;
   }

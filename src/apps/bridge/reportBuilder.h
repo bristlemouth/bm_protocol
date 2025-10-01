@@ -26,12 +26,9 @@ typedef struct {
  *
  */
 typedef struct {
-    /// Pointer to the data value to be encoded
-    void *sample_member;
-    /// Callback function to encode the sample member data
-    sample_encoder_cb sample_member_encoder_cb;
-    /// Size of the data
-    uint32_t size;
+  void *sample_member;
+  sample_encoder_cb sample_member_encoder_cb;
+  uint32_t size;
 } SampleMemberParams;
 
 /**
@@ -41,22 +38,14 @@ typedef struct {
  * context, sensor data, and metadata for CBOR encoding. Used by the report
  * builder system to process sensor data in a structured way.
  */
- // cppcheck-suppress unusedStructMember
- typedef struct {
-  /// Context for CBOR encoding
+// cppcheck-suppress unusedStructMember
+typedef struct {
   sensor_report_encoder_context_t &context;
-  /// Pointer to the sensor data to be encoded
   void *sensor_data;
-  /// Index of the sample to be encoded
   uint32_t sample_index;
-  /// Failure text for logging
   const char *fail_text;
-  /// Sample type identifier
   const char *sample_type;
-  /// Number of sample members (fields) in the sensor data
   uint32_t num_sample_members;
-  /// Pointer to sensor-specific array of sample member parameters
-  /// Delegate construction and size to sensor
   SampleMemberParams *sample_members;
 } ReportParams;
 
