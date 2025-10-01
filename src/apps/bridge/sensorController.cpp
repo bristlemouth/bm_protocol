@@ -1,7 +1,6 @@
 extern "C" {
 #include "util.h"
 }
-#include "sensorController.h"
 #include "aanderaaConductivitySensor.h"
 #include "aanderaaSensor.h"
 #include "abstractSensor.h"
@@ -17,6 +16,7 @@ extern "C" {
 #include "rbrCodaSensor.h"
 #include "reportBuilder.h"
 #include "seapointTurbiditySensor.h"
+#include "sensorController.h"
 #include "softSensor.h"
 #include "sys_info_service.h"
 #include "sys_info_svc_reply_msg.h"
@@ -86,7 +86,7 @@ static void abstractSensorAddSensorSub(AbstractSensor *sensor);
  * @param save Reference to a boolean that indicates if a save is needed.
  */
 template <typename T>
-static void load_sensor_config(const SensorSubscriptionCtx<T> &ctx, bool &save) {
+static void get_sensor_readin_period_config(const SensorSubscriptionCtx<T> &ctx, bool &save) {
   *ctx.reading_period.ms = ctx.reading_period.default_ms;
   if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, ctx.reading_period.config_key,
                        strlen(ctx.reading_period.config_key), ctx.reading_period.ms)) {
@@ -198,7 +198,7 @@ void sensorControllerInit(BridgePowerController *power_controller) {
     save = true;
   }
 
-  load_sensor_config(aanderaa_conductivity_ctx, save);
+  get_sensor_readin_period_config(aanderaa_conductivity_ctx, save);
 
   if (save) {
     save_config(BM_CFG_PARTITION_SYSTEM, false);

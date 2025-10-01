@@ -69,9 +69,6 @@ bool AanderaaConductivitySensor::subscribe(void) {
  * Only aggregates if minimum number of readings have been collected.
  */
 void AanderaaConductivitySensor::aggregate(void) {
-  char *log_buf = static_cast<char *>(bm_malloc(SENSOR_LOG_BUF_SIZE));
-  configASSERT(log_buf);
-
   if (xSemaphoreTake(_mutex, portMAX_DELAY)) {
 
     // Initialize aggregation structure with NaN values (invalid data indicator)
@@ -104,7 +101,6 @@ void AanderaaConductivitySensor::aggregate(void) {
   } else {
     bm_debug("Failed to get the Aanderaa Conductivity mutex while trying to aggregate\n");
   }
-  bm_free(log_buf);
 }
 
 /**
@@ -117,9 +113,9 @@ void AanderaaConductivitySensor::aggregate(void) {
  * @param sample_index Index of sample to encode
  * @param sampleMemberParams
  */
-void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data,
-                                                          uint32_t sample_index,
-                                                          ReportParams &report_params) {
+void AanderaaConductivitySensor::get_report_builder_sample_params(void *sensor_data,
+                                                                  uint32_t sample_index,
+                                                                  ReportParams &report_params) {
   AanderaaConductivityAggregations &aanderaa_conductivity_sample =
       (static_cast<AanderaaConductivityAggregations *>(sensor_data))[sample_index];
 
@@ -168,7 +164,7 @@ void AanderaaConductivitySensor::get_sample_member_params(void *sensor_data,
 }
 
 /**
- * @brief Get report parameters for encoding sensor data
+ * @brief Get report parameters for encoding sensor data in report builder
  *
  * @details This function is called when the report builder is setting up the report parameters
  *
@@ -194,8 +190,7 @@ AanderaaConductivitySensor::get_report_params(sensor_report_encoder_context_t &c
       .sample_members = sample_members,
   };
 
-  // Fill the sample members array using the existing function
-  get_sample_member_params(sensor_data, sample_index, params);
+  get_report_builder_sample_params(sensor_data, sample_index, params);
 
   return params;
 }

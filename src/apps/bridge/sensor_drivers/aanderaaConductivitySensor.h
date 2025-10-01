@@ -179,8 +179,8 @@ public:
                              uint32_t averager_max_samples);
   bool subscribe(void) override;
   void aggregate(void);
-  static void get_sample_member_params(void *sensor_data, uint32_t sample_index,
-                                       ReportParams &report_params);
+  static void get_report_builder_sample_params(void *sensor_data, uint32_t sample_index,
+                                               ReportParams &report_params);
   static ReportParams get_report_params(sensor_report_encoder_context_t &context,
                                         void *sensor_data, uint32_t sample_index);
   static void setup_sensor_pointers(report_builder_element_t *element, const void **nan_sample,
