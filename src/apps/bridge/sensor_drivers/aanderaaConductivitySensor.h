@@ -155,15 +155,9 @@ private:
   uint32_t last_timestamp;
 
   static constexpr uint32_t AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS = 6;
-
-  /** @brief Minimum readings required before performing aggregation */
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
-
-  /// Subtag for conductivity sensor data
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
-  /** @brief Default sensor reading period in milliseconds */
-  static constexpr uint32_t DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS =
-      30000; // default is 30 seconds
+  static constexpr uint32_t DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS = 30000;
 
   BmErr send_spotter_log_individual(const AanderaaConductivityMsg::Data &m);
   BmErr send_spotter_log_aggregate(const AanderaaConductivityAggregations &agg);
