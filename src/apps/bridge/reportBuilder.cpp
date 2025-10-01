@@ -67,20 +67,6 @@ static QueueHandle_t _report_builder_queue = NULL;
 
 static void report_builder_task(void *parameters);
 
-/// Initialize a new sample entry in the CBOR report
-bool report_builder_open_sample(ReportParams &params);
-
-/// Encode a single data field from the sensor reading into the CBOR report
-bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &s);
-
-/// Finalize the current sample entry in the CBOR report
-bool report_builder_close_sample(ReportParams &params);
-
-/// Helper function that opens a sample, adds all sample members from
-/// the report parameters, and closes the sample.
-/// This is the main function sensors should use to add their data to reports.
-bool report_builder_add_samples(ReportParams &params);
-
 CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
   const uint8_t *local_sample_member = static_cast<uint8_t *>(sample_member);
@@ -160,7 +146,7 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
  * @param params Report parameters containing context and metadata
  * @return true if successful, false on encoding error
  */
-bool report_builder_open_sample(ReportParams &params) {
+static bool report_builder_open_sample(ReportParams &params) {
   if (sensor_report_encoder_open_sample(params.context, params.num_sample_members,
                                         params.sample_type) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
@@ -178,7 +164,7 @@ bool report_builder_open_sample(ReportParams &params) {
  * @param params Report parameters containing context
  * @return true if successful, false on encoding error
  */
-bool report_builder_close_sample(ReportParams &params) {
+static bool report_builder_close_sample(ReportParams &params) {
   if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
     return false;
@@ -197,7 +183,7 @@ bool report_builder_close_sample(ReportParams &params) {
  * @param s Sample member parameters containing data pointer, encoder, and context
  * @return true if successful, false on encoding error
  */
-bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &s) {
+static bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &s) {
   if (sensor_report_encoder_add_sample_member(params.context, s.sample_member_encoder_cb,
                                               s.sample_member) != CborNoError) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
@@ -216,7 +202,7 @@ bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &
  * @param params Report parameters containing sample members and context
  * @return true if successful, false on encoding error
  */
-bool report_builder_add_samples(ReportParams &params) {
+static bool report_builder_add_samples(ReportParams &params) {
   if (!report_builder_open_sample(params)) {
     bm_debug("%s: Failed to open sample\n", __func__);
     return false;
