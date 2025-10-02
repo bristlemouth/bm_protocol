@@ -47,6 +47,7 @@ public:
     void resetSensor(void);
     void startStreaming(void);
     void calibrateCellCoef(void);
+    float read_data_from_sensor(const char*);
 
     static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_cond_raw.log";
 

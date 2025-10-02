@@ -228,7 +228,6 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
       return;
     } else {
       debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
-      // char calibrate_cmd[32];
 	  clearPayloadBuffer();
 	  uint16_t read_len = 0;
       PLUART::write((uint8_t *)"\r\n", strlen("\r\n"));
@@ -242,52 +241,12 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
      	 }
 	  }
       vTaskDelay(pdMS_TO_TICKS(500));
-      clearPayloadBuffer();
 
-      // read cellCoef from the sensor
-	  uint32_t read_duration_ms = 1000;
-  	  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
-      PLUART::write((uint8_t *)CMD_GET_CELL_COEF, strlen(CMD_GET_CELL_COEF));
-	  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-   		 if (PLUART::lineAvailable()) {
-      		read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      		if (read_len > 5) {
-        	  debug_printf("%.*s\n", read_len, _payload_buffer);
-      		  // cellCoef\t5990\t67\t4.585078E+00\r\n
-              // _cellCoef = 4.585078E+00
-      		  char *last_tab = strrchr(_payload_buffer, '\t');
-      		  if (last_tab != NULL) {
-      		    _cellCoef = strtof(last_tab + 1, NULL); // +1 to skip the tab
-      		    debug_printf("Measured cellCoef: %f\n", _cellCoef);
-      		  } else {
-      		    debug_printf("Failed to find tab separator\n");
-      		  }
-        	  clearPayloadBuffer();
-      	   }
-        }
-  	  }
+      // read cellCoef
+      _cellCoef = read_data_from_sensor(CMD_GET_CELL_COEF);
 
       // read conductivity
-      start_time = pdTICKS_TO_MS(xTaskGetTickCount());
-      PLUART::write((uint8_t *)CMD_GET_CONDUCTIVITY, strlen(CMD_GET_CONDUCTIVITY));
-      while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-        if (PLUART::lineAvailable()) {
-          read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-          if (read_len > 5) {
-            debug_printf("%.*s\n", read_len, _payload_buffer);
-            // Conductivity[mS/cm]\t5990\t67\t0.002\r\n
-            // _measuredConductivity = 0.002
-            char *last_tab = strrchr(_payload_buffer, '\t');
-            if (last_tab != NULL) {
-              _measuredConductivity = strtof(last_tab + 1, NULL); // +1 to skip the tab
-              debug_printf("Measured Conductivity: %.3f mS/cm\n", _measuredConductivity);
-            } else {
-              debug_printf("Failed to find tab separator\n");
-            }
-            clearPayloadBuffer();
-          }
-        }
-      }
+      _measuredConductivity = read_data_from_sensor(CMD_GET_CONDUCTIVITY);
 
       if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
         /* calibration failed but the loop() in user_code.cpp will run this function again to
@@ -314,4 +273,32 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
       }
     }
   }
+}
+
+float AanderaaConductivitySensor::read_data_from_sensor(const char* command) {
+  clearPayloadBuffer();
+  float value = NAN;
+  uint16_t read_len = 0;
+  uint32_t read_duration_ms = 1000;
+  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+
+  PLUART::write((uint8_t *)command, strlen(command));
+  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+    if (PLUART::lineAvailable()) {
+      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+      if (read_len > 5) {
+        // read value after 3rd tab
+        debug_printf("%.*s\n", read_len, _payload_buffer);
+        char *last_tab = strrchr(_payload_buffer, '\t');
+        if (last_tab != NULL) {
+          value = strtof(last_tab + 1, NULL); // +1 to skip the tab
+          debug_printf("Measured Value: %f\n", value);
+        } else {
+          debug_printf("Failed to find tab separator\n");
+        }
+        clearPayloadBuffer();
+      }
+    }
+  }
+  return value;
 }
