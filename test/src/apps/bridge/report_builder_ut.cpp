@@ -1,3 +1,4 @@
+#include "aanderaaConductivitySensor.h"
 #include "aanderaaSensor.h"
 #include "abstractSensor.h"
 #include "borealisSensor.h"
@@ -24,86 +25,97 @@ typedef struct {
   size_t size;
 } SensorInfo_t;
 
-static SensorInfo_t info[SENSOR_TYPE_COUNT] = {
-    [SENSOR_TYPE_UNKNOWN] =
-        {
-            0,
-            NULL,
-            NULL,
-            NULL,
-            0,
-        },
-    [SENSOR_TYPE_AANDERAA] =
-        {
-            0,
-            &AanderaaSensor::NAN_AGG,
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<aanderaa_aggregations_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(aanderaa_aggregations_t),
-        },
-    [SENSOR_TYPE_SOFT] =
-        {
-            0,
-            &SoftSensor::SOFT_NAN_AGG,
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<soft_aggregations_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(soft_aggregations_t),
-        },
-    [SENSOR_TYPE_RBR_CODA] =
-        {
-            0,
-            &RbrCodaSensor::RBR_CODA_NAN_AGG,
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<rbr_coda_aggregations_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(rbr_coda_aggregations_t),
-        },
-    [SENSOR_TYPE_SEAPOINT_TURBIDITY] =
-        {
-            0,
-            &SeapointTurbiditySensor::seapoint_turbidity_NAN_AGG,
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<seapoint_turbidity_aggregations_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(seapoint_turbidity_aggregations_t),
-        },
-    [SENSOR_TYPE_BOREALIS] =
-        {
-            0,
-            &BorealisSensor::AOS_BOREALIS_NAN_AGG,
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<BorealisAggregationData_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(BorealisAggregationData_t),
-        },
-    [SENSOR_TYPE_PME_DO] =
-        {
-            0,
-            &PmeDissolvedOxygenSensor::PME_DO_NAN_AGG,
-            [](void *data, uint8_t idx) -> void * {
-              return &(static_cast<pme_dissolved_oxygen_aggregations_t *>(data))[idx];
-            },
-            NULL,
-            sizeof(pme_dissolved_oxygen_aggregations_t),
-        },
-    [SENSOR_TYPE_PME_WIPE] =
-        {
-            0,
-            NULL,
-            NULL,
-            NULL,
-            0,
-        },
-};
+static void *get_aanderaa_agg(void *data, uint8_t idx) {
+  return &(static_cast<aanderaa_aggregations_t *>(data))[idx];
+}
+
+static void *get_soft_agg(void *data, uint8_t idx) {
+  return &(static_cast<soft_aggregations_t *>(data))[idx];
+}
+
+static void *get_rbr_agg(void *data, uint8_t idx) {
+  return &(static_cast<rbr_coda_aggregations_t *>(data))[idx];
+}
+
+static void *get_turbidity_agg(void *data, uint8_t idx) {
+  return &(static_cast<seapoint_turbidity_aggregations_t *>(data))[idx];
+}
+
+static void *get_conductivity_agg(void *data, uint8_t idx) {
+  return &(static_cast<AanderaaConductivityAggregations *>(data))[idx];
+}
+
+static void *get_borealis_agg(void *data, uint8_t idx) {
+  return &(static_cast<BorealisAggregationData_t *>(data))[idx];
+}
+
+static void *get_pme_do_agg(void *data, uint8_t idx) {
+  return &(static_cast<pme_dissolved_oxygen_aggregations_t *>(data))[idx];
+}
+
+static SensorInfo_t info[SENSOR_TYPE_COUNT];
+
+static void initialize_sensor_info() {
+  info[SENSOR_TYPE_UNKNOWN].node_id = 0;
+  info[SENSOR_TYPE_UNKNOWN].nan_struct = NULL;
+  info[SENSOR_TYPE_UNKNOWN].converter = NULL;
+  info[SENSOR_TYPE_UNKNOWN].data = NULL;
+  info[SENSOR_TYPE_UNKNOWN].size = 0;
+
+  info[SENSOR_TYPE_AANDERAA].node_id = 0;
+  info[SENSOR_TYPE_AANDERAA].nan_struct = &AanderaaSensor::NAN_AGG;
+  info[SENSOR_TYPE_AANDERAA].converter = get_aanderaa_agg;
+  info[SENSOR_TYPE_AANDERAA].data = NULL;
+  info[SENSOR_TYPE_AANDERAA].size = sizeof(aanderaa_aggregations_t);
+
+  info[SENSOR_TYPE_SOFT].node_id = 0;
+  info[SENSOR_TYPE_SOFT].nan_struct = &SoftSensor::SOFT_NAN_AGG;
+  info[SENSOR_TYPE_SOFT].converter = get_soft_agg;
+  info[SENSOR_TYPE_SOFT].data = NULL;
+  info[SENSOR_TYPE_SOFT].size = sizeof(soft_aggregations_t);
+
+  info[SENSOR_TYPE_RBR_CODA].node_id = 0;
+  info[SENSOR_TYPE_RBR_CODA].nan_struct = &RbrCodaSensor::RBR_CODA_NAN_AGG;
+  info[SENSOR_TYPE_RBR_CODA].converter = get_rbr_agg;
+  info[SENSOR_TYPE_RBR_CODA].data = NULL;
+  info[SENSOR_TYPE_RBR_CODA].size = sizeof(rbr_coda_aggregations_t);
+
+  info[SENSOR_TYPE_SEAPOINT_TURBIDITY].node_id = 0;
+  info[SENSOR_TYPE_SEAPOINT_TURBIDITY].nan_struct =
+      &SeapointTurbiditySensor::seapoint_turbidity_NAN_AGG;
+  info[SENSOR_TYPE_SEAPOINT_TURBIDITY].converter = get_turbidity_agg;
+  info[SENSOR_TYPE_SEAPOINT_TURBIDITY].data = NULL;
+  info[SENSOR_TYPE_SEAPOINT_TURBIDITY].size = sizeof(seapoint_turbidity_aggregations_t);
+
+  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].node_id = 0;
+  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].nan_struct =
+      &AanderaaConductivitySensor::aanderaa_conductivity_NAN_AGG;
+  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].converter = get_conductivity_agg;
+  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].data = NULL;
+  info[SENSOR_TYPE_AANDERAA_CONDUCTIVITY].size = sizeof(AanderaaConductivityAggregations);
+
+  info[SENSOR_TYPE_BOREALIS].node_id = 0;
+  info[SENSOR_TYPE_BOREALIS].nan_struct = &BorealisSensor::AOS_BOREALIS_NAN_AGG;
+  info[SENSOR_TYPE_BOREALIS].converter = get_borealis_agg;
+  info[SENSOR_TYPE_BOREALIS].data = NULL;
+  info[SENSOR_TYPE_BOREALIS].size = sizeof(BorealisAggregationData_t);
+
+  info[SENSOR_TYPE_PME_DO].node_id = 0;
+  info[SENSOR_TYPE_PME_DO].nan_struct = &PmeDissolvedOxygenSensor::PME_DO_NAN_AGG;
+  info[SENSOR_TYPE_PME_DO].converter = get_pme_do_agg;
+  info[SENSOR_TYPE_PME_DO].data = NULL;
+  info[SENSOR_TYPE_PME_DO].size = sizeof(pme_dissolved_oxygen_aggregations_t);
+
+  info[SENSOR_TYPE_PME_WIPE].node_id = 0;
+  info[SENSOR_TYPE_PME_WIPE].nan_struct = NULL;
+  info[SENSOR_TYPE_PME_WIPE].converter = NULL;
+  info[SENSOR_TYPE_PME_WIPE].data = NULL;
+  info[SENSOR_TYPE_PME_WIPE].size = 0;
+}
 
 static void assign_info_node_ids(void) {
+  initialize_sensor_info();
+
   uint32_t seed = time(NULL);
   rand_sequence_unique rsu(seed, seed + 1);
 
@@ -247,3 +259,4 @@ TEST(ReportBuilderLinkedList, AddingSamples) {
   list.clear();
   free_random_data();
 }
+

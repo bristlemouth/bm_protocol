@@ -640,7 +640,8 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
   configASSERT(len == 1);
 
   // but the byte into the current buffer
-  ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
+  ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx] = byte;
+  ncpRXBuffIdx += 1;
 
   do {
     if (ncpRXBuffIdx >= NCP_BUFF_LEN) {
