@@ -433,7 +433,7 @@ void loop(void) {
     }
 
     if (AanderaaCurrentMeterMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
-                                &encoded_len) == CborNoError) {
+                                        &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
                 encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {
@@ -495,7 +495,7 @@ static void spoof_aanderaa() {
     d.temperature_deg_c = 20 + (rand() % 5);
 
     if (AanderaaCurrentMeterMsg::encode(d, reinterpret_cast<uint8_t *>(payload_buffer), bufsize,
-                                &encoded_len) == CborNoError) {
+                                        &encoded_len) == CborNoError) {
       bm_pub_wl(aanderaaTopic, aanderaaTopicStrLen, reinterpret_cast<uint8_t *>(payload_buffer),
                 encoded_len, 0, BM_COMMON_PUB_SUB_VERSION);
     } else {

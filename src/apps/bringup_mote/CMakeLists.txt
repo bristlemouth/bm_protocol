@@ -16,7 +16,8 @@ set(APP_LIBS
 
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
-    NO_NETWORK
+    # Add network stress test functions
+    STRESS_TEST_ENABLE
     )
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
