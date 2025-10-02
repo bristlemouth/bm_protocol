@@ -32,6 +32,7 @@ AanderaaConductivitySensor::AanderaaConductivitySensor(uint64_t conductivity_nod
 
   reading_count = 0;
   last_timestamp = 0;
+  node_position = 0;
 
   _mutex = xSemaphoreCreateMutex();
   configASSERT(_mutex);
@@ -255,7 +256,7 @@ BmErr AanderaaConductivitySensor::send_spotter_log_aggregate(
       "%.4f,"   // conductivity_mean_ms_cm
       "%.3f,"   // temperature_mean_deg_c
       "%.3f,"   // salinity_mean_psu
-      "%.3f,"   // salinity_std_dev
+      "%.4f,"   // salinity_std_dev
       "%.3f,"   // water_density_mean_kg_m3
       "%.3f,"   // sound_speed_mean_m_s
       "%.3f\n", // depth_mean_m
