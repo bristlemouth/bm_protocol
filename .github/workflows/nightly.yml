@@ -1,0 +1,81 @@
+#
+# This github action will auto build the latest development firmware
+# if new pushes have occurred to the develop branch in the last 24
+# hours. These releases are not available on the release page, but
+# rather artifacts are generated and accessible for testing.
+#
+
+name: nightly
+on:
+  # Schedule at 2AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+jobs:
+  Nightly:
+    runs-on:
+      - ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    permissions:
+      contents: write
+    steps:
+      # Checkout develop branch
+      - uses: actions/checkout@v4
+        with:
+          ref: 'develop'
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Determine if pushes have happened in last 24 hours, if not stop the
+      # workflow, else continue with a release
+      - name: Check For Recent Commits
+        id: check_commits
+        run: |
+          LAST_COMMIT_DATE=$(git log -1 --format=%ct $(git rev-parse --abbrev-ref HEAD))
+          CURRENT_DATE=$(date +%s)
+          TIME_DIFF=$((CURRENT_DATE - LAST_COMMIT_DATE))
+
+          # Set threshold for last commit (24 hours = 86400 seconds)
+          THRESHOLD=86400
+
+          if [ "$TIME_DIFF" -lt "$THRESHOLD" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No new commits found in the last $THRESHOLD seconds. Skipping Nightly build."
+            echo "TODO: change line below to false..."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: conda-incubator/setup-miniconda@v2
+        if: steps.check_commits.outputs.should_run == 'true'
+        with:
+          miniconda-version: "latest"
+          activate-environment: bristlemouth
+          environment-file: environment_ci.yml
+          auto-activate-base: false
+
+      # Obtain nightly tag name
+      - name: Get Nightly Tag Name
+        if: steps.check_commits.outputs.should_run == 'true'
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)-nightly_$(date +'%Y_%m_%d')" >> $GITHUB_ENV
+
+      # Run auto_build.py to generate release packages (zipped)
+      - name: Build and Package
+        if: steps.check_commits.outputs.should_run == 'true'
+        env:
+          MEMFAULT_ORG_TOKEN: ${{ secrets.MEMFAULT_ORG_TOKEN }}
+          ED25519_PRIV_KEY: ${{ secrets.SPOTTER_ED25519 }}
+        run: |
+          eval `ssh-agent -s`
+          ssh-add - <<< '${{ secrets.BOREALIS_SSH_KEY }}'
+          python3 tools/scripts/release/auto_build.py tools/scripts/release/configs/default.yml --version=${{ env.RELEASE_VERSION }} --out_dir=${{ runner.temp }}/artifacts
+
+      # If nightly build, upload artifacts and do not push to release page
+      - name: Generate Artifacts
+        if: steps.check_commits.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RELEASE_VERSION }}
+          path: ${{ runner.temp }}/artifacts/*.zip
