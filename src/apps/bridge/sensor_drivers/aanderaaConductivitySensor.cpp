@@ -84,6 +84,11 @@ void AanderaaConductivitySensor::aggregate(void) {
         (conductivity_aggs.*(f.aggr_ptr)) = samplers[f.type].getMean();
       }
       conductivity_aggs.salinity_std_dev = samplers[SamplerType::Salinity_psu].getStd();
+
+      if (conductivity_aggs.salinity_std_dev > SALINITY_STD_DEV_MAX) {
+        conductivity_aggs.salinity_std_dev = HUGE_VAL;
+      }
+
       conductivity_aggs.reading_count = reading_count;
     }
     send_spotter_log_aggregate(conductivity_aggs);
