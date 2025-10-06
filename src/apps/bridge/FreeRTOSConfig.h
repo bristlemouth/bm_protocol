@@ -151,6 +151,7 @@ header file. */
 #include "memfault/ports/freertos_trace.h"
 #include "memfault/panics/assert.h"
 #define configASSERT(x) MEMFAULT_ASSERT(x)
+#define configASSERT_EXTRA(x, _reason) MEMFAULT_ASSERT_EXTRA(x, _reason)
 
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS

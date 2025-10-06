@@ -3,23 +3,26 @@
 #include "aanderaaSensor.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
+#include "bm_config.h"
 #include "bm_serial.h"
-#include "borealisSensor.h"
 #include "bridgeLog.h"
-#include "cbor_sensor_report_encoder.h"
 #include "device_info.h"
-#include "pmeDissolvedOxygenSensor.h"
 #include "queue.h"
-#include "rbrCodaSensor.h"
 #include "reportBuilderList.h"
-#include "seapointTurbiditySensor.h"
 #include "semphr.h"
-#include "softSensor.h"
 #include "task.h"
 #include "task_priorities.h"
 #include "timer_callback_handler.h"
 #include "timers.h"
 #include "topology_sampler.h"
+// Sensor drivers
+#include "sensor_drivers/aanderaaConductivitySensor.h"
+#include "sensor_drivers/borealisSensor.h"
+#include "sensor_drivers/pmeDissolvedOxygenSensor.h"
+#include "sensor_drivers/rbrCodaSensor.h"
+#include "sensor_drivers/seapointTurbiditySensor.h"
+#include "sensor_drivers/softSensor.h"
+
 #include <inttypes.h>
 #include <string.h>
 
@@ -66,7 +69,8 @@ static void report_builder_task(void *parameters);
 
 CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
-  const uint8_t *local_sample_member = (const uint8_t *)sample_member;
+  const uint8_t *local_sample_member = static_cast<uint8_t *>(sample_member);
+
   CborError err = CborNoError;
   if (size && local_sample_member) {
     err = cbor_encode_byte_string(&sample_array, local_sample_member, size);
@@ -79,7 +83,7 @@ CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_me
 CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size) {
   (void)size;
-  double local_sample_member = *(double *)sample_member;
+  double local_sample_member = *(static_cast<double *>(sample_member));
   CborError err = CborNoError;
   err = cbor_encode_double(&sample_array, local_sample_member);
   return err;
@@ -88,7 +92,7 @@ CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_me
 CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
                                     uint32_t size) {
   (void)size;
-  uint32_t local_sample_member = *(uint32_t *)sample_member;
+  uint32_t local_sample_member = *(static_cast<uint32_t *>(sample_member));
   CborError err = CborNoError;
   err = cbor_encode_uint(&sample_array, local_sample_member);
   return err;
@@ -131,6 +135,97 @@ void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor
     configASSERT(0);
   }
   xQueueSend(_report_builder_queue, &item, portMAX_DELAY);
+}
+
+/**
+ * @brief Open a new sample in the sensor report encoder
+ *
+ * Initializes a new sample entry in the CBOR report with the specified
+ * number of sample members and sample type identifier.
+ *
+ * @param params Report parameters containing context and metadata
+ * @return true if successful, false on encoding error
+ */
+static bool report_builder_open_sample(ReportParams &params) {
+  if (sensor_report_encoder_open_sample(params.context, params.num_sample_members,
+                                        params.sample_type) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Close the current sample in the sensor report encoder
+ *
+ * Finalizes the current sample entry in the CBOR report. Must be called
+ * after all sample members have been added.
+ *
+ * @param params Report parameters containing context
+ * @return true if successful, false on encoding error
+ */
+static bool report_builder_close_sample(ReportParams &params) {
+  if (sensor_report_encoder_close_sample(params.context) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Add a sample member (field) to the current sample
+ *
+ * Encodes a single data field from the sensor reading into the CBOR report
+ * using the appropriate encoder callback. This function handles the encoding
+ * of individual sensor values like temperature, conductivity, etc.
+ *
+ * @param params Report parameters containing context and metadata
+ * @param s Sample member parameters containing data pointer, encoder, and context
+ * @return true if successful, false on encoding error
+ */
+static bool report_builder_add_sample_member(ReportParams &params, SampleMemberParams &s) {
+  if (sensor_report_encoder_add_sample_member(params.context, s.sample_member_encoder_cb,
+                                              s.sample_member) != CborNoError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER, params.fail_text);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Add all sample members from a report to the encoder
+ *
+ * Convenience function that opens a sample, adds all sample members from
+ * the report parameters, and closes the sample. This is the main function
+ * sensors should use to add their data to reports.
+ *
+ * @param params Report parameters containing sample members and context
+ * @return true if successful, false on encoding error
+ */
+static bool report_builder_add_samples(ReportParams &params) {
+  if (!report_builder_open_sample(params)) {
+    bm_debug("%s: Failed to open sample\n", __func__);
+    return false;
+  }
+
+  if (params.sample_members == NULL) {
+    bm_debug("%s: sample_members is NULL\n", __func__);
+    return false;
+  }
+
+  for (uint32_t i = 0; i < params.num_sample_members; i++) {
+    if (!report_builder_add_sample_member(params, params.sample_members[i])) {
+      bm_debug("%s: Failed to add sample member\n", __func__);
+      return false;
+    }
+  }
+
+  if (!report_builder_close_sample(params)) {
+    bm_debug("%s: Failed to close sample\n", __func__);
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -353,6 +448,24 @@ static bool addSamplesToReport(sensor_report_encoder_context_t &context, uint8_t
     rval = true;
     break;
   }
+  case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
+    /// TODO: This pattern will significantly reduce the amount of duplicated code in the switch statement
+    ///     Step 1:
+    ///             * Add `get_report_params()` to each sensor
+    ///             * Call `report_builder_add_samples()` with the params
+    ///     Step 2:
+    ///             * Create an array or map of of sensor types to report_params_t generators ie SensorX::get_report_params()
+    ///             * simply call
+    ///               ```
+    ///               if (sensorReportBuilders[sensor_type]) {
+    ///                   sensorReportBuilders[sensor_type](context, sensor_data, sample_index);
+    ///               }
+    ///               ```
+    ReportParams params =
+        AanderaaConductivitySensor::get_report_params(context, sensor_data, sample_index);
+    rval = report_builder_add_samples(params);
+    break;
+  }
   case SENSOR_TYPE_PME_DO: {
     pme_dissolved_oxygen_aggregations_t pme_do_sample =
         (static_cast<pme_dissolved_oxygen_aggregations_t *>(sensor_data))[sample_index];
@@ -526,6 +639,12 @@ static void report_builder_task(void *parameters) {
                       }
                       case SENSOR_TYPE_SEAPOINT_TURBIDITY: {
                         size = sizeof(seapoint_turbidity_aggregations_t);
+                        break;
+                      }
+                      case SENSOR_TYPE_AANDERAA_CONDUCTIVITY: {
+                        /// If we force each sensor to implement a get_aggregation_size() function, we can remove the switch statement
+                        /// eg, sensorHandlers[sensor_type]->get_aggregation_size()
+                        size = AanderaaConductivitySensor::get_aggregation_size();
                         break;
                       }
                       case SENSOR_TYPE_PME_DO: {

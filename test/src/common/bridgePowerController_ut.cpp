@@ -835,7 +835,7 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
       .BoostEnablePin = FAKE_BOOST_EN,
       .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
       .sampleDurationMs = SAMPLE_DURATION_S * 1000,
-      BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000,
       .subsamplingEnabled = false,
       .powerControllerEnabled = false,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstractSensor.h"
+#include "cbor_sensor_report_encoder.h"
 
 typedef enum {
   REPORT_BUILDER_INCREMENT_SAMPLE_COUNT,
@@ -16,16 +17,53 @@ typedef struct {
   uint32_t sensor_data_size;
 } report_builder_queue_item_t;
 
+/**
+ * @brief Parameters for encoding individual sample members (fields) within sensor data
+ *
+ * Used to pass sample member data and encoding information to the CBOR functions.
+ * Each sensor reading typically contains multiple sample members (e.g., temperature, conductivity)
+ * that need to be encoded with their appropriate encoder callbacks.
+ *
+ */
+typedef struct {
+  void *sample_member;
+  sample_encoder_cb sample_member_encoder_cb;
+  uint32_t size;
+} SampleMemberParams;
+
+/**
+ * @brief Parameters for building complete sensor reports
+ *
+ * Contains information needed to construct a sensor report including
+ * context, sensor data, and metadata for CBOR encoding. Used by the report
+ * builder system to process sensor data in a structured way.
+ */
+// cppcheck-suppress unusedStructMember
+typedef struct {
+  sensor_report_encoder_context_t &context;
+  void *sensor_data;
+  uint32_t sample_index;
+  const char *fail_text;
+  const char *sample_type;
+  uint32_t num_sample_members;
+  SampleMemberParams *sample_members;
+} ReportParams;
+
 void reportBuilderInit(void);
+
 void reportBuilderAddToQueue(uint64_t node_id, uint8_t sensor_type, void *sensor_data,
                              uint32_t sensor_data_size, report_builder_message_e msg_type);
 uint8_t *report_builder_alloc_last_network_config(uint32_t &network_crc32,
                                                   uint32_t &cbor_config_size);
 uint32_t report_builder_get_samples_per_report(void);
+
 bool report_builder_get_transmit_aggregations(void);
+
 CborError encode_buffer_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);
+
 CborError encode_double_sample_member(CborEncoder &sample_array, void *sample_member,
                                       uint32_t size);
+
 CborError encode_uint_sample_member(CborEncoder &sample_array, void *sample_member,
                                     uint32_t size);

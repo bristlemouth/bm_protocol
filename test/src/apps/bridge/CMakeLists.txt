@@ -53,6 +53,7 @@ target_sources(report_builder_tests
     PRIVATE
     ${TEST_DIR}/stubs/mock_bridgeLog.cpp
     ${SRC_DIR}/apps/bridge/reportBuilderList.cpp
+    ${TEST_DIR}/stubs/aanderaaConductivitySensor_minimal_stub.cpp
     report_builder_ut.cpp)
 
 target_link_libraries(report_builder_tests gmock gtest_main)
