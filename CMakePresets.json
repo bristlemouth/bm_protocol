@@ -254,6 +254,13 @@
             "cacheVariables": {
                 "APP": "sub_example"
             }
+        },
+        {
+            "name": "aanderaa-conductivity-rs232",
+            "inherits": "serial-payload-example-rs232",
+            "cacheVariables": {
+                "APP": "aanderaa_conductivity"
+            }
         }
     ],
     "buildPresets": [
@@ -410,6 +417,11 @@
         {
             "configurePreset": "sub-example",
             "name": "sub-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "aanderaa-conductivity-rs232",
+            "name": "aanderaa-conductivity-rs232",
             "jobs": 8
         }
     ]
