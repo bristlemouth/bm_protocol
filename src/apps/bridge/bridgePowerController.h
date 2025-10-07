@@ -45,6 +45,11 @@ private:
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
   void stateLogPrintTarget(const char *state, uint32_t target);
+  uint32_t handleInitState(void);
+  bool bridgePowerControllerHandleEarlyWake(uint32_t intervalStartS, uint32_t currentCycleS);
+  uint32_t handleSubsamplingState(uint32_t sampleTimeRemainingS,
+                                                  uint32_t currentCycleS);
+  uint32_t handleSampleState(void);
 
 public:
   static constexpr uint32_t OFF = (1 << 0);

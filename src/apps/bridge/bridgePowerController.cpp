@@ -18,7 +18,8 @@
 #endif // RAW_PRESSURE_ENABLE
 
 BridgePowerController::BridgePowerController(const Config &config)
-    : _BusLoadSwitchEnablePin(config.BusLoadSwitchEnablePin), _BoostEnablePin(config.BoostEnablePin),
+    : _BusLoadSwitchEnablePin(config.BusLoadSwitchEnablePin),
+      _BoostEnablePin(config.BoostEnablePin),
       _powerControlEnabled(config.powerControllerEnabled),
       _sampleIntervalS(config.sampleIntervalMs / 1000),
       _sampleDurationS(config.sampleDurationMs / 1000),
@@ -66,11 +67,9 @@ void BridgePowerController::validateConfig(void) {
     _alignmentS = DEFAULT_ALIGNMENT_S;
   }
   if (_sampleDurationS == _sampleIntervalS) {
-    _configError = true;
     _powerControlEnabled = false;
   }
   if (_subsampleDurationS == _subsampleIntervalS) {
-    _configError = true;
     _subsamplingEnabled = false;
   }
 }
@@ -193,148 +192,168 @@ void BridgePowerController::stateLogPrintTarget(const char *state, uint32_t targ
                  (_ticksSamplingEnabled) ? "uptime" : "epoch");
 }
 
+uint32_t BridgePowerController::handleInitState(void) {
+  uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
+
+  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge State Init\n");
+  // We start Bus on, no need to signal an eth up / power up event to l2 & adin
+  setBusPowerAndSetSignal(true, false);
+  // Set bus on for two minutes for init.
+  vTaskDelay(INIT_POWER_ON_TIMEOUT_MS);
+  if (_configError) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Bridge configuration error! Please check configs, using default.\n");
+  }
+  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                 "Sample enabled %d\n"
+                 "Sample Duration: %" PRIu32 " s\n"
+                 "Sample Interval: %" PRIu32 " s\n"
+                 "Subsample enabled: %d \n"
+                 "Subsample Duration: %" PRIu32 " s\n"
+                 "Subsample Interval: %" PRIu32 " s\n"
+                 "Alignment Interval: %" PRIu32 " s\n",
+                 _powerControlEnabled, _sampleDurationS, _sampleIntervalS, _subsamplingEnabled,
+                 _subsampleDurationS, _subsampleIntervalS, _alignmentS);
+  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Using %s timebase\n",
+                 _ticksSamplingEnabled ? "ticks" : "RTC");
+  bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                 "Bridge State Init Complete\n");
+  checkAndUpdateTimebase();
+  uint32_t currentCycleS = getCurrentTimeS();
+  if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
+    time_to_sleep_ms = MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
+    // The default state until first sample interval depends
+    // on whether bus power control is enabled.
+    setBusPowerAndSetSignal(!_powerControlEnabled);
+  }
+  _initDone = true;
+
+  return time_to_sleep_ms;
+}
+
+uint32_t BridgePowerController::handleSubsamplingState(uint32_t sampleTimeRemainingS,
+                                                       uint32_t currentCycleS) {
+  uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
+
+  if (currentCycleS < _subsampleIntervalStartS) {
+    const uint32_t secondsUntilNextSubsample = _subsampleIntervalStartS - currentCycleS;
+    const uint32_t timeToSleepS = MIN(sampleTimeRemainingS, secondsUntilNextSubsample);
+    time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Controller task woke early at %" PRIu32 ", will wait %" PRIu32 " ms\n",
+                   currentCycleS, time_to_sleep_ms);
+    return time_to_sleep_ms;
+  }
+
+  uint32_t subsampleTimeRemainingS =
+      timeRemainingGeneric(_subsampleIntervalStartS, currentCycleS, _subsampleDurationS);
+  if (subsampleTimeRemainingS) {
+    stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
+    setBusPowerAndSetSignal(true);
+    time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
+  } else {
+    const uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
+    _subsampleIntervalStartS = nextSubsampleEpochS;
+    const uint32_t secondsUntilNextSubsample =
+        nextSubsampleEpochS > currentCycleS ? nextSubsampleEpochS - currentCycleS : 0;
+    // Check whether this is the last subsample within a sample duration
+    // If so, only sleep until sampling off, to align the next sample
+    const uint32_t timeToSleepS = MIN(sampleTimeRemainingS, secondsUntilNextSubsample);
+    stateLogPrintTarget("Subsampling Off", currentCycleS + timeToSleepS);
+    time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
+
+    // Prevent bus thrash
+    if (_powerControlEnabled && nextSubsampleEpochS > currentCycleS) {
+      setBusPowerAndSetSignal(!_subsamplingEnabled);
+    }
+  }
+
+  return time_to_sleep_ms;
+}
+
+uint32_t BridgePowerController::handleSampleState(void) {
+  uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
+  uint32_t currentCycleS = getCurrentTimeS();
+
+  if (currentCycleS < _sampleIntervalStartS) {
+    time_to_sleep_ms = (_sampleIntervalStartS - currentCycleS) * 1000;
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Controller task woke early at %" PRIu32 ", will wait %" PRIu32 " ms\n",
+                   currentCycleS, time_to_sleep_ms);
+    return time_to_sleep_ms;
+  }
+
+  uint32_t sampleTimeRemainingS =
+      timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
+  if (sampleTimeRemainingS) {
+    if (_subsamplingEnabled) {
+      time_to_sleep_ms = handleSubsamplingState(sampleTimeRemainingS, currentCycleS);
+    } else {
+      stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
+#ifdef RAW_PRESSURE_ENABLE
+      if (!rbrPressureProcessorIsStarted()) {
+        rbrPressureProcessorStart();
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Started rbrPressureProcessor\n");
+      }
+#endif // RAW_PRESSURE_ENABLE
+      setBusPowerAndSetSignal(true);
+      time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
+    }
+  } else {
+    uint32_t nextSampleEpochS =
+        _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
+    _sampleIntervalStartS = nextSampleEpochS;
+    _subsampleIntervalStartS = nextSampleEpochS;
+    stateLogPrintTarget("Sampling Off", nextSampleEpochS);
+    time_to_sleep_ms = (currentCycleS < nextSampleEpochS)
+                           ? MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
+                           : MIN_TASK_SLEEP_MS;
+    // Prevent bus thrash
+    if (nextSampleEpochS > currentCycleS) {
+      setBusPowerAndSetSignal(!_powerControlEnabled);
+    }
+
+    // Notify sensor controller that an aggregation report should occur
+    xTaskNotify(sensor_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
+  }
+
+  return time_to_sleep_ms;
+}
+
 void BridgePowerController::_update(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
-  do {
-    if (!_initDone) { // Initializing
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge State Init\n");
-      // We start Bus on, no need to signal an eth up / power up event to l2 & adin
-      setBusPowerAndSetSignal(true, false);
-      // Set bus on for two minutes for init.
-      vTaskDelay(INIT_POWER_ON_TIMEOUT_MS);
-      if (_configError) {
-        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
-                       "Bridge configuration error! Please check configs, using default.\n");
+  if (!_initDone) {
+    time_to_sleep_ms = handleInitState();
+  } else if (_timebaseSet) {
+    time_to_sleep_ms = handleSampleState();
+  } else {
+    uint8_t enabled;
+    if (!_powerControlEnabled && IORead(&_BusLoadSwitchEnablePin, &enabled)) {
+      if (!enabled) { // Turn the bus on if we've disabled the power manager.
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Bridge State Disabled - bus on\n");
+        setBusPowerAndSetSignal(true);
       }
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                     "Sample enabled %d\n"
-                     "Sample Duration: %" PRIu32 " s\n"
-                     "Sample Interval: %" PRIu32 " s\n"
-                     "Subsample enabled: %d \n"
-                     "Subsample Duration: %" PRIu32 " s\n"
-                     "Subsample Interval: %" PRIu32 " s\n"
-                     "Alignment Interval: %" PRIu32 " s\n",
-                     _powerControlEnabled, _sampleDurationS, _sampleIntervalS,
-                     _subsamplingEnabled, _subsampleDurationS, _subsampleIntervalS,
-                     _alignmentS);
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Using %s timebase\n",
-                     _ticksSamplingEnabled ? "ticks" : "RTC");
-      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                     "Bridge State Init Complete\n");
+    } else if (!_timebaseSet && _powerControlEnabled &&
+               IORead(&_BusLoadSwitchEnablePin, &enabled)) {
+      if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
+        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Bridge State Disabled - controller enabled, but timebase is not yet "
+                       "set - bus off\n");
+        setBusPowerAndSetSignal(false);
+      }
+
+      // Align the first sample to UTC or tick offset when the timebase finally gets set
       checkAndUpdateTimebase();
       uint32_t currentCycleS = getCurrentTimeS();
       if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
         time_to_sleep_ms =
             MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
-        // The default state until first sample interval depends
-        // on whether bus power control is enabled.
-        setBusPowerAndSetSignal(!_powerControlEnabled);
       }
-      _initDone = true;
-    } else if (_powerControlEnabled && _timebaseSet) { // Sampling Enabled
-      uint32_t currentCycleS = getCurrentTimeS();
-      if (currentCycleS < _sampleIntervalStartS) {
-        time_to_sleep_ms = (_sampleIntervalStartS - currentCycleS) * 1000;
-        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                       "Controller task woke early at %" PRIu32 ", will wait %" PRIu32 " ms\n",
-                       currentCycleS, time_to_sleep_ms);
-        break;
-      }
-      uint32_t sampleTimeRemainingS =
-          timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
-      if (sampleTimeRemainingS) {
-        if (_subsamplingEnabled) { // Subsampling Enabled
-          if (currentCycleS < _subsampleIntervalStartS) {
-            const uint32_t secondsUntilNextSubsample = _subsampleIntervalStartS - currentCycleS;
-            const uint32_t timeToSleepS = MIN(sampleTimeRemainingS, secondsUntilNextSubsample);
-            time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
-            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                           "Controller task woke early at %" PRIu32 ", will wait %" PRIu32
-                           " ms\n",
-                           currentCycleS, time_to_sleep_ms);
-            break;
-          }
-          uint32_t subsampleTimeRemainingS = timeRemainingGeneric(
-              _subsampleIntervalStartS, currentCycleS, _subsampleDurationS);
-          if (subsampleTimeRemainingS) {
-            stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
-            setBusPowerAndSetSignal(true);
-            time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
-            break;
-          } else {
-            const uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
-            _subsampleIntervalStartS = nextSubsampleEpochS;
-            const uint32_t secondsUntilNextSubsample =
-                nextSubsampleEpochS > currentCycleS ? nextSubsampleEpochS - currentCycleS : 0;
-            // Check whether this is the last subsample within a sample duration
-            // If so, only sleep until sampling off, to align the next sample
-            const uint32_t timeToSleepS = MIN(sampleTimeRemainingS, secondsUntilNextSubsample);
-            stateLogPrintTarget("Subsampling Off", currentCycleS + timeToSleepS);
-            time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
-            // Prevent bus thrash
-            if (nextSubsampleEpochS > currentCycleS) {
-              setBusPowerAndSetSignal(false);
-            }
-            break;
-          }
-        } else { // Subsampling disabled
-          stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
-#ifdef RAW_PRESSURE_ENABLE
-          if (!rbrPressureProcessorIsStarted()) {
-            rbrPressureProcessorStart();
-            bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                           "Started rbrPressureProcessor\n");
-          }
-#endif // RAW_PRESSURE_ENABLE
-          setBusPowerAndSetSignal(true);
-          time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
-          break;
-        }
-      } else {
-        uint32_t nextSampleEpochS =
-            _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
-        _sampleIntervalStartS = nextSampleEpochS;
-        _subsampleIntervalStartS = nextSampleEpochS;
-        stateLogPrintTarget("Sampling Off", nextSampleEpochS);
-        time_to_sleep_ms =
-            (currentCycleS < nextSampleEpochS)
-                ? MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
-                : MIN_TASK_SLEEP_MS;
-        // Prevent bus thrash
-        if (nextSampleEpochS > currentCycleS) {
-          setBusPowerAndSetSignal(false);
-        }
-        xTaskNotify(sensor_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
-        break;
-      }
-    } else { // Sampling Not Enabled
-      uint8_t enabled;
-      if (!_powerControlEnabled && IORead(&_BusLoadSwitchEnablePin, &enabled)) {
-        if (!enabled) { // Turn the bus on if we've disabled the power manager.
-          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                         "Bridge State Disabled - bus on\n");
-          setBusPowerAndSetSignal(true);
-        }
-      } else if (!_timebaseSet && _powerControlEnabled && IORead(&_BusLoadSwitchEnablePin, &enabled)) {
-        if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
-          bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                         "Bridge State Disabled - controller enabled, but timebase is not yet "
-                         "set - bus off\n");
-          setBusPowerAndSetSignal(false);
-        }
-
-        // Align the first sample to UTC or tick offset when the timebase finally gets set
-        checkAndUpdateTimebase();
-        uint32_t currentCycleS = getCurrentTimeS();
-        if (_timebaseSet && _sampleIntervalStartS > currentCycleS) {
-          time_to_sleep_ms =
-              MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
-        }
-      }
-      checkAndUpdateTimebase();
     }
-
-  } while (0);
+    checkAndUpdateTimebase();
+  }
 
   if (time_to_sleep_ms > MIN_TASK_SLEEP_MS) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
