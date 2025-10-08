@@ -263,8 +263,8 @@ uint32_t BridgePowerController::handleSubsamplingState(uint32_t sampleTimeRemain
     time_to_sleep_ms = MAX(timeToSleepS * 1000, MIN_TASK_SLEEP_MS);
 
     // Prevent bus thrash
-    if (_powerControlEnabled && nextSubsampleEpochS > currentCycleS) {
-      setBusPowerAndSetSignal(!_subsamplingEnabled);
+    if (nextSubsampleEpochS > currentCycleS) {
+      setBusPowerAndSetSignal(false);
     }
   }
 
@@ -329,6 +329,7 @@ void BridgePowerController::_update(void) {
     time_to_sleep_ms = handleSampleState();
   } else {
     uint8_t enabled;
+    time_to_sleep_ms = TIMEBASE_NOT_SET_SLEEP_MS;
     if (!_powerControlEnabled && IORead(&_BusLoadSwitchEnablePin, &enabled)) {
       if (!enabled) { // Turn the bus on if we've disabled the power manager.
         bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
