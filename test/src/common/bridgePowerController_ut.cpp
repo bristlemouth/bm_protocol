@@ -919,6 +919,7 @@ TEST_F(BridgePowerControllerTest, goldenPathIntervalEqualsDuration) {
   run_update(curtimeMs, config.sampleDurationMs - curtimeMs +
                             BridgePowerController::CAPACITOR_CHARGE_DELAY_MS);
 
+  // Ensure that power does not turn off
   for (uint8_t i = 0; i < UINT8_MAX; i++) {
     // Interval end
     run_update(curtimeMs, config.sampleDurationMs, 1);
@@ -960,13 +961,19 @@ TEST_F(BridgePowerControllerTest, goldenPathSubsampleIntervalEqualsDuration) {
              2, 1, false);
   EXPECT_EQ(isRTCSet_fake.call_count, 3);
 
-  // Interval start, subsampling is inherentely disabled,
-  // due to the interval and duration being equal
-  run_update(curtimeMs, duration_start_overall_delay(config), 1, 1, true);
-  // Duration end
-  run_update(curtimeMs, duration_end_overall_delay(config), 1, 1, false);
-  // Interval start
-  run_update(curtimeMs, duration_start_overall_delay(config), 1, 1, true);
-  // Duration end
-  run_update(curtimeMs, duration_end_overall_delay(config), 1, 1, false);
+  // Ensure that power turns off when duration is done and not during subsampling periods
+  for (uint8_t i = 0; i < 50; i++) {
+
+    // Reset buffers here because only 50 elements can be stored in fakes
+    RESET_FAKE(fake_io_write_func);
+    RESET_FAKE(fake_io_read_func);
+    num_io_reads = 0;
+    num_io_writes = 0;
+
+    // Interval start, subsampling is inherentely disabled,
+    // due to the interval and duration being equal
+    run_update(curtimeMs, duration_start_overall_delay(config), 1, 1, true);
+    // Duration end
+    run_update(curtimeMs, duration_end_overall_delay(config), 1, 1, false);
+  }
 }
