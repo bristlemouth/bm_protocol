@@ -205,6 +205,17 @@ void BridgePowerController::stateLogPrintTarget(const char *state, uint32_t targ
                  (_ticksSamplingEnabled) ? "uptime" : "epoch");
 }
 
+/*!
+ @brief Handles Initialization State Of Bridge Power Controller
+
+ @details During this state the bridge is powered on for INIT_POWER_ON_TIMEOUT_MS.
+          Following this time period, if RTC is set, the bus power will be turned
+          off if the _powerControllerEnabled variable is set to true and the
+          _powerControlContinuousMode is false, then a delay will occur until
+          the first sampling interval will begin.
+
+ @return the time the task should sleep until the next action is to be taken.
+ */
 uint32_t BridgePowerController::handleInitState(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
 
@@ -245,6 +256,22 @@ uint32_t BridgePowerController::handleInitState(void) {
   return time_to_sleep_ms;
 }
 
+/*!
+ @brief Handles Sub Sampling Of The Bridge Power Controller
+
+ @details Subsampling is very similar to how sampling works on the bridge power
+          controller, but operates only during the duration period. During the
+          subsampling duration power will be enabled on the Bristlemouth
+          network and the difference between the subsample interval and the
+          duration is when the power will be disabled. Data will only be
+          collected from sensors on the network when the power is enabled.
+
+ @param sampleTimeRemainingS Tick or epoch time remaining before the next
+                             sample is started is seconds
+ @param currentCycleS Current tick or epoch time in second
+
+ @return the time the task should sleep until the next action is to be taken.
+ */
 uint32_t BridgePowerController::handleSubsamplingState(uint32_t sampleTimeRemainingS,
                                                        uint32_t currentCycleS) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
@@ -261,11 +288,7 @@ uint32_t BridgePowerController::handleSubsamplingState(uint32_t sampleTimeRemain
 
   uint32_t subsampleTimeRemainingS =
       timeRemainingGeneric(_subsampleIntervalStartS, currentCycleS, _subsampleDurationS);
-  if (subsampleTimeRemainingS) {
-    stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
-    setBusPowerAndSetSignal(true);
-    time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
-  } else {
+  if (!subsampleTimeRemainingS) {
     const uint32_t nextSubsampleEpochS = _subsampleIntervalStartS + _subsampleIntervalS;
     _subsampleIntervalStartS = nextSubsampleEpochS;
     const uint32_t secondsUntilNextSubsample =
@@ -280,11 +303,39 @@ uint32_t BridgePowerController::handleSubsamplingState(uint32_t sampleTimeRemain
     if (nextSubsampleEpochS > currentCycleS) {
       setBusPowerAndSetSignal(false);
     }
+  } else {
+    stateLogPrintTarget("Subsample", currentCycleS + subsampleTimeRemainingS);
+    setBusPowerAndSetSignal(true);
+    time_to_sleep_ms = MAX(subsampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
   }
 
   return time_to_sleep_ms;
 }
 
+/*!
+ @brief Handles Sampling Of The Bridge Power Controller
+
+ @details This state of the bridge power controller's task will determine if 
+          the sampling duration or interval has been completed and perform
+          necessary actions. The sampling duration is the amount of time the
+          Bristlemouth network's power is on and data is being collected and
+          aggregated by the bridge. The difference between the sampling
+          interval a duration is the amount of time the Bristlemouth network
+          will be off. Aggregated data reports occur at the end of a sampling
+          duration.
+
+          If at the beginning of a sampling duration, the task will
+          determine if subsampling is enabled, and if so handle subsampling
+          accordingly, else the task will enable the power to the Bristlemouth
+          network and sleep until the end of the duration.
+
+          If at the end of a sampling duration, the amount of time the power
+          will be disabled is calculated and the power to the Bristlemouth
+          network will be turned off if the bridge power controller is not
+          operating in continuous mode.
+
+ @return the time the task should sleep until the next action is to be taken.
+ */
 uint32_t BridgePowerController::handleSampleState(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
   uint32_t currentCycleS = getCurrentTimeS();
@@ -299,22 +350,7 @@ uint32_t BridgePowerController::handleSampleState(void) {
 
   uint32_t sampleTimeRemainingS =
       timeRemainingGeneric(_sampleIntervalStartS, currentCycleS, _sampleDurationS);
-  if (sampleTimeRemainingS) {
-    if (_subsamplingEnabled) {
-      time_to_sleep_ms = handleSubsamplingState(sampleTimeRemainingS, currentCycleS);
-    } else {
-      stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
-#ifdef RAW_PRESSURE_ENABLE
-      if (!rbrPressureProcessorIsStarted()) {
-        rbrPressureProcessorStart();
-        bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                       "Started rbrPressureProcessor\n");
-      }
-#endif // RAW_PRESSURE_ENABLE
-      setBusPowerAndSetSignal(true);
-      time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
-    }
-  } else {
+  if (!sampleTimeRemainingS) {
     uint32_t nextSampleEpochS =
         _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
     _sampleIntervalStartS = nextSampleEpochS;
@@ -323,13 +359,26 @@ uint32_t BridgePowerController::handleSampleState(void) {
                            ? MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
                            : MIN_TASK_SLEEP_MS;
     // Prevent bus thrash
-    if (nextSampleEpochS > currentCycleS) {
+    if (nextSampleEpochS > currentCycleS && !_powerControlContinuousMode) {
       stateLogPrintTarget("Sampling Off", nextSampleEpochS);
-      setBusPowerAndSetSignal(_powerControlContinuousMode);
+      setBusPowerAndSetSignal(false);
     }
 
     // Notify sensor controller that an aggregation report should occur
     xTaskNotify(sensor_controller_task_handle, AGGREGATION_TIMER_BITS, eSetBits);
+  } else if (_subsamplingEnabled) {
+    time_to_sleep_ms = handleSubsamplingState(sampleTimeRemainingS, currentCycleS);
+  } else {
+    stateLogPrintTarget("Sample", currentCycleS + sampleTimeRemainingS);
+#ifdef RAW_PRESSURE_ENABLE
+    if (!rbrPressureProcessorIsStarted()) {
+      rbrPressureProcessorStart();
+      bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                     "Started rbrPressureProcessor\n");
+    }
+#endif // RAW_PRESSURE_ENABLE
+    setBusPowerAndSetSignal(true);
+    time_to_sleep_ms = MAX(sampleTimeRemainingS * 1000, MIN_TASK_SLEEP_MS);
   }
 
   return time_to_sleep_ms;
