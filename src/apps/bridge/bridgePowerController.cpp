@@ -66,6 +66,19 @@ void BridgePowerController::validateConfig(void) {
     _configError = true;
     _alignmentS = DEFAULT_ALIGNMENT_S;
   }
+
+  // Truncate duration if they are greater than intervals
+  if (_sampleDurationS > _sampleIntervalS) {
+    _sampleDurationS = _sampleIntervalS;
+  }
+  if (_subsampleIntervalS > _sampleIntervalS) {
+    _subsampleIntervalS = _sampleIntervalS;
+    _subsamplingEnabled = false;
+  }
+  if (_subsampleDurationS > _subsampleIntervalS) {
+    _subsampleDurationS = _subsampleIntervalS;
+  }
+
   if (_sampleDurationS == _sampleIntervalS) {
     _powerControlContinuousMode = true;
   }

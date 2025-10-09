@@ -71,18 +71,9 @@ power_config_s getPowerConfigs(void) {
   }
 
   pwrcfg.bridgePowerControllerEnabled = BridgePowerController::DEFAULT_POWER_CONTROLLER_ENABLED;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::BRIDGE_POWER_CONTROLLER_ENABLED,
-                       strlen(AppConfig::BRIDGE_POWER_CONTROLLER_ENABLED),
-                       &pwrcfg.bridgePowerControllerEnabled)) {
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Failed to get bridge power controller enabled from config, using default "
-                   "value and writing to config: %" PRIu32 "\n",
-                   pwrcfg.bridgePowerControllerEnabled);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::BRIDGE_POWER_CONTROLLER_ENABLED,
-                    strlen(AppConfig::BRIDGE_POWER_CONTROLLER_ENABLED),
-                    pwrcfg.bridgePowerControllerEnabled);
-    save = true;
-  }
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::BRIDGE_POWER_CONTROLLER_ENABLED,
+                  strlen(AppConfig::BRIDGE_POWER_CONTROLLER_ENABLED),
+                  &pwrcfg.bridgePowerControllerEnabled);
 
   pwrcfg.alignmentInterval5Min = BridgePowerController::DEFAULT_ALIGNMENT_5_MIN_INTERVAL;
   if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::ALIGNMENT_INTERVAL_5MIN,
