@@ -82,6 +82,7 @@ private:
   IOPinHandle_t &_BusLoadSwitchEnablePin;
   IOPinHandle_t &_BoostEnablePin;
   bool _powerControlEnabled;
+  bool _powerControlContinuousMode;
   uint32_t _sampleIntervalS;
   uint32_t _sampleDurationS;
   uint32_t _subsampleIntervalS;

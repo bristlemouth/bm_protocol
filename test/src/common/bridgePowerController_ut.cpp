@@ -798,29 +798,18 @@ TEST_F(BridgePowerControllerTest, goldenPath) {
   run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
   EXPECT_EQ(isRTCSet_fake.call_count, 3);
 
-  // Power controller is disabled, but,
-  // with RTC set will transfer to sampling stage, waking up the task early
-  run_update(curtimeMs, config.sampleIntervalMs - curtimeMs +
-                            BridgePowerController::CAPACITOR_CHARGE_DELAY_MS);
+  // Power controller is disabled
+  run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
 
-  xTaskSetTickCount(0); // Convenience tick set for checking sleep.
+  // Convenience tick set for checking sleep
+  xTaskSetTickCount(0);
   curtimeMs = 0;
 
-  // Controller waits until the next aligned sample start
+  // Enable the power controller, this re-aligns the sampling period, wait until next interval
+  bridge_power_controller->powerControlEnable(true);
   run_update(curtimeMs, config.sampleIntervalMs);
 
-  // Ensure that power does not turn off when power controller is off,
-  // but aggregated reports can still occur
-  for (uint8_t i = 0; i < UINT8_MAX; i++) {
-    run_update(curtimeMs, duration_start_overall_delay(config, false), 1);
-
-    run_update(curtimeMs, duration_end_overall_delay(config), 1);
-  }
-
-  // Enable the scheduler
-  bridge_power_controller->powerControlEnable(true);
-
-  // The bus stays on until the next Sample Off time
+  // Bus power up
   run_update(curtimeMs, config.sampleDurationMs, 1);
 
   // Time for a bus down cycle
@@ -859,16 +848,18 @@ TEST_F(BridgePowerControllerTest, goldenPathUsingTicks) {
                  BridgePowerController::CAPACITOR_CHARGE_DELAY_MS,
              2, 1, true);
 
-  // Bridge Controller is tow intitialized, not enabled and Ticks is set
-  // Bus should still be on with sampling enabled
-  run_update(curtimeMs, config.sampleDurationMs, 1);
+  // Bridge Controller is now intitialized, not enabled and Ticks is set
+  run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
 
-  // Sampling interval is finish, bus will stay on
-  run_update(curtimeMs, duration_end_overall_delay(config), 1);
-  EXPECT_EQ(isRTCSet_fake.call_count, 1);
+  // Convenience tick set for checking sleep
+  xTaskSetTickCount(0);
+  curtimeMs = 0;
 
-  // Enable the power controller, this re-aligns the sampling period
+  // Enable the power controller, this re-aligns the sampling period, wait until next interval
   bridge_power_controller->powerControlEnable(true);
+  run_update(curtimeMs, config.sampleIntervalMs);
+
+  // Bus power up
   run_update(curtimeMs, config.sampleDurationMs, 1);
 
   // Time for a bus down cycle
@@ -907,29 +898,25 @@ TEST_F(BridgePowerControllerTest, goldenPathIntervalEqualsDuration) {
   run_update(curtimeMs, init_overall_delay(), 1, 1, true);
   EXPECT_EQ(isRTCSet_fake.call_count, 1);
 
-  // RTC gets set.
+  // RTC gets set, align to the first reading
   y = 2024;
   m = 10;
   d = 7;
   isRTCSet_fake.return_val = true;
-  run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
-  EXPECT_EQ(isRTCSet_fake.call_count, 2);
-
-  // Interval starts immedietely no alignment if power controller is off
-  run_update(curtimeMs, config.sampleDurationMs - curtimeMs +
-                            BridgePowerController::CAPACITOR_CHARGE_DELAY_MS);
+  run_update(curtimeMs,
+             config.sampleIntervalMs - curtimeMs +
+                 BridgePowerController::CAPACITOR_CHARGE_DELAY_MS,
+             1);
+  EXPECT_EQ(isRTCSet_fake.call_count, 3);
 
   // Ensure that power does not turn off
-  for (uint8_t i = 0; i < UINT8_MAX; i++) {
-    // Interval end
+  for (uint8_t i = 0; i < 255; i++) {
+    // Interval start
     run_update(curtimeMs, config.sampleDurationMs, 1);
 
-    // Interval start
+    // Interval interval end
     run_update(curtimeMs, BridgePowerController::MIN_TASK_SLEEP_MS);
   }
-
-  // Interval end
-  run_update(curtimeMs, config.sampleDurationMs, 1);
 }
 
 TEST_F(BridgePowerControllerTest, goldenPathSubsampleIntervalEqualsDuration) {

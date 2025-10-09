@@ -20,7 +20,7 @@
 BridgePowerController::BridgePowerController(const Config &config)
     : _BusLoadSwitchEnablePin(config.BusLoadSwitchEnablePin),
       _BoostEnablePin(config.BoostEnablePin),
-      _powerControlEnabled(config.powerControllerEnabled),
+      _powerControlEnabled(config.powerControllerEnabled), _powerControlContinuousMode(false),
       _sampleIntervalS(config.sampleIntervalMs / 1000),
       _sampleDurationS(config.sampleDurationMs / 1000),
       _subsampleIntervalS(config.subsampleIntervalMs / 1000),
@@ -67,7 +67,7 @@ void BridgePowerController::validateConfig(void) {
     _alignmentS = DEFAULT_ALIGNMENT_S;
   }
   if (_sampleDurationS == _sampleIntervalS) {
-    _powerControlEnabled = false;
+    _powerControlContinuousMode = true;
   }
   if (_subsampleDurationS == _subsampleIntervalS) {
     _subsamplingEnabled = false;
@@ -224,7 +224,8 @@ uint32_t BridgePowerController::handleInitState(void) {
     time_to_sleep_ms = MAX((_sampleIntervalStartS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS);
     // The default state until first sample interval depends
     // on whether bus power control is enabled.
-    setBusPowerAndSetSignal(!_powerControlEnabled);
+    bool power = !_powerControlEnabled || _powerControlContinuousMode;
+    setBusPowerAndSetSignal(power);
   }
   _initDone = true;
 
@@ -305,13 +306,13 @@ uint32_t BridgePowerController::handleSampleState(void) {
         _alignNextInterval(currentCycleS, _sampleIntervalStartS, _sampleIntervalS);
     _sampleIntervalStartS = nextSampleEpochS;
     _subsampleIntervalStartS = nextSampleEpochS;
-    stateLogPrintTarget("Sampling Off", nextSampleEpochS);
     time_to_sleep_ms = (currentCycleS < nextSampleEpochS)
                            ? MAX((nextSampleEpochS - currentCycleS) * 1000, MIN_TASK_SLEEP_MS)
                            : MIN_TASK_SLEEP_MS;
     // Prevent bus thrash
     if (nextSampleEpochS > currentCycleS) {
-      setBusPowerAndSetSignal(!_powerControlEnabled);
+      stateLogPrintTarget("Sampling Off", nextSampleEpochS);
+      setBusPowerAndSetSignal(_powerControlContinuousMode);
     }
 
     // Notify sensor controller that an aggregation report should occur
@@ -323,9 +324,11 @@ uint32_t BridgePowerController::handleSampleState(void) {
 
 void BridgePowerController::_update(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
+  bool can_sample = _powerControlContinuousMode || _powerControlEnabled;
+
   if (!_initDone) {
     time_to_sleep_ms = handleInitState();
-  } else if (_timebaseSet) {
+  } else if (can_sample && _timebaseSet) {
     time_to_sleep_ms = handleSampleState();
   } else {
     uint8_t enabled;
@@ -338,7 +341,9 @@ void BridgePowerController::_update(void) {
       }
     } else if (!_timebaseSet && _powerControlEnabled &&
                IORead(&_BusLoadSwitchEnablePin, &enabled)) {
-      if (enabled) { // If our timebase is not set and we've enabled the power manager, we should disable the VBUS
+      // If our timebase is not set, not in continuous mode and we've enabled the power manager,
+      // we should disable the VBUS
+      if (!_powerControlContinuousMode && enabled) {
         bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                        "Bridge State Disabled - controller enabled, but timebase is not yet "
                        "set - bus off\n");
@@ -356,7 +361,7 @@ void BridgePowerController::_update(void) {
     checkAndUpdateTimebase();
   }
 
-  if (time_to_sleep_ms > MIN_TASK_SLEEP_MS) {
+  if (time_to_sleep_ms > TIMEBASE_NOT_SET_SLEEP_MS && time_to_sleep_ms > MIN_TASK_SLEEP_MS) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                    "Controller task will wait %" PRIu32 " ms\n", time_to_sleep_ms);
   }
