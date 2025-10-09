@@ -890,7 +890,6 @@ TEST_F(BridgePowerControllerTest, goldenPathIntervalEqualsDuration) {
       .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000,
       .powerControllerEnabled = true,
-      .subsamplingEnabled = false,
   };
   bridge_power_controller = std::make_unique<BridgePowerController>(config);
   uint64_t curtimeMs = 0;
@@ -927,8 +926,8 @@ TEST_F(BridgePowerControllerTest, goldenPathSubsampleIntervalEqualsDuration) {
       .sampleDurationMs = 120 * 1000,
       .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
       .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      .subsamplingEnabled = true,
       .powerControllerEnabled = true,
-      .subsamplingEnabled = false,
   };
   bridge_power_controller = std::make_unique<BridgePowerController>(config);
   uint64_t curtimeMs = 0;
