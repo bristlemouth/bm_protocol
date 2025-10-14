@@ -386,11 +386,10 @@ uint32_t BridgePowerController::handleSampleState(void) {
 
 void BridgePowerController::_update(void) {
   uint32_t time_to_sleep_ms = MIN_TASK_SLEEP_MS;
-  bool can_sample = _powerControlContinuousMode || _powerControlEnabled;
 
   if (!_initDone) {
     time_to_sleep_ms = handleInitState();
-  } else if (can_sample && _timebaseSet) {
+  } else if (_powerControlEnabled && _timebaseSet) {
     time_to_sleep_ms = handleSampleState();
   } else {
     uint8_t enabled;
