@@ -7,12 +7,13 @@
 
 #include "adi_hal.h"
 #include "bm_adin2111.h"
-#include "bm_config.h"
-#include "bsp.h"
+#include "bm_ip.h"
+#include "bm_ports.h"
 #include "bristlemouth_client.h"
-#include "debug.h"
-#include "l2.h"
+#include "bsp.h"
 #include "debug_adin_raw.h"
+#include "l2.h"
+#include "stress.h"
 #include "util.h"
 #include <string.h>
 
@@ -94,6 +95,8 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
         } else {
           printf("L2 initialization failed, err: %d\n", err);
         }
+        bm_ip_init();
+        stress_test_init(network_device, STRESS_TEST_PORT);
       } else {
         printf("Adin initialization failed, err: %d :(\n", err);
       }
