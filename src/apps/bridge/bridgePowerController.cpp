@@ -79,7 +79,7 @@ void BridgePowerController::validateConfig(void) {
     _subsampleDurationS = _subsampleIntervalS;
   }
 
-  if (_sampleDurationS == _sampleIntervalS) {
+  if (_powerControlEnabled && _sampleDurationS == _sampleIntervalS) {
     _powerControlContinuousMode = true;
   }
   if (_subsampleDurationS == _subsampleIntervalS) {

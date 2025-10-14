@@ -963,3 +963,33 @@ TEST_F(BridgePowerControllerTest, goldenPathSubsampleIntervalEqualsDuration) {
     run_update(curtimeMs, duration_end_overall_delay(config), 1, 1, false);
   }
 }
+
+TEST_F(BridgePowerControllerTest, goldenPathIntervalEqualsDurationPowerControllerDisabled) {
+  BridgePowerController::Config config = {
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
+      .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      .sampleDurationMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000,
+      .powerControllerEnabled = false,
+  };
+  bridge_power_controller = std::make_unique<BridgePowerController>(config);
+  uint64_t curtimeMs = 0;
+
+  run_update(curtimeMs, init_overall_delay(), 1, 1, true);
+  EXPECT_EQ(isRTCSet_fake.call_count, 1);
+
+  // RTC gets set, align to the first reading
+  y = 2024;
+  m = 10;
+  d = 7;
+  isRTCSet_fake.return_val = true;
+  run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
+  EXPECT_EQ(isRTCSet_fake.call_count, 2);
+
+  // Ensure that power does not turn off and transmit aggregations are never sent
+  for (uint8_t i = 0; i < 255; i++) {
+    run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
+  }
+}
