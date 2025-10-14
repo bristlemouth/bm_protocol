@@ -45,6 +45,10 @@ private:
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
   void stateLogPrintTarget(const char *state, uint32_t target);
+  uint32_t handleInitState(void);
+  bool bridgePowerControllerHandleEarlyWake(uint32_t intervalStartS, uint32_t currentCycleS);
+  uint32_t handleSubsamplingState(uint32_t sampleTimeRemainingS, uint32_t currentCycleS);
+  uint32_t handleSampleState(void);
 
 public:
   static constexpr uint32_t OFF = (1 << 0);
@@ -70,13 +74,15 @@ public:
   static constexpr uint32_t DEFAULT_ALIGNMENT_5_MIN_INTERVAL = (1);
   static constexpr uint32_t DEFAULT_TICKS_SAMPLING_ENABLED = (0);
   static constexpr uint32_t CAPACITOR_CHARGE_DELAY_MS = 15;
-  static constexpr uint32_t MIN_TASK_SLEEP_MS = (1000);
+  static constexpr uint32_t MIN_TASK_SLEEP_MS = (0);
+  static constexpr uint32_t TIMEBASE_NOT_SET_SLEEP_MS = (1000);
   static constexpr uint32_t INIT_POWER_ON_TIMEOUT_MS = (2 * 60 * 1000);
 
 private:
   IOPinHandle_t &_BusLoadSwitchEnablePin;
   IOPinHandle_t &_BoostEnablePin;
   bool _powerControlEnabled;
+  bool _powerControlContinuousMode;
   uint32_t _sampleIntervalS;
   uint32_t _sampleDurationS;
   uint32_t _subsampleIntervalS;
