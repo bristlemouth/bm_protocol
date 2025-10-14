@@ -7,7 +7,6 @@
 
 #include "adi_hal.h"
 #include "bm_adin2111.h"
-#include "bm_ip.h"
 #include "bm_ports.h"
 #include "bristlemouth_client.h"
 #include "bsp.h"
@@ -16,6 +15,10 @@
 #include "stress.h"
 #include "util.h"
 #include <string.h>
+
+extern "C" {
+#include "bm_ip.h"
+}
 
 extern adin_pins_t adin_pins;
 
@@ -66,6 +69,7 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
   (void)commandString;
   (void)writeBuffer;
   (void)writeBufferLen;
+  static NetworkDevice network_device = {};
 
   do {
     const char *parameter;
@@ -73,6 +77,7 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     parameter = FreeRTOS_CLIGetParameter(commandString,
                                          1, // Get the first parameter (command)
                                          &parameterStringLength);
+    static bool stack_initialized = false;
 
     if (parameter == NULL) {
       printf("ERR Invalid paramters\n");
@@ -82,12 +87,10 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     if (strncmp("init", parameter, parameterStringLength) == 0) {
       IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
       HAL_Init_Hook();
-      NetworkDevice network_device = adin2111_network_device();
+      network_device = adin2111_network_device();
       network_device.callbacks->power = bcl_power_callback;
       BmErr err = adin2111_init();
-      if (err == BmEALREADY) {
-        printf("Adin already initialized\n");
-      } else if (err == BmOK) {
+      if (err == BmOK) {
         printf("Adin initialized successfully\n");
         if (bm_l2_init(network_device) == BmOK) {
           network_device.callbacks->receive = debug_l2_rx;
@@ -95,15 +98,30 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
         } else {
           printf("L2 initialization failed, err: %d\n", err);
         }
-        bm_ip_init();
+
         stress_test_init(network_device, STRESS_TEST_PORT);
+        if (!stack_initialized) {
+          bm_ip_init();
+          stack_initialized = true;
+        }
       } else {
         printf("Adin initialization failed, err: %d :(\n", err);
       }
+    } else if (strncmp("off", parameter, parameterStringLength) == 0) {
+      bcl_power_callback(false);
+      network_device = (NetworkDevice){};
+      bm_l2_deinit();
+      stress_test_deinit();
     } else if (strncmp("tx", parameter, parameterStringLength) == 0) {
-      NetworkDevice device = adin2111_network_device();
       const uint8_t all_ports_mask = 3;
-      BmErr err = device.trait->send(device.self, data, sizeof(data), all_ports_mask);
+
+      if (!network_device.trait) {
+        printf("Adin not initialized.\n");
+        break;
+      }
+
+      BmErr err =
+          network_device.trait->send(network_device.self, data, sizeof(data), all_ports_mask);
       if (err == BmOK) {
         printf("OK!\n");
       } else {
