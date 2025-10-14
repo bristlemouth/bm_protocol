@@ -256,10 +256,10 @@
             }
         },
         {
-            "name": "aanderaa-conductivity-rs232",
+            "name": "aanderaa-salinity-rs232",
             "inherits": "serial-payload-example-rs232",
             "cacheVariables": {
-                "APP": "aanderaa_conductivity"
+                "APP": "aanderaa_salinity"
             }
         }
     ],
@@ -420,8 +420,8 @@
             "jobs": 8
         },
         {
-            "configurePreset": "aanderaa-conductivity-rs232",
-            "name": "aanderaa-conductivity-rs232",
+            "configurePreset": "aanderaa-salinity-rs232",
+            "name": "aanderaa-salinity-rs232",
             "jobs": 8
         }
     ]
