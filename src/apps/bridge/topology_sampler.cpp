@@ -817,7 +817,7 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
   (void)app_name_len;
   for (uint8_t i = 0; i < TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE; i++) {
     if (_node_list.nodes[i] == node_id) {
-      if (strncmp(app_name, "aanderaa_conductivity", strlen("aanderaa_conductivity")) == 0) {
+      if (strncmp(app_name, "aanderaa_salinity", strlen("aanderaa_salinity")) == 0) {
         _node_list.sensor_type[i] = SENSOR_TYPE_AANDERAA_CONDUCTIVITY;
         break;
       } else if (strncmp(app_name, "aanderaa", strlen("aanderaa")) == 0) {

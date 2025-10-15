@@ -60,7 +60,7 @@ template <typename T> struct SensorSubscriptionCtx {
 static sensorsControllerCtx_t _ctx;
 
 static const SensorSubscriptionCtx<AanderaaConductivity_t> aanderaa_conductivity_ctx = {
-    .app_name = "aanderaa_conductivity",
+    .app_name = "aanderaa_salinity",
     .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
     .reading_period =
         {
