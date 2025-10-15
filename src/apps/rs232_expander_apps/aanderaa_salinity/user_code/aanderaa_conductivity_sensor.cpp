@@ -171,7 +171,7 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
                  "tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
                  read_len, _payload_buffer);
     }
-    spotter_log_console(0, "conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+    spotter_log_console(0, "salinity | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
               rtc_time_str, read_len, _payload_buffer);
     debug_printf("conductivity | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtc_time_str,
            read_len, _payload_buffer);

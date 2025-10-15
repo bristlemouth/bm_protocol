@@ -110,6 +110,15 @@
     build_type: Release
   sign: true
 
+- name: aanderaa_salinity_release
+  description: Aanderaa Salinity Sensor - Release
+  type: build_fw
+  args:
+    app: aanderaa_salinity
+    bsp: bm_mote_rs232
+    build_type: Release
+  sign: true
+
 - name: pme_do_sensor_release
   type: build_fw
   args:
