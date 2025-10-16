@@ -429,13 +429,13 @@ static void defaultTask(void *parameters) {
   };
   BridgePowerController bridge_power_controller(config);
 
+  reportBuilderInit();
+  sensorControllerInit(&bridge_power_controller);
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
   debug_ncp_init();
   debugBmServiceInit();
   sys_info_service_init();
-  reportBuilderInit();
-  sensorControllerInit(&bridge_power_controller);
   config_cbor_map_service_init();
   IOWrite(&ALARM_OUT, 1);
   IOWrite(&LED_BLUE, LED_OFF);
