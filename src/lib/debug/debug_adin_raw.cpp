@@ -38,31 +38,13 @@ static const CLI_Command_Definition_t cmdGpio = {
     // Help string
     "adin:\n"
     " * adin init\n"
-    " * adin off\n"
-    " * adin tx <port> <data>\n",
+    " * adin off\n",
     // Command function
     adinCommand,
     // Number of parameters (variable)
     -1};
 
 void debugAdinRawInit(void) { FreeRTOS_CLIRegisterCommand(&cmdGpio); }
-
-void debug_l2_rx(uint8_t port_mask, uint8_t *payload, size_t payload_len) {
-
-  printf("ADIN RX <%d> ", port_mask);
-  for (uint32_t idx = 0; idx < payload_len; idx++) {
-    printf("%02X ", payload[idx]);
-  }
-  printf("\n");
-}
-
-uint8_t data[] = {0x33, 0x33, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xD5, 0xAD, 0x7A, 0xDD, 0x86,
-                  0xDD, 0x60, 0x00, 0x00, 0x00, 0x00, 0x20, 0x11, 0xFF, 0x20, 0x01, 0x0D, 0xB8,
-                  0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD5, 0xFF, 0xFE, 0xAD, 0x7A, 0xDD, 0xFF,
-                  0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                  0x00, 0x01, 0x08, 0xAE, 0x08, 0xAE, 0x00, 0x20, 0x06, 0x1E, 0x00, 0x00, 0x07,
-                  0x00, 0x9F, 0x9F, 0x1A, 0xB8, 0x0D, 0x01, 0x20, 0x00, 0x1A, 0xFF, 0xD5, 0x00,
-                  0x00, 0x1A, 0xDD, 0x7A, 0xAD, 0xFE, 0xFF, 0xFF};
 
 static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
                               const char *commandString) {
@@ -94,7 +76,6 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
       if (err == BmOK) {
         printf("Adin initialized successfully\n");
         if (bm_l2_init(network_device) == BmOK) {
-          network_device.callbacks->receive = debug_l2_rx;
           printf("L2 initialized successfully\n");
         } else {
           printf("L2 initialization failed, err: %d\n", err);
@@ -113,21 +94,6 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
       network_device = (NetworkDevice){};
       bm_l2_deinit();
       stress_test_deinit();
-    } else if (strncmp("tx", parameter, parameterStringLength) == 0) {
-      const uint8_t all_ports_mask = 3;
-
-      if (!network_device.trait) {
-        printf("Adin not initialized.\n");
-        break;
-      }
-
-      BmErr err =
-          network_device.trait->send(network_device.self, data, sizeof(data), all_ports_mask);
-      if (err == BmOK) {
-        printf("OK!\n");
-      } else {
-        printf("ERR %d\n", err);
-      }
     } else {
       printf("ERR Invalid paramters\n");
       break;
