@@ -99,11 +99,11 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
           printf("L2 initialization failed, err: %d\n", err);
         }
 
-        stress_test_init(network_device, STRESS_TEST_PORT);
         if (!stack_initialized) {
           bm_ip_init();
           stack_initialized = true;
         }
+        stress_test_init(network_device, STRESS_TEST_PORT);
       } else {
         printf("Adin initialization failed, err: %d :(\n", err);
       }
