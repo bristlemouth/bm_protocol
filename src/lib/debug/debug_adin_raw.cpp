@@ -38,6 +38,7 @@ static const CLI_Command_Definition_t cmdGpio = {
     // Help string
     "adin:\n"
     " * adin init\n"
+    " * adin off\n"
     " * adin tx <port> <data>\n",
     // Command function
     adinCommand,
