@@ -28,7 +28,7 @@ extern "C" {
 #include "task_priorities.h"
 #include "usart.h"
 
-static constexpr uint8_t NCP_NOTIFY_BUFF_MASK  = (1 << 0);
+static constexpr uint8_t NCP_NOTIFY_BUFF_MASK = (1 << 0);
 static constexpr uint8_t NCP_NOTIFY = (1 << 1);
 
 static constexpr uint8_t NCP_PROCESSOR_RX_QUEUE_DEPTH = 16;
@@ -670,13 +670,12 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
     BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
                                          eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
+    // switch ncp buffers
+    ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     if (rval == pdFALSE) {
-      // previous packet still pending, 😬
+      // previous packet still pending, drop the oldest and continue
       // TODO - track dropped packets?
-      configASSERT(0);
-    } else {
-      // switch ncp buffers
-      ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
+      ulTaskNotifyValueClear(ncpRXTaskHandle, ncpRXCurrBuff);
     }
     xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
   } while (0);
