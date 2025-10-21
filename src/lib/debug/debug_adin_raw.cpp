@@ -21,6 +21,26 @@ extern "C" {
 }
 
 extern adin_pins_t adin_pins;
+static NetworkDevice network_device = {};
+
+#if BRINGUP_LEGACY == 1
+static const uint8_t data[] = {
+    0x33, 0x33, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xD5, 0xAD, 0x7A, 0xDD, 0x86, 0xDD, 0x60,
+    0x00, 0x00, 0x00, 0x00, 0x20, 0x11, 0xFF, 0x20, 0x01, 0x0D, 0xB8, 0x02, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xD5, 0xFF, 0xFE, 0xAD, 0x7A, 0xDD, 0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08, 0xAE, 0x08, 0xAE, 0x00, 0x20,
+    0x06, 0x1E, 0x00, 0x00, 0x07, 0x00, 0x9F, 0x9F, 0x1A, 0xB8, 0x0D, 0x01, 0x20, 0x00, 0x1A,
+    0xFF, 0xD5, 0x00, 0x00, 0x1A, 0xDD, 0x7A, 0xAD, 0xFE, 0xFF, 0xFF,
+};
+
+static void debug_l2_rx(uint8_t port_mask, uint8_t *payload, size_t payload_len) {
+  printf("ADIN RX <%d> ", port_mask);
+  for (uint32_t idx = 0; idx < payload_len; idx++) {
+    printf("%02X ", payload[idx]);
+  }
+  printf("\n");
+}
+#endif
 
 static bool network_device_interrupt(const void *pinHandle, uint8_t value, void *args) {
   (void)pinHandle;
@@ -38,7 +58,11 @@ static const CLI_Command_Definition_t cmdGpio = {
     // Help string
     "adin:\n"
     " * adin init\n"
+#if BRINGUP_LEGACY == 0
     " * adin off\n",
+#else
+    " * adin tx <port> <data>\n",
+#endif
     // Command function
     adinCommand,
     // Number of parameters (variable)
@@ -52,7 +76,6 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
   (void)commandString;
   (void)writeBuffer;
   (void)writeBufferLen;
-  static NetworkDevice network_device = {};
 
   do {
     const char *parameter;
@@ -60,7 +83,6 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     parameter = FreeRTOS_CLIGetParameter(commandString,
                                          1, // Get the first parameter (command)
                                          &parameterStringLength);
-    static bool stack_initialized = false;
 
     if (parameter == NULL) {
       printf("ERR Invalid paramters\n");
@@ -68,32 +90,50 @@ static BaseType_t adinCommand(char *writeBuffer, size_t writeBufferLen,
     }
 
     if (strncmp("init", parameter, parameterStringLength) == 0) {
+
       IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
       HAL_Init_Hook();
       network_device = adin2111_network_device();
       network_device.callbacks->power = bcl_power_callback;
       BmErr err = adin2111_init();
       if (err == BmOK) {
+
         printf("Adin initialized successfully\n");
+        bm_l2_deinit();
         if (bm_l2_init(network_device) == BmOK) {
           printf("L2 initialized successfully\n");
         } else {
           printf("L2 initialization failed, err: %d\n", err);
         }
 
+#if BRINGUP_LEGACY == 0
+        static bool stack_initialized = false;
         if (!stack_initialized) {
           bm_ip_init();
           stack_initialized = true;
         }
+        stress_test_deinit();
         stress_test_init(network_device, STRESS_TEST_PORT);
+#else
+        network_device.callbacks->receive = debug_l2_rx;
+#endif
       } else {
         printf("Adin initialization failed, err: %d :(\n", err);
       }
+#if BRINGUP_LEGACY == 0
     } else if (strncmp("off", parameter, parameterStringLength) == 0) {
       bcl_power_callback(false);
       network_device = (NetworkDevice){};
-      bm_l2_deinit();
-      stress_test_deinit();
+#else
+    } else if (strncmp("tx", parameter, parameterStringLength) == 0) {
+      NetworkDevice device = adin2111_network_device();
+      const uint8_t all_ports_mask = 3;
+      BmErr err =
+          device.trait->send(device.self, (uint8_t *)data, sizeof(data), all_ports_mask);
+      if (err == BmOK) {
+        printf("OK!\n");
+      }
+#endif
     } else {
       printf("ERR Invalid paramters\n");
       break;
