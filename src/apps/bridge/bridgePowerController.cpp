@@ -441,6 +441,52 @@ void BridgePowerController::powerControllerRun(void *arg) {
   }
 }
 
+bm_serial_power_status_reply_data_t BridgePowerController::getPowerStats(void) {
+  bm_serial_power_status_reply_data_t d = {0, 0};
+
+  uint32_t current_time_s = getCurrentTimeS();
+  if ((!_initDone || !_timebaseSet) && isPowerControlEnabled()) {
+    static constexpr uint64_t init_uptime_s = 0;
+    uint64_t current_uptime_s = uptimeGetMs() / 1000;
+
+    d.remaining_on_ms = timeRemainingGeneric(init_uptime_s, current_uptime_s,
+                                             ms_to_s(INIT_POWER_ON_TIMEOUT_MS));
+  } else if (isSubsampleEnabled() && isPowerControlEnabled()) {
+    uint32_t sample_duration_remain =
+        timeRemainingGeneric(_sampleIntervalStartS, current_time_s, _sampleDurationS);
+
+    if (isBridgePowerOn()) {
+      d.remaining_on_ms =
+          timeRemainingGeneric(_subsampleIntervalStartS, current_time_s, _subsampleDurationS);
+    } else {
+      // Account for sample interval off time after sample duration in subsampling
+      if (sample_duration_remain >= current_time_s) {
+        d.remaining_off_ms =
+            timeRemainingGeneric(_subsampleIntervalStartS, current_time_s, _subsampleIntervalS);
+      } else {
+        d.remaining_off_ms =
+            timeRemainingGeneric(_subsampleIntervalStartS, current_time_s, _sampleIntervalS);
+      }
+    }
+  } else if (isPowerControlEnabled()) {
+    if (isBridgePowerOn()) {
+      d.remaining_on_ms =
+          timeRemainingGeneric(_sampleIntervalStartS, current_time_s, _sampleDurationS);
+    } else if (_sampleIntervalStartS > current_time_s) {
+      d.remaining_off_ms = timeRemainingGeneric(_sampleIntervalStartS, current_time_s, 0);
+    } else {
+      timeRemainingGeneric(_sampleIntervalStartS, current_time_s, _sampleIntervalS);
+    }
+  } else if (!isPowerControlEnabled()) {
+    d.remaining_on_ms = S_IN_A_DAY;
+  }
+
+  d.remaining_on_ms = s_to_ms(d.remaining_on_ms);
+  d.remaining_off_ms = s_to_ms(d.remaining_off_ms);
+
+  return d;
+}
+
 PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
   PowerInfoReplyData d = {};
   BridgePowerController *power_controller = reinterpret_cast<BridgePowerController *>(arg);

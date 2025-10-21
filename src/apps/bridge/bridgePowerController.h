@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FreeRTOS.h"
+#include "bm_serial_messages.h"
 #include "event_groups.h"
 #include "io.h"
 #include "power_info_service.h"
@@ -31,6 +32,7 @@ public:
   bool isBridgePowerOn(void);
   bool initPeriodElapsed(void);
   void validateConfig(void);
+  bm_serial_power_status_reply_data_t getPowerStats(void);
 
   // Shim function for FreeRTOS compatibility, should not be called as part of the public API.
   void _update(void); // PRIVATE
