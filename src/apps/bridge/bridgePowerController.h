@@ -52,6 +52,19 @@ private:
   uint32_t handleSubsamplingState(uint32_t sampleTimeRemainingS, uint32_t currentCycleS);
   uint32_t handleSampleState(void);
 
+  struct PowerTimings {
+    uint32_t total_on_s;
+    uint32_t remaining_on_s;
+    uint32_t remaining_off_s;
+    uint32_t upcoming_off_s;
+  };
+  bool isInInitializationPeriod(void);
+  PowerTimings calculateInitializationTimings(void);
+  PowerTimings calculateDisabledTimings(void);
+  PowerTimings calculateSubsampleTimings(void);
+  PowerTimings calculateSampleTimings(void);
+  PowerTimings calculatePowerTimings(void);
+
 public:
   static constexpr uint32_t OFF = (1 << 0);
   static constexpr uint32_t ON = (1 << 1);
