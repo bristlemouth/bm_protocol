@@ -19,6 +19,8 @@
 #include "util.h"
 #include <string.h>
 
+#include "bm_os.h"
+
 #include "stress.h"
 
 // Print out stats every 2 seconds
@@ -137,6 +139,30 @@ void stress_test_init(NetworkDevice network_device, uint16_t udp_port) {
                      configMINIMAL_STACK_SIZE * 4, NULL, STRESS_TASK_PRIORITY, &_ctx.task);
 
   configASSERT(rval == pdTRUE);
+}
+
+/*!
+  @brief Deinitialize the stress test
+
+  @details Frees and deinitializes all variables and states in stress_test
+ */
+void stress_test_deinit(void) {
+  if (_ctx.evt_queue) {
+    bm_queue_delete(_ctx.evt_queue);
+  }
+  if (_ctx.tx_timer) {
+    bm_timer_delete(_ctx.tx_timer, 0);
+  }
+  if (_ctx.stats_timer) {
+    bm_timer_delete(_ctx.stats_timer, 0);
+  }
+  if (_ctx.task) {
+    bm_task_delete(_ctx.task);
+  }
+  if (_ctx.pcb) {
+    udp_remove(_ctx.pcb);
+  }
+  memset(&_ctx, 0, sizeof(_ctx));
 }
 
 /*!

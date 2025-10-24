@@ -682,13 +682,12 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
     BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
                                          eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
+    // switch ncp buffers
+    ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     if (rval == pdFALSE) {
-      // previous packet still pending, 😬
+      // previous packet still pending, drop the oldest and continue
       // TODO - track dropped packets?
-      configASSERT(0);
-    } else {
-      // switch ncp buffers
-      ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
+      ulTaskNotifyValueClear(ncpRXTaskHandle, ncpRXCurrBuff);
     }
     xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
   } while (0);
