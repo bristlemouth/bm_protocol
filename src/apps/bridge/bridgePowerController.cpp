@@ -441,10 +441,28 @@ void BridgePowerController::powerControllerRun(void *arg) {
   }
 }
 
+/*!
+ @brief Determine If Bridge Power Controller Is In Initilization Period
+
+ @see INIT_POWER_ON_TIMEOUT_MS
+ @see handleInitState
+
+ @return true if in initialization state,
+         false otherwise
+ */
 bool BridgePowerController::isInInitializationPeriod(void) {
   return (!_initDone || !_timebaseSet) && _powerControlEnabled;
 }
 
+/*!
+ @brief Calculate The Power Timings During Initialization Period
+
+ @details The initialization period will always have the upcoming off seconds
+          set to UNDEFINED as the next sample interval has not yet been
+          determined during this state.
+
+ @return Power timings during this moment in the initialization state
+ */
 BridgePowerController::PowerTimings
 BridgePowerController::calculateInitializationTimings(void) {
   static constexpr uint64_t init_uptime_s = 0;
@@ -461,6 +479,13 @@ BridgePowerController::calculateInitializationTimings(void) {
   };
 }
 
+/*!
+ @brief Calculate The Power Timings When Bridge Power Controller Is Disabled
+
+ @details The power is on indefinitely during this configuration.
+
+ @return Power timings when bridge power controller is disabled
+ */
 BridgePowerController::PowerTimings BridgePowerController::calculateDisabledTimings(void) {
   return PowerTimings{
       .total_on_s = POWER_SERVICE_UNDEFINED,
@@ -470,6 +495,11 @@ BridgePowerController::PowerTimings BridgePowerController::calculateDisabledTimi
   };
 }
 
+/*!
+ @brief Calculate Subsample Timings When Subsampling Is Enabled
+
+ @return Power timings when subsampling is enabled
+ */
 BridgePowerController::PowerTimings BridgePowerController::calculateSubsampleTimings(void) {
   uint32_t current_time_s = getCurrentTimeS();
 
@@ -501,6 +531,11 @@ BridgePowerController::PowerTimings BridgePowerController::calculateSubsampleTim
   return timings;
 }
 
+/*!
+ @brief Calculate Power Timings When Enabled And Subsampling Is Disabled
+
+ @return Power timings during normal sample intervals
+ */
 BridgePowerController::PowerTimings BridgePowerController::calculateSampleTimings(void) {
   uint32_t current_time_s = getCurrentTimeS();
 
@@ -524,6 +559,11 @@ BridgePowerController::PowerTimings BridgePowerController::calculateSampleTiming
   return timings;
 }
 
+/*!
+ @brief Calculate The Power Timings Based Off The Configuration/State Of The Power Controller
+
+ @return Power timings
+ */
 BridgePowerController::PowerTimings BridgePowerController::calculatePowerTimings(void) {
   if (isInInitializationPeriod()) {
     return calculateInitializationTimings();
@@ -540,6 +580,17 @@ BridgePowerController::PowerTimings BridgePowerController::calculatePowerTimings
   return calculateSampleTimings();
 }
 
+/*!
+ @brief Obtain The Power Timings And Create A Power Status Reply
+
+ @details Calculates the power timings and creates a power status reply message
+          for the NCP request. This informs the NCP about the current power
+          status of the Bristlemouth network
+
+ @param arg BridgePowerController instance
+
+ @return Power status data
+ */
 bm_serial_power_status_reply_data_t BridgePowerController::getPowerStats(void) {
   bm_serial_power_status_reply_data_t d = {0, 0};
 
@@ -555,6 +606,16 @@ bm_serial_power_status_reply_data_t BridgePowerController::getPowerStats(void) {
   return d;
 }
 
+/*!
+ @brief Obtain The Power Timings And Create A Power Info Reply
+
+ @details Calculates the power timings and creates a power info reply message
+          for the corresponding Bristlemouth service.
+
+ @param arg BridgePowerController instance
+
+ @return Power info data
+ */
 PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
   PowerInfoReplyData d = {};
   BridgePowerController *power_controller = reinterpret_cast<BridgePowerController *>(arg);
