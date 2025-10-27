@@ -9,7 +9,7 @@ version = "0.1.0"
 
 [dependencies]
 python = ">=3.10"
-arm-none-eabi-gcc = ">=13.2.rel1,<14"
+arm-none-eabi-gcc = "==13.2.rel1"
 clang-tools = ">=15.0.3,<19"
 cmake = "~=3.29.0"
 cppcheck = ">=2.18.3,<3"
