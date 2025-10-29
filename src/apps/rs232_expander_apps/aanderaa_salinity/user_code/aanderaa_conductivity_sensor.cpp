@@ -55,7 +55,6 @@ void AanderaaConductivitySensor::init() {
 
 void AanderaaConductivitySensor::configureSensor(void) {
   // takes sensor a few ms between each commands
-  uint32_t command_delay_ticks = pdMS_TO_TICKS(25);
   uint16_t read_len = 0;
   vTaskDelay(pdMS_TO_TICKS(1000));
   sendCommand(CMD_WAKE);
@@ -64,7 +63,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_STOP);
 
   // passkey command
-  sendCommand(CMD_SET_PASSKEY_1);
+  sendCommand(CMD_SET_PASSKEY_1000);
 
   // enable sleep
   sendCommand(CMD_ENABLE_SLEEP_YES);
@@ -73,53 +72,42 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
 
   // set interval, define default interval
-  char interval_cmd[32];
+  AanderaaConductivityString interval_cmd;
   snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _readingPeriodS);
-  PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(interval_cmd);
 
   // enable Temperature
-  PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_TEMPERATURE_YES);
 
   // disable rawdata
-  PLUART::write((uint8_t *)CMD_ENABLE_RAWDATA_NO, strlen(CMD_ENABLE_RAWDATA_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_RAWDATA_NO);
 
   // disable RawCond1
-  PLUART::write((uint8_t *)CMD_ENABLE_RAWCOND1_NO, strlen(CMD_ENABLE_RAWCOND1_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_RAWCOND1_NO);
 
   // enable conductivity
-  PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES, strlen(CMD_ENABLE_CONDUCTIVITY_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_CONDUCTIVITY_YES);
 
   //  disable Polled Mode
-  PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO, strlen(CMD_ENABLE_POLLEDMODE_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_POLLEDMODE_NO);
 
   // disable text
-  PLUART::write((uint8_t *)CMD_ENABLE_TEXT_NO, strlen(CMD_ENABLE_TEXT_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_TEXT_NO);
 
   // enable decimalformat
-  PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_DECIMALFORMAT_YES);
 
   // enable derived parameters
-  PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES, strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_DERIVEDPARAMETERS_YES);
 
   // set pressure command
   debug_printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
-  char pressure_cmd[32];
+  AanderaaConductivityString pressure_cmd;
   snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
-  PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(pressure_cmd);
 
   // save
-  PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
-  vTaskDelay(pdMS_TO_TICKS(8000)); // needs about 7 seconds to save successfully
+  sendCommand(CMD_SAVE, _saveTimeMs);
 
   // send get_all command
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
@@ -148,11 +136,11 @@ void AanderaaConductivitySensor::clearPayloadBuffer(void) {
 }
 
 void AanderaaConductivitySensor::resetSensor(void) {
-  PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
+  sendCommand(CMD_RESET);
 }
 
 void AanderaaConductivitySensor::startStreaming(void) {
-  PLUART::write((uint8_t *)CMD_START, strlen(CMD_START));
+  sendCommand(CMD_START);
 }
 
 bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
