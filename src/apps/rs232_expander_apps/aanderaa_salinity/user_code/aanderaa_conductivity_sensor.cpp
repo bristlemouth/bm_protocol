@@ -71,10 +71,10 @@ void AanderaaConductivitySensor::configureSensor(void) {
   // set sleep timeout to 10s
   sendCommand(CMD_SET_COMM_TIMEOUT_10S);
 
+  checkAssignProductionConfigs();
+
   // set lower priveledge level
   sendCommand(CMD_SET_PASSKEY_1);
-
-  checkAssignProductionConfigs();
 
   // set interval, define default interval
   AanderaaConductivityString interval_cmd;
@@ -174,6 +174,9 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
         // Skip the first two tab-separated fields
         for (int i = 0; i < 2; i++) {
           data_start = strchr(data_start, '\t');
+          if (i == 0) {
+            validateSerialNumber(data_start);
+          }
           if (data_start) {
             data_start++; // Move past the tab
           } else {
@@ -324,6 +327,22 @@ bool AanderaaConductivitySensor::checkAssignEpochValues(void) {
   return ret;
 }
 
+void AanderaaConductivitySensor::validateSerialNumber(const char *str) {
+  AanderaaConductivityUint detected_serial_number = 0;
+
+  if (!str) {
+    return;
+  }
+
+  checkTypeAndAssign(str, strlen(str), &detected_serial_number);
+  debug_printf("Detected serial number: %" PRIu32 "\n", detected_serial_number);
+  if (detected_serial_number != _serialNumber) {
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM), 1);
+  } else {
+    remove_key(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM));
+  }
+}
+
 bool AanderaaConductivitySensor::hasProductionConfigs(ProductionConfigs &production_configs) {
   bool has_serial_number = get_config_uint(BM_CFG_PARTITION_SYSTEM,
                                            SENSOR_SERIAL_NUMBER,
@@ -339,14 +358,8 @@ bool AanderaaConductivitySensor::hasProductionConfigs(ProductionConfigs &product
 
 void AanderaaConductivitySensor::checkAssignProductionConfigs(void) {
   ProductionConfigs production_configs = {};
-  if (hasProductionConfigs(production_configs)) {
-      return;
-  }
-
   ProductionConfigs prev_read_configs = {};
   ProductionConfigs read_configs = {};
-
-  sendCommand(CMD_SET_PASSKEY_1000);
 
   // Ensure robust readings for serial number
   do {
@@ -361,9 +374,13 @@ void AanderaaConductivitySensor::checkAssignProductionConfigs(void) {
   } while (prev_read_configs.serial_number != read_configs.serial_number &&
            prev_read_configs.cell_coef != read_configs.cell_coef);
 
-  sendCommand(CMD_SET_PASSKEY_1);
+  _serialNumber = read_configs.serial_number;
 
-  debug_printf("Saving production configs!s\n");
+  if (hasProductionConfigs(production_configs)) {
+      return;
+  }
+
+  debug_printf("Saving production configs!\n");
   set_config_uint(BM_CFG_PARTITION_SYSTEM,
                   SENSOR_SERIAL_NUMBER,
                   strlen(SENSOR_SERIAL_NUMBER),

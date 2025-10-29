@@ -82,6 +82,7 @@ private:
   static constexpr char LAST_CAL_TIME_EPOCH_S[] = "lastCalTimeEpochS";
   static constexpr char CAL_COUNT[] = "calibrationCount";
   static constexpr char SENSOR_SERIAL_NUMBER[] = "sensorSerialNum";
+  static constexpr char ERR_SERIAL_NUM[] = "errDetectedSensorSerialNum";
 
   static constexpr char FIRST_CAL_TIME_EPOCH_S[] = "firstCalTimeEpochS";
   static constexpr char FACTORY_CELL_COEF[] = "factoryCellCoef";
@@ -92,6 +93,7 @@ private:
   uint32_t _readingPeriodS = 2;
   OrderedSeparatorLineParser _parser;
   char _payload_buffer[2048];
+  AanderaaConductivityUint _serialNumber;
 
   float _cellCoef = 0.000000f;
   float _referenceConductivity = NAN;
@@ -100,6 +102,8 @@ private:
   // The save procedure may take up to 20 seconds according to Table 5-2 in the
   // TD321 Operation Manual
   static constexpr uint16_t _saveTimeMs = 20000;
+
+  void validateSerialNumber(const char *str);
 
   bool hasProductionConfigs(ProductionConfigs &production_configs);
   void checkAssignProductionConfigs(void);
