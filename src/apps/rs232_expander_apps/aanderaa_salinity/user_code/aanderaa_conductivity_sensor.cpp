@@ -41,7 +41,7 @@ void AanderaaConductivitySensor::init() {
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
   PLUART::setBaud(BAUD_RATE);
   // Disable passing raw bytes to user app.
-  PLUART::setUseByteStreamBuffer(false);
+  PLUART::setUseByteStreamBuffer(true);
   PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter(LINE_TERM);
@@ -51,72 +51,57 @@ void AanderaaConductivitySensor::init() {
 
 void AanderaaConductivitySensor::configureSensor(void) {
   // takes sensor a few ms between each commands
-  uint32_t command_delay_ticks = pdMS_TO_TICKS(25);
   uint16_t read_len = 0;
   vTaskDelay(pdMS_TO_TICKS(1000));
-  PLUART::write((uint8_t *)"0", strlen("0")); //wake
-  vTaskDelay(pdMS_TO_TICKS(50));
+  sendCommand(CMD_WAKE);
 
   // send stop command to stop streaming
-  PLUART::write((uint8_t *)CMD_STOP, strlen(CMD_STOP));
-  vTaskDelay(pdMS_TO_TICKS(500));
+  sendCommand(CMD_STOP);
 
   // passkey command
-  PLUART::write((uint8_t *)CMD_SET_PASSKEY_1, strlen(CMD_SET_PASSKEY_1));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_SET_PASSKEY_1);
 
   // enable sleep
-  PLUART::write((uint8_t *)CMD_ENABLE_SLEEP_YES, strlen(CMD_ENABLE_SLEEP_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_SLEEP_YES);
+
 
   // set interval, define default interval
-  char interval_cmd[32];
+  AanderaaConductivityString interval_cmd;
   snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _readingPeriodS);
-  PLUART::write((uint8_t *)interval_cmd, strlen(interval_cmd));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(interval_cmd);
 
   // enable Temperature
-  PLUART::write((uint8_t *)CMD_ENABLE_TEMPERATURE_YES, strlen(CMD_ENABLE_TEMPERATURE_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_TEMPERATURE_YES);
 
   // disable rawdata
-  PLUART::write((uint8_t *)CMD_ENABLE_RAWDATA_NO, strlen(CMD_ENABLE_RAWDATA_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_RAWDATA_NO);
 
   // disable RawCond1
-  PLUART::write((uint8_t *)CMD_ENABLE_RAWCOND1_NO, strlen(CMD_ENABLE_RAWCOND1_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_RAWCOND1_NO);
 
   // enable conductivity
-  PLUART::write((uint8_t *)CMD_ENABLE_CONDUCTIVITY_YES, strlen(CMD_ENABLE_CONDUCTIVITY_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_CONDUCTIVITY_YES);
 
   //  disable Polled Mode
-  PLUART::write((uint8_t *)CMD_ENABLE_POLLEDMODE_NO, strlen(CMD_ENABLE_POLLEDMODE_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_POLLEDMODE_NO);
 
   // disable text
-  PLUART::write((uint8_t *)CMD_ENABLE_TEXT_NO, strlen(CMD_ENABLE_TEXT_NO));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_TEXT_NO);
 
   // enable decimalformat
-  PLUART::write((uint8_t *)CMD_ENABLE_DECIMALFORMAT_YES, strlen(CMD_ENABLE_DECIMALFORMAT_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_DECIMALFORMAT_YES);
 
   // enable derived parameters
-  PLUART::write((uint8_t *)CMD_ENABLE_DERIVEDPARAMETERS_YES, strlen(CMD_ENABLE_DERIVEDPARAMETERS_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_DERIVEDPARAMETERS_YES);
 
   // set pressure command
   debug_printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
-  char pressure_cmd[32];
+  AanderaaConductivityString pressure_cmd;
   snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
-  PLUART::write((uint8_t *)pressure_cmd, strlen(pressure_cmd));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(pressure_cmd);
 
   // save
-  PLUART::write((uint8_t *)CMD_SAVE, strlen(CMD_SAVE));
-  vTaskDelay(pdMS_TO_TICKS(8000)); // needs about 7 seconds to save successfully
+  sendCommand(CMD_SAVE, _saveTimeMs);
 
   // send get_all command
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
@@ -140,20 +125,16 @@ void AanderaaConductivitySensor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
-void AanderaaConductivitySensor::flush(void) {
-  PLUART::reset();
-}
-
 void AanderaaConductivitySensor::clearPayloadBuffer(void) {
   memset(_payload_buffer, 0, sizeof(_payload_buffer));
 }
 
 void AanderaaConductivitySensor::resetSensor(void) {
-  PLUART::write((uint8_t *)CMD_RESET, strlen(CMD_RESET));
+  sendCommand(CMD_RESET);
 }
 
 void AanderaaConductivitySensor::startStreaming(void) {
-  PLUART::write((uint8_t *)CMD_START, strlen(CMD_START));
+  sendCommand(CMD_START);
 }
 
 bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
@@ -243,10 +224,10 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
       vTaskDelay(pdMS_TO_TICKS(500));
 
       // read cellCoef
-      _cellCoef = read_data_from_sensor(CMD_GET_CELL_COEF);
+      sendCommand(CMD_GET_CELL_COEF, &_cellCoef);
 
       // read conductivity
-      _measuredConductivity = read_data_from_sensor(CMD_GET_CONDUCTIVITY);
+      sendCommand(CMD_GET_CONDUCTIVITY, &_measuredConductivity);
 
       if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
         /* calibration failed but the loop() in user_code.cpp will run this function again to
@@ -272,33 +253,168 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
         save_config(BM_CFG_PARTITION_SYSTEM, true);
       }
     }
+  } 
+}
+
+/*!
+ @brief Parse And Assign Unsigned Integer Value From Sensor Output String
+
+ @param output the output string from the sensor to parse
+ @param length the length of the output string
+ @param value pointer to store the parsed unsigned integer value
+ */
+void AanderaaConductivitySensor::checkTypeAndAssign(const char *output,
+    uint16_t length,
+    AanderaaConductivitySensor::AanderaaConductivityUint *value) {
+  (void)length;
+
+  if (value)  {
+    *value = (uint32_t)strtoul(output, NULL, 10);
   }
 }
 
-float AanderaaConductivitySensor::read_data_from_sensor(const char* command) {
-  clearPayloadBuffer();
-  float value = NAN;
-  uint16_t read_len = 0;
-  uint32_t read_duration_ms = 1000;
-  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+/*!
+ @brief Parse And Assign Float Value From Sensor Output String
 
+ @param output the output string from the sensor to parse
+ @param length unused
+ @param value pointer to store the parsed float value
+ */
+void AanderaaConductivitySensor::checkTypeAndAssign(
+    const char *output,
+    uint16_t length,
+    AanderaaConductivitySensor::AanderaaConductivityFloat *value) {
+  (void)length;
+
+  if (value)  {
+    *value = strtof(output, NULL);
+  }
+}
+
+/*!
+ @brief Copy And Assign String Value From Sensor Output String
+
+ @param output the output string from the sensor to copy
+ @param length the length of the output string
+ @param value pointer to string buffer to store the copied string
+ */
+void AanderaaConductivitySensor::checkTypeAndAssign(
+    const char *output,
+    uint16_t length,
+    AanderaaConductivitySensor::AanderaaConductivityString *value) {
+  if (value)  {
+    size_t copy_len = bm_min(length, sizeof(AanderaaConductivityString) - 1);
+    strncpy(*value, output, copy_len);
+    (*value)[copy_len] = '\0';
+  }
+}
+
+/*!
+ @brief Send Command To Aanderaa Sensor Without Retrieving Response Value
+
+ @details Sends a command string to the Aanderaa sensor via UART and waits for
+          an acknowledgment response. This is a convenience wrapper for commands
+          that don't need to retrieve a value.
+
+ @param command the command string to send to the sensor
+ @param timeout_ms timeout in milliseconds to wait for sensor acknowledgment
+
+ @return BmOK on success
+ @return BmEINVAL if command is NULL or timeout_ms is 0
+ @return BmETIMEDOUT if no response received within timeout
+ @return BmEBADMSG if sensor responds with error acknowledgment
+ */
+BmErr AanderaaConductivitySensor::sendCommand(const char *command, uint32_t timeout_ms) {
+  return sendCommand(command, static_cast<uint32_t *>(nullptr), timeout_ms);
+}
+
+/*!
+ @brief Send Command To Aanderaa Sensor And Optionally Retrieve Response Value
+
+ @details Sends a command string to the Aanderaa sensor via UART and waits for
+          an acknowledgment response. If a value pointer is provided, this function
+          will parse the sensor's response and extract the value after the last tab
+          character. The function waits byte-by-byte for responses, handling both
+          simple acknowledgments, and full data responses with values.
+          Acknowledgment codes follow TD321 Operation Manual section 5.5.
+
+ @param command the command string to send to the sensor
+ @param value pointer to store the parsed response value (can be NULL if no value needed)
+ @param timeout_ms timeout in milliseconds to wait for sensor acknowledgment
+
+ @return BmOK on success
+ @return BmEINVAL if command is NULL or timeout_ms is 0
+ @return BmETIMEDOUT if no response received within timeout
+ @return BmEBADMSG if sensor responds with error acknowledgment ('*')
+ */
+template <typename T>
+BmErr AanderaaConductivitySensor::sendCommand(const char *command,
+                                              T *value,
+                                              uint32_t timeout_ms) {
+  BmErr err = BmEINVAL;
+
+  if (!command || !timeout_ms) {
+    return err;
+  }
+
+  constexpr uint8_t wait_read_tick = pdMS_TO_TICKS(1);
+  PLUART::flush();
+  clearPayloadBuffer();
+  uint32_t start_time = uptimeGetMs();
+  err = BmETIMEDOUT;
+  uint16_t buf_idx = 0;
+
+  debug_printf("command: %s", command);
+  // Send the command and wait for acknowledgement
   PLUART::write((uint8_t *)command, strlen(command));
-  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-    if (PLUART::lineAvailable()) {
-      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      if (read_len > 5) {
-        // read value after 3rd tab
-        debug_printf("%.*s\n", read_len, _payload_buffer);
-        char *last_tab = strrchr(_payload_buffer, '\t');
-        if (last_tab != NULL) {
-          value = strtof(last_tab + 1, NULL); // +1 to skip the tab
-          debug_printf("Measured Value: %f\n", value);
-        } else {
-          debug_printf("Failed to find tab separator\n");
-        }
-        clearPayloadBuffer();
+  while ((uptimeGetMs() - start_time) < timeout_ms) {
+    if (!PLUART::byteAvailable()) {
+      // Delay for UART task to process incoming bytes
+      vTaskDelay(wait_read_tick);
+      continue;
+    }
+
+    _payload_buffer[buf_idx] = PLUART::readByte();
+    // Some responses do not finish with a new line such as '!' and '%'
+    // see section 5.4 in TD321 Operation Manual
+    if (!buf_idx) {
+      if (_payload_buffer[buf_idx] == '!') {
+        err = BmOK;
+        break;
+      } 
+    }
+    
+    if (_payload_buffer[buf_idx] == '\n') {
+      debug_printf("command response: %.*s\n", buf_idx, _payload_buffer);
+
+      // read value after 3rd tab if it is a get command
+      char *last_tab = strrchr(_payload_buffer, '\t');
+      if (last_tab != NULL && value) {
+        // +1 to skip the tab
+        last_tab++;
+        last_tab[strcspn(last_tab, "\r\n")] = '\0';
+        checkTypeAndAssign(last_tab, strlen(last_tab), value);
+      } 
+
+      // Acknowledge for message reports '*' followed by a string for a failure and
+      // '#' for success, see section 5.5 in TD321 Operation Manual
+      // Sometimes there is junk before # on CMD_SAVE, the ack_idx accounts for that
+      uint8_t ack_idx = buf_idx > sizeof("\r\n") ? buf_idx - 2 : 0;
+      if (_payload_buffer[ack_idx] == '#') {
+        err = BmOK;
+        break;
+      } else if (_payload_buffer[0] == '*') {
+        err = BmEBADMSG;
+        break;
       }
+
+      buf_idx = 0;
+    } else {
+      buf_idx++;
     }
   }
-  return value;
+
+  debug_printf("%s err: %d\n", __func__, err);
+
+  return err;
 }

@@ -202,6 +202,11 @@ bool lineAvailable(void) {
 
 void reset(void) {
   disable(); // Disable the UART
+  flush();
+  enable(); // Reeable the UART
+}
+
+void flush(void) {
   configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
   // Clear the line buffer state
   memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
@@ -210,7 +215,6 @@ void reset(void) {
   xSemaphoreGive(_user_line.mutex);
   // Clear the user byte stream buffer
   xStreamBufferReset(user_byte_stream_buffer);
-  enable(); // Reeable the UART
 }
 
 uint8_t readByte(void) {
