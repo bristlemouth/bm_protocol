@@ -37,6 +37,7 @@ extern "C" {
 #define CMD_GET_CELL_COEF "Get CellCoef\r\n"
 #define CMD_GET_CONDUCTIVITY "Get Conductivity\r\n"
 #define CMD_GET_SERIAL_NUMBER "Get Serial Number\r\n"
+#define CMD_SET_COMM_TIMEOUT_10S "Set Comm TimeOut(10 s)\r\n"
 
 class AanderaaConductivitySensor {
 public:
