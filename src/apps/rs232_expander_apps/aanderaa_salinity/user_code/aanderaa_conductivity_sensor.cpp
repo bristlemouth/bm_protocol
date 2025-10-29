@@ -68,8 +68,13 @@ void AanderaaConductivitySensor::configureSensor(void) {
   // enable sleep
   sendCommand(CMD_ENABLE_SLEEP_YES);
 
-  checkAssignProductionConfigs();
+  // set sleep timeout to 10s
+  sendCommand(CMD_SET_COMM_TIMEOUT_10S);
 
+  // set lower priveledge level
+  sendCommand(CMD_SET_PASSKEY_1);
+
+  checkAssignProductionConfigs();
 
   // set interval, define default interval
   AanderaaConductivityString interval_cmd;

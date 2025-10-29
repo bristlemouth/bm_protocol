@@ -39,6 +39,7 @@ extern "C" {
 #define CMD_GET_SERIAL_NUMBER "Get Serial Number\r\n"
 #define CMD_GET_PRODUCTION_DATE "Get Production Date\r\n"
 #define CMD_GET_LAST_CAL "Get Last Calibration\r\n"
+#define CMD_SET_COMM_TIMEOUT_10S "Set Comm TimeOut(10 s)\r\n"
 
 class AanderaaConductivitySensor {
 public:
