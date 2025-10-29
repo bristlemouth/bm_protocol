@@ -43,6 +43,7 @@ double degToRad(double deg);
 
 #define MIN_TO_S(minute) (minute * 60)
 #define MIN_TO_MS(minute) (MIN_TO_S(minute) * 1000)
+#define US_TO_S(us) (us / 1000000)
 
 // Handle float/double to integer conversion nicely, without this, there will
 // be off-by-one errors.

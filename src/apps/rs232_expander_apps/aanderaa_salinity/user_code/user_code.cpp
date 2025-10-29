@@ -18,7 +18,7 @@ static int aanderaa_conductivity_topic_str_len;
 // Configurable VOUT off duration when we want to reboot the Aanderaa sensor.
 // We do this to recover from FTL: Failure To Launch.
 static constexpr char CFG_FTL_RECOVERY_MS[] = "ftlRecoveryMs";
-static uint32_t ftl_recovery_ms = 1000;
+static uint32_t ftl_recovery_ms = 10000;
 
 static int createAanderaaConductivityDataTopic(void) {
   int topic_str_len = snprintf(aanderaa_conductivity_topic, BM_TOPIC_MAX_LEN,
@@ -60,5 +60,6 @@ void loop(void) {
   }
 
   vTaskDelay(pdMS_TO_TICKS(10));
+  aanderaa_conductivity_sensor.checkAssignEpochValues();
   aanderaa_conductivity_sensor.calibrateCellCoef();
 }

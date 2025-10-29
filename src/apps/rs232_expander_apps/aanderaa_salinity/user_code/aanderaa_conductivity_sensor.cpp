@@ -6,12 +6,16 @@
 #include "app_util.h"
 #include "configuration.h"
 #include "payload_uart.h"
-#include "serial.h"
 #include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
+#include <string>
+#include "uptime.h"
 
+extern "C" {
+#include "bm_rtc.h"
+}
 #if __has_include ("debug.h")
 #include "debug.h"
 #else
@@ -41,7 +45,7 @@ void AanderaaConductivitySensor::init() {
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
   PLUART::setBaud(BAUD_RATE);
   // Disable passing raw bytes to user app.
-  PLUART::setUseByteStreamBuffer(false);
+  PLUART::setUseByteStreamBuffer(true);
   PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter(LINE_TERM);
@@ -54,20 +58,19 @@ void AanderaaConductivitySensor::configureSensor(void) {
   uint32_t command_delay_ticks = pdMS_TO_TICKS(25);
   uint16_t read_len = 0;
   vTaskDelay(pdMS_TO_TICKS(1000));
-  PLUART::write((uint8_t *)"0", strlen("0")); //wake
-  vTaskDelay(pdMS_TO_TICKS(50));
+  sendCommand(CMD_WAKE);
 
   // send stop command to stop streaming
-  PLUART::write((uint8_t *)CMD_STOP, strlen(CMD_STOP));
-  vTaskDelay(pdMS_TO_TICKS(500));
+  sendCommand(CMD_STOP);
 
   // passkey command
-  PLUART::write((uint8_t *)CMD_SET_PASSKEY_1, strlen(CMD_SET_PASSKEY_1));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_SET_PASSKEY_1);
 
   // enable sleep
-  PLUART::write((uint8_t *)CMD_ENABLE_SLEEP_YES, strlen(CMD_ENABLE_SLEEP_YES));
-  vTaskDelay(command_delay_ticks);
+  sendCommand(CMD_ENABLE_SLEEP_YES);
+
+  checkAssignProductionConfigs();
+
 
   // set interval, define default interval
   char interval_cmd[32];
@@ -138,10 +141,6 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
   clearPayloadBuffer();
   vTaskDelay(pdMS_TO_TICKS(1000));
-}
-
-void AanderaaConductivitySensor::flush(void) {
-  PLUART::reset();
 }
 
 void AanderaaConductivitySensor::clearPayloadBuffer(void) {
@@ -221,84 +220,272 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
   // read sys config referenceConductivity
   get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY), &_referenceConductivity);
 
-  if (!isnan(_referenceConductivity)) {
+  if (isnan(_referenceConductivity)) {
+    return;
+  }
+
     // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
-    if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
-      debug_printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
+  if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
+    debug_printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
+    return;
+  } 
+
+  uint32_t calib_count = 0;
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, CAL_COUNT, strlen(CAL_COUNT), &calib_count);
+
+  debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
+
+  // Wake up the sensor and stop readings
+  sendCommand(CMD_WAKE);
+  sendCommand(CMD_STOP);
+  sendCommand(CMD_SET_PASSKEY_1000);
+
+  // read cellCoef
+  sendCommand(CMD_GET_CELL_COEF, &_cellCoef);
+  // read conductivity
+  sendCommand(CMD_GET_CONDUCTIVITY, &_measuredConductivity);
+
+  if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
+    /* calibration failed but the loop() in user_code.cpp will run this function again to
+     * attempt doing it again and then remove referenceConductivity from the configs */
+    debug_printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
+  } else {
+  // calculate new cellCoef
+    debug_printf("old cellCoef: %f\n", _cellCoef);
+    // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
+    _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
+    debug_printf("new cellCoef: %f\n", _cellCoef);
+
+    // write new cellCoef to sensor
+    AanderaaConductivityString calibrate_cmd;
+    snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_SET_CELL_COEF, _cellCoef);
+    sendCommand(calibrate_cmd);
+    sendCommand(CMD_SAVE, _saveTimeMs);
+
+    // Set calibration configuration parameters
+    calib_count++;
+    remove_key(BM_CFG_PARTITION_SYSTEM, LAST_CAL_TIME_EPOCH_S, strlen(LAST_CAL_TIME_EPOCH_S));
+    set_config_float(BM_CFG_PARTITION_SYSTEM,
+                     CELL_COEF,
+                     strlen(CELL_COEF),
+                     _cellCoef);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, CAL_COUNT, strlen(CAL_COUNT), calib_count);
+    checkAssignEpochValues();
+
+    // reset sensor
+    resetSensor();
+  }
+  // remove referenceConductivity from the config
+  remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
+  save_config(BM_CFG_PARTITION_SYSTEM, true);
+}
+
+bool AanderaaConductivitySensor::checkAssignEpochValues(void) {
+  RtcTimeAndDate rtc_time = {};
+  if (bm_rtc_get(&rtc_time) != BmOK) {
+    return false;
+  }
+
+  float cell_coef;
+  uint32_t first_cal_time_s, last_cal_time_s;
+  bool has_calibration = get_config_float(BM_CFG_PARTITION_SYSTEM,
+                                          CELL_COEF,
+                                          strlen(CELL_COEF),
+                                          &cell_coef);
+  if (!has_calibration) {
+    return false;
+  }
+
+  // Calibration is set, check if configurations exist for calibration time
+  bool ret = false;
+  uint32_t epoch_s = (uint32_t)US_TO_S(bm_rtc_get_micro_seconds(&rtc_time));
+  bool has_first_cal_time = get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                                            FIRST_CAL_TIME_EPOCH_S,
+                                            strlen(FIRST_CAL_TIME_EPOCH_S),
+                                            &first_cal_time_s);
+  bool has_last_cal_time = get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                                           LAST_CAL_TIME_EPOCH_S,
+                                           strlen(LAST_CAL_TIME_EPOCH_S),
+                                           &last_cal_time_s);
+
+  if (!has_first_cal_time) {
+    debug_printf("Setting first cal time %" PRIu32 "\n", epoch_s);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM,
+                    FIRST_CAL_TIME_EPOCH_S,
+                    strlen(FIRST_CAL_TIME_EPOCH_S),
+                    epoch_s);
+    ret = true;
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  }
+
+  if (!has_last_cal_time) {
+    debug_printf("Setting last cal time %" PRIu32 "\n", epoch_s);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM,
+                    LAST_CAL_TIME_EPOCH_S,
+                    strlen(LAST_CAL_TIME_EPOCH_S),
+                    epoch_s);
+    ret = true;
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  }
+
+  return ret;
+}
+
+bool AanderaaConductivitySensor::hasProductionConfigs(ProductionConfigs &production_configs) {
+  bool has_serial_number = get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                                           SENSOR_SERIAL_NUMBER,
+                                           strlen(SENSOR_SERIAL_NUMBER),
+                                           &production_configs.serial_number);
+  bool has_cell_coef = get_config_float(BM_CFG_PARTITION_SYSTEM,
+                                       FACTORY_CELL_COEF,
+                                       strlen(FACTORY_CELL_COEF),
+                                       &production_configs.cell_coef);
+
+  return has_serial_number && has_cell_coef;
+}
+
+void AanderaaConductivitySensor::checkAssignProductionConfigs(void) {
+  ProductionConfigs production_configs = {};
+  if (hasProductionConfigs(production_configs)) {
       return;
-    } else {
-      debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
-	  clearPayloadBuffer();
-	  uint16_t read_len = 0;
-      PLUART::write((uint8_t *)"\r\n", strlen("\r\n"));
-      vTaskDelay(pdMS_TO_TICKS(500));
+  }
 
-      PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
-	  if (PLUART::lineAvailable()) {
-      	read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-	  	if (read_len > 0) {
-        	debug_printf("Read line for passkey 1000: %.*s\n", read_len, _payload_buffer);
-     	 }
-	  }
-      vTaskDelay(pdMS_TO_TICKS(500));
+  ProductionConfigs prev_read_configs = {};
+  ProductionConfigs read_configs = {};
 
-      // read cellCoef
-      _cellCoef = read_data_from_sensor(CMD_GET_CELL_COEF);
+  sendCommand(CMD_SET_PASSKEY_1000);
 
-      // read conductivity
-      _measuredConductivity = read_data_from_sensor(CMD_GET_CONDUCTIVITY);
-
-      if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
-        /* calibration failed but the loop() in user_code.cpp will run this function again to
-         * attempt doing it again and then remove referenceConductivity from the configs */
-        debug_printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
-        return;
-      } else {
-      // calculate new cellCoef
-        debug_printf("old cellCoef: %f\n", _cellCoef);
-        // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
-        _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
-        debug_printf("new cellCoef: %f\n", _cellCoef);
-
-        // write new cellCoef to sensor
-        char calibrate_cmd[32];
-        snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_SET_CELL_COEF, _cellCoef);
-        PLUART::write((uint8_t *)calibrate_cmd, strlen(calibrate_cmd));
-
-        // reset sensor
-        resetSensor();
-        // remove referenceConductivity from the config
-        remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
-        save_config(BM_CFG_PARTITION_SYSTEM, true);
-      }
+  // Ensure robust readings for serial number
+  do {
+    prev_read_configs = read_configs;
+    if (sendCommand(CMD_GET_SERIAL_NUMBER, &read_configs.serial_number) == BmOK) {
+        debug_printf("Serial number is %" PRIu32 "\n", read_configs.serial_number);
     }
+    if (sendCommand(CMD_GET_CELL_COEF, &read_configs.cell_coef) == BmOK) {
+
+        debug_printf("cellCoef is %0.4f\n", read_configs.cell_coef);
+    }
+  } while (prev_read_configs.serial_number != read_configs.serial_number &&
+           prev_read_configs.cell_coef != read_configs.cell_coef);
+
+  sendCommand(CMD_SET_PASSKEY_1);
+
+  debug_printf("Saving production configs!s\n");
+  set_config_uint(BM_CFG_PARTITION_SYSTEM,
+                  SENSOR_SERIAL_NUMBER,
+                  strlen(SENSOR_SERIAL_NUMBER),
+                  read_configs.serial_number);
+  set_config_float(BM_CFG_PARTITION_SYSTEM,
+                  FACTORY_CELL_COEF,
+                  strlen(FACTORY_CELL_COEF),
+                  read_configs.cell_coef);
+  save_config(BM_CFG_PARTITION_SYSTEM, false);
+}
+
+void AanderaaConductivitySensor::checkTypeAndAssign(const char *output,
+    uint16_t length,
+    AanderaaConductivitySensor::AanderaaConductivityUint *value) {
+  (void)length;
+
+  if (value)  {
+    *value = (uint32_t)strtoul(output, NULL, 10);
   }
 }
 
-float AanderaaConductivitySensor::read_data_from_sensor(const char* command) {
-  clearPayloadBuffer();
-  float value = NAN;
-  uint16_t read_len = 0;
-  uint32_t read_duration_ms = 1000;
-  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+void AanderaaConductivitySensor::checkTypeAndAssign(
+    const char *output,
+    uint16_t length,
+    AanderaaConductivitySensor::AanderaaConductivityFloat *value) {
+  (void)length;
 
+  if (value)  {
+    *value = strtof(output, NULL);
+  }
+}
+
+void AanderaaConductivitySensor::checkTypeAndAssign(
+    const char *output,
+    uint16_t length,
+    AanderaaConductivitySensor::AanderaaConductivityString *value) {
+  if (value)  {
+    size_t copy_len = bm_min(length, sizeof(AanderaaConductivityString) - 1);
+    strncpy(*value, output, copy_len);
+    (*value)[copy_len] = '\0';
+  }
+}
+
+BmErr AanderaaConductivitySensor::sendCommand(const char *command, uint32_t timeout_ms) {
+  return sendCommand(command, static_cast<uint32_t *>(nullptr), timeout_ms);
+}
+
+template <typename T>
+BmErr AanderaaConductivitySensor::sendCommand(const char *command,
+                                              T *value,
+                                              uint32_t timeout_ms) {
+  BmErr err = BmEINVAL;
+
+  if (!command || !timeout_ms) {
+    return err;
+  }
+
+  constexpr uint8_t wait_read_tick = pdMS_TO_TICKS(1);
+  PLUART::flush();
+  clearPayloadBuffer();
+  uint32_t start_time = uptimeGetMs();
+  err = BmETIMEDOUT;
+  uint16_t buf_idx = 0;
+
+  debug_printf("command: %s", command);
+  // Send the command and wait for acknowledgement
   PLUART::write((uint8_t *)command, strlen(command));
-  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-    if (PLUART::lineAvailable()) {
-      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      if (read_len > 5) {
-        // read value after 3rd tab
-        debug_printf("%.*s\n", read_len, _payload_buffer);
-        char *last_tab = strrchr(_payload_buffer, '\t');
-        if (last_tab != NULL) {
-          value = strtof(last_tab + 1, NULL); // +1 to skip the tab
-          debug_printf("Measured Value: %f\n", value);
-        } else {
-          debug_printf("Failed to find tab separator\n");
-        }
-        clearPayloadBuffer();
+  while ((uptimeGetMs() - start_time) < timeout_ms) {
+    if (!PLUART::byteAvailable()) {
+      // Delay for UART task to process incoming bytes
+      vTaskDelay(wait_read_tick);
+      continue;
+    }
+
+    _payload_buffer[buf_idx] = PLUART::readByte();
+    // Some responses do not finish with a new line such as '!' and '%'
+    // see section 5.4 in TD321 Operation Manual
+    if (!buf_idx) {
+      if (_payload_buffer[buf_idx] == '!') {
+        err = BmOK;
+        break;
+      } 
+    }
+    
+    if (_payload_buffer[buf_idx] == '\n') {
+      debug_printf("command response: %.*s\n", buf_idx, _payload_buffer);
+
+      // read value after 3rd tab if it is a get command
+      char *last_tab = strrchr(_payload_buffer, '\t');
+      if (last_tab != NULL && value) {
+        // +1 to skip the tab
+        last_tab++;
+        last_tab[strcspn(last_tab, "\r\n")] = '\0';
+        checkTypeAndAssign(last_tab, strlen(last_tab), value);
+      } 
+
+      // Acknowledge for message reports '*' followed by a string for a failure and
+      // '#' for success, see section 5.5 in TD321 Operation Manual
+      // Sometimes there is junk before # on CMD_SAVE, the ack_idx accounts for that
+      uint8_t ack_idx = buf_idx > sizeof("\r\n") ? buf_idx - 2 : 0;
+      if (_payload_buffer[ack_idx] == '#') {
+        err = BmOK;
+        break;
+      } else if (_payload_buffer[0] == '*') {
+        err = BmEBADMSG;
+        break;
       }
+
+      buf_idx = 0;
+    } else {
+      buf_idx++;
     }
   }
-  return value;
+
+  debug_printf("%s err: %d\n", __func__, err);
+
+  return err;
 }
