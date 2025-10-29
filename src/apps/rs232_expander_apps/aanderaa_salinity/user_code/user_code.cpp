@@ -60,5 +60,6 @@ void loop(void) {
   }
 
   vTaskDelay(pdMS_TO_TICKS(10));
+  aanderaa_conductivity_sensor.checkAssignEpochValues();
   aanderaa_conductivity_sensor.calibrateCellCoef();
 }

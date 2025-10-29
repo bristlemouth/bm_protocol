@@ -6,12 +6,16 @@
 #include "app_util.h"
 #include "configuration.h"
 #include "payload_uart.h"
-#include "serial.h"
 #include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
+#include <string>
+#include "uptime.h"
 
+extern "C" {
+#include "bm_rtc.h"
+}
 #if __has_include ("debug.h")
 #include "debug.h"
 #else
@@ -59,11 +63,15 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_STOP);
 
   // passkey command
-  sendCommand(CMD_SET_PASSKEY_1);
+  sendCommand(CMD_SET_PASSKEY_1000);
 
   // enable sleep
   sendCommand(CMD_ENABLE_SLEEP_YES);
 
+  checkAssignProductionConfigs();
+
+  // set lower priveledge level
+  sendCommand(CMD_SET_PASSKEY_1);
 
   // set interval, define default interval
   AanderaaConductivityString interval_cmd;
@@ -163,6 +171,9 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
         // Skip the first two tab-separated fields
         for (int i = 0; i < 2; i++) {
           data_start = strchr(data_start, '\t');
+          if (i == 0) {
+            validateSerialNumber(data_start);
+          }
           if (data_start) {
             data_start++; // Move past the tab
           } else {
@@ -198,62 +209,248 @@ bool AanderaaConductivitySensor::getData(AanderaaConductivityMsg::Data &d) {
   return success;
 }
 
+/*!
+ @brief Calibrate the Aanderaa 5990
+
+ @details This API is expected to be polled after the 5990 has been
+          configured. It monitors the referenceConductivity configuration
+          parameter. Once set the calibration process begins. This process
+          invokes the following steps:
+            1. Wakes up the 5990
+            2. Stops the 5990 from reporting data
+            3. Sets the passkey to 1000
+            4. Reads the current cellCoef and conductivity reading on the 5990
+            5. Calculates the updated cellCoef value
+            6. Writes the updated cellCoef value to the sensor
+            7. Saves the configuration on the device
+            8. Sets the calibration related configuration parameters on the mote
+            9. Resets the 5990
+            10. Saves the system configuration partition on the mote and reboots
+ */
 void AanderaaConductivitySensor::calibrateCellCoef(void) {
   // read sys config referenceConductivity
   get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY), &_referenceConductivity);
 
-  if (!isnan(_referenceConductivity)) {
+  if (isnan(_referenceConductivity)) {
+    return;
+  }
+
     // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
-    if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
-      debug_printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
-      return;
-    } else {
-      debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
-	  clearPayloadBuffer();
-	  uint16_t read_len = 0;
-      PLUART::write((uint8_t *)"\r\n", strlen("\r\n"));
-      vTaskDelay(pdMS_TO_TICKS(500));
-
-      PLUART::write((uint8_t *)CMD_SET_PASSKEY_1000, strlen(CMD_SET_PASSKEY_1000));
-	  if (PLUART::lineAvailable()) {
-      	read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-	  	if (read_len > 0) {
-        	debug_printf("Read line for passkey 1000: %.*s\n", read_len, _payload_buffer);
-     	 }
-	  }
-      vTaskDelay(pdMS_TO_TICKS(500));
-
-      // read cellCoef
-      sendCommand(CMD_GET_CELL_COEF, &_cellCoef);
-
-      // read conductivity
-      sendCommand(CMD_GET_CONDUCTIVITY, &_measuredConductivity);
-
-      if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
-        /* calibration failed but the loop() in user_code.cpp will run this function again to
-         * attempt doing it again and then remove referenceConductivity from the configs */
-        debug_printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
-        return;
-      } else {
-      // calculate new cellCoef
-        debug_printf("old cellCoef: %f\n", _cellCoef);
-        // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
-        _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
-        debug_printf("new cellCoef: %f\n", _cellCoef);
-
-        // write new cellCoef to sensor
-        char calibrate_cmd[32];
-        snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_SET_CELL_COEF, _cellCoef);
-        PLUART::write((uint8_t *)calibrate_cmd, strlen(calibrate_cmd));
-
-        // reset sensor
-        resetSensor();
-        // remove referenceConductivity from the config
-        remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
-        save_config(BM_CFG_PARTITION_SYSTEM, true);
-      }
-    }
+  if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
+    debug_printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
+    return;
   } 
+
+  uint32_t calib_count = 0;
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, CAL_COUNT, strlen(CAL_COUNT), &calib_count);
+
+  debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
+
+  // Wake up the sensor and stop readings
+  sendCommand(CMD_WAKE);
+  sendCommand(CMD_STOP);
+  sendCommand(CMD_SET_PASSKEY_1000);
+
+  // read cellCoef
+  sendCommand(CMD_GET_CELL_COEF, &_cellCoef);
+  // read conductivity
+  sendCommand(CMD_GET_CONDUCTIVITY, &_measuredConductivity);
+
+  if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
+    /* calibration failed but the loop() in user_code.cpp will run this function again to
+     * attempt doing it again and then remove referenceConductivity from the configs */
+    debug_printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
+  } else {
+  // calculate new cellCoef
+    debug_printf("old cellCoef: %f\n", _cellCoef);
+    // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
+    _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
+    debug_printf("new cellCoef: %f\n", _cellCoef);
+
+    // write new cellCoef to sensor
+    AanderaaConductivityString calibrate_cmd;
+    snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_SET_CELL_COEF, _cellCoef);
+    sendCommand(calibrate_cmd);
+    sendCommand(CMD_SAVE, _saveTimeMs);
+
+    // Set calibration configuration parameters
+    calib_count++;
+    remove_key(BM_CFG_PARTITION_SYSTEM, LAST_CAL_TIME_EPOCH_S, strlen(LAST_CAL_TIME_EPOCH_S));
+    set_config_float(BM_CFG_PARTITION_SYSTEM,
+                     CELL_COEF,
+                     strlen(CELL_COEF),
+                     _cellCoef);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, CAL_COUNT, strlen(CAL_COUNT), calib_count);
+    checkAssignEpochValues();
+
+    // reset sensor
+    resetSensor();
+  }
+  // remove referenceConductivity from the config
+  remove_key(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY));
+  save_config(BM_CFG_PARTITION_SYSTEM, true);
+}
+
+/*!
+ @brief Check and Assign Calibration Epoch Time Values
+
+ @details Verifies the cellCoef configuration exists and the RTC time is set.
+          Assigns the current RTC epoch time if calibration timestamp values
+          are missing. This function sets both firstCalTimeEpochS and
+          lastCalTimeEpochS timestamps.
+
+ @see lastCalTimeEpochS
+ @see firstCalTimeEpochS
+
+ @return true if new calibration times were assigned, false otherwise
+ */
+bool AanderaaConductivitySensor::checkAssignEpochValues(void) {
+  RtcTimeAndDate rtc_time = {};
+  if (bm_rtc_get(&rtc_time) != BmOK) {
+    return false;
+  }
+
+  float cell_coef;
+  uint32_t first_cal_time_s, last_cal_time_s;
+  bool has_calibration = get_config_float(BM_CFG_PARTITION_SYSTEM,
+                                          CELL_COEF,
+                                          strlen(CELL_COEF),
+                                          &cell_coef);
+  if (!has_calibration) {
+    return false;
+  }
+
+  // Calibration is set, check if configurations exist for calibration time
+  bool ret = false;
+  uint32_t epoch_s = (uint32_t)US_TO_S(bm_rtc_get_micro_seconds(&rtc_time));
+  bool has_first_cal_time = get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                                            FIRST_CAL_TIME_EPOCH_S,
+                                            strlen(FIRST_CAL_TIME_EPOCH_S),
+                                            &first_cal_time_s);
+  bool has_last_cal_time = get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                                           LAST_CAL_TIME_EPOCH_S,
+                                           strlen(LAST_CAL_TIME_EPOCH_S),
+                                           &last_cal_time_s);
+
+  if (!has_first_cal_time) {
+    debug_printf("Setting first cal time %" PRIu32 "\n", epoch_s);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM,
+                    FIRST_CAL_TIME_EPOCH_S,
+                    strlen(FIRST_CAL_TIME_EPOCH_S),
+                    epoch_s);
+    ret = true;
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  }
+
+  if (!has_last_cal_time) {
+    debug_printf("Setting last cal time %" PRIu32 "\n", epoch_s);
+    set_config_uint(BM_CFG_PARTITION_SYSTEM,
+                    LAST_CAL_TIME_EPOCH_S,
+                    strlen(LAST_CAL_TIME_EPOCH_S),
+                    epoch_s);
+    ret = true;
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  }
+
+  return ret;
+}
+
+/*!
+ @brief Validate Sensor Serial Number Against Stored Production Serial Number
+
+ @details Compares the detected serial number from sensor data with the stored
+          production serial number (sensorSerialNum). If a mismatch is detected,
+          sets errDetectedSensorSerialNum. If the serial numbers match, removes
+          the configuration parameter errDetectedSensorSerialNum.
+
+ @see sensorSerialNum
+ @see errDetectedSensorSerialNum
+
+ @param str pointer to string containing the serial number to validate
+ */
+void AanderaaConductivitySensor::validateSerialNumber(const char *str) {
+  AanderaaConductivityUint detected_serial_number = 0;
+
+  if (!str) {
+    return;
+  }
+
+  checkTypeAndAssign(str, strlen(str), &detected_serial_number);
+  debug_printf("Detected serial number: %" PRIu32 "\n", detected_serial_number);
+  if (detected_serial_number != _serialNumber) {
+    set_config_uint(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM), 1);
+  } else {
+    remove_key(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM));
+  }
+}
+
+/*!
+ @brief Check if Production Configuration Values Exist and Populate Output Structure
+
+ @param production_configs structure to populate with production config values
+
+ @return true if both production configurations exist, false otherwise
+ */
+bool AanderaaConductivitySensor::hasProductionConfigs(ProductionConfigs &production_configs) {
+  bool has_serial_number = get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                                           SENSOR_SERIAL_NUMBER,
+                                           strlen(SENSOR_SERIAL_NUMBER),
+                                           &production_configs.serial_number);
+  bool has_cell_coef = get_config_float(BM_CFG_PARTITION_SYSTEM,
+                                       FACTORY_CELL_COEF,
+                                       strlen(FACTORY_CELL_COEF),
+                                       &production_configs.cell_coef);
+
+  return has_serial_number && has_cell_coef;
+}
+
+/*!
+ @brief Check and Assign Production Configuration Values from Sensor
+
+ @details Reads the serial number and cell coefficient directly from the sensor
+          hardware and stores them as production configuration values if they don't
+          already exist. Uses a loop to ensure multiple readings are the
+          same in a row to reduce the chance of a glitch on the UART line from
+          ruining the reading. The serial number is also cached in the
+          _serialNumber member variable.
+
+ @see factoryCellCoef
+ @see sensorSerialNum
+ */
+void AanderaaConductivitySensor::checkAssignProductionConfigs(void) {
+  ProductionConfigs production_configs = {};
+  ProductionConfigs prev_read_configs = {};
+  ProductionConfigs read_configs = {};
+
+  // Ensure robust readings for serial number
+  do {
+    prev_read_configs = read_configs;
+    if (sendCommand(CMD_GET_SERIAL_NUMBER, &read_configs.serial_number) == BmOK) {
+        debug_printf("Serial number is %" PRIu32 "\n", read_configs.serial_number);
+    }
+    if (sendCommand(CMD_GET_CELL_COEF, &read_configs.cell_coef) == BmOK) {
+
+        debug_printf("cellCoef is %0.4f\n", read_configs.cell_coef);
+    }
+  } while (prev_read_configs.serial_number != read_configs.serial_number &&
+           prev_read_configs.cell_coef != read_configs.cell_coef);
+
+  _serialNumber = read_configs.serial_number;
+
+  if (hasProductionConfigs(production_configs)) {
+      return;
+  }
+
+  debug_printf("Saving production configs!\n");
+  set_config_uint(BM_CFG_PARTITION_SYSTEM,
+                  SENSOR_SERIAL_NUMBER,
+                  strlen(SENSOR_SERIAL_NUMBER),
+                  read_configs.serial_number);
+  set_config_float(BM_CFG_PARTITION_SYSTEM,
+                  FACTORY_CELL_COEF,
+                  strlen(FACTORY_CELL_COEF),
+                  read_configs.cell_coef);
+  save_config(BM_CFG_PARTITION_SYSTEM, false);
 }
 
 /*!
