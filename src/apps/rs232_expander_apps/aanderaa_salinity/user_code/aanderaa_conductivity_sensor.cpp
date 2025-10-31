@@ -70,6 +70,11 @@ void AanderaaConductivitySensor::configureSensor(void) {
 
   checkAssignProductionConfigs();
 
+  get_config_uint(BM_CFG_PARTITION_SYSTEM,
+                  SENSOR_SERIAL_NUMBER,
+                  strlen(SENSOR_SERIAL_NUMBER),
+                  &_serialNumber);
+
   // set lower priveledge level
   sendCommand(CMD_SET_PASSKEY_1);
 
@@ -370,19 +375,24 @@ bool AanderaaConductivitySensor::checkAssignEpochValues(void) {
  */
 void AanderaaConductivitySensor::validateSerialNumber(const char *str) {
   AanderaaConductivityUint detected_serial_number = 0;
+  uint32_t serial_number_err = 0;
 
   if (!str) {
     return;
   }
 
   checkTypeAndAssign(str, strlen(str), &detected_serial_number);
+
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM), &serial_number_err);
+  bool serial_numbers_match = detected_serial_number == _serialNumber;
+  
   debug_printf("Detected serial number: %" PRIu32 "\n", detected_serial_number);
-  if (detected_serial_number != _serialNumber) {
+  if (!serial_number_err && !serial_numbers_match) {
     spotter_log(0, AANDERAA_CONDUCTIVITY_LOG, USE_TIMESTAMP,
                 "Err: Detected 5990 serial number %" PRIu32 " does not match"
                 "production serial number: %" PRIu32 "\n", detected_serial_number, _serialNumber);
     set_config_uint(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM), 1);
-  } else {
+  } else if (serial_numbers_match) {
     remove_key(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM));
   }
 }
@@ -425,6 +435,10 @@ void AanderaaConductivitySensor::checkAssignProductionConfigs(void) {
   ProductionConfigs prev_read_configs = {};
   ProductionConfigs read_configs = {};
 
+  if (hasProductionConfigs(production_configs)) {
+      return;
+  }
+
   // Ensure robust readings for serial number
   do {
     prev_read_configs = read_configs;
@@ -437,12 +451,6 @@ void AanderaaConductivitySensor::checkAssignProductionConfigs(void) {
     }
   } while (prev_read_configs.serial_number != read_configs.serial_number &&
            prev_read_configs.cell_coef != read_configs.cell_coef);
-
-  _serialNumber = read_configs.serial_number;
-
-  if (hasProductionConfigs(production_configs)) {
-      return;
-  }
 
   debug_printf("Saving production configs!\n");
   set_config_uint(BM_CFG_PARTITION_SYSTEM,
