@@ -53,6 +53,7 @@ public:
 
 
   static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_salinity_raw.log";
+  static constexpr char AANDERAA_CONDUCTIVITY_LOG[] = "aanderaa_salinity.log";
 
 private:
   typedef uint32_t AanderaaConductivityUint;
