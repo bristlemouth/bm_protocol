@@ -104,6 +104,9 @@ class AutoBuilder:
         if config["name"].startswith("aanderaa"):
             cmd += ["-DCMAKE_AANDERAA_TYPE=4830"]
 
+        if config["legacy"]:
+            cmd += ["-DLEGACY=1"]
+
         if config["sign"]:
             cmd += ["-DSIGN_IMAGES=1"]
             if self.ed25519_priv_key_file:
