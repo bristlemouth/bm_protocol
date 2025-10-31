@@ -64,7 +64,7 @@ static const SensorSubscriptionCtx<AanderaaConductivity_t> aanderaa_conductivity
     .sensor_type = SENSOR_TYPE_AANDERAA_CONDUCTIVITY,
     .reading_period =
         {
-            .config_key = AppConfig::AANDERAA_CONDUCTIVITY_READING_PERIOD_MS,
+            .config_key = AppConfig::AANDERAA_SALINITY_READING_PERIOD_MS,
             .ms = &_ctx.aanderaa_conductivity_reading_period_ms,
             .default_ms = AanderaaConductivitySensor::get_default_reading_period_ms(),
         },
