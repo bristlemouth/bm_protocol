@@ -386,14 +386,16 @@ void AanderaaConductivitySensor::validateSerialNumber(const char *str) {
   get_config_uint(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM), &serial_number_err);
   bool serial_numbers_match = detected_serial_number == _serialNumber;
   
-  debug_printf("Detected serial number: %" PRIu32 "\n", detected_serial_number);
-  if (!serial_number_err && !serial_numbers_match) {
+  // Only set and log the key if it has not been set yet or if the config does not exist
+  if ((!_serialNumberErrSet || !serial_number_err) && !serial_numbers_match) {
     spotter_log(0, AANDERAA_CONDUCTIVITY_LOG, USE_TIMESTAMP,
                 "Err: Detected 5990 serial number %" PRIu32 " does not match"
-                "production serial number: %" PRIu32 "\n", detected_serial_number, _serialNumber);
+                " production serial number: %" PRIu32 "\n", detected_serial_number, _serialNumber);
     set_config_uint(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM), 1);
+    _serialNumberErrSet = true;
   } else if (serial_numbers_match) {
     remove_key(BM_CFG_PARTITION_SYSTEM, ERR_SERIAL_NUM, strlen(ERR_SERIAL_NUM));
+    _serialNumberErrSet = false;
   }
 }
 

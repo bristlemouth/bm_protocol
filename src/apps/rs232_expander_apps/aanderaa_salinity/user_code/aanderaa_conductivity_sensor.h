@@ -91,6 +91,7 @@ private:
   OrderedSeparatorLineParser _parser;
   char _payload_buffer[2048];
   AanderaaConductivityUint _serialNumber;
+  bool _serialNumberErrSet = false;
 
   float _cellCoef = 0.000000f;
   float _referenceConductivity = NAN;
