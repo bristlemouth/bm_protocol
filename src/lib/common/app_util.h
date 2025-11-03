@@ -55,6 +55,8 @@ double degToRad(double deg);
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+#define S_IN_A_DAY (86400)
+
 #ifdef __GNUC__
 #define UNUSED_FUNCTION(x) __attribute__((__unused__)) UNUSED_##x
 #else

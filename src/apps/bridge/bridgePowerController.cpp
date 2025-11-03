@@ -441,53 +441,197 @@ void BridgePowerController::powerControllerRun(void *arg) {
   }
 }
 
+/*!
+ @brief Determine If Bridge Power Controller Is In Initilization Period
+
+ @see INIT_POWER_ON_TIMEOUT_MS
+ @see handleInitState
+
+ @return true if in initialization state,
+         false otherwise
+ */
+bool BridgePowerController::isInInitializationPeriod(void) {
+  return (!_initDone || !_timebaseSet) && _powerControlEnabled;
+}
+
+/*!
+ @brief Calculate The Power Timings During Initialization Period
+
+ @details The initialization period will always have the upcoming off seconds
+          set to UNDEFINED as the next sample interval has not yet been
+          determined during this state.
+
+ @return Power timings during this moment in the initialization state
+ */
+BridgePowerController::PowerTimings
+BridgePowerController::calculateInitializationTimings(void) {
+    static constexpr uint32_t rtc_not_set_ncp_power_check_s = 1;
+  static constexpr uint64_t init_uptime_s = 0;
+  static constexpr uint32_t init_total_on_s = ms_to_s(INIT_POWER_ON_TIMEOUT_MS);
+  uint64_t current_uptime_s = uptimeGetMs() / 1000;
+
+  uint32_t remaining_s = timeRemainingGeneric(init_uptime_s, current_uptime_s, init_total_on_s);
+  
+  // Remaining time on is indefinite, but the NCP device should check in often until
+  // the timebase is set
+  if (!remaining_s && _sampleIntervalS == _sampleDurationS) {
+    remaining_s = rtc_not_set_ncp_power_check_s;
+  }
+
+  return PowerTimings{
+      .total_on_s = init_total_on_s,
+      .remaining_on_s = remaining_s,
+      .remaining_off_s = 0,
+      .upcoming_off_s = POWER_SERVICE_UNDEFINED,
+  };
+}
+
+/*!
+ @brief Calculate The Power Timings When Bridge Power Controller Is Disabled
+
+ @details The power is on indefinitely during this configuration.
+
+ @return Power timings when bridge power controller is disabled
+ */
+BridgePowerController::PowerTimings BridgePowerController::calculateDisabledTimings(void) {
+  return PowerTimings{
+      .total_on_s = POWER_SERVICE_UNDEFINED,
+      .remaining_on_s = POWER_SERVICE_UNDEFINED,
+      .remaining_off_s = 0,
+      .upcoming_off_s = 0,
+  };
+}
+
+/*!
+ @brief Calculate Subsample Timings When Subsampling Is Enabled
+
+ @return Power timings when subsampling is enabled
+ */
+BridgePowerController::PowerTimings BridgePowerController::calculateSubsampleTimings(void) {
+  uint32_t current_time_s = getCurrentTimeS();
+
+  PowerTimings timings = {
+      .total_on_s = _sampleDurationS,
+      .remaining_on_s = 0,
+      .remaining_off_s = 0,
+      .upcoming_off_s = _sampleIntervalS - _sampleDurationS,
+  };
+
+  uint32_t sample_duration_remain =
+      timeRemainingGeneric(_sampleIntervalStartS, current_time_s, _sampleDurationS);
+
+  if (isBridgePowerOn()) {
+    timings.remaining_on_s =
+        timeRemainingGeneric(_subsampleIntervalStartS, current_time_s, _subsampleDurationS);
+  } else {
+    timings.remaining_off_s = timeRemainingGeneric(_subsampleIntervalStartS, current_time_s, 0);
+  }
+
+  // Account for sample interval off time after sample duration in subsampling
+  if (sample_duration_remain >= timings.total_on_s) {
+    timings.upcoming_off_s = _subsampleIntervalS - timings.total_on_s;
+  } else {
+    timings.upcoming_off_s = (_sampleIntervalStartS + _sampleIntervalS) -
+                             (_subsampleIntervalStartS + _subsampleDurationS);
+  }
+
+  return timings;
+}
+
+/*!
+ @brief Calculate Power Timings When Enabled And Subsampling Is Disabled
+
+ @return Power timings during normal sample intervals
+ */
+BridgePowerController::PowerTimings BridgePowerController::calculateSampleTimings(void) {
+  uint32_t current_time_s = getCurrentTimeS();
+
+  PowerTimings timings = {
+      .total_on_s = _sampleDurationS,
+      .remaining_on_s = 0,
+      .remaining_off_s = 0,
+      .upcoming_off_s = 0,
+  };
+
+  if (isBridgePowerOn()) {
+    timings.remaining_on_s =
+        timeRemainingGeneric(_sampleIntervalStartS, current_time_s, _sampleDurationS);
+  } else {
+    // _sampleIntervalStartS will be ahead of current time
+    timings.remaining_off_s = timeRemainingGeneric(_sampleIntervalStartS, current_time_s, 0);
+  }
+
+  timings.upcoming_off_s = _sampleIntervalS - timings.total_on_s;
+
+  return timings;
+}
+
+/*!
+ @brief Calculate The Power Timings Based Off The Configuration/State Of The Power Controller
+
+ @return Power timings
+ */
+BridgePowerController::PowerTimings BridgePowerController::calculatePowerTimings(void) {
+  if (!_powerControlEnabled) {
+      return calculateDisabledTimings();
+  }
+
+  if (isInInitializationPeriod()) {
+    return calculateInitializationTimings();
+  }
+
+  if (_subsamplingEnabled) {
+    return calculateSubsampleTimings();
+  }
+
+  return calculateSampleTimings();
+}
+
+/*!
+ @brief Obtain The Power Timings And Create A Power Status Reply
+
+ @details Calculates the power timings and creates a power status reply message
+          for the NCP request. This informs the NCP about the current power
+          status of the Bristlemouth network
+
+ @param arg BridgePowerController instance
+
+ @return Power status data
+ */
+bm_serial_power_status_reply_data_t BridgePowerController::getPowerStats(void) {
+  bm_serial_power_status_reply_data_t d = {0, 0};
+
+  PowerTimings timings = calculatePowerTimings();
+
+  if (timings.remaining_on_s == POWER_SERVICE_UNDEFINED) {
+    d.remaining_on_ms = UINT32_MAX;
+  } else {
+    d.remaining_on_ms = s_to_ms(timings.remaining_on_s);
+  }
+  d.remaining_off_ms = s_to_ms(timings.remaining_off_s);
+
+  return d;
+}
+
+/*!
+ @brief Obtain The Power Timings And Create A Power Info Reply
+
+ @details Calculates the power timings and creates a power info reply message
+          for the corresponding Bristlemouth service.
+
+ @param arg BridgePowerController instance
+
+ @return Power info data
+ */
 PowerInfoReplyData BridgePowerController::powerInfoStatsCb(void *arg) {
   PowerInfoReplyData d = {};
   BridgePowerController *power_controller = reinterpret_cast<BridgePowerController *>(arg);
 
-  if ((!power_controller->_initDone || !power_controller->_timebaseSet) &&
-      power_controller->isPowerControlEnabled()) {
-    static const uint64_t init_uptime_s = 0;
-    uint64_t current_uptime_s = uptimeGetMs() / 1000;
+  PowerTimings timings = power_controller->calculatePowerTimings();
 
-    // Calculate how long the bus will be on before initialization is done
-    d.total_on_s = INIT_POWER_ON_TIMEOUT_MS / 1000;
-    d.remaining_on_s = timeRemainingGeneric(init_uptime_s, current_uptime_s, d.total_on_s);
-    d.upcoming_off_s = POWER_SERVICE_UNDEFINED;
-  } else if (power_controller->isSubsampleEnabled() &&
-             power_controller->isPowerControlEnabled()) {
-    uint32_t sample_duration_remain = timeRemainingGeneric(
-        power_controller->_sampleIntervalStartS, power_controller->getCurrentTimeS(),
-        power_controller->_sampleDurationS);
-
-    d.total_on_s = power_controller->_subsampleDurationS;
-    if (power_controller->isBridgePowerOn()) {
-      d.remaining_on_s = timeRemainingGeneric(power_controller->_subsampleIntervalStartS,
-                                              power_controller->getCurrentTimeS(),
-                                              power_controller->_subsampleDurationS);
-    }
-
-    // Account for sample interval off time after sample duration in subsampling
-    if (sample_duration_remain >= d.total_on_s) {
-      d.upcoming_off_s = power_controller->_subsampleIntervalS - d.total_on_s;
-    } else {
-      d.upcoming_off_s =
-          (power_controller->_sampleIntervalStartS + power_controller->_sampleIntervalS) -
-          (power_controller->_subsampleIntervalStartS + power_controller->_subsampleDurationS);
-    }
-  } else if (power_controller->isPowerControlEnabled()) {
-    d.total_on_s = power_controller->_sampleDurationS;
-    if (power_controller->isBridgePowerOn()) {
-      d.remaining_on_s = timeRemainingGeneric(power_controller->_sampleIntervalStartS,
-                                              power_controller->getCurrentTimeS(),
-                                              power_controller->_sampleDurationS);
-    }
-    d.upcoming_off_s = power_controller->_sampleIntervalS - d.total_on_s;
-  } else {
-    d.total_on_s = POWER_SERVICE_UNDEFINED;
-    d.remaining_on_s = POWER_SERVICE_UNDEFINED;
-    d.upcoming_off_s = 0;
-  }
+  d.total_on_s = timings.total_on_s;
+  d.remaining_on_s = timings.remaining_on_s;
+  d.upcoming_off_s = timings.upcoming_off_s;
 
   return d;
 }
