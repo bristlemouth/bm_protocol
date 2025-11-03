@@ -465,11 +465,18 @@ bool BridgePowerController::isInInitializationPeriod(void) {
  */
 BridgePowerController::PowerTimings
 BridgePowerController::calculateInitializationTimings(void) {
+    static constexpr uint32_t rtc_not_set_ncp_power_check_s = 1;
   static constexpr uint64_t init_uptime_s = 0;
   static constexpr uint32_t init_total_on_s = ms_to_s(INIT_POWER_ON_TIMEOUT_MS);
   uint64_t current_uptime_s = uptimeGetMs() / 1000;
 
   uint32_t remaining_s = timeRemainingGeneric(init_uptime_s, current_uptime_s, init_total_on_s);
+  
+  // Remaining time on is indefinite, but the NCP device should check in often until
+  // the timebase is set
+  if (!remaining_s && _sampleIntervalS == _sampleDurationS) {
+    remaining_s = rtc_not_set_ncp_power_check_s;
+  }
 
   return PowerTimings{
       .total_on_s = init_total_on_s,
