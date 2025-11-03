@@ -572,12 +572,12 @@ BridgePowerController::PowerTimings BridgePowerController::calculateSampleTiming
  @return Power timings
  */
 BridgePowerController::PowerTimings BridgePowerController::calculatePowerTimings(void) {
-  if (isInInitializationPeriod()) {
-    return calculateInitializationTimings();
+  if (!_powerControlEnabled) {
+      return calculateDisabledTimings();
   }
 
-  if (!_powerControlEnabled) {
-    return calculateDisabledTimings();
+  if (isInInitializationPeriod()) {
+    return calculateInitializationTimings();
   }
 
   if (_subsamplingEnabled) {
@@ -604,7 +604,7 @@ bm_serial_power_status_reply_data_t BridgePowerController::getPowerStats(void) {
   PowerTimings timings = calculatePowerTimings();
 
   if (timings.remaining_on_s == POWER_SERVICE_UNDEFINED) {
-    d.remaining_on_ms = S_IN_A_DAY;
+    d.remaining_on_ms = UINT32_MAX;
   } else {
     d.remaining_on_ms = s_to_ms(timings.remaining_on_s);
   }
