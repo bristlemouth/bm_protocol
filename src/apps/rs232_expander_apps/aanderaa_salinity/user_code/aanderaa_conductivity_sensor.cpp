@@ -39,7 +39,6 @@ void AanderaaConductivitySensor::init() {
   debug_printf("sensorDepthM: %f\n", _sensorDepthM);
   // convert depth in meters to pressure in kPa; Pressure = 10 * depth
   _pressureKpa = _sensorDepthM * 10.0f;
-  debug_printf("Calculated pressure for depth %.2f m is %f kPa\n", _sensorDepthM, _pressureKpa);
 
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set to 9600, which is expected by the Aanderaa conductivity sensor
@@ -108,7 +107,9 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_ENABLE_DERIVEDPARAMETERS_YES);
 
   // set pressure command
-  debug_printf("Calculated pressure for depth %.2f m is %.2f kPa\n", _sensorDepthM, _pressureKpa);
+  spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+              "Calculated pressure for depth %.2f m is %f kPa\n",
+              _sensorDepthM, _pressureKpa);
   AanderaaConductivityString pressure_cmd;
   snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
   sendCommand(pressure_cmd);
@@ -236,20 +237,25 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
   // read sys config referenceConductivity
   get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY, strlen(EXTERNAL_REFERENCE_CONDUCTIVITY), &_referenceConductivity);
 
+  spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+              "Calibrating salinity sensor...\n");
+
   if (isnan(_referenceConductivity)) {
     return;
   }
 
     // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
   if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
-    debug_printf("Reference conductivity is out of range. Skipping cellCoef adjustment\n");
+    spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+                "Reference conductivity is out of range. Skipping cellCoef adjustment\n");
     return;
   } 
 
   uint32_t calib_count = 0;
   get_config_uint(BM_CFG_PARTITION_SYSTEM, CAL_COUNT, strlen(CAL_COUNT), &calib_count);
 
-  debug_printf("Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
+  spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+              "Reference conductivity %f mS/cm is within range. Proceeding with cellCoef adjustment\n", _referenceConductivity);
 
   // Wake up the sensor and stop readings
   sendCommand(CMD_WAKE);
@@ -264,13 +270,17 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
   if (_cellCoef == 0.000000f || _measuredConductivity == 0.000f) {
     /* calibration failed but the loop() in user_code.cpp will run this function again to
      * attempt doing it again and then remove referenceConductivity from the configs */
-    debug_printf("Calibration failed because cellCoef or measuredConductivity is zero\n");
+    spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+                "Calibration failed because cellCoef or measuredConductivity is zero\n");
   } else {
   // calculate new cellCoef
-    debug_printf("old cellCoef: %f\n", _cellCoef);
+    
+    spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+                "old cellCoef: %f\n", _cellCoef);
     // Formula -> NEW cellCoef = stored cellCoef * (referenceConductivity / measuredConductivity)
     _cellCoef = _cellCoef * (_referenceConductivity / _measuredConductivity);
-    debug_printf("new cellCoef: %f\n", _cellCoef);
+    spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+                "new cellCoef: %f\n", _cellCoef);
 
     // write new cellCoef to sensor
     AanderaaConductivityString calibrate_cmd;
