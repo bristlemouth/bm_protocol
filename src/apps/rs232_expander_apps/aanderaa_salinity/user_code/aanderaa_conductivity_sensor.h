@@ -4,6 +4,9 @@
 #pragma once
 #include "OrderedSeparatorLineParser.h"
 #include "aanderaa_conductivity_msg.h"
+extern "C" {
+#include "util.h"
+}
 #include <math.h>
 #include <stdint.h>
 
@@ -26,6 +29,7 @@
 #define CMD_SAVE "Save\r\n"
 #define CMD_RESET "Reset\r\n"
 #define ACK "#\r\n"
+#define CMD_WAKE "\r\n"
 #define CMD_GET_ALL "Get_All\r\n"
 #define CMD_GET_ALL_PARAMS "Get_All Parameters\r\n"
 #define CMD_SET_PRESSURE "Set Pressure(%f)\r\n"
@@ -40,16 +44,18 @@ public:
   void init();
   void configureSensor(void);
   bool getData(AanderaaConductivityMsg::Data &d);
-  void flush(void);
   void clearPayloadBuffer(void);
   void resetSensor(void);
   void startStreaming(void);
   void calibrateCellCoef(void);
-  float read_data_from_sensor(const char *);
 
   static constexpr char AANDERAA_CONDUCTIVITY_RAW_LOG[] = "aanderaa_salinity_raw.log";
 
 private:
+  typedef uint32_t AanderaaConductivityUint;
+  typedef float AanderaaConductivityFloat;
+  typedef char AanderaaConductivityString[32];
+
   static constexpr uint32_t BAUD_RATE = 9600;
   static constexpr char LINE_TERM = '\n';
 
@@ -71,5 +77,17 @@ private:
   float _cellCoef = 0.000000f;
   float _referenceConductivity = NAN;
   float _measuredConductivity = NAN;
-  char _config_payload_buffer[256];
+
+  // The save procedure may take up to 20 seconds according to Table 5-2 in the
+  // TD321 Operation Manual
+  static constexpr uint16_t _saveTimeMs = 20000;
+
+  void checkTypeAndAssign(const char *output, uint16_t length, AanderaaConductivityUint *value);
+  void checkTypeAndAssign(const char *output, uint16_t length,
+                          AanderaaConductivityFloat *value);
+  void checkTypeAndAssign(const char *output, uint16_t length, AanderaaConductivityString *value);
+
+  BmErr sendCommand(const char *command, uint32_t timeout_ms = 1000);
+  template <typename T>
+  BmErr sendCommand(const char *command, T *value = nullptr, uint32_t timeout_ms = 1000);
 };
