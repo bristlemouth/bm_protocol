@@ -621,6 +621,20 @@ BmErr AanderaaConductivitySensor::sendCommand(const char *command, T *value,
   return err;
 }
 
+/*!
+ @brief Compares UINT Values And Populates Set Buffer To Send Values
+
+ @details If the values for read and expected do not match, the buffer used to
+          set the parameter is populated.
+
+ @param parameter parameter to set if values do not match
+ @param buf buffer to populate to send the set command
+ @param read read value from 5990
+ @param expected expected value
+
+ @return true if the read value matches the expected value
+         false if the read value does not match the expected value
+ */
 bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
     const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString *buf,
     const AanderaaConductivitySensor::AanderaaConductivityUint read,
@@ -635,13 +649,27 @@ bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
   return false;
 }
 
+/*!
+ @brief Compares Float Values And Populates Set Buffer To Send Values
+
+ @details If the values for read and expected do not match, the buffer used to
+          set the parameter is populated.
+
+ @param parameter parameter to set if values do not match
+ @param buf buffer to populate to send the set command
+ @param read read value from 5990
+ @param expected expected value
+
+ @return true if the read value matches the expected value
+         false if the read value does not match the expected value
+ */
 bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
     const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString *buf,
     const AanderaaConductivitySensor::AanderaaConductivityFloat read,
     const AanderaaConductivitySensor::AanderaaConductivityFloat expected) {
 
-  constexpr float EPSILON = 0.0001f;
-  if (fabs(read - expected) < EPSILON) {
+  constexpr float epsilon = 0.0001f;
+  if (fabs(read - expected) < epsilon) {
     return true;
   }
 
@@ -650,6 +678,20 @@ bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
   return false;
 }
 
+/*!
+ @brief Compares String Values And Populates Set Buffer To Send Values
+
+ @details If the values for read and expected do not match, the buffer used to
+          set the parameter is populated.
+
+ @param parameter parameter to set if values do not match
+ @param buf buffer to populate to send the set command
+ @param read read value from 5990
+ @param expected expected value
+
+ @return true if the read value matches the expected value
+         false if the read value does not match the expected value
+ */
 bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
     const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString *buf,
     const AanderaaConductivitySensor::AanderaaConductivityString read,
@@ -664,6 +706,16 @@ bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
   return false;
 }
 
+/*!
+ @brief Overloaded Wrapper To Accept String Literals For Expected Value
+
+ @param parameter parameter to get/set
+ @param expected_val expected value from get command
+ @param retries number of times to retry getting/setting the parameter
+
+ @return BmOk on success,
+         BmEINVAL if expected value is longer than AanderaaConductivityString
+ */
 BmErr AanderaaConductivitySensor::readValidateWriteValue(const char *parameter,
                                                          const char *expected_val,
                                                          uint8_t retries) {
@@ -678,6 +730,25 @@ BmErr AanderaaConductivitySensor::readValidateWriteValue(const char *parameter,
   return readValidateWriteValue<AanderaaConductivityString>(parameter, str_buf, retries);
 }
 
+/*!
+ @brief Reads/Validate/Write a Parameter On The 5990
+
+ @details This function will get a specified parameter from the 5990, compare that
+          parameter to an expected value and then proceed to write that parameter
+          if the read parameter is not expected. This will then mark the 5990's 
+          config parameters as dirty and will save the configuration to the
+          5990 at the end of configureSensor. Retries are implemented to
+          ensure that the get/set commands are able to be invoked properly.
+
+ @param parameter parameter to get/set
+ @param expected_val expected value from get command
+ @param retries number of times to retry getting/setting the parameter
+
+ @return BmOK on successful write or if the expected value matches the read value
+ @return BmEINVAL if command is NULL
+ @return BmETIMEDOUT if no response received within timeout
+ @return BmEBADMSG if sensor responds with error acknowledgment ('*')
+ */
 template <typename T>
 BmErr AanderaaConductivitySensor::readValidateWriteValue(const char *parameter, T expected_val,
                                                          uint8_t retries) {
