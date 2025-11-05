@@ -64,10 +64,10 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_SET_PASSKEY_1000);
 
   // enable sleep
-  sendCommand(CMD_ENABLE_SLEEP_YES);
+  readValidateWriteValue(CMD_ENABLE_SLEEP, CMD_YES);
 
   // set sleep timeout to 10s
-  sendCommand(CMD_SET_COMM_TIMEOUT_10S);
+  readValidateWriteValue(CMD_COMM_TIMEOUT, "10 s");
 
   checkAssignProductionConfigs();
 
@@ -78,43 +78,42 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_SET_PASSKEY_1);
 
   // set interval, define default interval
-  AanderaaConductivityString interval_cmd;
-  snprintf(interval_cmd, sizeof(interval_cmd), CMD_SET_INTERVAL, _readingPeriodS);
-  sendCommand(interval_cmd);
+  readValidateWriteValue(CMD_INTERVAL, (AanderaaConductivityUint)_readingPeriodS);
 
   // enable Temperature
-  sendCommand(CMD_ENABLE_TEMPERATURE_YES);
+  readValidateWriteValue(CMD_ENABLE_TEMPERATURE, CMD_YES);
 
   // disable rawdata
-  sendCommand(CMD_ENABLE_RAWDATA_NO);
+  readValidateWriteValue(CMD_ENABLE_RAWDATA, CMD_NO);
 
   // disable RawCond1
-  sendCommand(CMD_ENABLE_RAWCOND1_NO);
+  readValidateWriteValue(CMD_ENABLE_RAWCOND1, CMD_NO);
 
   // enable conductivity
-  sendCommand(CMD_ENABLE_CONDUCTIVITY_YES);
+  readValidateWriteValue(CMD_ENABLE_CONDUCTIVITY, CMD_YES);
 
   //  disable Polled Mode
-  sendCommand(CMD_ENABLE_POLLEDMODE_NO);
+  readValidateWriteValue(CMD_ENABLE_POLLEDMODE, CMD_NO);
 
   // disable text
-  sendCommand(CMD_ENABLE_TEXT_NO);
+  readValidateWriteValue(CMD_ENABLE_TEXT, CMD_NO);
 
   // enable decimalformat
-  sendCommand(CMD_ENABLE_DECIMALFORMAT_YES);
+  readValidateWriteValue(CMD_ENABLE_DECIMALFORMAT, CMD_YES);
 
   // enable derived parameters
-  sendCommand(CMD_ENABLE_DERIVEDPARAMETERS_YES);
+  readValidateWriteValue(CMD_ENABLE_DERIVEDPARAMETERS, CMD_YES);
 
   // set pressure command
   spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
               "Calculated pressure for depth %.2f m is %f kPa\n", _sensorDepthM, _pressureKpa);
-  AanderaaConductivityString pressure_cmd;
-  snprintf(pressure_cmd, sizeof(pressure_cmd), CMD_SET_PRESSURE, _pressureKpa);
-  sendCommand(pressure_cmd);
+  readValidateWriteValue(CMD_PRESSURE, (AanderaaConductivityFloat)_pressureKpa);
 
   // save
-  sendCommand(CMD_SAVE, _saveTimeMs);
+  if (_sensorConfigDirty) {
+    sendCommand(CMD_SAVE, _saveTimeMs);
+    _sensorConfigDirty = false;
+  }
 
   // send get_all command
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
@@ -620,4 +619,92 @@ BmErr AanderaaConductivitySensor::sendCommand(const char *command, T *value,
   debug_printf("%s err: %d\n", __func__, err);
 
   return err;
+}
+
+bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
+    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString buf,
+    const AanderaaConductivitySensor::AanderaaConductivityUint read,
+    const AanderaaConductivitySensor::AanderaaConductivityUint expected) {
+
+  if (read == expected) {
+    return true;
+  }
+
+  snprintf(buf, sizeof(AanderaaConductivityString), "%s %s(%" PRIu32 ")\r\n", CMD_SET,
+           parameter, expected);
+  return false;
+}
+
+bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
+    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString buf,
+    const AanderaaConductivitySensor::AanderaaConductivityFloat read,
+    const AanderaaConductivitySensor::AanderaaConductivityFloat expected) {
+
+  if (read == expected) {
+    return true;
+  }
+
+  snprintf(buf, sizeof(AanderaaConductivityString), "%s %s(%f)\r\n", CMD_SET, parameter,
+           expected);
+  return false;
+}
+
+bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
+    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString buf,
+    const AanderaaConductivitySensor::AanderaaConductivityString read,
+    const AanderaaConductivitySensor::AanderaaConductivityString expected) {
+
+  if (!strncmp(read, expected, sizeof(AanderaaConductivityString))) {
+    return true;
+  }
+
+  snprintf(buf, sizeof(AanderaaConductivityString), "%s %s(%s)\r\n", CMD_SET, parameter,
+           expected);
+  return false;
+}
+
+BmErr AanderaaConductivitySensor::readValidateWriteValue(const char *parameter,
+                                                         const char *expected_val,
+                                                         uint8_t retries) {
+  AanderaaConductivityString str_buf = {};
+
+  if (strlen(expected_val) > sizeof(str_buf)) {
+    return BmEINVAL;
+  }
+
+  strncpy(str_buf, expected_val, sizeof(str_buf));
+
+  return readValidateWriteValue<AanderaaConductivityString>(parameter, str_buf, retries);
+}
+
+template <typename T>
+BmErr AanderaaConductivitySensor::readValidateWriteValue(const char *parameter, T expected_val,
+                                                         uint8_t retries) {
+  T read_val;
+  AanderaaConductivityString _readValidateCompareBuf = {};
+  BmErr ret = BmOK;
+
+  do {
+    snprintf(_readValidateCompareBuf, sizeof(_readValidateCompareBuf), "%s %s\r\n", CMD_GET,
+             parameter);
+
+    ret = sendCommand(_readValidateCompareBuf, &read_val);
+    if (ret != BmOK) {
+      continue;
+    }
+
+    if (compareValuesPopulateBuffer(parameter, _readValidateCompareBuf, read_val,
+                                    expected_val)) {
+      ret = BmOK;
+      break;
+    }
+
+    ret = sendCommand(_readValidateCompareBuf);
+
+    if (ret == BmOK) {
+      _sensorConfigDirty = true;
+    }
+  } while (ret != BmOK && retries--);
+
+  return ret;
 }
