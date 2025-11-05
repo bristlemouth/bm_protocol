@@ -227,7 +227,7 @@ void AanderaaConductivitySensor::setup_sensor_pointers(report_builder_element_t 
 BmErr AanderaaConductivitySensor::send_spotter_log_individual(
     const AanderaaConductivityMsg::Data &m) {
   BmErr err = AbstractSensor::send_spotter_log_individual(
-      "aanderaa_salinity", m.header, DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS + 1000U,
+      "aanderaa_salinity", m.header, DEFAULT_AANDERAA_SALINITY_READING_PERIOD_MS + 1000U,
       "%.4f,"   // conductivity_ms_cm
       "%.3f,"   // temperature_deg_c
       "%.3f,"   // salinity_psu

@@ -150,7 +150,7 @@ private:
   static constexpr uint32_t AANDERAA_CONDUCTIVITY_NUM_SAMPLE_MEMBERS = 7;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
   static constexpr char subtag[] = "/sofar/aanderaa_conductivity_data";
-  static constexpr uint32_t DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS = 30000;
+  static constexpr uint32_t DEFAULT_AANDERAA_SALINITY_READING_PERIOD_MS = 30000;
 
   BmErr send_spotter_log_individual(const AanderaaConductivityMsg::Data &m);
   BmErr send_spotter_log_aggregate(const AanderaaConductivityAggregations &agg);
@@ -198,7 +198,7 @@ public:
    * @return Default reading period in milliseconds.
    */
   static uint32_t get_default_reading_period_ms(void) {
-    return DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS;
+    return DEFAULT_AANDERAA_SALINITY_READING_PERIOD_MS;
   }
 
 } AanderaaConductivity_t;

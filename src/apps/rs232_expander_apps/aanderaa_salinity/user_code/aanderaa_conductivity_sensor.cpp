@@ -66,6 +66,9 @@ void AanderaaConductivitySensor::configureSensor(void) {
   // enable sleep
   sendCommand(CMD_ENABLE_SLEEP_YES);
 
+  // set sleep timeout to 10s
+  sendCommand(CMD_SET_COMM_TIMEOUT_10S);
+
   checkAssignProductionConfigs();
 
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_SERIAL_NUMBER, strlen(SENSOR_SERIAL_NUMBER),
