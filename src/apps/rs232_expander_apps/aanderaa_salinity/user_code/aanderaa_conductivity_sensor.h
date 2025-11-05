@@ -123,13 +123,13 @@ private:
   template <typename T>
   BmErr sendCommand(const char *command, T *value = nullptr, uint32_t timeout_ms = 1000);
 
-  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString buf,
+  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString *buf,
                                    const AanderaaConductivityUint read,
                                    const AanderaaConductivityUint validate);
-  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString buf,
+  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString *buf,
                                    const AanderaaConductivityFloat read,
                                    const AanderaaConductivityFloat validate);
-  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString buf,
+  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString *buf,
                                    const AanderaaConductivityString read,
                                    const AanderaaConductivityString validate);
 

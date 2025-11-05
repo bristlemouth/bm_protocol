@@ -622,7 +622,7 @@ BmErr AanderaaConductivitySensor::sendCommand(const char *command, T *value,
 }
 
 bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString buf,
+    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString *buf,
     const AanderaaConductivitySensor::AanderaaConductivityUint read,
     const AanderaaConductivitySensor::AanderaaConductivityUint expected) {
 
@@ -630,27 +630,28 @@ bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
     return true;
   }
 
-  snprintf(buf, sizeof(AanderaaConductivityString), "%s %s(%" PRIu32 ")\r\n", CMD_SET,
+  snprintf(*buf, sizeof(AanderaaConductivityString), "%s %s(%" PRIu32 ")\r\n", CMD_SET,
            parameter, expected);
   return false;
 }
 
 bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString buf,
+    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString *buf,
     const AanderaaConductivitySensor::AanderaaConductivityFloat read,
     const AanderaaConductivitySensor::AanderaaConductivityFloat expected) {
 
-  if (read == expected) {
+  constexpr float EPSILON = 0.0001f;
+  if (fabs(read - expected) < EPSILON) {
     return true;
   }
 
-  snprintf(buf, sizeof(AanderaaConductivityString), "%s %s(%f)\r\n", CMD_SET, parameter,
+  snprintf(*buf, sizeof(AanderaaConductivityString), "%s %s(%f)\r\n", CMD_SET, parameter,
            expected);
   return false;
 }
 
 bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString buf,
+    const char *parameter, AanderaaConductivitySensor::AanderaaConductivityString *buf,
     const AanderaaConductivitySensor::AanderaaConductivityString read,
     const AanderaaConductivitySensor::AanderaaConductivityString expected) {
 
@@ -658,7 +659,7 @@ bool AanderaaConductivitySensor::compareValuesPopulateBuffer(
     return true;
   }
 
-  snprintf(buf, sizeof(AanderaaConductivityString), "%s %s(%s)\r\n", CMD_SET, parameter,
+  snprintf(*buf, sizeof(AanderaaConductivityString), "%s %s(%s)\r\n", CMD_SET, parameter,
            expected);
   return false;
 }
@@ -681,25 +682,23 @@ template <typename T>
 BmErr AanderaaConductivitySensor::readValidateWriteValue(const char *parameter, T expected_val,
                                                          uint8_t retries) {
   T read_val;
-  AanderaaConductivityString _readValidateCompareBuf = {};
+  AanderaaConductivityString command_buf = {};
   BmErr ret = BmOK;
 
   do {
-    snprintf(_readValidateCompareBuf, sizeof(_readValidateCompareBuf), "%s %s\r\n", CMD_GET,
-             parameter);
+    snprintf(command_buf, sizeof(command_buf), "%s %s\r\n", CMD_GET, parameter);
 
-    ret = sendCommand(_readValidateCompareBuf, &read_val);
+    ret = sendCommand(command_buf, &read_val);
     if (ret != BmOK) {
       continue;
     }
 
-    if (compareValuesPopulateBuffer(parameter, _readValidateCompareBuf, read_val,
-                                    expected_val)) {
+    if (compareValuesPopulateBuffer(parameter, &command_buf, read_val, expected_val)) {
       ret = BmOK;
       break;
     }
 
-    ret = sendCommand(_readValidateCompareBuf);
+    ret = sendCommand(command_buf);
 
     if (ret == BmOK) {
       _sensorConfigDirty = true;
