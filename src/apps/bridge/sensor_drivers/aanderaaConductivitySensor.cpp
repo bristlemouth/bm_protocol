@@ -257,9 +257,12 @@ BmErr AanderaaConductivitySensor::send_spotter_log_aggregate(
 
   BmErr err = AbstractSensor::send_spotter_log_aggregate(
       "aanderaa_salinity", agg.reading_count,
+      "%.4f,"   // conductivity_mean_ms_cm
       "%.3f,"   // temperature_mean_deg_c
       "%.3f,"   // salinity_mean_psu
-      "%.4f\n", // salinity_std_dev
+      "%.4f,"   // salinity_std_dev
+      "%.3f,"   // water_density_mean_kg_m3
+      "%.3f\n", // sound_speed_mean_m_s
       agg.temperature_mean_deg_c, agg.salinity_mean_psu, agg.salinity_std_dev);
 
   if (err != BmOK) {
