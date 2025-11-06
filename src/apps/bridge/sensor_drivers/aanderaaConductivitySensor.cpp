@@ -263,7 +263,8 @@ BmErr AanderaaConductivitySensor::send_spotter_log_aggregate(
       "%.4f,"   // salinity_std_dev
       "%.3f,"   // water_density_mean_kg_m3
       "%.3f\n", // sound_speed_mean_m_s
-      agg.temperature_mean_deg_c, agg.salinity_mean_psu, agg.salinity_std_dev);
+      agg.conductivity_mean_ms_cm, agg.temperature_mean_deg_c, agg.salinity_mean_psu,
+      agg.salinity_std_dev, agg.water_density_mean_kg_m3, agg.sound_speed_mean_m_s);
 
   if (err != BmOK) {
     bm_debug("ERROR: Failed to send PME DO aggregate log to spotter, err: %d\n", err);
