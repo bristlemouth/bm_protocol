@@ -78,7 +78,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_SET_PASSKEY_1);
 
   // set interval, define default interval
-  readValidateWriteValue(CMD_INTERVAL, (AanderaaConductivityUint)_readingPeriodS);
+  readValidateWriteValue(CMD_INTERVAL, (AanderaaConductivityFloat)_readingPeriodS);
 
   // enable Temperature
   readValidateWriteValue(CMD_ENABLE_TEMPERATURE, CMD_YES);
