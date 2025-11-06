@@ -64,7 +64,7 @@ public:
 private:
   typedef uint32_t AanderaaConductivityUint;
   typedef float AanderaaConductivityFloat;
-  typedef char AanderaaConductivityString[32];
+  typedef char AanderaaConductivityString[64];
 
   typedef struct {
     AanderaaConductivityUint serial_number;
