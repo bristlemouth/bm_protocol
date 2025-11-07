@@ -39,6 +39,12 @@ bool lineAvailable(void);
 // Read a line from the UART - return length read
 uint16_t readLine(char *buffer, size_t len);
 
+// Get the number of lines that have been dropped due to queue overflow
+uint32_t getDroppedLineCount(void);
+
+// Reset the dropped line counter
+void resetDroppedLineCount(void);
+
 // Write to the UART
 void write(uint8_t *buffer, size_t len);
 
