@@ -104,7 +104,7 @@ class AutoBuilder:
         if config["name"].startswith("aanderaa"):
             cmd += ["-DCMAKE_AANDERAA_TYPE=4830"]
 
-        if config.get("legacy", None) is not None:
+        if config.get("legacy", False):
             cmd += ["-DLEGACY=1"]
 
         if config["sign"]:
