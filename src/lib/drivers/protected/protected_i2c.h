@@ -1,9 +1,9 @@
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "stm32u5xx.h"
 
@@ -18,7 +18,7 @@ typedef enum {
   I2C_TIMEOUT,
   I2C_NACK,
   I2C_MUTEX,
-  I2C_ERR
+  I2C_ERR,
 } I2CResponse_t;
 
 typedef struct {
@@ -27,12 +27,19 @@ typedef struct {
   void (*initFn)();
   SemaphoreHandle_t mutex;
   uint32_t lpm_mask;
+  TaskHandle_t task;
 } I2CInterface_t;
 
 bool i2cInit(I2CInterface_t *interface);
-I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuff, size_t txLen, uint8_t *rxBuff, size_t rxLen, uint32_t timeoutMs);
-#define i2cTx(interface, address, buff, len, timeout) i2cTxRx(interface, address, buff, len, NULL, 0, timeout);
-#define i2cRx(interface, address, buff, len, timeout) i2cTxRx(interface, address, NULL, 0, buff, len, timeout);
+I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuff, size_t txLen,
+                      uint8_t *rxBuff, size_t rxLen, uint32_t timeoutMs);
+I2CResponse_t i2cTxRxNonblocking(I2CInterface_t *interface, uint8_t address, uint8_t *txBuff,
+                                 size_t txLen, uint8_t *rxBuff, size_t rxLen,
+                                 uint32_t timeoutMs);
+#define i2cTx(interface, address, buff, len, timeout)                                          \
+  i2cTxRxNonblocking(interface, address, buff, len, NULL, 0, timeout);
+#define i2cRx(interface, address, buff, len, timeout)                                          \
+  i2cTxRxNonblocking(interface, address, NULL, 0, buff, len, timeout);
 I2CResponse_t i2cProbe(I2CInterface_t *interface, uint8_t address, uint32_t timeoutMs);
 void i2cLoadLogCfg();
 
@@ -40,4 +47,5 @@ void i2cLoadLogCfg();
 }
 #endif
 
-#define PROTECTED_I2C(name, handle, initFunction, lpm_mask) {name, &handle, initFunction, NULL, lpm_mask};
+#define PROTECTED_I2C(name, handle, initFunction, lpm_mask)                                    \
+  {name, &handle, initFunction, NULL, lpm_mask, NULL};
