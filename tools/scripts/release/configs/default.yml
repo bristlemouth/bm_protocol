@@ -74,6 +74,16 @@
     build_type: Debug
   sign: false
 
+- name: bringup_mote_legacy
+  description: Bringup Mote - Debug Legacy
+  type: build_fw
+  args:
+    app: bringup_mote
+    bsp: bm_mote_v1.0
+    build_type: Debug
+  sign: false
+  legacy: true
+
 - name: bringup_bridge_debug
   description: Bringup Bridge - Debug
   type: build_fw
@@ -82,6 +92,16 @@
     bsp: bridge_v1_0
     build_type: Debug
   sign: false
+
+- name: bringup_bridge_legacy
+  description: Bringup Bridge - Debug Legacy
+  type: build_fw
+  args:
+    app: bringup_bridge
+    bsp: bridge_v1_0
+    build_type: Debug
+  sign: false
+  legacy: true
 
 - name: bm_rbr_release
   description: BM RBR - Release
