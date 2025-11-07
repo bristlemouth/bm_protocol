@@ -21,7 +21,6 @@
 #include "bme280driver.h"
 #include "bootloader_helper.h"
 #include "bristlefin.h"
-#include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
 #include "debug.h"
@@ -369,7 +368,6 @@ static void defaultTask(void *parameters) {
 #ifdef USE_BOOTLOADER
   mcubootCliInit();
 #endif
-  bcl_init();
   debugRTCInit();
 
   // Commenting out while we test usart1

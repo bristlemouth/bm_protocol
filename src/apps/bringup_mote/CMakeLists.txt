@@ -17,8 +17,13 @@ set(APP_LIBS
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
     # Add network stress test functions
-    STRESS_TEST_ENABLE
-    )
+)
+
+if(NOT DEFINED LEGACY)
+    set(LEGACY 0)
+endif()
+
+list(APPEND APP_DEFINES BRINGUP_LEGACY=${LEGACY})
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)

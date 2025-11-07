@@ -227,7 +227,7 @@ void AanderaaConductivitySensor::setup_sensor_pointers(report_builder_element_t 
 BmErr AanderaaConductivitySensor::send_spotter_log_individual(
     const AanderaaConductivityMsg::Data &m) {
   BmErr err = AbstractSensor::send_spotter_log_individual(
-      "aanderaa_salinity", m.header, DEFAULT_AANDERAA_CONDUCTIVITY_READING_PERIOD_MS + 1000U,
+      "aanderaa_salinity", m.header, DEFAULT_AANDERAA_SALINITY_READING_PERIOD_MS + 1000U,
       "%.4f,"   // conductivity_ms_cm
       "%.3f,"   // temperature_deg_c
       "%.3f,"   // salinity_psu
@@ -262,11 +262,9 @@ BmErr AanderaaConductivitySensor::send_spotter_log_aggregate(
       "%.3f,"   // salinity_mean_psu
       "%.4f,"   // salinity_std_dev
       "%.3f,"   // water_density_mean_kg_m3
-      "%.3f,"   // sound_speed_mean_m_s
-      "%.3f\n", // depth_mean_m
+      "%.3f\n", // sound_speed_mean_m_s
       agg.conductivity_mean_ms_cm, agg.temperature_mean_deg_c, agg.salinity_mean_psu,
-      agg.salinity_std_dev, agg.water_density_mean_kg_m3, agg.sound_speed_mean_m_s,
-      agg.depth_mean_m);
+      agg.salinity_std_dev, agg.water_density_mean_kg_m3, agg.sound_speed_mean_m_s);
 
   if (err != BmOK) {
     bm_debug("ERROR: Failed to send PME DO aggregate log to spotter, err: %d\n", err);

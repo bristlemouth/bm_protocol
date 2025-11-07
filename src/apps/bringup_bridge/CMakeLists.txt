@@ -23,6 +23,11 @@ set(APP_DEFINES
     DEBUG_USE_USART3
     )
 
+if(NOT DEFINED LEGACY)
+    set(LEGACY 0)
+endif()
+
+list(APPEND APP_DEFINES BRINGUP_LEGACY=${LEGACY})
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)
 set(APP_DEFINES "${APP_DEFINES}" PARENT_SCOPE)

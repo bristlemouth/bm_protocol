@@ -94,6 +94,7 @@ target_include_directories(bridge_power_controller_tests
     ${SRC_DIR}/lib/bm_core/common
     ${SRC_DIR}/lib/bm_core/bm_common_messages
     ${SRC_DIR}/lib/bm_core/middleware
+    ${SRC_DIR}/lib/bm_serial
     ${SRC_DIR}/lib/drivers/abstract
     ${SRC_DIR}/third_party/tinycbor/src
     ${SRC_DIR}/lib/bm_core/test/mocks
