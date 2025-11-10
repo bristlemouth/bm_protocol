@@ -157,8 +157,8 @@ static bool loadCellSample() {
 
 
     //prints lines in SD and console to indicate remote message send
-    spotter_log(0, "loadcell.log", "Loadcell reading period ended.");
-    spotter_log(0, "loadcell.log", data_string);
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP, "Loadcell reading period ended.");
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP, data_string);
     spotter_log_console(0, "Loadcell reading period ended.");
     spotter_log_console(0, data_string);
 
