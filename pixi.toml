@@ -1,7 +1,7 @@
 [workspace]
 authors = ["the authors"]
 channels = ["sofar_fw", "conda-forge", "memfault"]
-name = "pixi"
+name = "bristlemouth-protocol"
 platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
 version = "0.1.0"
 
