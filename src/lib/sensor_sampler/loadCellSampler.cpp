@@ -20,6 +20,7 @@ TO DO :
 #include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 static NAU7802 *_loadCell;
 
@@ -101,11 +102,11 @@ static bool loadCellSample() {
 
 
     //Debugging stuff that prints on mote 
-    printf("%llu | reading: %d\n", uptimeGetMicroSeconds() / 1000, reading);
+    printf("%llu | reading: %ld\n", uptimeGetMicroSeconds() / 1000, reading);
     _loadCell->getInternalOffsetCal(); // In this function there are calls to printf the three bytes of the internal offset cal on the mote serial. This is a leftover from the public arduino libary. someday, the nau7802 lib should get refactors so that there are not buried print calls and we just return the values. 
     printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
     printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
-    printf("%llu | zeroOffset: %d\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
+    printf("%llu | zeroOffset: %ld\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
   
     // print commands to SD card file and spotter console.
     spotter_log(0, "loadcell.log", USE_TIMESTAMP,
@@ -131,18 +132,34 @@ static bool loadCellSample() {
   if (reading_attempts_counter % num_reads == 0) {
     printf("\n num_reads reached. Sending a cellular message. "); // debug line
     
-    mean_force = sum_of_weights / sucessful_readings_counter;
-    variance = running_m2/sucessful_readings_counter; // CHECK TO MAKE SURE THIS NEEDS TO HAPPEN? 
-    stdev = sqrtf(variance);
+    if (sucessful_readings_counter > 0) { // avoids divide by zero error if all the LC readings fail. Not sure what would happen. 
+      mean_force = sum_of_weights / sucessful_readings_counter;
+      variance   = running_m2 / sucessful_readings_counter;   // population variance
+      stdev      = sqrtf(variance);
+    } 
+    else { // in case no successful readings. 
+      mean_force = 0.0f;
+      variance   = 0.0f;
+      stdev      = 0.0f;
+    }
 
-    printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %d  | missed readings: %d", rtcTimeBuffer,mean_force,
-            max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
+    // printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %ld  | missed readings: %ld", rtcTimeBuffer,mean_force,
+    //         max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
+    // sprintf(data_string, "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %ld  | missed readings: %ld", rtcTimeBuffer,mean_force,
+    //         max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
 
     char data_string[300]; // made this a little bigger to accomdate new values. 
     memset(data_string, 0, sizeof(data_string));
 
-    sprintf(data_string, "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %d  | missed readings: %d", rtcTimeBuffer,mean_force,
-            max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
+  
+    printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32,
+       rtcTimeBuffer, mean_force, max_force, min_force, stdev,
+       sucessful_readings_counter, missed_reading_counter);
+
+    sprintf(data_string,
+         "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32,
+         rtcTimeBuffer, mean_force, max_force, min_force, stdev,
+         sucessful_readings_counter, missed_reading_counter);
 
     spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
 
@@ -182,7 +199,7 @@ static bool loadCellInit() {
       negative_factor = true;
   }
 
-  printf("loadCell init rval: %u\n", rval);
+  printf("loadCell init rval: %d \n", rval);
   return rval;
 }
 
