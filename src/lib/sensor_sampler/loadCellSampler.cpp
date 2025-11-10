@@ -27,22 +27,21 @@ static bool negative_factor = false;
 
 static uint32_t reading_attempts_counter = 0; //Counts number of readings or reading attempts taken. compared against num reads to determine when to send a message
 static uint32_t sucessful_readings_counter = 0; //This is the number of sucessful readings. This allows accurate means and variance to be calcuated while still counting missed reading separately. 
-static uint32_t missed_reading_count = 0;
+static uint32_t missed_reading_counter = 0;
 
-static float mean_force;
-static float sum_of_weights;
-static float max_force;
-static float min_force;
+static float mean_force = 0;
+static float sum_of_weights = 0;
+static float max_force = 0;
+static float min_force = 10000;
 
 static float running_mean = 0;
-static float running_var = 0;
+static float running_m2 = 0;
 static float old_mean = 0;
 static float stdev = 0;
+static float variance = 0;
 
-static uint32_t num_reads = 240; //This should be 4 minutes. do so that even 5 minute intervals get the messages out. 
+static uint32_t num_reads = 570; //at one reading per 500 ms, this should be 4.75 minutes. 
 static LoadCellConfig_t _cfg;
-
-#define INA_STR_LEN 80 // what is this for? 
 
 /*
   sensorSampler function to take power sample(s)
@@ -54,18 +53,16 @@ static LoadCellConfig_t _cfg;
   check   -- For Power and HTU, this is NULL. for baro, it does a checkPROM which funnels down to a readData command. Pretty much just check if you get a reading. We can leave it blank for now.
 */
 
-/* Checking with a soak.  */
-static bool loadCellSample() {
-  printf("Load cell sample called\n");
 
+static bool loadCellSample() {
+  printf("Load cell sample called\n"); //mote debug line
+
+  //function specific definitions
   bool rval = true;
   static int32_t reading = 0;
   static float weight = 0;
   static float calFactor = 0;
   static int32_t zeroOffset = 0;
-  
-
-
 
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
@@ -77,9 +74,7 @@ static bool loadCellSample() {
     strcpy(rtcTimeBuffer, "0");
   }
 
-  
-
-  //Load cell read block (if readable)
+  //Load cell read block (if LC is readable)
   if (_loadCell->available()) {
     
     // Reading and overwriting "current" data values
@@ -102,7 +97,7 @@ static bool loadCellSample() {
     sum_of_weights += weight; // for period-mean at the end
     old_mean = running_mean;
     running_mean = running_mean + ((weight - running_mean)/sucessful_readings_counter);
-    running_var = running_var + ((weight - running_mean)*(weight - old_mean));  
+    running_m2 = running_m2 + ((weight - running_mean)*(weight - old_mean));  
 
 
     //Debugging stuff that prints on mote 
@@ -127,38 +122,34 @@ static bool loadCellSample() {
   
   //If load cell read fails 
   else {
-    missed_reading_count ++;
+    missed_reading_counter ++; // to track at the end
     reading_attempts_counter++; //This still updates so we send our message on time. We do not interate successful_reading_count. 
-    
+    // none of our values need to update here. 
   }
   
   // Message send block once desired reading-attempt-count is reached.  
   if (reading_attempts_counter % num_reads == 0) {
-    printf("\n\n\n\nThis should only print once every 4 mins\n\n\n");
+    printf("\n num_reads reached. Sending a cellular message. "); // debug line
+    
     mean_force = sum_of_weights / sucessful_readings_counter;
+    variance = running_m2/sucessful_readings_counter; // CHECK TO MAKE SURE THIS NEEDS TO HAPPEN? 
+    stdev = sqrtf(variance);
 
+    printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %d  | missed readings: %d", rtcTimeBuffer,mean_force,
+            max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
 
-    running_var = running_var/sucessful_readings_counter; // CHECK TO MAKE SURE THIS NEEDS TO HAPPEN? 
-    stdev = sqrtf(running_var);
-
-
-    //STILL NEED TO REFORMAT THESE FOR THE NEW WAY
-    printf("Loadcell  |  mean force: %f |  max force: %f  | min force: %f  | stdev: %f  | reading count: %d", mean_force,
-            max_force, min_force, stdev, sucessful_readings_counter);
-
-    char data_string[200];
+    char data_string[300]; // made this a little bigger to accomdate new values. 
     memset(data_string, 0, sizeof(data_string));
 
-
-    sprintf(data_string, "Loadcell  |  mean force: %f |  max force: %f  | min force: %f  | stdev: %f  | reading count: %d", mean_force,
-            max_force, min_force, stdev, sucessful_readings_counter);
+    sprintf(data_string, "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %d  | missed readings: %d", rtcTimeBuffer,mean_force,
+            max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
 
     spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
 
-    // printf(data_string);
+    //Resetting all the counters and stats for the next cycle. 
     reading_attempts_counter = 0;
     sucessful_readings_counter = 0;
-    missed_reading_count = 0;
+    missed_reading_counter = 0;
     
     sum_of_weights = 0;
     max_force = 0;
@@ -166,17 +157,10 @@ static bool loadCellSample() {
     mean_force = 0;
 
     running_mean = 0;
-    running_var = 0;
+    running_m2 = 0;
+    variance = 0;
     old_mean = 0;
     stdev = 0;
-
-    /* Things that need to get reset here
-    - missed reading count
-    -all the var and mean stuff
-    cellular send read counter
-    */
-
-
   }
 
   return rval;
@@ -200,12 +184,6 @@ static bool loadCellInit() {
 
   printf("loadCell init rval: %u\n", rval);
   return rval;
-
-  // initial vals for force averaging.
-  cellular_send_read_counter = 0;
-  mean_force = 0;
-  max_force = 0;
-  min_force = 10000;
 }
 
 static bool loadCellCheck() {
