@@ -238,9 +238,9 @@ I2CResponse_t i2cTxRxNonblocking(I2CInterface_t *interface, uint8_t address, uin
     lpmPeripheralInactive(interface->lpm_mask);
   }
 
-  xSemaphoreGive(interface->mutex);
-
   interface->task = NULL;
+
+  xSemaphoreGive(interface->mutex);
 
   return rval;
 }

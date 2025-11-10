@@ -2,6 +2,7 @@
 #include "stm32_io.h"
 #include "pca9535.h"
 
+IOPinHandle_t IMU_BOOT = {&STM32PinDriver, &(STM32Pin_t){IMU_BOOT_GPIO_Port, IMU_BOOT_Pin, NULL, NULL}};
 IOPinHandle_t IMU_INT = {&STM32PinDriver, &(STM32Pin_t){IMU_INT_GPIO_Port, IMU_INT_Pin, NULL, NULL}};
 IOPinHandle_t VUSB_DETECT = {&STM32PinDriver, &(STM32Pin_t){VUSB_DETECT_GPIO_Port, VUSB_DETECT_Pin, NULL, NULL}};
 IOPinHandle_t POWER_EN = {&STM32PinDriver, &(STM32Pin_t){POWER_EN_GPIO_Port, POWER_EN_Pin, NULL, NULL}};

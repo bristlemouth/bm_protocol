@@ -84,6 +84,10 @@ set(THIRD_PARTY_FILES
     ${SRC_DIR}/third_party/printf/printf.c
     ${SRC_DIR}/third_party/mbedtls_base64/base64.c
     ${SRC_DIR}/third_party/cobs-c/cobs.c
+    ${SRC_DIR}/third_party/sh2/sh2.c
+    ${SRC_DIR}/third_party/sh2/sh2_SensorValue.c
+    ${SRC_DIR}/third_party/sh2/sh2_util.c
+    ${SRC_DIR}/third_party/sh2/shtp.c
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}
     ${MCUBOOT_FILES}
@@ -96,6 +100,7 @@ set(THIRD_PARTY_INCLUDES
     ${SRC_DIR}/third_party/fnv
     ${SRC_DIR}/third_party/mbedtls_base64
     ${SRC_DIR}/third_party/cobs-c
+    ${SRC_DIR}/third_party/sh2
     ${LWIP_INCLUDE_DIRS}
     ${FREERTOS_INCLUDES}
     ${MEMFAULT_INCLUDES}

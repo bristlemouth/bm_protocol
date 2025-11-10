@@ -17,6 +17,7 @@ void bspInit();
 void delay_us(uint64_t us);
 
 // Pin definitions
+extern IOPinHandle_t IMU_BOOT;
 extern IOPinHandle_t IMU_INT;
 extern IOPinHandle_t VUSB_DETECT;
 extern IOPinHandle_t POWER_EN;

@@ -37,9 +37,9 @@ I2CResponse_t i2cTxRxNonblocking(I2CInterface_t *interface, uint8_t address, uin
                                  size_t txLen, uint8_t *rxBuff, size_t rxLen,
                                  uint32_t timeoutMs);
 #define i2cTx(interface, address, buff, len, timeout)                                          \
-  i2cTxRxNonblocking(interface, address, buff, len, NULL, 0, timeout);
+  i2cTxRxNonblocking(interface, address, buff, len, NULL, 0, timeout)
 #define i2cRx(interface, address, buff, len, timeout)                                          \
-  i2cTxRxNonblocking(interface, address, NULL, 0, buff, len, timeout);
+  i2cTxRxNonblocking(interface, address, NULL, 0, buff, len, timeout)
 I2CResponse_t i2cProbe(I2CInterface_t *interface, uint8_t address, uint32_t timeoutMs);
 void i2cLoadLogCfg();
 
