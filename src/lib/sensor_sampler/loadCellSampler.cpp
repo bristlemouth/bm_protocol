@@ -143,25 +143,25 @@ static bool loadCellSample() {
       stdev      = 0.0f;
     }
 
-    // printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %ld  | missed readings: %ld", rtcTimeBuffer,mean_force,
-    //         max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
-    // sprintf(data_string, "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %ld  | missed readings: %ld", rtcTimeBuffer,mean_force,
-    //         max_force, min_force, stdev, sucessful_readings_counter, missed_reading_counter);
-
+    // Remote message send
     char data_string[300]; // made this a little bigger to accomdate new values. 
     memset(data_string, 0, sizeof(data_string));
-
-  
     printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32,
        rtcTimeBuffer, mean_force, max_force, min_force, stdev,
        sucessful_readings_counter, missed_reading_counter);
-
     sprintf(data_string,
          "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32,
          rtcTimeBuffer, mean_force, max_force, min_force, stdev,
          sucessful_readings_counter, missed_reading_counter);
+    spotter_tx_data(data_string, 300, BmNetworkTypeCellularIriFallback);
 
-    spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
+
+    //prints lines in SD and console to indicate remote message send
+    spotter_log(0, "loadcell.log", "Loadcell reading period ended.");
+    spotter_log(0, "loadcell.log", data_string);
+    spotter_log_console(0, "Loadcell reading period ended.");
+    spotter_log_console(0, data_string);
+
 
     //Resetting all the counters and stats for the next cycle. 
     reading_attempts_counter = 0;
