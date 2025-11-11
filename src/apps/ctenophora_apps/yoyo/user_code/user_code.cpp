@@ -178,7 +178,7 @@ static int bno085_read(sh2_Hal_t *self, uint8_t *buf, unsigned len, uint32_t *t_
   (void)self;
   (void)t_us;
   // Read the cargo length header first (4 bytes)
-  uint8_t header[4];
+  _Alignas(4) static uint8_t header[4];
   if (i2cRx(&i2c1, BNO085_ADDRESS, header, 4, 1000) != I2C_OK) {
     return 0;
   }
@@ -197,9 +197,11 @@ static int bno085_read(sh2_Hal_t *self, uint8_t *buf, unsigned len, uint32_t *t_
     cargo_len = len;
   }
 
-  if (i2cRx(&i2c1, BNO085_ADDRESS, buf, cargo_len, 1000) != I2C_OK) {
+  _Alignas(4) static uint8_t cpy_buf[1024];
+  if (i2cRx(&i2c1, BNO085_ADDRESS, cpy_buf, cargo_len, 1000) != I2C_OK) {
     return 0;
   }
+  memcpy(buf, cpy_buf, cargo_len);
 
   return cargo_len; // Return number of bytes read
 }
