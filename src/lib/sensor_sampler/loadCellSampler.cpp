@@ -1,14 +1,3 @@
-/*!
-  Load cell sampling functions
-TO DO :
- Check the running var logic
-
-
- QUESTIONS:
- - USE_TIMESTAMP ? 
- - INA_STR_LEN
-*/
-
 #include "loadCellSampler.h"
 #include "spotter.h"
 #include "pubsub.h"
