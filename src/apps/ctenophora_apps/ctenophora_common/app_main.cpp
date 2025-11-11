@@ -303,7 +303,7 @@ static void defaultTask(void *parameters) {
                                  .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
-  //sensorsInit();
+  sensorsInit();
   debugBmServiceInit();
   sys_info_service_init();
   config_cbor_map_service_init();

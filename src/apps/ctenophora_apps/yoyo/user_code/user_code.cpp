@@ -226,9 +226,10 @@ static bool imu_int_cb(const void *pinHandle, uint8_t value, void *args) {
 
 static void bno085_event(void *cookie, sh2_AsyncEvent_t *event) {
   (void)cookie;
-  printf("BNO085 event cb info:\n");
-  printf("id: %" PRIu32 "\n", event->eventId);
-  printf("event: %u\n", event->shtpEvent);
+  (void)event;
+  //printf("BNO085 event cb info:\n");
+  //printf("id: %" PRIu32 "\n", event->eventId);
+  //printf("event: %u\n", event->shtpEvent);
 }
 
 static void printEvent(const sh2_SensorEvent_t *event) {
@@ -369,7 +370,18 @@ static void startReports() {
       // {SH2_RAW_ACCELEROMETER, {.reportInterval_us = 10000}},
 
       // Raw gyroscope, 100 Hz
-      // {SH2_RAW_GYROSCOPE, {.reportInterval_us = 10000}},
+      {SH2_RAW_GYROSCOPE,
+       {
+           .changeSensitivityEnabled = false,
+           .changeSensitivityRelative = false,
+           .wakeupEnabled = false,
+           .alwaysOnEnabled = false,
+           .sniffEnabled = false,
+           .changeSensitivity = false,
+           .reportInterval_us = 10000,
+           .batchInterval_us = 0,
+           .sensorSpecific = 0,
+       }},
 
       // Rotation Vector, 100 Hz
       // {SH2_ROTATION_VECTOR, {.reportInterval_us = 10000}},
@@ -448,17 +460,9 @@ void setup(void) {
 
   // Enable power to the board
   IOWrite(&IMU_BOOT, 1);
-  IOWrite(&VBUS_EN, 1);
-  uint8_t val;
-  IORead(&IMU_INT, &val);
-  printf("Int Pin Before: %u\n", val);
-  vTaskDelay(5000);
   IOWrite(&VBUS_EN, 0);
-  vTaskDelay(1000);
-  IORead(&IMU_INT, &val);
-  printf("Int Pin After: %u\n", val);
 
-  //bmp_sensor_init();
+  bmp_sensor_init();
 
   IORegisterCallback(&IMU_INT, imu_int_cb, NULL);
 
