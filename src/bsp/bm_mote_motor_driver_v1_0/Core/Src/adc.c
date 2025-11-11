@@ -86,7 +86,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     }
 
     /* ADC1 clock enable */
-    __HAL_RCC_ADC1_CLK_ENABLE();
+    __HAL_RCC_ADC12_CLK_ENABLE();
   /* USER CODE BEGIN ADC1_MspInit 1 */
 
   /* USER CODE END ADC1_MspInit 1 */
@@ -102,7 +102,7 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 
   /* USER CODE END ADC1_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_ADC1_CLK_DISABLE();
+    __HAL_RCC_ADC12_CLK_DISABLE();
   /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
   /* USER CODE END ADC1_MspDeInit 1 */
