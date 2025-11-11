@@ -300,7 +300,7 @@ static void user_task(void *parameters) {
       to allow for lower priority tasks to be serviced.
       Should typically stay in the 10 to 100 ms range.
     */
-    bm_delay(10);
+    bm_delay(1);
   }
 }
 /* USER CODE EXECUTED HERE END */
@@ -368,11 +368,11 @@ static void defaultTask(void *parameters) {
                   strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
   debugConfigurationInit();
 
-  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
-                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
-  sensorSamplerInit(&sensorConfig);
-  // must call sensorsInit after sensorSamplerInit
-  sensorsInit();
+  // sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
+  //                                .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
+  // sensorSamplerInit(&sensorConfig);
+  // // must call sensorsInit after sensorSamplerInit
+  // sensorsInit();
   debugBmServiceInit();
 
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);

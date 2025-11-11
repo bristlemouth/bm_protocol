@@ -1,5 +1,8 @@
 #include "bno085.h"
 #include "uptime.h"
+#include "debug.h"
+#include "bsp.h"
+#include "string.h"
 
 Bno085::Bno085(I2CInterface_t* i2cInterface, uint8_t address) {
   _interface = i2cInterface;
@@ -43,8 +46,6 @@ void Bno085::close(sh2_Hal_t *self) {
 
 int Bno085::read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us) {
   (void) self;
-  (void)pBuffer;
-  (void)len;
   (void)t_us;
 
   // TODO:
@@ -69,15 +70,69 @@ int Bno085::read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us
   // My notes:
   // One thing I need to find out is how the interrupt line
   // plays into recieving... if we even need it?
-  return readBytes(pBuffer, len);
+  // TODO is to get this to return the number of bytes it read...
+    // readBytes(pBuffer, len);
+    // printf("xfer size: %d\n", i2c1.handle->XferSize);
+    // // static bool is_first_read = true;
+    // // if (is_first_read) {
+    // //   is_first_read = false;
+    // //   return 4;
+    // // }
+
+    // return 255 - (i2c1.handle->XferSize);
+    // return 2;
+  // }
+
 
   // return 0;
+
+    // For blocking I2C, we need to check if data is available first
+    // The BNO085 uses a header byte to indicate data length
+    uint8_t header[4];
+
+    // Read the 4-byte SHTP header (blocking)
+    if (HAL_I2C_Master_Receive(i2c1.handle, I2C_ADDR << 1, header, 4, 100) != HAL_OK) {
+        return 0; // No data available or error
+    }
+
+    // Parse SHTP header to get cargo length
+    uint16_t cargoLength = ((uint16_t)header[0] + ((uint16_t)header[1] << 8)) & ~0x8000;
+
+    if (cargoLength == 0) {
+        return 0; // No data
+    }
+
+    if (cargoLength > len) {
+        return 0; // Buffer too small
+    }
+
+    // Copy header to buffer
+    memcpy(pBuffer, header, 4);
+
+    // Read remaining cargo if any (blocking)
+    if (cargoLength > 4) {
+        if (HAL_I2C_Master_Receive(i2c1.handle, I2C_ADDR << 1,
+                                   pBuffer + 4, cargoLength - 4, 100) != HAL_OK) {
+            return 0;
+        }
+    }
+
+    // Get timestamp
+    if (t_us) {
+        *t_us = getTimeUs(self);
+    }
+    printf("cargoLength: %d\n", cargoLength);
+    // printf("cargo: ");
+    // for (int j = 0; j < cargoLength; j++) {
+    //   printf("0x%02" PRIx8 ",", pBuffer[j]);
+    // }
+    // printf("\n");
+    return cargoLength;
+
 }
 
 int Bno085::write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len) {
   (void) self;
-  (void)pBuffer;
-  (void)len;
 
   // TODO:
   // This function supports writing data to the sensor hub.
@@ -92,9 +147,13 @@ int Bno085::write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len) {
   // accepted.  It need not block.  The actual transmission of
   // the data can continue after this function returns.
 
-  return writeBytes(pBuffer, len);
+  // return writeBytes(pBuffer, len);
+  // Blocking I2C write
+  if (HAL_I2C_Master_Transmit(i2c1.handle, I2C_ADDR << 1, pBuffer, len, 100) != HAL_OK) {
+      return 0;
+  }
 
-  // return 0;
+  return len;
 }
 
 uint32_t Bno085::getTimeUs(sh2_Hal_t *self) {
