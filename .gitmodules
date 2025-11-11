@@ -37,3 +37,6 @@
 [submodule "src/third_party/BMP581"]
 	path = src/third_party/BMP581
 	url = https://github.com/boschsensortec/BMP5_SensorAPI.git
+[submodule "src/third_party/sh2"]
+	path = src/third_party/sh2
+	url = https://github.com/ceva-dsp/sh2.git
