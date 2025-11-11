@@ -21,6 +21,8 @@ TO DO :
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <string.h>
+
 
 static NAU7802 *_loadCell;
 
@@ -134,7 +136,7 @@ static bool loadCellSample() {
     
     if (sucessful_readings_counter > 0) { // avoids divide by zero error if all the LC readings fail. Not sure what would happen. 
       mean_force = sum_of_weights / sucessful_readings_counter;
-      variance   = running_m2 / sucessful_readings_counter;   // population variance
+      variance   = running_m2 / sucessful_readings_counter;   // population variance not sample variance
       stdev      = sqrtf(variance);
     } 
     else { // in case no successful readings. 
@@ -146,18 +148,18 @@ static bool loadCellSample() {
     // Remote message send
     char data_string[300]; // made this a little bigger to accomdate new values. 
     memset(data_string, 0, sizeof(data_string));
-    printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32,
+    printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32 "\n",
        rtcTimeBuffer, mean_force, max_force, min_force, stdev,
        sucessful_readings_counter, missed_reading_counter);
     sprintf(data_string,
-         "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32,
+         "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32 "\n",
          rtcTimeBuffer, mean_force, max_force, min_force, stdev,
          sucessful_readings_counter, missed_reading_counter);
-    spotter_tx_data(data_string, 300, BmNetworkTypeCellularIriFallback);
+    spotter_tx_data(data_string, strlen(data_string), BmNetworkTypeCellularIriFallback);
 
 
     //prints lines in SD and console to indicate remote message send
-    spotter_log(0, "loadcell.log", USE_TIMESTAMP, "Loadcell reading period ended.");
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP, "Loadcell reading period ended.\n");
     spotter_log(0, "loadcell.log", USE_TIMESTAMP, data_string);
     spotter_log_console(0, "Loadcell reading period ended.");
     spotter_log_console(0, data_string);
