@@ -212,7 +212,7 @@ I2CResponse_t i2cTxRxNonblocking(I2CInterface_t *interface, uint8_t address, uin
   // Make sure interface has been initialized!
   configASSERT(interface->mutex != NULL);
 
-  if (xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) == pdFALSE) {
+  if (xSemaphoreTake(interface->mutex, pdMS_TO_TICKS(timeoutMs)) != pdTRUE) {
     return I2C_TIMEOUT;
   }
 
@@ -297,21 +297,24 @@ I2CResponse_t i2cProbe(I2CInterface_t *interface, uint8_t address, uint32_t time
   return rval;
 }
 
-static void i2c_dma_complete(I2C_HandleTypeDef *hi2c, BaseType_t notify_flags) {
+static inline void i2c_dma_complete(I2C_HandleTypeDef *hi2c, BaseType_t notify_flags) {
   BaseType_t higher_priority_task_woken = pdFALSE;
   for (uint8_t i = 0; i < ctx.count; i++) {
-    if (hi2c == ctx.interface[i]->handle) {
-      xTaskNotifyFromISR(ctx.interface[i]->task, notify_flags, eSetBits,
+    if (hi2c == ctx.interface[i]->handle && ctx.interface[i]->task) {
+      xTaskNotifyFromISR(ctx.interface[i]->task, notify_flags, eSetValueWithOverwrite,
                          &higher_priority_task_woken);
     }
   }
-
   portYIELD_FROM_ISR(higher_priority_task_woken);
 }
 
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) { i2c_dma_complete(hi2c, 0); }
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
+  i2c_dma_complete(hi2c, I2C_NOTIFY_OK);
+}
 
-void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) { i2c_dma_complete(hi2c, 0); }
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+  i2c_dma_complete(hi2c, I2C_NOTIFY_OK);
+}
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
   i2c_dma_complete(hi2c, I2C_NOTIFY_ERROR);
