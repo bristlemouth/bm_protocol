@@ -20,7 +20,6 @@ extern "C" {
 #include "sh2_SensorValue.h"
 }
 
-
 double gravity = 9.80665; // m/s^2
 double rho_salt = 1023.6; // kg/m^3
 double rho_fresh =  997.0474; // kg/m^3
@@ -33,34 +32,46 @@ static uint32_t fresh_water = 0;
 
 
 static Bno085 bno085_imu(&i2c1, IMU_ADDR);
-// C-style wrapper functions for the HAL driver
-static int bno085_open_wrapper(sh2_Hal_t* hal) {
-    return bno085_imu.open(hal);
-}
 
-static void bno085_close_wrapper(sh2_Hal_t* hal) {
-    bno085_imu.close(hal);
-}
+// ISR callback for INT pin
+bool imuIntCallback(const void *pinHandle, uint8_t value, void *args) {
+    (void)pinHandle;
+    (void)args;
 
-static int bno085_read_wrapper(sh2_Hal_t* hal, uint8_t* pBuffer, unsigned len, uint32_t* t_us) {
-    return bno085_imu.read(hal, pBuffer, len, t_us);
+    // INT is active low, so trigger when it goes low (value == 0)
+    if (value == 0) {
+        bno085_imu.notifyDataReady();
+    }
+    return true;
 }
+// // C-style wrapper functions for the HAL driver
+// static int bno085_open_wrapper(sh2_Hal_t* hal) {
+//     return bno085_imu.open(hal);
+// }
 
-static int bno085_write_wrapper(sh2_Hal_t* hal, uint8_t* pBuffer, unsigned len) {
-    return bno085_imu.write(hal, pBuffer, len);
-}
+// static void bno085_close_wrapper(sh2_Hal_t* hal) {
+//     bno085_imu.close(hal);
+// }
 
-static uint32_t bno085_getTimeUs_wrapper(sh2_Hal_t* hal) {
-    return bno085_imu.getTimeUs(hal);
-}
+// static int bno085_read_wrapper(sh2_Hal_t* hal, uint8_t* pBuffer, unsigned len, uint32_t* t_us) {
+//     return bno085_imu.read(hal, pBuffer, len, t_us);
+// }
 
-sh2_Hal_t sh2_hal_driver = {
-    .open = bno085_open_wrapper,
-    .close = bno085_close_wrapper,
-    .read = bno085_read_wrapper,
-    .write = bno085_write_wrapper,
-    .getTimeUs = bno085_getTimeUs_wrapper
-};
+// static int bno085_write_wrapper(sh2_Hal_t* hal, uint8_t* pBuffer, unsigned len) {
+//     return bno085_imu.write(hal, pBuffer, len);
+// }
+
+// static uint32_t bno085_getTimeUs_wrapper(sh2_Hal_t* hal) {
+//     return bno085_imu.getTimeUs(hal);
+// }
+
+// sh2_Hal_t sh2_hal_driver = {
+//     .open = bno085_open_wrapper,
+//     .close = bno085_close_wrapper,
+//     .read = bno085_read_wrapper,
+//     .write = bno085_write_wrapper,
+//     .getTimeUs = bno085_getTimeUs_wrapper
+// };
 
 void event_callback(void *cookie, sh2_AsyncEvent_t *pEvent) {
   (void) cookie;
@@ -218,52 +229,68 @@ void setup(void) {
   vTaskDelay(10000);
   // depth_sensor.init();
 
+  IORegisterCallback(&IMU_INT, imuIntCallback, NULL);
+
   get_config_uint(BM_CFG_PARTITION_SYSTEM, FRESH_WATER_FLAG, strlen(FRESH_WATER_FLAG), &fresh_water);
 
-  int res = sh2_open(&sh2_hal_driver, event_callback, NULL);
-  if (res != 0) {
-    printf("Failed to open sensor hub, res: %d\n", res);
-  } else {
-    printf("Sensor hub opened successfully\n");
-  }
+  // int res = sh2_open(&sh2_hal_driver, event_callback, NULL);
+  // if (res != 0) {
+  //   printf("Failed to open sensor hub, res: %d\n", res);
+  // } else {
+  //   printf("Sensor hub opened successfully\n");
+  // }
 
-  // Enable sensor callback
-    sh2_setSensorCallback(printEvent, NULL);
+  // // Enable sensor callback
+  //   sh2_setSensorCallback(printEvent, NULL);
+  // Initialize BNO085 - this creates the service task
+    if (!bno085_imu.init(event_callback, printEvent)) {
+        printf("Failed to initialize BNO085\n");
+        return;
+    }
+
+    vTaskDelay(1000);
 
     // Configure sensors to report at specific intervals
-    static sh2_SensorConfig_t config;
+    // static sh2_SensorConfig_t config;
 
-    // Enable rotation vector at 100Hz (10ms interval)
-    config.changeSensitivityEnabled = false;
-    config.wakeupEnabled = false;
-    config.changeSensitivityRelative = false;
-    config.alwaysOnEnabled = false;
-    config.changeSensitivity = 0;
-    config.reportInterval_us = 100000; // 100ms = 10Hz
-    config.batchInterval_us = 0;
+    // // Enable rotation vector at 100Hz (10ms interval)
+    // config.changeSensitivityEnabled = false;
+    // config.wakeupEnabled = false;
+    // config.changeSensitivityRelative = false;
+    // config.alwaysOnEnabled = false;
+    // config.changeSensitivity = 0;
+    // config.reportInterval_us = 100000; // 100ms = 10Hz
+    // config.batchInterval_us = 0;
 
-    res = sh2_setSensorConfig(SH2_ROTATION_VECTOR, &config);
-    if (res != SH2_OK) {
-        printf("Failed to configure rotation vector: %d\n", res);
-    }
+    // res = sh2_setSensorConfig(SH2_ROTATION_VECTOR, &config);
+    // if (res != SH2_OK) {
+    //     printf("Failed to configure rotation vector: %d\n", res);
+    // }
 
-    // Enable accelerometer at 100Hz
-    res = sh2_setSensorConfig(SH2_ACCELEROMETER, &config);
-    if (res != SH2_OK) {
-        printf("Failed to configure accelerometer: %d\n", res);
-    }
+    // // Enable accelerometer at 100Hz
+    // res = sh2_setSensorConfig(SH2_ACCELEROMETER, &config);
+    // if (res != SH2_OK) {
+    //     printf("Failed to configure accelerometer: %d\n", res);
+    // }
 
-    // Enable gyroscope at 100Hz
-    res = sh2_setSensorConfig(SH2_GYROSCOPE_CALIBRATED, &config);
-    if (res != SH2_OK) {
-        printf("Failed to configure gyroscope: %d\n", res);
-    }
+    // // Enable gyroscope at 100Hz
+    // res = sh2_setSensorConfig(SH2_GYROSCOPE_CALIBRATED, &config);
+    // if (res != SH2_OK) {
+    //     printf("Failed to configure gyroscope: %d\n", res);
+    // }
+    // Configure sensors (10 Hz = 100ms interval)
+    bno085_imu.configureSensor(SH2_ROTATION_VECTOR, 100000);
+    bno085_imu.configureSensor(SH2_ACCELEROMETER, 100000);
+    bno085_imu.configureSensor(SH2_GYROSCOPE_CALIBRATED, 100000);
+
+    printf("BNO085 configured and running\n");
 
 }
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-  uint32_t curr_time_ms = bno085_imu.getTimeUs(&sh2_hal_driver)/1000;
+  // uint32_t curr_time_ms = bno085_imu.getTimeUs(&sh2_hal_driver)/1000;
+  uint32_t curr_time_ms = uptimeGetMs();
   static uint32_t prev_time_ms = 0;
   if (curr_time_ms - 5000 > prev_time_ms) {
     printf("time: %" PRIu32 " ms\n", curr_time_ms);
@@ -281,7 +308,7 @@ void loop(void) {
 
     // TODO - publis the depth on the BM bus so we can use it to make decisions in other systems?
     // Or we subscribe to other systems and tell them what to do to make sure we are correct here?
-    sh2_service();
+    // sh2_service();
 
   }
 }

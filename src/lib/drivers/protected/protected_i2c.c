@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "protected_i2c.h"
 
-#define I2C_DEBUG
+// #define I2C_DEBUG
 
 // Translate HAL i2c error codes to ours
 static I2CResponse_t _halI2cErrToI2CResponse(uint32_t errorCode) {

@@ -1,21 +1,21 @@
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 set(APP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/bno085.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
     ${SRC_DIR}/third_party/ceva_sh2/sh2.c
     ${SRC_DIR}/third_party/ceva_sh2/shtp.c
     ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
     ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bno085.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/user_code/user_code.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
 )
 
 set(APP_INCLUDES
+    ${SRC_DIR}/third_party/ceva_sh2/
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/user_code
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors
-    ${SRC_DIR}/third_party/ceva_sh2/
 )
 
 set(APP_LIBS

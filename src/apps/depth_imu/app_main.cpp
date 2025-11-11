@@ -300,7 +300,7 @@ static void user_task(void *parameters) {
       to allow for lower priority tasks to be serviced.
       Should typically stay in the 10 to 100 ms range.
     */
-    bm_delay(1);
+    bm_delay(10);
   }
 }
 /* USER CODE EXECUTED HERE END */
