@@ -67,7 +67,7 @@ $ conda deactivate
 
 Whenever you pull new project changes (specifically those that update environment.yml), you should run `conda env update -f environment.yml` again.
 
-### Install pixi - alternative
+### Using pixi - alternative
 
 An alternative option to manage your environment is [pixi](https://pixi.sh), which does a better job tracking the tree of dependencies on multiple platforms.
 
@@ -85,14 +85,13 @@ curl -fsSL https://pixi.sh/install.sh | sh
 pixi shell -e dev
 ```
 
-When you run it for the first time, it will download all dependencies for your machine in the directory `.pixi`.
-Once it is ready to use, you'll see in your terminal `(bristlemouth-protocol:dev)`.
+When you run it for the first time, all dependencies are downloaded in the directory `.pixi`.
+Once it is ready to use, you'll see in your terminal something like `(bristlemouth-protocol:dev)`, and your prompt ready to receive commands.
 
 That's it, you have the same development tools used by the rest of the team.
+You can skip all the conda/miniconda setup instructions, and it works with Rasberry Pi as well!
 Just remember to run `pixi shell -e dev` from insite `bm_protocol` the next time you want to use it again.
-
-If you decide using `pixi`, you can skip all the conda/miniconda setup instructions, and it works with Rasberry Pi as well!
-Instead of doing `conda activate bristlemouth`, you will do `pixi shell -e dev`.
+So, instead of doing `conda activate bristlemouth`, you will do `pixi shell -e dev`.
 
 
 ### Set up Pre-commit
