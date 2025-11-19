@@ -269,12 +269,22 @@ target_sources(payload_uart_queue_tests
 )
 
 # Disable specific warnings for FreeRTOS source files
-set_source_files_properties(
-    ${SRC_DIR}/third_party/FreeRTOS/Source/queue.c
-    ${SRC_DIR}/third_party/FreeRTOS/Source/list.c
-    PROPERTIES
-    COMPILE_FLAGS "-Wno-tautological-constant-out-of-range-compare"
-)
+# Use compiler-specific flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set_source_files_properties(
+        ${SRC_DIR}/third_party/FreeRTOS/Source/queue.c
+        ${SRC_DIR}/third_party/FreeRTOS/Source/list.c
+        PROPERTIES
+        COMPILE_FLAGS "-Wno-tautological-constant-out-of-range-compare"
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set_source_files_properties(
+        ${SRC_DIR}/third_party/FreeRTOS/Source/queue.c
+        ${SRC_DIR}/third_party/FreeRTOS/Source/list.c
+        PROPERTIES
+        COMPILE_FLAGS "-Wno-type-limits"
+    )
+endif()
 
 target_link_libraries(payload_uart_queue_tests gtest gmock gtest_main)
 
