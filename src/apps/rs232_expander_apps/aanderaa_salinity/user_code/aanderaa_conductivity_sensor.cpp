@@ -505,8 +505,13 @@ void AanderaaConductivitySensor::checkTypeAndAssign(
 void AanderaaConductivitySensor::checkTypeAndAssign(
     const char *output, uint16_t length,
     AanderaaConductivitySensor::AanderaaConductivityString *value) {
+  const size_t copy_len = sizeof(AanderaaConductivityString) - 1;
+
+  if (length > copy_len) {
+    return;
+  }
+
   if (value) {
-    size_t copy_len = bm_min(length, sizeof(AanderaaConductivityString) - 1);
     strncpy(*value, output, copy_len);
     (*value)[copy_len] = '\0';
   }
