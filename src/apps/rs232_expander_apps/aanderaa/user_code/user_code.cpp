@@ -17,6 +17,9 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
+#include "memfault_platform_core.h"
+#include "reset_reason.h"
+
 
 #define AANDERAA_WATCHDOG_MAX_TRIGGERS (3)
 static constexpr char AANDERAA_WATCHDOG_ID[] = "Aanderaa";
@@ -28,6 +31,8 @@ static constexpr char s_payload_wd_to_s[] = "payloadWdToS";
 static constexpr char s_pl_uart_baud_rate[] = "plUartBaudRate";
 static constexpr char s_mfg_tx_test_enable[] = "mfgTxTestModeEnable";
 static constexpr char s_sensor_bm_log_enable[] = "sensorBmLogEnable";
+
+static bool sent_reset_reason = false;
 
 // Enable logging of sensor data to the BM log.
 static uint32_t sensorBmLogEnable = 0;
@@ -302,6 +307,24 @@ void loop(void) {
   /// This aggregates BMDK sensor readings into stats, and sends them along to Spotter
   static uint32_t sensorStatsTimer = uptimeGetMs();
   static uint32_t statsStartTick = uptimeGetMs();
+
+
+
+
+
+  if (uptimeGetMs() > 10000 && !sent_reset_reason) {
+    sent_reset_reason = true;
+    ResetReason_t resetReason = checkResetReason();
+    uint32_t pc = memfault_get_pc();
+    uint32_t lr = memfault_get_lr();
+    spotter_log(0, "reset_reason.log", USE_TIMESTAMP, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    spotter_log_console(0, "Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+    printf("Reset Reason: %d: %s, PC: 0x%" PRIx32 ", LR: 0x%" PRIx32 "\n", resetReason, getResetReasonString(), pc, lr);
+  }
+
+
+
+
   if (CURRENT_AGG_PERIOD_MS > 0 &&
       (uint32_t)uptimeGetMs() - sensorStatsTimer >= CURRENT_AGG_PERIOD_MS) {
     sensorStatsTimer = uptimeGetMs();
