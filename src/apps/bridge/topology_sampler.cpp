@@ -33,7 +33,7 @@
 #include "topology_sampler.h"
 #include "util.h"
 
-#define TOPOLOGY_TIMEOUT_MS 60000
+#define TOPOLOGY_TIMEOUT_MS 15000
 #define NETWORK_CONFIG_TIMEOUT_MS 1000
 
 #define TOPOLOGY_LOADING_TIMEOUT_MS 60000
