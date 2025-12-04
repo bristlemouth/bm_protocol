@@ -152,10 +152,18 @@ void lpmPreSleepProcessing() {
 }
 
 void lpmPostSleepProcessing() {
+  //
+  // A bug was found with the Aanderaa Current Meter RS232 Mote application with this
+  // implementation of the watchdog. So for now while we figure out how to workaround it
+  // we will go back to using the old watchdog for the Aanderaa Current Meter RS232 app.
+  // See watchdog.c for more details.
+  //
+  #ifndef APP_AANDERAA_CURRENT_METER
   // reference xMaximumSuppressedTicks, the maximum amount of time we can sleep
   // is 1998 ticks (or ms, ref configTICK_RATE_HZ). Feed the watchdog here
   // before moving onto next tasks
-  // watchdogFeed();
+  watchdogFeed();
+  #endif // APP_AANDERAA_CURRENT_METER
   if (SCB->SCR & SCB_SCR_SLEEPDEEP_Msk)
    {
       //      We may have been in deep sleep.  If we were, the RCC cleared several enable bits in the CR, and
