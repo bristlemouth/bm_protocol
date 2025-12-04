@@ -226,7 +226,7 @@ static const DebugGpio_t debugGpioPins[] = {
     {"boot_led", &BOOT_LED, GPIO_IN},
     {"vusb_detect", &VUSB_DETECT, GPIO_IN},
     {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
-    {"tp14", &TP14, GPIO_IN},
+    {"tp14", &TP14, GPIO_OUT},
     {"tp15", &TP15, GPIO_OUT},
 };
 
