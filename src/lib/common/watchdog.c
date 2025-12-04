@@ -26,8 +26,34 @@ void watchdogFeed() {
 //        conditions are met.
 //
 
-void vApplicationIdleHook(void) {
+// void vApplicationIdleHook(void) {
+//     watchdogFeed();
+// }
+
+static void iWDGTask( void *parameters );
+
+void startIWDGTask() {
+  // memfault_software_watchdog_enable();
+  BaseType_t rval;
+  rval = xTaskCreate(
+              iWDGTask,
+              "IWDG",
+              configMINIMAL_STACK_SIZE,
+              NULL,
+              IWDG_TASK_PRIORITY,
+              NULL);
+
+  configASSERT(rval == pdTRUE);
+}
+
+static void iWDGTask( void *parameters ) {
+  // Don't warn about unused parameters
+  (void) parameters;
+
+  for(;;) {
     watchdogFeed();
+    vTaskDelay(2 * 1000);
+  }
 }
 
 void IWDG_IRQHandler(void) {
