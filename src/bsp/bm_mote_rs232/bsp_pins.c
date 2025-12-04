@@ -21,3 +21,7 @@ IOPinHandle_t PAYLOAD_RX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_RX_GPIO_Port,
 IOPinHandle_t PAYLOAD_TX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_TX_GPIO_Port, PAYLOAD_TX_Pin, NULL, NULL}};
 IOPinHandle_t TP14 = {&STM32PinDriver, &(STM32Pin_t){TP14_GPIO_Port, TP14_Pin, NULL, NULL}};
 IOPinHandle_t TP15 = {&STM32PinDriver, &(STM32Pin_t){TP15_GPIO_Port, TP15_Pin, NULL, NULL}};
+IOPinHandle_t TP4 = {&STM32PinDriver, &(STM32Pin_t){TP4_GPIO_Port, TP4_Pin, NULL, NULL}};
+IOPinHandle_t TP9 = {&STM32PinDriver, &(STM32Pin_t){TP9_GPIO_Port, TP9_Pin, NULL, NULL}};
+IOPinHandle_t TP6 = {&STM32PinDriver, &(STM32Pin_t){TP6_GPIO_Port, TP6_Pin, NULL, NULL}};
+IOPinHandle_t TP18 = {&STM32PinDriver, &(STM32Pin_t){TP18_GPIO_Port, TP18_Pin, NULL, NULL}};

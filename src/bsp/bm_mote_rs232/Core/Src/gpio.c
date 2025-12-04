@@ -58,7 +58,8 @@ void MX_GPIO_Init(void)
   LL_GPIO_ResetOutputPin(GPIOH, TP14_Pin|ADIN_PWR_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOA, ADIN_RST_Pin|PL_BUCK_EN_Pin|FLASH_CS_Pin|ADIN_CS_Pin);
+  LL_GPIO_ResetOutputPin(GPIOA, ADIN_RST_Pin|TP18_Pin|PL_BUCK_EN_Pin|TP9_Pin
+                          |TP4_Pin|TP6_Pin|FLASH_CS_Pin|ADIN_CS_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(GPIOB, DISCHARGE_ON_Pin|VBUS_EN_Pin);
@@ -83,7 +84,8 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = ADIN_RST_Pin|PL_BUCK_EN_Pin|FLASH_CS_Pin|BB_3v3_EN_Pin
+  GPIO_InitStruct.Pin = ADIN_RST_Pin|TP18_Pin|PL_BUCK_EN_Pin|TP9_Pin
+                          |TP4_Pin|TP6_Pin|FLASH_CS_Pin|BB_3v3_EN_Pin
                           |ADIN_CS_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;

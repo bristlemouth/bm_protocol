@@ -228,6 +228,10 @@ static const DebugGpio_t debugGpioPins[] = {
     {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
     {"tp14", &TP14, GPIO_OUT},
     {"tp15", &TP15, GPIO_OUT},
+    {"tp4", &TP4, GPIO_OUT},
+    {"tp9", &TP9, GPIO_OUT},
+    {"tp6", &TP6, GPIO_OUT},
+    {"tp18", &TP18, GPIO_OUT},
 };
 
 /* USER CODE EXECUTED HERE */

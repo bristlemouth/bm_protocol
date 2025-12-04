@@ -40,6 +40,10 @@ extern IOPinHandle_t PAYLOAD_TX;
 extern IOPinHandle_t DISCHARGE_ON;
 extern IOPinHandle_t TP14;
 extern IOPinHandle_t TP15;
+extern IOPinHandle_t TP4;
+extern IOPinHandle_t TP9;
+extern IOPinHandle_t TP6;
+extern IOPinHandle_t TP18;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;
