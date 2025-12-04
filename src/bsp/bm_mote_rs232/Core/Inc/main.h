@@ -73,6 +73,10 @@ void SystemPower_Config_ext(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define TP15_Pin LL_GPIO_PIN_13
+#define TP15_GPIO_Port GPIOC
+#define TP14_Pin LL_GPIO_PIN_0
+#define TP14_GPIO_Port GPIOH
 #define ADIN_PWR_Pin LL_GPIO_PIN_1
 #define ADIN_PWR_GPIO_Port GPIOH
 #define ADIN_RST_Pin LL_GPIO_PIN_0

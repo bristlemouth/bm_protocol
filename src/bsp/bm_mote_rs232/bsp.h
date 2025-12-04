@@ -38,6 +38,8 @@ extern IOPinHandle_t ADIN_INT;
 extern IOPinHandle_t PAYLOAD_RX;
 extern IOPinHandle_t PAYLOAD_TX;
 extern IOPinHandle_t DISCHARGE_ON;
+extern IOPinHandle_t TP14;
+extern IOPinHandle_t TP15;
 
 // SPI Interfaces
 extern SPIInterface_t spi1;

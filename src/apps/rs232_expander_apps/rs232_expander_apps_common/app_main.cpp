@@ -216,11 +216,18 @@ void handle_bm_subscriptions(uint64_t node_id, const char *topic, uint16_t topic
 // TODO - move this to some debug file
 // Defines list if GPIOs for Debug CLI
 static const DebugGpio_t debugGpioPins[] = {
-    {"adin_cs", &ADIN_CS, GPIO_OUT},        {"adin_int", &ADIN_INT, GPIO_IN},
-    {"adin_pwr", &ADIN_PWR, GPIO_OUT},      {"adin_rst", &ADIN_RST, GPIO_OUT},
-    {"pl_buck_en", &PL_BUCK_EN, GPIO_OUT},  {"vbus_en", &VBUS_EN, GPIO_OUT},
-    {"flash_cs", &FLASH_CS, GPIO_OUT},      {"boot_led", &BOOT_LED, GPIO_IN},
-    {"vusb_detect", &VUSB_DETECT, GPIO_IN}, {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
+    {"adin_cs", &ADIN_CS, GPIO_OUT},
+    {"adin_int", &ADIN_INT, GPIO_IN},
+    {"adin_pwr", &ADIN_PWR, GPIO_OUT},
+    {"adin_rst", &ADIN_RST, GPIO_OUT},
+    {"pl_buck_en", &PL_BUCK_EN, GPIO_OUT},
+    {"vbus_en", &VBUS_EN, GPIO_OUT},
+    {"flash_cs", &FLASH_CS, GPIO_OUT},
+    {"boot_led", &BOOT_LED, GPIO_IN},
+    {"vusb_detect", &VUSB_DETECT, GPIO_IN},
+    {"discharge_on", &DISCHARGE_ON, GPIO_OUT},
+    {"tp14", &TP14, GPIO_IN},
+    {"tp15", &TP15, GPIO_OUT},
 };
 
 /* USER CODE EXECUTED HERE */

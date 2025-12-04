@@ -19,3 +19,5 @@ IOPinHandle_t ADIN_INT = {&STM32PinDriver, &(STM32Pin_t){ADIN_INT_GPIO_Port, ADI
 IOPinHandle_t BOOT_LED = {&STM32PinDriver, &(STM32Pin_t){BOOT_LED_GPIO_Port, BOOT_LED_Pin, NULL, NULL}};
 IOPinHandle_t PAYLOAD_RX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_RX_GPIO_Port, PAYLOAD_RX_Pin, NULL, NULL}};
 IOPinHandle_t PAYLOAD_TX = {&STM32PinDriver, &(STM32Pin_t){PAYLOAD_TX_GPIO_Port, PAYLOAD_TX_Pin, NULL, NULL}};
+IOPinHandle_t TP14 = {&STM32PinDriver, &(STM32Pin_t){TP14_GPIO_Port, TP14_Pin, NULL, NULL}};
+IOPinHandle_t TP15 = {&STM32PinDriver, &(STM32Pin_t){TP15_GPIO_Port, TP15_Pin, NULL, NULL}};

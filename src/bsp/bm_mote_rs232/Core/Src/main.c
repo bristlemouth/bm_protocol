@@ -24,7 +24,6 @@
 #include "icache.h"
 #include "iwdg.h"
 #include "usart.h"
-#include "memorymap.h"
 #include "rtc.h"
 #include "spi.h"
 #include "usb_otg.h"
@@ -90,11 +89,11 @@ int main(void)
 
   /* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
-
   /* Configure the System Power */
   SystemPower_Config();
+
+  /* Configure the system clock */
+  SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
