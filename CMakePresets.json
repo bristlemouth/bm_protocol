@@ -254,6 +254,13 @@
             "cacheVariables": {
                 "APP": "sub_example"
             }
+        },
+        {
+            "name": "aanderaa-salinity-rs232",
+            "inherits": "serial-payload-example-rs232",
+            "cacheVariables": {
+                "APP": "aanderaa_salinity"
+            }
         }
     ],
     "buildPresets": [
@@ -410,6 +417,11 @@
         {
             "configurePreset": "sub-example",
             "name": "sub-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "aanderaa-salinity-rs232",
+            "name": "aanderaa-salinity-rs232",
             "jobs": 8
         }
     ]

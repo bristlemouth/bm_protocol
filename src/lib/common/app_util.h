@@ -43,6 +43,7 @@ double degToRad(double deg);
 
 #define MIN_TO_S(minute) (minute * 60)
 #define MIN_TO_MS(minute) (MIN_TO_S(minute) * 1000)
+#define US_TO_S(us) (us / 1000000)
 
 // Handle float/double to integer conversion nicely, without this, there will
 // be off-by-one errors.
@@ -54,6 +55,8 @@ double degToRad(double deg);
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+#define S_IN_A_DAY (86400)
 
 #ifdef __GNUC__
 #define UNUSED_FUNCTION(x) __attribute__((__unused__)) UNUSED_##x

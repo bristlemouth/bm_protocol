@@ -28,7 +28,7 @@ extern "C" {
 #include "task_priorities.h"
 #include "usart.h"
 
-static constexpr uint8_t NCP_NOTIFY_BUFF_MASK  = (1 << 0);
+static constexpr uint8_t NCP_NOTIFY_BUFF_MASK = (1 << 0);
 static constexpr uint8_t NCP_NOTIFY = (1 << 1);
 
 static constexpr uint8_t NCP_PROCESSOR_RX_QUEUE_DEPTH = 16;
@@ -42,6 +42,7 @@ static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];
 static volatile uint32_t ncpRXBuffLen[NCP_RX_BUFF_COUNT];
 static volatile bool ncp_rx = false;
 
+static BridgePowerController *ncp_power_controller = NULL;
 static QueueHandle_t ncp_processor_queue_handle;
 static QueueHandle_t ncp_tx_queue_handle;
 static SemaphoreHandle_t ncp_serial_lock = NULL;
@@ -342,6 +343,14 @@ static bool baud_rate_reply_cb(void) {
   return true;
 }
 
+static bool power_stats_request_cb(void) {
+  if (ncp_power_controller) {
+    bm_serial_send_power_stats_reply(ncp_power_controller->getPowerStats());
+  }
+
+  return true;
+}
+
 // Used by spotter to request a self test
 static bool bm_serial_self_test_cb(uint64_t node_id, uint32_t result) {
   (void)node_id;
@@ -466,9 +475,12 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.node_id_reply_fn = NULL;
   bm_serial_callbacks.baud_rate_negotiation_request_fn = baud_rate_request_cb;
   bm_serial_callbacks.baud_rate_negotiation_reply_fn = baud_rate_reply_cb;
+  bm_serial_callbacks.power_stats_request_fn = power_stats_request_cb;
+  bm_serial_callbacks.power_stats_reply_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
+  ncp_power_controller = power_controller;
   serialEnable(ncpSerialHandle);
   ncpBaudRateDiscovery();
   ncp_dfu_check_for_update();
@@ -640,7 +652,8 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
   configASSERT(len == 1);
 
   // but the byte into the current buffer
-  ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx++] = byte;
+  ncpRXBuff[ncpRXCurrBuff][ncpRXBuffIdx] = byte;
+  ncpRXBuffIdx += 1;
 
   do {
     if (ncpRXBuffIdx >= NCP_BUFF_LEN) {
@@ -669,13 +682,12 @@ static BaseType_t ncpRXBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, siz
 
     BaseType_t rval = xTaskNotifyFromISR(ncpRXTaskHandle, (ncpRXCurrBuff | NCP_NOTIFY),
                                          eSetValueWithoutOverwrite, &higherPriorityTaskWoken);
+    // switch ncp buffers
+    ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
     if (rval == pdFALSE) {
-      // previous packet still pending, 😬
+      // previous packet still pending, drop the oldest and continue
       // TODO - track dropped packets?
-      configASSERT(0);
-    } else {
-      // switch ncp buffers
-      ncpRXCurrBuff = (ncpRXCurrBuff + 1) % NCP_RX_BUFF_COUNT;
+      ulTaskNotifyValueClear(ncpRXTaskHandle, ncpRXCurrBuff);
     }
     xSemaphoreGiveFromISR(ncp_serial_lock, &higherPriorityTaskWoken);
   } while (0);

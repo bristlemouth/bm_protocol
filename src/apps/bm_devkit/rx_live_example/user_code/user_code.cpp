@@ -1,9 +1,11 @@
 #include "user_code.h"
+#include "app_util.h"
 #include "bristlefin.h"
 #include "bsp.h"
 #include "debug.h"
 #include "lwip/inet.h"
 #include "payload_uart.h"
+#include "pubsub.h"
 #include "rx_live_sensor.h"
 #include "sensors.h"
 #include "spotter.h"
@@ -11,7 +13,6 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
-#include "util.h"
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -202,6 +203,9 @@ void setup() {
   bristlefin.enableVbus();      // Enable the input to the Vout power supply.
   vTaskDelay(pdMS_TO_TICKS(5)); // ensure Vbus stable before enable Vout with a 5ms delay.
   bristlefin.enableVout();      // enable Vout to turn on the Rx-Live, 12V by default.
+  // enable 5V for RS-485 XCVR and 3.3V on Mote.
+  bristlefin.enable5V();
+  bristlefin.enable3V();
   // setup the RX-Live interface
   rx_live.init(rx_live_serial_number);
   // Must send an RTMNOW command to enable data output in Profile 0

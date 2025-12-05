@@ -113,7 +113,7 @@ endif()
 if(APP_NAME MATCHES "bringup")
     list(APPEND LIB_FILES
         ${LIB_DIR}/debug/debug_uart.c
-        ${LIB_DIR}/debug/debug_adin_raw.c
+        ${LIB_DIR}/debug/debug_adin_raw.cpp
     )
 endif()
 

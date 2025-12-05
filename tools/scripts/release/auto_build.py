@@ -104,6 +104,9 @@ class AutoBuilder:
         if config["name"].startswith("aanderaa"):
             cmd += ["-DCMAKE_AANDERAA_TYPE=4830"]
 
+        if config.get("legacy", False):
+            cmd += ["-DLEGACY=1"]
+
         if config["sign"]:
             cmd += ["-DSIGN_IMAGES=1"]
             if self.ed25519_priv_key_file:
@@ -298,9 +301,18 @@ class AutoBuilder:
         if config["type"] == "ext_fw" and config["repo"] is not None:
             temp_dir = tempfile.TemporaryDirectory()
             try:
+                dir = temp_dir.name + "/" + config["args"]["app"]
                 repo = git.Repo.clone_from(
-                    config["repo"], temp_dir.name + "/" + config["args"]["app"]
+                    config["repo"],
+                    dir,
+                    depth=1,
                 )
+
+                # If specified SHA in config, checkout that SHA
+                if config["sha"] is not None:
+                    ref = str(config["sha"])
+                    repo.git.checkout(ref)
+
                 print(f"Repository successfully cloned to: {repo.working_dir}")
             except Exception as e:
                 print(f"Error cloning repository: {e}")

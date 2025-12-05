@@ -56,6 +56,7 @@ void setUseByteStreamBuffer(bool enable);
 
 // Clear the uart buffer and reset the uart
 void reset(void);
+void flush(void);
 
 // Setup Rx and Tx stream buffers, and start the Rx handler task LPUartRx
 BaseType_t init(uint8_t task_priority);

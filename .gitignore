@@ -24,3 +24,7 @@ src/bsp/pluteus_v3.1/*.s
 src/bsp/pluteus_v3.1/*.ld
 src/bsp/sunflower_v3.3/*.s
 src/bsp/sunflower_v3.3/*.ld
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml

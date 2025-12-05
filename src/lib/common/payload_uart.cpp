@@ -123,24 +123,32 @@ static void processLineBufferedRxByte(void *serialHandle, uint8_t byte) {
     SerialLineBuffer_t *lineBuffer = reinterpret_cast<SerialLineBuffer_t *>(handle->data);
     // We need a buffer to use!
     configASSERT(lineBuffer->buffer != NULL);
-    lineBuffer->buffer[lineBuffer->idx] = byte;
-    if (lineBuffer->buffer[lineBuffer->idx] == terminationCharacter) {
-      // Zero terminate the line
-      if ((lineBuffer->idx + 1) < lineBuffer->len) {
-        lineBuffer->buffer[lineBuffer->idx + 1] = 0;
-      }
-      if (lineBuffer->lineCallback != NULL) {
-        lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
-      }
-      // Reset buffer index
-      lineBuffer->idx = 0;
-      //    printf("buffer reset!\n");
+
+    // ignore spurious NULs, observed in Rx-LIVE RS-485 setup – Evan 2025-08-20
+    // As this feature is only intended for valid ASCII line protocols, this shouldn't cause any
+    //  ill effects. However, if an oddball protocol intentionally uses NUL as a termination
+    //  character, this will need to be adjusted accordingly.
+    if (byte == 0x00) {
     } else {
-      lineBuffer->idx++;
-      // Heavy handed way of dealing with overflow for now
-      // Later we can just purge the buffer
-      // TODO - log error and clear buffer instead
-      configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
+      lineBuffer->buffer[lineBuffer->idx] = byte;
+      if (lineBuffer->buffer[lineBuffer->idx] == terminationCharacter) {
+        // Zero terminate the line
+        if ((lineBuffer->idx + 1) < lineBuffer->len) {
+          lineBuffer->buffer[lineBuffer->idx + 1] = 0;
+        }
+        if (lineBuffer->lineCallback != NULL) {
+          lineBuffer->lineCallback(handle, lineBuffer->buffer, lineBuffer->idx);
+        }
+        // Reset buffer index
+        lineBuffer->idx = 0;
+        //    printf("buffer reset!\n");
+      } else {
+        lineBuffer->idx++;
+        // Heavy handed way of dealing with overflow for now
+        // Later we can just purge the buffer
+        // TODO - log error and clear buffer instead
+        configASSERT((lineBuffer->idx + 1) < lineBuffer->len);
+      }
     }
   }
 
@@ -194,6 +202,11 @@ bool lineAvailable(void) {
 
 void reset(void) {
   disable(); // Disable the UART
+  flush();
+  enable(); // Reeable the UART
+}
+
+void flush(void) {
   configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
   // Clear the line buffer state
   memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
@@ -202,7 +215,6 @@ void reset(void) {
   xSemaphoreGive(_user_line.mutex);
   // Clear the user byte stream buffer
   xStreamBufferReset(user_byte_stream_buffer);
-  enable(); // Reeable the UART
 }
 
 uint8_t readByte(void) {
