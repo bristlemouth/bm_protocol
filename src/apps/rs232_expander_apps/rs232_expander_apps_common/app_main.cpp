@@ -268,9 +268,6 @@ static void defaultTask(void *parameters) {
   // platform boot before starting the watchdog task
   memfault_platform_boot();
 
-  #ifdef APP_AANDERAA_CURRENT_METER
-  startIWDGTask();
-  #endif // APP_AANDERAA_CURRENT_METER
   startSerial();
 
   startSerialConsole(&usbCLI);

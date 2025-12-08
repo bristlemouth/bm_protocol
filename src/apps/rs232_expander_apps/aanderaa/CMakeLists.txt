@@ -14,7 +14,6 @@ set(APP_LIBS
 
 set(APP_DEFINES
     APP_NAME="${APP_NAME}"
-    APP_AANDERAA_CURRENT_METER
     # Add network stress test functions
     STRESS_TEST_ENABLE
 )
