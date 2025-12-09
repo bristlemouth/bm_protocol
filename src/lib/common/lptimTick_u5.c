@@ -237,6 +237,14 @@ static volatile uint8_t isTickNowSuppressed;    //   This field helps the tick I
 #define LPTIM_IRQHandler   LPTIM1_IRQHandler
 #endif
 
+static inline void enter_sleep_mode(void) {
+    __asm__ volatile (
+        ".balign 16\n\t"  // Align to 16-byte boundary (128 bits)
+        "wfi\n\t"
+        ::: "memory"
+    );
+}
+
 //============================================================================================================
 // vPortSetupTimerInterrupt()
 //
@@ -444,7 +452,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             //      Wait for an interrupt.
             //
             __DSB();
-            __WFI();
+            enter_sleep_mode();
             __ISB();
          }
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
