@@ -167,16 +167,11 @@ I2CResponse_t i2cTxRx(I2CInterface_t *interface, uint8_t address, uint8_t *txBuf
 }
 
 static I2CResponse_t handle_errors_and_wait(I2CInterface_t *interface, uint32_t timeout_ms,
-                                            HAL_StatusTypeDef hal_rval) {
+                                            HAL_StatusTypeDef rval) {
   I2CResponse_t ret = I2C_ERR;
 
-  if (hal_rval != HAL_OK) {
-    ret = _halI2cErrToI2CResponse(((I2C_HandleTypeDef *)interface->handle)->ErrorCode);
-
-#if I2C_WORKAROUND == 1
-    i2cWorkaround(interface, ret);
-#endif
-
+  if (rval != HAL_OK) {
+    ret = _halI2cErrToI2CResponse(rval);
     return ret;
   }
 
@@ -189,6 +184,12 @@ static I2CResponse_t handle_errors_and_wait(I2CInterface_t *interface, uint32_t 
     ret = I2C_ERR;
   } else {
     ret = I2C_OK;
+  }
+
+  if (ret == I2C_ERR) {
+#if I2C_WORKAROUND == 1
+    i2cWorkaround(interface, ret);
+#endif
   }
 
   return ret;
@@ -317,9 +318,9 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 }
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
+  HAL_DMA_Abort(hi2c->hdmatx);
+  HAL_DMA_Abort(hi2c->hdmarx);
   i2c_dma_complete(hi2c, I2C_NOTIFY_ERROR);
 }
 
-void HAL_I2C_AbortCpltCallback(I2C_HandleTypeDef *hi2c) {
-  i2c_dma_complete(hi2c, I2C_NOTIFY_ABORT);
-}
+void HAL_I2C_AbortCpltCallback(I2C_HandleTypeDef *hi2c) { (void)hi2c; }
