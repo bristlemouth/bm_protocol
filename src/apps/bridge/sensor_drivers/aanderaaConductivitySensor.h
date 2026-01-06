@@ -167,7 +167,7 @@ public:
    * Accounts for timing slop between sensor sampling and bridge aggregation periods.
    */
   static constexpr uint32_t N_SAMPLES_PAD = 150;
-  static constexpr double SALINITY_STD_DEV_MAX = 0.1018;
+  static constexpr double SALINITY_STD_DEV_MAX = 0.506;
 
   /**
    * @brief Default aggregation structure with NaN values
