@@ -26,7 +26,6 @@ bool imuIntCallback(const void *pinHandle, uint8_t value, void *args) {
     (void)pinHandle;
     (void)args;
 
-
     // INT is active low, so trigger when it goes low (value == 0)
     if (value == 0) {
         bno085_imu.notifyDataReady();
@@ -37,7 +36,6 @@ bool imuIntCallback(const void *pinHandle, uint8_t value, void *args) {
 void event_callback(void *cookie, sh2_AsyncEvent_t *pEvent) {
   (void) cookie;
   (void) pEvent;
-
 
   // TODO - handle the event
   // This is where we would handle the events from the sensor hub
@@ -212,7 +210,7 @@ void setup(void) {
 
   IORegisterCallback(&BF_IMU_INT, imuIntCallback, NULL);
 
-  // // Enable sensor callback
+  // Enable sensor callback
   // Initialize BNO085 - this creates the service task
     if (!bno085_imu.init(event_callback, printEvent)) {
         printf("Failed to initialize BNO085\n");
@@ -221,7 +219,7 @@ void setup(void) {
 
     vTaskDelay(1000);
 
-    // Configure sensors (10 Hz = 100ms interval)
+    // Configure sensors
     bno085_imu.configureSensor(SH2_ROTATION_VECTOR, 1000000);
     bno085_imu.configureSensor(SH2_ACCELEROMETER, 1000000);
     bno085_imu.configureSensor(SH2_GYROSCOPE_CALIBRATED, 1000000);
@@ -233,10 +231,6 @@ void setup(void) {
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
-  uint32_t curr_time_ms = uptimeGetMs();
-  static uint32_t prev_time_ms = 0;
-  if (curr_time_ms - 5000 > prev_time_ms) {
-    printf("time: %" PRIu32 " ms\n", curr_time_ms);
-    prev_time_ms = curr_time_ms;
-  }
+  // Not doing anything right now, since the BNO085 code
+  // has callbacks to print the data when it arrives
 }

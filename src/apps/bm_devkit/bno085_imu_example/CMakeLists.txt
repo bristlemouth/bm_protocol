@@ -5,7 +5,6 @@ set(APP_FILES
     ${SRC_DIR}/third_party/ceva_sh2/shtp.c
     ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
     ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${SRC_DIR}/lib/drivers/bno085.cpp
     ${CMAKE_CURRENT_LIST_DIR}/user_code/user_code.cpp
 )
