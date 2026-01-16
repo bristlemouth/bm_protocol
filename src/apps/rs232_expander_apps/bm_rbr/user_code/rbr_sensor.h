@@ -10,7 +10,7 @@ public:
         _stored_type(BmRbrDataMsg::SensorType_t::UNKNOWN), _sensorDropDebounceCount(0),
         _sensorBmLogEnable(false), _minProbePeriodMs(0), _lastProbeTime(0),
         _awaitingProbeResponse(false), _parserTwoArguments(",", 256, parserValueTypeOne, 2),
-        _parserThreeArguments(",", 256, parserValueTypeTwo, 3){};
+        _parserThreeArguments(",", 256, parserValueTypeTwo, 3) {};
   void init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_ms);
   void maybeProbeType(uint64_t last_power_on_time);
   bool getData(BmRbrDataMsg::Data &d);
@@ -32,6 +32,9 @@ private:
   static constexpr char typeCommand[] = "outputformat channelslist\n";
   static constexpr uint8_t SENSOR_DROP_DEBOUNCE_MAX_COUNT = 3;
   static constexpr uint32_t PROBE_TYPE_TIMEOUT_MS = 1000;
+  static constexpr uint32_t PROBE_WINDOW_WIDTH_MS = 100;
+  static constexpr uint32_t RBR_READING_PERIOD_MS = 500;
+
   static constexpr uint8_t NUM_PARSERS = 4;
   static constexpr char sensor_bm_log_enable[] = "sensorBmLogEnable";
 
@@ -42,6 +45,7 @@ private:
   uint32_t _sensorBmLogEnable = 0;
   uint32_t _minProbePeriodMs = 0;
   uint64_t _lastProbeTime = 0;
+  uint64_t _last_data_time = 0;
   bool _awaitingProbeResponse = false;
   OrderedSeparatorLineParser _parserTwoArguments;
   OrderedSeparatorLineParser _parserThreeArguments;
