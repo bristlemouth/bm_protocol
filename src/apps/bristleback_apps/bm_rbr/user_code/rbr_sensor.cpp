@@ -1,11 +1,11 @@
 #include "rbr_sensor.h"
 #include "FreeRTOS.h"
 #include "OrderedSeparatorLineParser.h"
-#include "spotter.h"
 #include "configuration.h"
 #include "payload_uart.h"
 #include "rbr_sensor_util.h"
 #include "serial.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -18,10 +18,10 @@ static constexpr char PRESSURE[] = "pressure";
 static constexpr char TEMPERATURE[] = "temperature";
 
 /*!
-* @brief Initialize the RBR sensor driver.
-* @param type The sensor type.
-* @param min_probe_period_ms How often to check the sensor type in milliseconds.
-*/
+ * @brief Initialize the RBR sensor driver.
+ * @param type The sensor type.
+ * @param min_probe_period_ms How often to check the sensor type in milliseconds.
+ */
 void RbrSensor::init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_ms) {
   _type = type;
   _stored_type = type;
@@ -52,12 +52,30 @@ void RbrSensor::init(BmRbrDataMsg::SensorType_t type, uint32_t min_probe_period_
 }
 
 /*!
-* @brief Probe the sensor type if enough time has passed.
-*/
+ * @brief Probe the sensor type if enough time has passed.
+ */
 void RbrSensor::maybeProbeType(uint64_t last_power_on_time) {
   uint64_t now = uptimeGetMs();
+
+  // Cannot transmit to the RBR while a reading is ongoing or else the
+  // RBR will "blank" the streaming data, see:
+  // https://docs.rbr-global.com/l3-command-reference/N/External/timeouts-output-blanking-and-power-saving
+  // Create a window in which the probe can occur:
+  //+--------------+---------------+---------------+
+  //|     0ms      |    200-300ms  |       500ms   |
+  //+--------------+---------------+---------------+
+  //| RBR reading  |  Probe TX     |   RBR reading |
+  //+--------------+---------------+---------------+
+  static constexpr uint32_t window_start_time =
+      RBR_READING_PERIOD_MS / 2 - PROBE_WINDOW_WIDTH_MS / 2;
+  static constexpr uint32_t window_end_time =
+      RBR_READING_PERIOD_MS / 2 + PROBE_WINDOW_WIDTH_MS / 2;
+  bool lower_window = now > _last_data_time + window_start_time;
+  bool upper_window = now < _last_data_time + window_end_time;
+  bool can_transmit = lower_window && upper_window;
+
   if (now - _lastProbeTime >= _minProbePeriodMs &&
-      now - last_power_on_time >= _minProbePeriodMs) {
+      now - last_power_on_time >= _minProbePeriodMs && can_transmit) {
     PLUART::write((uint8_t *)typeCommand, strlen(typeCommand));
     _lastProbeTime = uptimeGetMs();
     _awaitingProbeResponse = true;
@@ -78,9 +96,12 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       handleOutputformat(_payload_buffer, read_len);
     } else if (BmRbrSensorUtil::validSensorDataString(_payload_buffer, read_len)) {
       success = handleDataString(_payload_buffer, read_len, d);
+      if (success) {
+        _last_data_time = uptimeGetMs();
+      }
     } else {
       spotter_log(0, RBR_RAW_LOG, USE_TIMESTAMP, "Invalid line from sensor: %.*s\n", read_len,
-                 _payload_buffer);
+                  _payload_buffer);
       spotter_log_console(0, "Invalid line from sensor: %.*s", read_len, _payload_buffer);
       printf("Invalid line from sensor: %.*s\n", read_len, _payload_buffer);
     }
@@ -119,7 +140,7 @@ void RbrSensor::handleOutputformat(const char *s, size_t read_len) {
           BM_CFG_PARTITION_SYSTEM, CFG_RBR_TYPE, strlen(CFG_RBR_TYPE),
           static_cast<uint32_t>(BmRbrDataMsg::SensorType::PRESSURE_AND_TEMPERATURE));
       spotter_log(0, RBR_RAW_LOG, USE_TIMESTAMP,
-                 "Detected temp & pressure sensor, saving config\n");
+                  "Detected temp & pressure sensor, saving config\n");
       spotter_log_console(0, "Detected temp & pressure sensor, saving config");
       printf("Detected temp & pressure sensor, saving config.\n");
       save_config(BM_CFG_PARTITION_SYSTEM, true); // reboot
@@ -160,10 +181,10 @@ bool RbrSensor::handleDataString(const char *s, size_t read_len, BmRbrDataMsg::D
   rtcPrint(rtcTimeBuffer, NULL);
   if (_sensorBmLogEnable) {
     spotter_log(0, RBR_RAW_LOG, USE_TIMESTAMP, "tick: %" PRIu64 ", rtc: %s, line: %.*s\n",
-               uptimeGetMs(), rtcTimeBuffer, read_len, s);
+                uptimeGetMs(), rtcTimeBuffer, read_len, s);
   }
-  spotter_log_console(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
-            read_len, s);
+  spotter_log_console(0, "rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s", uptimeGetMs(),
+                      rtcTimeBuffer, read_len, s);
   printf("rbr | tick: %" PRIu64 ", rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
          (int)read_len, s);
 
