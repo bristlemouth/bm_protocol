@@ -38,6 +38,8 @@ void setup(void) {
   vTaskDelay(pdMS_TO_TICKS(5));
   // enable Vout, 12V by default.
   IOWrite(&PL_BUCK_EN, 0);
+  // Wait for the other system components to boot up
+  vTaskDelay(pdMS_TO_TICKS(10000));
 }
 
 void loop(void) {
