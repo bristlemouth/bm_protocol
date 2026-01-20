@@ -16,6 +16,9 @@
 
 bool led_state = false;
 
+// Counter to send increasing uint strings from pluart tx
+uint32_t counter = 0;
+
 // A buffer to put data from out payload sensor into.
 char payload_buffer[2048];
 
@@ -39,6 +42,13 @@ void setup(void) {
 
 void loop(void) {
   /* USER LOOP CODE GOES HERE */
+
+  // Temp string for printf
+  char sbuf[1024];
+  snprintf(sbuf, sizeof(sbuf), "%lu\n", counter);
+  size_t sblen = strlen(sbuf);
+  PLUART::write((uint8_t *)sbuf, sblen);
+  counter++;
 
   // Read a byte if it is available
   while (PLUART::byteAvailable()) {
