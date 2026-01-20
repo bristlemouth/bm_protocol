@@ -24,7 +24,7 @@ void setup(void) {
   // Setup the UART – the on-board serial driver that talks to the RS232 transceiver.
   PLUART::init(USER_TASK_PRIORITY);
   // Baud set per expected baud rate of the sensor.
-  PLUART::setBaud(9600);
+  PLUART::setBaud(115200);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter('\n');
   // Turn on the UART.
