@@ -50,6 +50,11 @@ static bool loadCellSample() {
   float calFactor = _loadCell->getCalibrationFactor();
   int32_t zeroOffset = _loadCell->getZeroOffset();
 
+  float running_mean = 0;
+  float running_var = 0;
+  float old_mean = 0;
+  float stdev = 0;
+
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
   if (rtcGet(&timeAndDate) == pdPASS) {
@@ -61,6 +66,8 @@ static bool loadCellSample() {
   }
   successful_lc_read = false;
   read_start_time = uptimeGetMicroSeconds() / 1000;
+
+  //load cell read attempt block 
   while ((!successful_lc_read) &&
          (((uptimeGetMicroSeconds() / 1000) - read_start_time) < read_attempt_duration)) {
     if (_loadCell->available()) {
@@ -84,10 +91,15 @@ static bool loadCellSample() {
       printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
       printf("%llu | zeroOffset: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
       successful_lc_read = true;
+
     } else {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
+
+  //___________________________________________________________________________
+  //steps that happen every read 
+
   cellular_send_read_counter++;
   if (weight < min_force) {
     min_force = weight;
@@ -97,17 +109,33 @@ static bool loadCellSample() {
   }
   mean_sum += weight;
 
+  //running variance block
+  old_mean = running_mean;
+  running_mean = running_mean + ((weight - running_mean)/cellular_send_read_counter);
+  running_var = running_var + ((weight - running_mean)*(weight - old_mean));
+
+
+  //___________________________________________________________________________
+
+
+  // Message send block once all the readings are taken. 
   if (cellular_send_read_counter % num_reads == 0) {
     printf("\n\n\n\nThis should only print once every 4 mins\n\n\n");
     mean_force = mean_sum / cellular_send_read_counter;
 
-    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force, max_force,
-           min_force);
 
-    char data_string[100];
+    running_var = running_var/cellular_send_read_counter;
+    stdev = sqrtf(running_var);
 
-    sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f", mean_force,
-            max_force, min_force);
+    printf("Loadcell  |  mean force: %f |  max force: %f  | min force: %f  | stdev: %f  | reading count: %d", mean_force,
+            max_force, min_force, stdev, cellular_send_read_counter);
+
+    char data_string[200];
+    memset(data_string, 0, sizeof(data_string));
+
+
+    sprintf(data_string, "Loadcell  |  mean force: %f |  max force: %f  | min force: %f  | stdev: %f  | reading count: %d", mean_force,
+            max_force, min_force, stdev, cellular_send_read_counter);
 
     spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
 
@@ -118,6 +146,10 @@ static bool loadCellSample() {
     max_force = 0;
     min_force = 10000;
     mean_force = 0;
+    running_mean = 0;
+    running_var = 0;
+    old_mean = 0;
+    stdev = 0;
   }
 
   return rval;
