@@ -189,55 +189,55 @@ int Bno085::readBytes(uint8_t *pBuffer, unsigned len, uint32_t *t_us) {
     int bytesRead = 0;
 
     // // Read SHTP header (4 bytes)
-    // uint8_t header[4];
-    // if (i2cTxRx(_interface, _addr, NULL, 0, header, 4, 100) == 0) {
+    uint8_t header[4];
+    if (i2cTxRx(_interface, _addr, NULL, 0, header, 4, 100) == 0) {
 
-    //     // Parse cargo length from header
-    //     uint16_t cargoLength = (header[0] | (header[1] << 8)) & 0x7FFF;
+        // Parse cargo length from header
+        uint16_t cargoLength = (header[0] | (header[1] << 8)) & 0x7FFF;
 
-    //     if (cargoLength > 0 && cargoLength <= len) {
-    //         // Copy header to output buffer
-    //         memcpy(pBuffer, header, 4);
+        if (cargoLength > 0 && cargoLength <= len) {
+            // Copy header to output buffer
+            memcpy(pBuffer, header, 4);
 
-    //         // Read remaining cargo if any
-    //         if (cargoLength > 4) {
-    //             if (i2cTxRx(_interface, _addr, NULL, 0,
-    //                        pBuffer + 4, cargoLength - 4, 100) == 0) {
-    //                 bytesRead = cargoLength;
-    //             }
-    //         } else {
-    //             bytesRead = 4;
-    //         }
-
-    //         // Set timestamp
-    //         if (t_us) {
-    //             *t_us = uptimeGetMs() * 1000;
-    //         }
-    //     }
-    // }
-
-    // Read maximum SHTP packet size in ONE I2C transaction
-    // The BNO085 will provide the actual length in the header
-    // SH2_HAL_MAX_TRANSFER_IN is typically 512 bytes
-    const uint16_t maxReadSize = (len < SH2_HAL_MAX_TRANSFER_IN) ? len : SH2_HAL_MAX_TRANSFER_IN;
-
-    // Single I2C read transaction - this is key!
-    if (i2cTxRx(_interface, _addr, NULL, 0, pBuffer, maxReadSize, 100) == 0) {
-
-        // Now parse the header from what we just read
-        uint16_t cargoLength = (pBuffer[0] | (pBuffer[1] << 8)) & 0x7FFF;
-
-        if (cargoLength > 0 && cargoLength <= maxReadSize) {
-            // We got valid data
-            bytesRead = cargoLength;
+            // Read remaining cargo if any
+            if (cargoLength > 4) {
+                if (i2cTxRx(_interface, _addr, NULL, 0,
+                           pBuffer, cargoLength, 100) == 0) {
+                    bytesRead = cargoLength;
+                }
+            } else {
+                bytesRead = 4;
+            }
 
             // Set timestamp
             if (t_us) {
                 *t_us = uptimeGetMs() * 1000;
             }
         }
-        // If cargoLength is 0, no data was available - return 0
     }
+
+    // Read maximum SHTP packet size in ONE I2C transaction
+    // The BNO085 will provide the actual length in the header
+    // SH2_HAL_MAX_TRANSFER_IN is typically 512 bytes
+    // const uint16_t maxReadSize = (len < SH2_HAL_MAX_TRANSFER_IN) ? len : SH2_HAL_MAX_TRANSFER_IN;
+
+    // // Single I2C read transaction - this is key!
+    // if (i2cTxRx(_interface, _addr, NULL, 0, pBuffer, maxReadSize, 100) == 0) {
+
+    //     // Now parse the header from what we just read
+    //     uint16_t cargoLength = (pBuffer[0] | (pBuffer[1] << 8)) & 0x7FFF;
+
+    //     if (cargoLength > 0 && cargoLength <= maxReadSize) {
+    //         // We got valid data
+    //         bytesRead = cargoLength;
+
+    //         // Set timestamp
+    //         if (t_us) {
+    //             *t_us = uptimeGetMs() * 1000;
+    //         }
+    //     }
+    //     // If cargoLength is 0, no data was available - return 0
+    // }
 
 
     xSemaphoreGive(_i2cMutex);

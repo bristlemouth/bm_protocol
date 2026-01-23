@@ -40,14 +40,14 @@ void event_callback(void *cookie, sh2_AsyncEvent_t *pEvent) {
   // TODO - handle the event
   // This is where we would handle the events from the sensor hub
   // For now we will just print the event ID
-  printf("Received event with ID: %" PRIu32 "\n", pEvent->eventId);
-  if (pEvent->eventId == SH2_RESET) {
-    printf("EventHandler id: RESET\n");
-  } else if (pEvent->eventId == SH2_SHTP_EVENT) {
-    printf("EventHandler id: SHTP, %d\n", pEvent->shtpEvent);
-  } else if (pEvent->eventId == SH2_GET_FEATURE_RESP) {
-    printf("EventHandler id: Sensor config, %d\n", pEvent->sh2SensorConfigResp.sensorId);
-  }
+//   printf("Received event with ID: %" PRIu32 "\n", pEvent->eventId);
+//   if (pEvent->eventId == SH2_RESET) {
+//     printf("EventHandler id: RESET\n");
+//   } else if (pEvent->eventId == SH2_SHTP_EVENT) {
+//     printf("EventHandler id: SHTP, %d\n", pEvent->shtpEvent);
+//   } else if (pEvent->eventId == SH2_GET_FEATURE_RESP) {
+//     printf("EventHandler id: Sensor config, %d\n", pEvent->sh2SensorConfigResp.sensorId);
+//   }
 }
 
 static void printEvent(void * cookie, sh2_SensorEvent_t * event)
@@ -221,8 +221,9 @@ void setup(void) {
 
     // Configure sensors
     // bno085_imu.configureSensor(SH2_ROTATION_VECTOR, 10000);
-    bno085_imu.configureSensor(SH2_ACCELEROMETER, 10000);
+    // bno085_imu.configureSensor(SH2_ACCELEROMETER, 10000);
     // bno085_imu.configureSensor(SH2_GYROSCOPE_CALIBRATED, 10000);
+    bno085_imu.configureSensor(SH2_GYROSCOPE_UNCALIBRATED, 10000);
     // bno085_imu.configureSensor(SH2_MAGNETIC_FIELD_CALIBRATED, 10000);
 
     printf("BNO085 configured and running\n");
