@@ -33,6 +33,18 @@ extern "C" {
 //   sh2_Hal_t sh2_hal;
 // };
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// C wrapper function to notify BNO085 from ISR
+void bno085NotifyDataReadyFromISR(void);
+
+#ifdef __cplusplus
+}
+#endif
+
 class Bno085 {
 public:
     Bno085(I2CInterface_t* i2cInterface, uint8_t address);
@@ -51,6 +63,8 @@ public:
     static int read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us);
     static int write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len);
     static uint32_t getTimeUs(sh2_Hal_t *self);
+    // Add friend declaration to allow C wrapper to access private members
+    friend void bno085NotifyDataReadyFromISR(void);
 
 private:
     static void serviceTask(void *arg);

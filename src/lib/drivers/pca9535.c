@@ -8,6 +8,10 @@
 
 #define PCA9535_TIMEOUT_MS 10
 
+extern void bno085NotifyDataReadyFromISR(void);
+
+// volatile uint32_t counter = 0;
+
 typedef enum {
   INPUT_PORT_0 = 0,
   INPUT_PORT_1 = 1,
@@ -265,6 +269,8 @@ bool pca9535IRQHandler(const void *pcaPinHandle, uint8_t value, void *args) {
 
   (void)pcaPinHandle;
   (void) value;
+
+  bno085NotifyDataReadyFromISR();
 
   BaseType_t higherPriorityTaskWoken = false;
   if(PCA9535TaskHandle != NULL && device->enabled) {

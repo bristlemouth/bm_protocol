@@ -22,16 +22,16 @@ extern "C" {
 static Bno085 bno085_imu(&i2c1, IMU_ADDR);
 
 // ISR callback for INT pin
-bool imuIntCallback(const void *pinHandle, uint8_t value, void *args) {
-    (void)pinHandle;
-    (void)args;
+// bool imuIntCallback(const void *pinHandle, uint8_t value, void *args) {
+//     (void)pinHandle;
+//     (void)args;
 
-    // INT is active low, so trigger when it goes low (value == 0)
-    if (value == 0) {
-        bno085_imu.notifyDataReady();
-    }
-    return true;
-}
+//     // INT is active low, so trigger when it goes low (value == 0)
+//     if (value == 0) {
+//         bno085_imu.notifyDataReady();
+//     }
+//     return true;
+// }
 
 void event_callback(void *cookie, sh2_AsyncEvent_t *pEvent) {
   (void) cookie;
@@ -208,7 +208,7 @@ void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
   vTaskDelay(10000);
 
-  IORegisterCallback(&BF_IMU_INT, imuIntCallback, NULL);
+//   IORegisterCallback(&BF_IMU_INT, imuIntCallback, NULL);
 
   // Enable sensor callback
   // Initialize BNO085 - this creates the service task
@@ -220,10 +220,10 @@ void setup(void) {
     vTaskDelay(1000);
 
     // Configure sensors
-    bno085_imu.configureSensor(SH2_ROTATION_VECTOR, 1000000);
-    bno085_imu.configureSensor(SH2_ACCELEROMETER, 1000000);
-    bno085_imu.configureSensor(SH2_GYROSCOPE_CALIBRATED, 1000000);
-    bno085_imu.configureSensor(SH2_MAGNETIC_FIELD_CALIBRATED, 1000000);
+    // bno085_imu.configureSensor(SH2_ROTATION_VECTOR, 10000);
+    bno085_imu.configureSensor(SH2_ACCELEROMETER, 10000);
+    // bno085_imu.configureSensor(SH2_GYROSCOPE_CALIBRATED, 10000);
+    // bno085_imu.configureSensor(SH2_MAGNETIC_FIELD_CALIBRATED, 10000);
 
     printf("BNO085 configured and running\n");
 }

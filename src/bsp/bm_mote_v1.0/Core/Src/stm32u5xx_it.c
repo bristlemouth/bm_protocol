@@ -145,14 +145,14 @@ void EXTI9_IRQHandler(void)
 void EXTI10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI10_IRQn 0 */
-
+  BaseType_t rval = pdFALSE;
   /* USER CODE END EXTI10_IRQn 0 */
-  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_10) != RESET)
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_10) != RESET)
   {
-    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_10);
-    /* USER CODE BEGIN LL_EXTI_LINE_10_RISING */
-
-    /* USER CODE END LL_EXTI_LINE_10_RISING */
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_10);
+    /* USER CODE BEGIN LL_EXTI_LINE_10_FALLING */
+    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)IOEXP_INT.pin);
+    /* USER CODE END LL_EXTI_LINE_10_FALLING */
   }
   /* USER CODE BEGIN EXTI10_IRQn 1 */
 

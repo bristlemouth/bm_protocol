@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "bsp.h"
 #include "string.h"
+#include "watchdog.h"
 
 // Initialize static instance pointer
 Bno085* Bno085::_instance = nullptr;
@@ -35,7 +36,7 @@ bool Bno085::init(sh2_EventCallback_t *eventCallback,
         "BNO085",
         configMINIMAL_STACK_SIZE * 4,
         this,
-        19,  // High priority to service sensor quickly
+        21,  // High priority to service sensor quickly
         &_serviceTaskHandle
     );
 
@@ -84,24 +85,37 @@ void Bno085::serviceTask(void *arg) {
     while (1) {
       // Wait for notification from ISR (INT pin asserted)
       // Timeout after 100ms to periodically check even if no interrupt
-      uint32_t notificationValue = ulTaskNotifyTake(pdTRUE, 10);
-
-      if (notificationValue > 0) {
+      uint32_t notificationValue = ulTaskNotifyTake(pdTRUE, 1000);
+      (void)notificationValue;
+    //   printf("counter: %" PRIu32 "\n", counter);
+      uint8_t intPinState = 0;
+      IORead(&IOEXP_INT, &intPinState);
+      watchdogFeed();
+        // printf("service started, pinstate: %" PRIu8 ", uptime: %" PRIu64 "\n", intPinState, uptimeGetMicroSeconds());
+            //, pinstate: %" PRIu8 "\n", intPinState);
+    //   if (notificationValue > 0) {
+    //     printf("got pin notification\n");
+    //   }
         // INT pin was asserted (went LOW), data is ready
             // Keep servicing until INT goes back HIGH
-            uint8_t intPinState;
-            do {
+            // do {
                 sh2_service();
 
                 // Check if INT pin is still LOW (more data available)
-                IORead(&BF_IMU_INT, &intPinState);
+                // IORead(&IOEXP_INT, &intPinState);
 
-            } while (intPinState == 0);  // Continue while INT is LOW
-      } else {
-        // Timeout - call sh2_service() anyway for housekeeping
-        // This handles cases where we might have missed an interrupt
-        sh2_service();
-      }
+            // } while (intPinState == 0);  // Continue while INT is LOW
+    //         printf("pin high\n");
+    //   } else {
+    //     printf("checking if we need to service\n");
+    //     // Timeout - call sh2_service() anyway for housekeeping
+    //     // This handles cases where we might have missed an interrupt
+    //     // while (intPinState == 1) {
+    //         sh2_service();
+    //         IORead(&IOEXP_INT, &intPinState);
+    //     // }
+        // printf("service ended, pinstate: %" PRIu8 "\n", intPinState);
+    //   }
     }
 }
 
@@ -242,6 +256,12 @@ int Bno085::writeBytes(uint8_t *pBuffer, unsigned len) {
 
     xSemaphoreGive(_i2cMutex);
     return bytesWritten;
+}
+
+extern "C" void bno085NotifyDataReadyFromISR(void) {
+    if (Bno085::_instance) {
+        Bno085::_instance->notifyDataReady();
+    }
 }
 
 // Bno085::Bno085(I2CInterface_t* i2cInterface, uint8_t address) {
