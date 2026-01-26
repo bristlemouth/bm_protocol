@@ -1,7 +1,3 @@
-/*!
-  Load cell sampling functions
-*/
-
 #include "loadCellSampler.h"
 #include "spotter.h"
 #include "pubsub.h"
@@ -13,22 +9,31 @@
 #include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <inttypes.h>
+#include <string.h>
+
 
 static NAU7802 *_loadCell;
-static bool successful_lc_read = false;
-static uint64_t read_attempt_duration = 100;
-static uint64_t read_start_time;
 
 static bool negative_factor = false;
-static uint32_t cellular_send_read_counter;
-static float mean_force;
-static float mean_sum;
-static float max_force;
-static float min_force;
-static uint32_t num_reads = 240; //This should be 4 minutes
-static LoadCellConfig_t _cfg;
 
-#define INA_STR_LEN 80
+static uint32_t reading_attempts_counter = 0; //Counts number of readings or reading attempts taken. compared against num reads to determine when to send a message
+static uint32_t sucessful_readings_counter = 0; //This is the number of sucessful readings. This allows accurate means and variance to be calcuated while still counting missed reading separately. 
+static uint32_t missed_reading_counter = 0;
+
+static float mean_force = 0;
+static float sum_of_weights = 0;
+static float max_force = 0;
+static float min_force = 10000;
+
+static float running_mean = 0;
+static float running_m2 = 0;
+static float old_mean = 0;
+static float stdev = 0;
+static float variance = 0;
+
+static uint32_t num_reads = 570; //at one reading per 500 ms, this should be 4.75 minutes. 
+static LoadCellConfig_t _cfg;
 
 /*
   sensorSampler function to take power sample(s)
@@ -40,15 +45,16 @@ static LoadCellConfig_t _cfg;
   check   -- For Power and HTU, this is NULL. for baro, it does a checkPROM which funnels down to a readData command. Pretty much just check if you get a reading. We can leave it blank for now.
 */
 
-/* Checking with a soak.  */
-static bool loadCellSample() {
-  printf("Load cell sample called\n");
 
+static bool loadCellSample() {
+  printf("Load cell sample called\n"); //mote debug line
+
+  //function specific definitions
   bool rval = true;
-  int32_t reading = _loadCell->getReading();
-  float weight = _loadCell->getWeight(negative_factor);
-  float calFactor = _loadCell->getCalibrationFactor();
-  int32_t zeroOffset = _loadCell->getZeroOffset();
+  static int32_t reading = 0;
+  static float weight = 0;
+  static float calFactor = 0;
+  static int32_t zeroOffset = 0;
 
   RTCTimeAndDate_t timeAndDate;
   char rtcTimeBuffer[32];
@@ -59,65 +65,110 @@ static bool loadCellSample() {
   } else {
     strcpy(rtcTimeBuffer, "0");
   }
-  successful_lc_read = false;
-  read_start_time = uptimeGetMicroSeconds() / 1000;
-  while ((!successful_lc_read) &&
-         (((uptimeGetMicroSeconds() / 1000) - read_start_time) < read_attempt_duration)) {
-    if (_loadCell->available()) {
-      printf("%llu | reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, reading);
-      // printf("%llu | reading corrs: %d\n", uptimeGetMicroSeconds()/1000, reading-333900);
-      _loadCell->getInternalOffsetCal();
 
-      // prints to SD card file
-      spotter_log(0, "loadcell.log", USE_TIMESTAMP,
-                 "tick: %llu, rtc: %s, reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000,
-                 rtcTimeBuffer, reading);
-      spotter_log(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, weight: %f\n",
-                 uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
-
-      // prints to Spotter console
-      spotter_log_console(0, "loadcell | tick: %llu, rtc: %s, reading: %" PRId32 "\n",
-                uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
-      spotter_log_console(0, "loadcell | tick: %llu, rtc: %s, weight: %f\n",
-                uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
-      printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
-      printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
-      printf("%llu | zeroOffset: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
-      successful_lc_read = true;
-    } else {
-      vTaskDelay(pdMS_TO_TICKS(10));
+  //Load cell read block (if LC is readable)
+  if (_loadCell->available()) {
+    
+    // Reading and overwriting "current" data values
+    reading = _loadCell->getReading();
+    weight = _loadCell->getWeight(negative_factor);
+    calFactor = _loadCell->getCalibrationFactor();
+    zeroOffset = _loadCell->getZeroOffset();
+  
+    //updates to counter values
+    reading_attempts_counter ++; // This one is used to trigger the end of the reading period and send a message. 
+    sucessful_readings_counter ++; // This one is used to calculate accurate running stats. If the loadcell never fails to read, this will equal cellular_sen_read_counter
+    
+    //Updates to Mix, Max, running mean and variance. 
+    if (weight < min_force) {
+      min_force = weight;
     }
+    if (weight > max_force) {
+      max_force = weight;
+    }
+    sum_of_weights += weight; // for period-mean at the end
+    old_mean = running_mean;
+    running_mean = running_mean + ((weight - running_mean)/sucessful_readings_counter);
+    running_m2 = running_m2 + ((weight - running_mean)*(weight - old_mean));  
+
+
+    //Debugging stuff that prints on mote 
+    printf("%llu | reading: %ld\n", uptimeGetMicroSeconds() / 1000, reading);
+    _loadCell->getInternalOffsetCal(); // In this function there are calls to printf the three bytes of the internal offset cal on the mote serial. This is a leftover from the public arduino libary. someday, the nau7802 lib should get refactors so that there are not buried print calls and we just return the values. 
+    printf("%llu | weight: %f\n", uptimeGetMicroSeconds() / 1000, weight);
+    printf("%llu | calFactor: %f\n", uptimeGetMicroSeconds() / 1000, calFactor);
+    printf("%llu | zeroOffset: %ld\n", uptimeGetMicroSeconds() / 1000, zeroOffset);
+  
+    // print commands to SD card file and spotter console.
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP,
+                "tick: %llu, rtc: %s, reading: %" PRId32 "\n", uptimeGetMicroSeconds() / 1000,
+                rtcTimeBuffer, reading);
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, weight: %f\n",
+                uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
+    spotter_log_console(0, "loadcell | tick: %llu, rtc: %s, reading: %" PRId32 "\n",
+              uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, reading);
+    spotter_log_console(0, "loadcell | tick: %llu, rtc: %s, weight: %f\n",
+              uptimeGetMicroSeconds() / 1000, rtcTimeBuffer, weight);
+
+  } 
+  
+  //If load cell read fails 
+  else {
+    missed_reading_counter ++; // to track at the end
+    reading_attempts_counter++; //This still updates so we send our message on time. We do not interate successful_reading_count. 
+    // none of our values need to update here. 
   }
-  cellular_send_read_counter++;
-  if (weight < min_force) {
-    min_force = weight;
-  }
-  if (weight > max_force) {
-    max_force = weight;
-  }
-  mean_sum += weight;
+  
+  // Message send block once desired reading-attempt-count is reached.  
+  if (reading_attempts_counter % num_reads == 0) {
+    printf("\n num_reads reached. Sending a cellular message. "); // debug line
+    
+    if (sucessful_readings_counter > 0) { // avoids divide by zero error if all the LC readings fail. Not sure what would happen. 
+      mean_force = sum_of_weights / sucessful_readings_counter;
+      variance   = running_m2 / sucessful_readings_counter;   // population variance not sample variance
+      stdev      = sqrtf(variance);
+    } 
+    else { // in case no successful readings. 
+      mean_force = 0.0f;
+      variance   = 0.0f;
+      stdev      = 0.0f;
+    }
 
-  if (cellular_send_read_counter % num_reads == 0) {
-    printf("\n\n\n\nThis should only print once every 4 mins\n\n\n");
-    mean_force = mean_sum / cellular_send_read_counter;
+    // Remote message send
+    char data_string[300]; // made this a little bigger to accomdate new values. 
+    memset(data_string, 0, sizeof(data_string));
+    printf("LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32 "\n",
+       rtcTimeBuffer, mean_force, max_force, min_force, stdev,
+       sucessful_readings_counter, missed_reading_counter);
+    sprintf(data_string,
+         "LOAD_00, rtc: %s  | mean: %f |  max: %f  | min: %f  | stdev: %f  | readings: %" PRIu32 "  | missed readings: %" PRIu32 "\n",
+         rtcTimeBuffer, mean_force, max_force, min_force, stdev,
+         sucessful_readings_counter, missed_reading_counter);
+    spotter_tx_data(data_string, strlen(data_string), BmNetworkTypeCellularIriFallback);
 
-    printf("mean force: %f |  max force: %f  | min force: %f\n\n\n", mean_force, max_force,
-           min_force);
 
-    char data_string[100];
+    //prints lines in SD and console to indicate remote message send
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP, "Loadcell reading period ended.\n");
+    spotter_log(0, "loadcell.log", USE_TIMESTAMP, data_string);
+    spotter_log_console(0, "Loadcell reading period ended.");
+    spotter_log_console(0, data_string);
 
-    sprintf(data_string, "mean force: %f |  max force: %f  | min force: %f", mean_force,
-            max_force, min_force);
 
-    spotter_tx_data(data_string, 100, BmNetworkTypeCellularIriFallback);
-
-    // printf(data_string);
-
-    mean_sum = 0;
-    cellular_send_read_counter = 0;
+    //Resetting all the counters and stats for the next cycle. 
+    reading_attempts_counter = 0;
+    sucessful_readings_counter = 0;
+    missed_reading_counter = 0;
+    
+    sum_of_weights = 0;
     max_force = 0;
     min_force = 10000;
     mean_force = 0;
+
+    running_mean = 0;
+    running_m2 = 0;
+    variance = 0;
+    old_mean = 0;
+    stdev = 0;
   }
 
   return rval;
@@ -139,14 +190,8 @@ static bool loadCellInit() {
       negative_factor = true;
   }
 
-  printf("loadCell init rval: %d\n", rval);
+  printf("loadCell init rval: %d \n", rval);
   return rval;
-
-  // initial vals for force averaging.
-  cellular_send_read_counter = 0;
-  mean_force = 0;
-  max_force = 0;
-  min_force = 10000;
 }
 
 static bool loadCellCheck() {
