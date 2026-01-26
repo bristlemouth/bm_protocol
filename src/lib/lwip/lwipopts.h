@@ -26,6 +26,7 @@
 
 #define TCPIP_MBOX_SIZE                   16
 #define TCPIP_THREAD_STACKSIZE            8192
+#define TCPIP_THREAD_PRIO                 7
 
 // Needed for multicast
 #define LWIP_IPV6_MLD                     (LWIP_IPV6)

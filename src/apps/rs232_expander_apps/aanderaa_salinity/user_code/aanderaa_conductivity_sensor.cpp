@@ -236,12 +236,12 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
   get_config_float(BM_CFG_PARTITION_SYSTEM, EXTERNAL_REFERENCE_CONDUCTIVITY,
                    strlen(EXTERNAL_REFERENCE_CONDUCTIVITY), &_referenceConductivity);
 
-  spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
-              "Calibrating salinity sensor...\n");
-
   if (isnan(_referenceConductivity)) {
     return;
   }
+
+  spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
+              "Calibrating salinity sensor...\n");
 
   // if _referenceConductivity is within expected range --- Minimum = 0.000 S/m (0.000 mS/cm) and Maximum = 7.500 S/m (75.000 mS/cm)
   if (_referenceConductivity < 0.000f || _referenceConductivity > 75.000f) {
