@@ -11,24 +11,20 @@
 
 static struct SSSInst sss;
 static BmSemaphore mutex = NULL;
-
-static void sss_service(uint8_t *data, uint16_t len) {
-
-  SSSHandleRet ret = sss_msg_handle(&sss, data, len);
-
-  if (ret) {
-    //TODO: handle return here
-  }
-}
+static BmTimer timer = NULL;
 
 static void timer_cb(BmTimer timer) {
   (void)timer;
-  sss_service(NULL, 0);
+  sss_msg_handle_timeout(&sss);
 }
 
 static void process_rx_bytes(void *handle, uint8_t byte) {
   (void)handle;
-  sss_service((uint8_t *)&byte, sizeof(uint8_t));
+  SSSHandleRet ret = sss_msg_handle_rx(&sss, &byte, sizeof(uint8_t));
+
+  if (ret) {
+    //TODO: handle return here
+  }
 }
 
 static int8_t sss_send(uint8_t *payload, uint16_t len) {
@@ -67,7 +63,12 @@ static int8_t sss_handle_cmd(SSSCommand type, const uint8_t *payload, uint16_t l
   return 0;
 }
 
-static uint32_t sss_time(void) { return (uint32_t)uptimeGetMs(); }
+static void sss_timer_start(uint32_t ms) {
+  bm_timer_change_period(timer, ms, 0);
+  bm_timer_start(timer, 0);
+}
+
+static void sss_timer_stop(void) { bm_timer_stop(timer, 0); }
 
 static void sss_lock(void) { bm_semaphore_take(mutex, UINT32_MAX); }
 
@@ -84,10 +85,11 @@ BmErr solar_scout_comms_init(void) {
   PLUART::enable();
 
   // Initialize SSS
-  struct SSSCfg sss_cfg = {
+  SSSCfg sss_cfg = {
       .send_cb = sss_send,
       .handle_cb = sss_handle_cmd,
-      .time_cb = sss_time,
+      .timer_start_cb = sss_timer_start,
+      .timer_stop_cb = sss_timer_stop,
       .lock = sss_lock,
       .unlock = sss_unlock,
       .timeout_ms = SSS_TIMEOUT_MS,
@@ -96,9 +98,8 @@ BmErr solar_scout_comms_init(void) {
 
   err = sss_init(&sss, sss_cfg) == 0 ? BmOK : BmEIO;
 
-  if (err == BmOK) {
-    BmTimer timer = bm_timer_create("sss_timer", 10, true, NULL, timer_cb);
-    bm_timer_start(timer, 0);
+  if (err == 0) {
+    timer = bm_timer_create("sss_timer", 10, true, NULL, timer_cb);
     mutex = bm_mutex_create();
   }
 
