@@ -8,8 +8,7 @@
 
 #define BM_USV_MOTE_COMPONENT_ID 2
 
-static void process_rx_bytes(void *handle, uint8_t byte) {
-  (void)handle;
+static void process_rx_bytes(uint8_t byte) {
   static constexpr uint8_t chan = MAVLINK_COMM_1;
   mavlink_status_t status = {};
   mavlink_message_t msg = {};
@@ -88,10 +87,13 @@ void setup(void) {
                   array_size(rx_lut));
   PLUART::init(USER_TASK_PRIORITY);
   PLUART::setBaud(57600);
-  PLUART::setUseByteStreamBuffer(false);
+  PLUART::setUseByteStreamBuffer(true);
   PLUART::setUseLineBuffer(false);
-  PLUART::setProcessByteCb(process_rx_bytes);
   PLUART::enable();
 }
 
-void loop(void) {}
+void loop(void) {
+  while (PLUART::byteAvailable()) {
+    process_rx_bytes(PLUART::readByte());
+  }
+}
