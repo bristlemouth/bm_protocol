@@ -94,13 +94,4 @@ void setup(void) {
   PLUART::enable();
 }
 
-void loop(void) {
-  mavlink_message_t msg;
-  uint8_t system_id = bm_mavlink_get_sys_id();     // Assigned system ID
-  uint8_t component_id = bm_mavlink_get_comp_id(); // Assigned component ID
-  mavlink_msg_heartbeat_pack(system_id, component_id, &msg, MAV_TYPE_GENERIC,
-                             MAV_AUTOPILOT_INVALID, 0, 0, MAV_STATE_ACTIVE);
-  bm_mavlink_transmit(&msg);
-
-  vTaskDelay(pdMS_TO_TICKS(1000));
-}
+void loop(void) {}
