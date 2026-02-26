@@ -261,6 +261,13 @@
             "cacheVariables": {
                 "APP": "aanderaa_salinity"
             }
+        },
+        {
+            "name": "mavlink-bridge",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "mavlink_bridge"
+            }
         }
     ],
     "buildPresets": [
@@ -422,6 +429,11 @@
         {
             "configurePreset": "aanderaa-salinity-rs232",
             "name": "aanderaa-salinity-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "mavlink-bridge",
+            "name": "mavlink-bridge",
             "jobs": 8
         }
     ]
