@@ -6,7 +6,8 @@
 #include "spotter.h"
 #include "task_priorities.h"
 
-#define BM_USV_MOTE_COMPONENT_ID 2
+#define BM_MAVLINK_BRIDGE_COMPONENT_ID 20
+#define BM_MAVLINK_BRIDGE_BAUD 57600
 
 static void process_rx_bytes(uint8_t byte) {
   // Bristlemouth's Middleware uses MAVLINK_COMM_0, other channels MUST be
@@ -80,15 +81,19 @@ static void heartbeat_cb(uint64_t node_id, mavlink_message_t *msg, mavlink_statu
            heartbeat.base_mode, heartbeat.system_status, heartbeat.mavlink_version);
 }
 
+// MAVLink messages of interest and associated callbacks located here
 static BmMavLinkRxEntry rx_lut[] = {
     {heartbeat_cb, MAVLINK_MSG_ID_HEARTBEAT},
 };
 
 void setup(void) {
-  bm_mavlink_init({1, BM_USV_MOTE_COMPONENT_ID, MAV_TYPE_GENERIC}, MAV_STATE_ACTIVE, rx_lut,
-                  array_size(rx_lut));
+  // Setup Bristlemouth MAVLink integration
+  bm_mavlink_init({1, BM_MAVLINK_BRIDGE_COMPONENT_ID, MAV_TYPE_GENERIC}, MAV_STATE_ACTIVE,
+                  rx_lut, array_size(rx_lut));
+
+  // Setup payload uart to receive incoming MAVLink messages
   PLUART::init(USER_TASK_PRIORITY);
-  PLUART::setBaud(57600);
+  PLUART::setBaud(BM_MAVLINK_BRIDGE_BAUD);
   PLUART::setUseByteStreamBuffer(true);
   PLUART::setUseLineBuffer(false);
   PLUART::enable();
