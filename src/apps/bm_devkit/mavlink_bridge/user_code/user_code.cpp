@@ -9,6 +9,8 @@
 #define BM_USV_MOTE_COMPONENT_ID 2
 
 static void process_rx_bytes(uint8_t byte) {
+  // Bristlemouth's Middleware uses MAVLINK_COMM_0, other channels MUST be
+  // utilized for parsing other MAVLink streams
   static constexpr uint8_t chan = MAVLINK_COMM_1;
   mavlink_status_t status = {};
   mavlink_message_t msg = {};
