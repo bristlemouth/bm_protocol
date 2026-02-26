@@ -67,3 +67,74 @@ static void cliTask( void *parameters ) {
   }
 }
 
+/*!
+  Process received CLI commands from iridium. Split them up, if multiple,
+  and send to CLI processor.
+
+  \param[in] *response - Iridium command response which contains CLI command(s)
+  \param[in] len - Response length (including required terminating \0)
+  \return true if caller must free response, false if it has already been freed
+*/
+bool _processRemoteCLICommands(uint8_t *response, size_t len) {
+  size_t numTokens = 0;
+  char **tokens = NULL;
+  bool rval = true; // Caller should free response buffer
+
+  tokens = tokenize((char *)response, len, '\n', &numTokens);
+  if (tokens != NULL) {
+    for(uint32_t token = 0; token < numTokens; token++) {
+      size_t cmdLen = strnlen(tokens[token], len) + 1;
+      // Set up command buffer structure
+      CLICommand_t cliCmd = {
+        .buff = (uint8_t *)pvPortMalloc(cmdLen),
+        .len = (uint16_t)(cmdLen),
+        .src = NULL
+      };
+
+      configASSERT(cliCmd.buff != NULL);
+      memcpy(cliCmd.buff, tokens[token], cmdLen);
+
+      // Send line to CLI processor
+      if(xQueueSend(cliGetQueue(), &cliCmd, 10 ) == errQUEUE_FULL) {
+        // CLI queue was full, lets reuse the allocated buffer
+        // logPrint(SYSLog, LOG_LEVEL_DEBUG, "Error sending command to CLI queue\n");
+        vPortFree(cliCmd.buff);
+      }
+    }
+    vPortFree(tokens);
+  } else {
+    // Set up command buffer structure
+    CLICommand_t cliCmd = {
+      .buff = response,
+      .len = (uint16_t)len,
+      .src = NULL
+    };
+
+    // Send line to CLI processor
+    if(xQueueSend(cliGetQueue(), &cliCmd, 10 ) == errQUEUE_FULL) {
+      // CLI queue was full, lets reuse the allocated buffer
+      // logPrint(SYSLog, LOG_LEVEL_DEBUG, "Error sending command to CLI queue\n");
+    } else {
+      // Let caller know not to free response buffer, since we
+      // sent it as the CLI command buff
+      rval = false;
+    }
+  }
+
+  return rval;
+}
+
+void cliIridiumRxCallback(uint8_t *message, size_t len) {
+    uint8_t *response = (uint8_t *)pvPortMalloc(len + 1);
+    configASSERT(response != NULL);
+
+    // Copy response to buffer and null terminating string
+    memcpy(response, message, len);
+    response[len] = 0;
+
+    // logPrint(SYSLog, LOG_LEVEL_INFO, "Remote message received(%u)! \"%s\"\n", len, response);
+
+    if(_processRemoteCLICommands(response, len + 1)) {
+      vPortFree(response);
+    }
+}

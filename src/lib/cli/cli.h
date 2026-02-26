@@ -17,6 +17,7 @@ typedef struct {
 
 void startCLI();
 xQueueHandle cliGetQueue();
+void cliIridiumRxCallback(uint8_t *message, size_t len);
 
 #ifdef __cplusplus
 }

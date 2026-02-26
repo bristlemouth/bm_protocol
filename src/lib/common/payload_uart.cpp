@@ -342,10 +342,6 @@ SerialHandle_t uart_handle = {
     .postTxCb = NULL,
 };
 
-void setProcessByteCb(void (*process_byte)(void *handle, uint8_t byte)) {
-  uart_handle.processByte = process_byte;
-}
-
 BaseType_t init(uint8_t task_priority) {
   // Create the stream buffer for the user bytes to be buffered into and read from
   user_byte_stream_buffer = xStreamBufferCreate(USER_BYTE_BUFFER_LEN, 1);
