@@ -1,7 +1,6 @@
 #include "user_code.h"
 #include "bm_config.h"
 #include "bm_mavlink.h"
-#include "bsp.h"
 #include "payload_uart.h"
 #include "spotter.h"
 #include "task_priorities.h"
@@ -44,7 +43,7 @@ static void process_rx_bytes(uint8_t byte) {
       bm_mavlink_transmit(&msg);
       break;
     }
-    case MAVLINK_MSG_ID_VFR_HUD:
+    case MAVLINK_MSG_ID_VFR_HUD: {
       mavlink_vfr_hud_t vfr_hud;
       mavlink_msg_vfr_hud_decode(&msg, &vfr_hud);
       bm_debug("Mavlink VFR HUD:\n"
@@ -59,6 +58,8 @@ static void process_rx_bytes(uint8_t byte) {
                msg.sysid, msg.compid, vfr_hud.airspeed, vfr_hud.groundspeed, vfr_hud.alt,
                vfr_hud.climb, vfr_hud.heading, vfr_hud.throttle);
       bm_mavlink_transmit(&msg);
+      break;
+    }
     }
   }
 }
