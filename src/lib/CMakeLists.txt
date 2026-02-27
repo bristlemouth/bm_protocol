@@ -103,7 +103,8 @@ set(LIB_FILES
 
 if(APP_NAME MATCHES "bridge" AND
    NOT APP_NAME MATCHES "bringup" AND
-   NOT APP_NAME MATCHES "serial")
+   NOT APP_NAME MATCHES "serial" AND
+   NOT APP_NAME MATCHES "mavlink")
     list(APPEND LIB_FILES
         ${LIB_DIR}/debug/debug_bridge_power_controller.cpp
         ${BM_NCP_FILES}
@@ -175,7 +176,8 @@ set(LIB_INCLUDES
 )
 
 if(APP_NAME MATCHES "bridge" AND
-   NOT APP_NAME MATCHES "bringup")
+   NOT APP_NAME MATCHES "bringup" AND
+   NOT APP_NAME MATCHES "mavlink")
     list(APPEND LIB_INCLUDES
         ${BM_NCP_INCLUDES}
     )
