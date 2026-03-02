@@ -9,8 +9,8 @@
 #define BM_BRIDGE_MAVLINK_SYS_ID 1
 #define BM_BRIDGE_MAVLINK_COMP_ID MAV_COMP_ID_USER51
 
-// From flight controller, messages of interest are sent at the same time at a minimum rate of 1Hz
-#define BM_USV_TIMEOUT_TIME_MS (500)
+// From flight controller, messages of interest are sent at a minimum rate of 1Hz
+#define BM_USV_TIMEOUT_TIME_MS (1500)
 
 typedef struct {
   bm_serial_usv_metrics_t metrics;
@@ -29,6 +29,7 @@ static void metrics_send_to_ncp(void) {
 
 static void metrics_timer_cb(void *timer) {
   (void)timer;
+  bm_debug("MAVLink metrics timed out...\n");
   metrics_send_to_ncp();
 }
 
@@ -98,6 +99,7 @@ static void package_and_send_usv_metrics(uint64_t node_id, mavlink_message_t *ms
 
   // Message ready to send
   if (full_message) {
+    bm_debug("MAVLink metrics sending...\n");
     metrics_send_to_ncp();
     bm_timer_stop(ctx.metrics_timer, 0);
   } else if (partial_message) {

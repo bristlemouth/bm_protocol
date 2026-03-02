@@ -423,7 +423,6 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "mavlink_bridge",
                          MIN(reply.app_name_strlen, strlen("mavlink_bridge"))) == 0) {
         bridge_mavlink_init();
-        printf("Here starting MAVLink!\n");
       }
     } else {
       printf("NACK\n");
