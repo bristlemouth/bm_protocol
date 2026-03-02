@@ -9,31 +9,32 @@
 #define BM_BRIDGE_MAVLINK_SYS_ID 1
 #define BM_BRIDGE_MAVLINK_COMP_ID MAV_COMP_ID_USER51
 
-// From flight controller, messages of interest are sent at the same time at a rate of 1Hz
+// From flight controller, messages of interest are sent at the same time at a minimum rate of 1Hz
 #define BM_USV_TIMEOUT_TIME_MS (500)
+
+typedef struct {
+  bm_serial_usv_metrics_t metrics;
+  BmTimer metrics_timer;
+  BmSemaphore mut;
+} MavlinkIntegrationCtx;
+
+static MavlinkIntegrationCtx ctx = {0};
+
+static void metrics_send_to_ncp(void) {
+  bm_semaphore_take(ctx.mut, BM_MAX_DELAY_UINT32);
+  bm_serial_send_usv_metrics(ctx.metrics);
+  ctx.metrics = (bm_serial_usv_metrics_t){0};
+  bm_semaphore_give(ctx.mut);
+}
+
+static void metrics_timer_cb(void *timer) {
+  (void)timer;
+  metrics_send_to_ncp();
+}
 
 static void package_and_send_usv_metrics(uint64_t node_id, mavlink_message_t *msg,
                                          mavlink_status_t *status) {
   (void)status;
-  static bool imu_part = false;
-  static bool vfr_hud_part = false;
-  static bm_serial_usv_metrics_t metrics = {0};
-  static uint64_t last_message_ms = 0;
-
-  uint64_t current_ms = uptimeGetMs();
-  bool partial_message = imu_part != vfr_hud_part;
-  bool timed_out = current_ms - last_message_ms > BM_USV_TIMEOUT_TIME_MS;
-
-  // Clear message if not completed after timeout
-  if (partial_message && timed_out) {
-    bm_debug("USV message incomplete and timed out after %" PRIu16 "ms, clearing...\n",
-             BM_USV_TIMEOUT_TIME_MS);
-    imu_part = false;
-    vfr_hud_part = false;
-    metrics = (bm_serial_usv_metrics_t){0};
-  }
-
-  last_message_ms = current_ms;
 
   switch (msg->msgid) {
   case MAVLINK_MSG_ID_RAW_IMU: {
@@ -58,16 +59,16 @@ static void package_and_send_usv_metrics(uint64_t node_id, mavlink_message_t *ms
              node_id, msg->sysid, msg->compid, imu.time_usec, imu.xacc, imu.yacc, imu.zacc,
              imu.xgyro, imu.ygyro, imu.zgyro, imu.xmag, imu.ymag, imu.zmag, imu.id,
              imu.temperature);
-    metrics.xacc = imu.xacc;
-    metrics.yacc = imu.yacc;
-    metrics.zacc = imu.zacc;
-    metrics.xgyro = imu.xgyro;
-    metrics.ygyro = imu.ygyro;
-    metrics.zgyro = imu.zgyro;
-    metrics.xmag = imu.xmag;
-    metrics.ymag = imu.ymag;
-    metrics.zmag = imu.zmag;
-    imu_part = true;
+    ctx.metrics.imu.xacc = imu.xacc;
+    ctx.metrics.imu.yacc = imu.yacc;
+    ctx.metrics.imu.zacc = imu.zacc;
+    ctx.metrics.imu.xgyro = imu.xgyro;
+    ctx.metrics.imu.ygyro = imu.ygyro;
+    ctx.metrics.imu.zgyro = imu.zgyro;
+    ctx.metrics.imu.xmag = imu.xmag;
+    ctx.metrics.imu.ymag = imu.ymag;
+    ctx.metrics.imu.zmag = imu.zmag;
+    ctx.metrics.has_imu = true;
     break;
   }
   case MAVLINK_MSG_ID_VFR_HUD: {
@@ -85,19 +86,22 @@ static void package_and_send_usv_metrics(uint64_t node_id, mavlink_message_t *ms
              "\tthrottle: %" PRIu16 "\n",
              node_id, msg->sysid, msg->compid, vfr_hud.airspeed, vfr_hud.groundspeed,
              vfr_hud.alt, vfr_hud.climb, vfr_hud.heading, vfr_hud.throttle);
-    metrics.throttle = vfr_hud.throttle;
-    metrics.groundspeed = vfr_hud.groundspeed;
-    vfr_hud_part = true;
+    ctx.metrics.vfr.throttle = vfr_hud.throttle;
+    ctx.metrics.vfr.groundspeed = vfr_hud.groundspeed;
+    ctx.metrics.has_vfr = true;
     break;
   }
   }
 
+  bool partial_message = ctx.metrics.has_imu != ctx.metrics.has_vfr;
+  bool full_message = ctx.metrics.has_vfr && ctx.metrics.has_imu;
+
   // Message ready to send
-  if (vfr_hud_part && imu_part) {
-    vfr_hud_part = false;
-    imu_part = false;
-    bm_serial_send_usv_metrics(metrics);
-    metrics = (bm_serial_usv_metrics_t){0};
+  if (full_message) {
+    metrics_send_to_ncp();
+    bm_timer_stop(ctx.metrics_timer, 0);
+  } else if (partial_message) {
+    bm_timer_start(ctx.metrics_timer, 0);
   }
 }
 
@@ -108,20 +112,32 @@ bool bridge_mavlink_init(void) {
       {package_and_send_usv_metrics, MAVLINK_MSG_ID_VFR_HUD},
   };
 
-  bool ret = true;
+  if (initialized) {
+    return true;
+  }
 
-  if (!initialized) {
-    BmMavLinkInfo info = {
-        BM_BRIDGE_MAVLINK_SYS_ID,
-        BM_BRIDGE_MAVLINK_COMP_ID,
-        MAV_TYPE_GENERIC,
-    };
+  BmMavLinkInfo info = {
+      BM_BRIDGE_MAVLINK_SYS_ID,
+      BM_BRIDGE_MAVLINK_COMP_ID,
+      MAV_TYPE_GENERIC,
+  };
 
-    ret = bm_mavlink_init(info, MAV_STATE_ACTIVE, rx_lut, array_size(rx_lut)) == BmOK;
+  BmErr err = bm_mavlink_init(info, MAV_STATE_ACTIVE, rx_lut, array_size(rx_lut));
+  if (err != BmOK) {
+    return false;
+  }
 
-    if (ret) {
-      initialized = true;
-    }
+  ctx.metrics_timer =
+      bm_timer_create("mavlink_timer", BM_USV_TIMEOUT_TIME_MS, false, NULL, metrics_timer_cb);
+  if (!ctx.metrics_timer) {
+    return false;
+  }
+
+  bool ret = false;
+  ctx.mut = bm_mutex_create();
+  if (ctx.mut) {
+    initialized = true;
+    ret = true;
   }
 
   return ret;
