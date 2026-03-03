@@ -2,7 +2,6 @@
 #include "bm_os.h"
 #include "power_battery_averages_msg.h"
 #include "power_solar_averages_msg.h"
-#include "power_solar_reading_msg.h"
 #include "pubsub.h"
 #include "uptime.h"
 #include <inttypes.h>
@@ -10,17 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
-// TODO - update this comment!!!
 /*
-This application demonstrates how to subscribe to a data topic over bristlemouth via the bm_sub function.
-The application subscribes to the topic "pubsub_example" and prints the received message to the console.
-The callback function subscribe_callback is called when a message is received.
-To test this application, you will need to run the pub_example application on another node.
+This application demonstrates how to subscribe to power averages and solar averages topics
+over bristlemouth via the bm_sub function.
 */
 
 // This is the topic to subscribe to, the publisher will need to publish to this topic (see the application pub_example)
 static const char *const POWER_BATTERY_AVGS_TOPIC = "sensor/*/power/battery/avgs";
-// static const char *const POWER_SOLAR_TOPIC = "sensor/*/power/solar";
 static const char *const POWER_SOLAR_AVGS_TOPIC = "sensor/*/power/solar/avgs";
 
 static void power_battery_avgs_callback(uint64_t node_id, const char *topic, uint16_t topic_len,
@@ -31,6 +26,12 @@ static void power_battery_avgs_callback(uint64_t node_id, const char *topic, uin
   (void)topic;
   (void)node_id;
   (void)type;
+
+  /*
+      Print out the data. Here you could take actions based on the power data.
+      If you are passing variables in/out of this function they must be mutex
+      protected since this callback is run in the middleware task.
+    */
 
   if (version != PowerBatteryAveragesMsg::VERSION) {
     printf("version incorrect\n");
@@ -70,46 +71,6 @@ static void power_battery_avgs_callback(uint64_t node_id, const char *topic, uin
   bm_free(d.cell_temperature_c_stdev);
 }
 
-// static void power_solar_callback(uint64_t node_id, const char *topic, uint16_t topic_len,
-//                            const uint8_t *data, uint16_t data_len, uint8_t type,
-//                            uint8_t version) {
-//   (void)topic_len;
-//   (void)data_len;
-//   (void)topic;
-//   (void)node_id;
-
-//   if (type != 1 || version != 1) {
-//     printf("version or type incorrect\n");
-//     return;
-//   }
-
-//   PowerSolarReadingMsg::Data d = {};
-//   CborError err = PowerSolarReadingMsg::decode(d, data, data_len);
-//   if (err == CborNoError) {
-//     printf("Spotter solar reading data:\n");
-//     printf("\tpower_reading_type: %d\n", d.power_reading_type);
-//     printf("\tstatus: %d\n", d.status);
-//     printf("\tvoltage_v: %.3f\n", d.voltage_v);
-//     printf("\tcurrent_a: %.3f\n", d.current_a);
-//     printf("\tmpp_position: %.3f\n", d.mpp_position);
-//     printf("\tnum_temp_sensors: %d\n", d.num_temp_sensors);
-//     for (uint8_t i = 0; i < d.num_temp_sensors; i++) {
-//       printf("\ttemp_sensor %d - temp: %.3f\n",
-//              i, d.panel_temperatures[i]);
-//     }
-//     printf("\tnum_lines: %d\n", d.num_lines);
-//     for (uint8_t i = 0; i < d.num_lines; i++) {
-//       printf("\tline %d - voltage: %.3f, current: %.3f\n",
-//              i, d.panel_voltages[i], d.panel_currents[i]);
-//     }
-//   } else {
-//     printf("Failed to decode the solar reading message!\n");
-//   }
-//   bm_free(d.panel_temperatures);
-//   bm_free(d.panel_voltages);
-//   bm_free(d.panel_currents);
-// }
-
 static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                       const uint8_t *data, uint16_t data_len, uint8_t type,
                                       uint8_t version) {
@@ -127,6 +88,13 @@ static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint1
   PowerSolarAveragesMsg::Data d = {};
   CborError err = PowerSolarAveragesMsg::decode(d, data, data_len);
   if (err == CborNoError) {
+
+    /*
+      Print out the data. Here you could take actions based on the power data.
+      If you are passing variables in/out of this function they must be mutex
+      protected since this callback run in the middleware task.
+    */
+
     printf("Spotter solar averages data:\n");
     printf("\tnum_samples: %lu\n", d.num_samples);
     printf("\taveraging_window_length_s: %.3f\n", d.averaging_window_length_s);
@@ -172,10 +140,9 @@ static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint1
 
 void setup(void) {
   /* USER ONE-TIME SETUP CODE GOES HERE */
-  // Subscribe to the topic and provide the callback function to be called when a message is received.
+  // Subscribe to the topics and provide the callback functions to be called when a message is received.
   bm_sub(POWER_BATTERY_AVGS_TOPIC, power_battery_avgs_callback);
   bm_sub(POWER_SOLAR_AVGS_TOPIC, power_solar_avgs_callback);
-  // bm_sub(POWER_SOLAR_TOPIC, power_solar_callback);
 }
 
 void loop(void) {
