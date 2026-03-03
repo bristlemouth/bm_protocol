@@ -21,22 +21,23 @@ typedef struct {
 static MavlinkIntegrationCtx ctx = {0};
 
 static void metrics_send_to_ncp(void) {
-  bm_semaphore_take(ctx.mut, BM_MAX_DELAY_UINT32);
   bm_serial_send_usv_metrics(ctx.metrics);
   ctx.metrics = (bm_serial_usv_metrics_t){0};
-  bm_semaphore_give(ctx.mut);
 }
 
 static void metrics_timer_cb(void *timer) {
   (void)timer;
+  bm_semaphore_take(ctx.mut, BM_MAX_DELAY_UINT32);
   bm_debug("MAVLink metrics timed out...\n");
   metrics_send_to_ncp();
+  bm_semaphore_give(ctx.mut);
 }
 
 static void package_and_send_usv_metrics(uint64_t node_id, mavlink_message_t *msg,
                                          mavlink_status_t *status) {
   (void)status;
 
+  bm_semaphore_take(ctx.mut, BM_MAX_DELAY_UINT32);
   switch (msg->msgid) {
   case MAVLINK_MSG_ID_RAW_IMU: {
     mavlink_raw_imu_t imu;
@@ -105,6 +106,7 @@ static void package_and_send_usv_metrics(uint64_t node_id, mavlink_message_t *ms
   } else if (partial_message) {
     bm_timer_start(ctx.metrics_timer, 0);
   }
+  bm_semaphore_give(ctx.mut);
 }
 
 bool bridge_mavlink_init(void) {
