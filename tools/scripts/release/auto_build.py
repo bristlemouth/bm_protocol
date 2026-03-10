@@ -305,7 +305,6 @@ class AutoBuilder:
                 repo = git.Repo.clone_from(
                     config["repo"],
                     dir,
-                    depth=1,
                 )
 
                 # If specified SHA in config, checkout that SHA
