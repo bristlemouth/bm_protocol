@@ -431,6 +431,7 @@ static void defaultTask(void *parameters) {
 
   reportBuilderInit();
   sensorControllerInit(&bridge_power_controller);
+  bridgeLogInit();
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
   debug_ncp_init();
