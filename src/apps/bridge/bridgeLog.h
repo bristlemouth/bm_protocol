@@ -17,6 +17,8 @@ typedef enum {
   BRIDGE_CFG,
 } bridgeLogType_e;
 
+void bridgeLogInit(void);
+bool bridgeLogLock(bool lock);
 void bridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
                     const char *format, ...);
 void vBridgeLogPrint(bridgeLogType_e type, BmLogLevel level, bool print_header,
