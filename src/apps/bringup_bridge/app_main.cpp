@@ -235,6 +235,7 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
+  bridgeLogInit();
   startSerial();
 
   startCLI();

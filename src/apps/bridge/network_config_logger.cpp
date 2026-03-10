@@ -50,6 +50,7 @@ void log_cbor_network_configurations(const uint8_t *cbor_buffer, size_t cbor_buf
   }
 
   state.pos = 0;
+  bridgeLogLock(true);
   bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge network config: ");
   cbor_value_to_pretty_stream(print_stream_handler, &state, &it, CborPrettyDefaultFlags);
   // Flush rest of buffer here
@@ -59,4 +60,5 @@ void log_cbor_network_configurations(const uint8_t *cbor_buffer, size_t cbor_buf
                    state.buf);
   }
   bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "\n");
+  bridgeLogLock(false);
 }
