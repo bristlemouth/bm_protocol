@@ -35,7 +35,6 @@ static constexpr uint8_t NCP_PROCESSOR_RX_QUEUE_DEPTH = 16;
 static constexpr uint8_t NCP_PROCESSOR_TX_QUEUE_DEPTH = 16;
 static constexpr uint8_t NCP_BAUD_RATE_NEGOTIATE_TIMEOUT_MS = 10;
 static constexpr uint8_t NCP_RX_BUFF_COUNT = 2;
-static constexpr uint16_t NCP_BUFF_LEN = 2048;
 static volatile uint32_t ncpRXBuffIdx = 0;
 static volatile uint8_t ncpRXCurrBuff = 0;
 static volatile uint8_t ncpRXBuff[NCP_RX_BUFF_COUNT][NCP_BUFF_LEN];

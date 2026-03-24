@@ -1,44 +1,64 @@
 #include "network_config_logger.h"
 #include "FreeRTOS.h"
+#include "bm_os.h"
 #include "bridgeLog.h"
 #include "cbor.h"
+#include "ncp_uart.h"
 
-static char *log_buffer = NULL;
-static size_t log_buffer_size = 0;
-static constexpr size_t log_buffer_max_size = 2048;
+#define CHUNK_SIZE (NCP_BUFF_LEN / 2)
+
+typedef struct {
+  char buf[CHUNK_SIZE];
+  size_t pos;
+} ChunkState;
 
 static CborError print_stream_handler(void *out, const char *fmt, ...) {
-  configASSERT(log_buffer != NULL);
-  (void)out;
+  ChunkState *state = static_cast<ChunkState *>(out);
 
+  // Write tmp into our chunk buffer, flushing as needed
   va_list args;
   va_start(args, fmt);
-  int n = vsnprintf(nullptr, 0, fmt, args);
-  if (n > 0 && log_buffer_size < log_buffer_max_size) {
-    vsnprintf(&log_buffer[log_buffer_size], log_buffer_max_size - log_buffer_size, fmt, args);
-    log_buffer_size += n;
-  }
+  int n = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
-  return n < 0 ? CborErrorIO : CborNoError;
+  size_t space_left = CHUNK_SIZE - state->pos;
+
+  // If cannot fit into chunked buffer, send now
+  if (space_left < static_cast<size_t>(n)) {
+    size_t to_write = state->pos;
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "%.*s", to_write,
+                   state->buf);
+    state->pos = 0;
+    space_left = CHUNK_SIZE;
+  }
+
+  va_start(args, fmt);
+  state->pos += vsnprintf(&state->buf[state->pos], space_left, fmt, args);
+  va_end(args);
+
+  return CborNoError;
 }
 
 void log_cbor_network_configurations(const uint8_t *cbor_buffer, size_t cbor_buffer_size) {
   configASSERT(cbor_buffer != NULL);
-  configASSERT(log_buffer == NULL);
-  log_buffer = static_cast<char *>(pvPortMalloc(log_buffer_max_size));
-  configASSERT(log_buffer);
-  log_buffer_size = 0;
+  static ChunkState state = {};
   CborParser parser;
   CborValue it;
   CborError err = cbor_parser_init(cbor_buffer, cbor_buffer_size, 0, &parser, &it);
-  if (err == CborNoError) {
-    cbor_value_to_pretty_stream(print_stream_handler, NULL, &it, CborPrettyDefaultFlags);
-    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "Bridge network config: %.*s\n", log_buffer_size, log_buffer);
+  if (err != CborNoError) {
+    return;
   }
-  if (log_buffer) {
-    vPortFree(log_buffer);
-    log_buffer = NULL;
+
+  state.pos = 0;
+  bridgeLogLock(true);
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER, "Bridge network config: ");
+  cbor_value_to_pretty_stream(print_stream_handler, &state, &it, CborPrettyDefaultFlags);
+  // Flush rest of buffer here
+  if (state.pos) {
+    size_t to_write = state.pos;
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "%.*s", to_write,
+                   state.buf);
   }
+  bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "\n");
+  bridgeLogLock(false);
 }
