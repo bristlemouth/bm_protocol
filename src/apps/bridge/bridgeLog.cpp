@@ -99,10 +99,9 @@ static void check_lock_publish_or_enqueue(const BridgeLogPubInfo *info) {
   if (!locked || is_locking_task) {
     bm_serial_pub(getNodeId(), info->topic, info->topic_length, info->data, info->data_length,
                   info->type, info->version);
-    return;
+  } else {
+    bridge_log_enqueue(info);
   }
-
-  bridge_log_enqueue(info);
 
   return;
 }
