@@ -24,7 +24,7 @@ jobs:
       # Checkout develop branch
       - uses: actions/checkout@v4
         with:
-          ref: 'develop'
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
           fetch-depth: 0
           fetch-tags: true
 
