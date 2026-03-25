@@ -343,6 +343,8 @@ static void defaultTask(void *parameters) {
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
 
+  bridgeLogInit();
+
   startSerial();
   startSerialConsole(&usbCLI);
   // Serial device will be enabled automatically when console connects
@@ -431,7 +433,6 @@ static void defaultTask(void *parameters) {
 
   reportBuilderInit();
   sensorControllerInit(&bridge_power_controller);
-  bridgeLogInit();
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
   debug_ncp_init();
