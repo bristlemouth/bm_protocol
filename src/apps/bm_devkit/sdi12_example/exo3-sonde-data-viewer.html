@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXO3 Sonde Data Viewer — Bristlemouth</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --drop-border: #38bdf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 600; }
+  header .tag {
+    font-size: 0.7rem;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+  /* Drop zone */
+  #drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1.5rem;
+  }
+  #drop-zone.dragover {
+    border-color: var(--drop-border);
+    background: rgba(56, 189, 248, 0.05);
+  }
+  #drop-zone h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  #drop-zone p { color: var(--muted); font-size: 0.85rem; }
+  #file-input { display: none; }
+
+  /* Info bar */
+  #info-bar {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  #info-bar span { color: var(--accent); font-weight: 600; }
+
+  /* Charts grid */
+  #charts { display: none; }
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(580px, 1fr));
+    gap: 1.25rem;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem 0.75rem;
+  }
+  .chart-card h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .chart-wrap { position: relative; height: 250px; }
+  .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+  /* Node selector */
+  #node-selector {
+    display: none;
+    margin-bottom: 1.25rem;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  #node-selector label { font-size: 0.85rem; color: var(--muted); }
+  #node-selector select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+
+  /* Table */
+  #data-table-section { display: none; margin-top: 1.5rem; }
+  #data-table-section h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(56, 189, 248, 0.04); }
+
+  .help-link {
+    margin-top: 2rem;
+    padding: 1rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .help-link a { color: var(--accent); text-decoration: none; }
+  .help-link a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1>EXO3 Sonde Data Viewer</h1>
+  <span class="tag">BRISTLEMOUTH</span>
+</header>
+
+<div class="container">
+  <div id="drop-zone">
+    <h2>Drop your Spotter CSV file here</h2>
+    <p>or click to select a file &mdash; exported from the Sofar Spotter dashboard (smartMooring-history CSV)</p>
+    <input type="file" id="file-input" accept=".csv">
+  </div>
+
+  <div id="info-bar"></div>
+
+  <div id="node-selector">
+    <label for="node-select">Bristlemouth Node:</label>
+    <select id="node-select"></select>
+  </div>
+
+  <div id="charts">
+    <div class="chart-grid" id="chart-grid"></div>
+  </div>
+
+  <div id="data-table-section">
+    <h2>Decoded Samples</h2>
+    <div class="table-wrap">
+      <table id="data-table">
+        <thead><tr id="table-header"></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="help-link">
+    Need help? See the <a href="https://bristlemouth.discourse.group/t/decoding-data-exo3-that-is-sent-from-the-dev-kit-to-the-sofar-spotter-dashboard/561" target="_blank">Bristlemouth forum thread</a>
+    or the <a href="https://bristlemouth.notion.site/dev-kit-guide-integrating-an-sdi-12-serial-sensor" target="_blank">Dev Kit integration guide</a>.
+  </div>
+</div>
+
+<script>
+// ── EXO3 struct definition ──
+const EXO3_FIELDS = [
+  { name: 'temp_sensor',  unit: '°C',    label: 'Temperature' },
+  { name: 'sp_cond',      unit: 'μS/cm', label: 'Specific Conductance' },
+  { name: 'pH',           unit: 'pH',    label: 'pH' },
+  { name: 'pH_mV',        unit: 'mV',    label: 'pH (mV)' },
+  { name: 'dis_oxy',      unit: '% Sat', label: 'Dissolved Oxygen (%)' },
+  { name: 'dis_oxy_mg',   unit: 'mg/L',  label: 'Dissolved Oxygen (mg/L)' },
+  { name: 'turbidity',    unit: 'NTU',   label: 'Turbidity' },
+  { name: 'wiper_pos',    unit: 'V',     label: 'Wiper Position' },
+  { name: 'depth',        unit: 'm',     label: 'Depth' },
+  { name: 'power',        unit: 'V',     label: 'Power' },
+];
+
+const SAMPLE_SIZE = 40; // 10 floats × 4 bytes
+
+// ── Chart config grouped by panel ──
+const CHART_PANELS = [
+  { title: 'Temperature',                fields: ['temp_sensor'],       colors: ['#f97316'] },
+  { title: 'Specific Conductance',       fields: ['sp_cond'],           colors: ['#38bdf8'] },
+  { title: 'pH',                          fields: ['pH'],                colors: ['#a78bfa'] },
+  { title: 'pH (mV)',                     fields: ['pH_mV'],             colors: ['#c084fc'] },
+  { title: 'Dissolved Oxygen',            fields: ['dis_oxy', 'dis_oxy_mg'], colors: ['#34d399','#2dd4bf'] },
+  { title: 'Turbidity',                  fields: ['turbidity'],         colors: ['#fbbf24'] },
+  { title: 'Depth',                       fields: ['depth'],             colors: ['#60a5fa'] },
+  { title: 'Power & Wiper',              fields: ['power', 'wiper_pos'], colors: ['#fb7185','#e879f9'] },
+];
+
+// ── Hex → little-endian floats ──
+function decodeHexToSamples(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  const samples = [];
+  for (let offset = 0; offset + SAMPLE_SIZE <= bytes.length; offset += SAMPLE_SIZE) {
+    const view = new DataView(bytes.buffer, offset, SAMPLE_SIZE);
+    const sample = {};
+    for (let i = 0; i < EXO3_FIELDS.length; i++) {
+      sample[EXO3_FIELDS[i].name] = view.getFloat32(i * 4, true); // little-endian
+    }
+    samples.push(sample);
+  }
+  return samples;
+}
+
+// ── CSV parsing ──
+function parseCSV(text) {
+  const lines = text.split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',');
+  const colIdx = {};
+  headers.forEach((h, i) => colIdx[h.trim()] = i);
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    // Simple CSV split — these CSVs have no quoted commas
+    const cols = line.split(',');
+    const nodeId = (cols[colIdx['bristlemouth_node_id']] || '').trim();
+    const dataType = (cols[colIdx['data_type']] || '').trim();
+    if (nodeId && dataType === 'binary_hex_encoded') {
+      rows.push({
+        timestamp: cols[colIdx['utc_timestamp']],
+        nodeId,
+        hex: (cols[colIdx['value']] || '').trim(),
+        lat: parseFloat(cols[colIdx['latitude']]) || null,
+        lon: parseFloat(cols[colIdx['longitude']]) || null,
+      });
+    }
+  }
+  return rows;
+}
+
+// ── Process rows into time-series data ──
+function processRows(rows) {
+  // Each row may contain multiple samples. We assign sub-second timestamps
+  // to spread samples evenly within the interval before the next row.
+  // Rows are sorted newest-first in the CSV, reverse for chronological order.
+  rows.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const points = []; // { time: Date, ...fields }
+  for (const row of rows) {
+    const samples = decodeHexToSamples(row.hex);
+    const baseTime = new Date(row.timestamp).getTime();
+    for (let i = 0; i < samples.length; i++) {
+      // Spread sub-samples across the preceding seconds
+      const t = new Date(baseTime - (samples.length - 1 - i) * 1000);
+      points.push({ time: t, ...samples[i] });
+    }
+  }
+  points.sort((a, b) => a.time - b.time);
+  return points;
+}
+
+// ── Chart rendering ──
+let chartInstances = [];
+
+function renderCharts(points) {
+  const grid = document.getElementById('chart-grid');
+  grid.innerHTML = '';
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+
+  for (const panel of CHART_PANELS) {
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+
+    const unitParts = panel.fields.map(f => EXO3_FIELDS.find(e => e.name === f).unit);
+    const unitLabel = [...new Set(unitParts)].join(' / ');
+    card.innerHTML = `<h3>${panel.title} <span style="opacity:0.5">(${unitLabel})</span></h3>`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-wrap';
+    const canvas = document.createElement('canvas');
+    wrap.appendChild(canvas);
+    card.appendChild(wrap);
+    grid.appendChild(card);
+
+    const datasets = panel.fields.map((field, fi) => {
+      const meta = EXO3_FIELDS.find(e => e.name === field);
+      return {
+        label: meta.label + ' (' + meta.unit + ')',
+        data: points.map(p => ({ x: p.time, y: p[field] })),
+        borderColor: panel.colors[fi],
+        backgroundColor: panel.colors[fi] + '22',
+        borderWidth: 1.5,
+        pointRadius: 1.5,
+        pointHoverRadius: 4,
+        fill: panel.fields.length === 1,
+        tension: 0.3,
+      };
+    });
+
+    const chart = new Chart(canvas, {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: panel.fields.length > 1,
+            labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } },
+          },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#e2e8f0',
+            bodyColor: '#94a3b8',
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: 'time',
+            grid: { color: '#1e293b' },
+            ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 8 },
+          },
+          y: {
+            grid: { color: '#1e293b' },
+            ticks: { color: '#64748b', font: { size: 10 } },
+            title: { display: true, text: unitLabel, color: '#64748b', font: { size: 11 } },
+          },
+        },
+      },
+    });
+    chartInstances.push(chart);
+  }
+}
+
+// ── Data table ──
+function renderTable(points) {
+  const header = document.getElementById('table-header');
+  const body = document.getElementById('table-body');
+  header.innerHTML = '<th>Timestamp (UTC)</th>' +
+    EXO3_FIELDS.map(f => `<th>${f.label} (${f.unit})</th>`).join('');
+
+  // Show most recent first in table
+  const sorted = [...points].reverse();
+  body.innerHTML = sorted.map(p => {
+    const ts = p.time.toISOString().replace('T', ' ').replace(/\.000Z$/, '');
+    return '<tr><td>' + ts + '</td>' +
+      EXO3_FIELDS.map(f => `<td>${p[f.name].toFixed(3)}</td>`).join('') +
+      '</tr>';
+  }).join('');
+}
+
+// ── Main load handler ──
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rows = parseCSV(e.target.result);
+    if (rows.length === 0) {
+      alert('No binary_hex_encoded rows with a bristlemouth_node_id found in this CSV.');
+      return;
+    }
+
+    // Group by node
+    const nodeIds = [...new Set(rows.map(r => r.nodeId))];
+    const nodeSelect = document.getElementById('node-select');
+    nodeSelect.innerHTML = '';
+    if (nodeIds.length > 1) {
+      const optAll = document.createElement('option');
+      optAll.value = '__all__';
+      optAll.textContent = `All nodes (${nodeIds.length})`;
+      nodeSelect.appendChild(optAll);
+    }
+    nodeIds.forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = id;
+      nodeSelect.appendChild(opt);
+    });
+    document.getElementById('node-selector').style.display = nodeIds.length > 1 ? 'flex' : 'none';
+
+    function render(selectedNode) {
+      const filtered = selectedNode === '__all__' ? rows : rows.filter(r => r.nodeId === selectedNode);
+      const points = processRows(filtered);
+
+      document.getElementById('info-bar').style.display = 'block';
+      document.getElementById('info-bar').innerHTML =
+        `<span>${file.name}</span> &mdash; ${filtered.length} messages &rarr; <span>${points.length} samples</span> decoded` +
+        (points.length > 0 ? ` &mdash; ${points[0].time.toISOString().slice(0,16).replace('T',' ')} to ${points[points.length-1].time.toISOString().slice(0,16).replace('T',' ')} UTC` : '');
+
+      document.getElementById('charts').style.display = 'block';
+      document.getElementById('data-table-section').style.display = 'block';
+      renderCharts(points);
+      renderTable(points);
+    }
+
+    nodeSelect.onchange = () => render(nodeSelect.value);
+    render(nodeSelect.value);
+    document.getElementById('drop-zone').style.display = 'none';
+  };
+  reader.readAsText(file);
+}
+
+// ── File input / drag-drop ──
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>
