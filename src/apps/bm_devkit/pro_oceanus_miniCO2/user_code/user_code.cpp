@@ -281,13 +281,21 @@ void loop(void) {
     }
 
     // Aggregate the corrected CO2 values into statistics
+    // Skip zero or negative values during sensor warm-up
+    double corrected_co2_reading = parser.getValue(10).data.double_val;
+
+    if (corrected_co2_reading <= 0.0) {
+      printf("WARN - Skipping invalid CO2 reading: %.2f ppmv (sensor warming up)\n",
+             corrected_co2_reading);
+      return;
+    }
+
     if (co2_data.getNumSamples() >= MAX_CO2_SAMPLES) {
       printf("ERR - No more room in CO2 reading buffer, already have %d readings!\n",
              MAX_CO2_SAMPLES);
       return;
     }
 
-    double corrected_co2_reading = parser.getValue(10).data.double_val;
     co2_data.addSample(corrected_co2_reading);
 
     printf("CO2 buffer: count: %lu/%d, min: %.2f ppmv, max: %.2f ppmv\n",
