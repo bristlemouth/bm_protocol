@@ -328,16 +328,13 @@ void configTxPinAlternate(void) {
 void enable(void) {
   USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
 
-  // Clear data in read register
-  (void)LL_LPUART_ReceiveData8(dev);
-
   LL_LPUART_Enable(dev);
+
+  serialEnable(&uart_handle);
 
   // Clear any pending NVIC bit from the disabled period, then re-enable
   NVIC_ClearPendingIRQ(LPUART1_IRQn);
   NVIC_EnableIRQ(LPUART1_IRQn);
-
-  serialEnable(&uart_handle);
 }
 
 void disable(void) {
