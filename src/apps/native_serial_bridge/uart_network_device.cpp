@@ -163,6 +163,7 @@ NetworkDevice uart_network_device(uint8_t task_priority) {
   // Configure and init the PLUART driver.
   PLUART::init(task_priority);
   PLUART::setBaud(UART_SBC_BAUD);
+  PLUART::setUseLineBuffer(false);
   PLUART::setUseByteStreamBuffer(true);
 
   static NetworkDeviceTrait const trait = {
