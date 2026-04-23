@@ -1,4 +1,5 @@
 #include "payload_uart.h"
+#include "bm_usart.h"
 #include "spotter.h"
 #include "stm32_io.h"
 #include "stm32_rtc.h"
@@ -260,9 +261,26 @@ void write(uint8_t *buffer, size_t len) {
 }
 
 void setBaud(uint32_t new_baud_rate) {
-  LL_LPUART_SetBaudRate(static_cast<USART_TypeDef *>(uart_handle.device),
-                        LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE),
-                        LL_LPUART_PRESCALER_DIV8, new_baud_rate);
+  USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
+  static constexpr uint32_t baud_rate_div8_max_speed = 115200;
+  uint32_t div = LL_LPUART_PRESCALER_DIV8;
+
+  if (new_baud_rate > baud_rate_div8_max_speed) {
+    div = LL_LPUART_PRESCALER_DIV1;
+  }
+
+  bool was_enabled = uart_handle.enabled;
+
+  disable();
+
+  // Prescaler and BRR must both be written while peripheral is disabled (UE=0)
+  LL_LPUART_SetPrescaler(dev, div);
+  LL_LPUART_SetBaudRate(dev, LL_RCC_GetLPUARTClockFreq(LL_RCC_LPUART1_CLKSOURCE), div,
+                        new_baud_rate);
+
+  if (was_enabled) {
+    enable();
+  }
 }
 
 void setEvenParity(void) {
@@ -307,9 +325,28 @@ void configTxPinAlternate(void) {
   }
 }
 
-void enable(void) { serialEnable(&uart_handle); }
+void enable(void) {
+  USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
 
-void disable(void) { serialDisable(&uart_handle); }
+  LL_LPUART_Enable(dev);
+
+  serialEnable(&uart_handle);
+
+  // Clear any pending NVIC bit from the disabled period, then re-enable
+  NVIC_ClearPendingIRQ(LPUART1_IRQn);
+  NVIC_EnableIRQ(LPUART1_IRQn);
+}
+
+void disable(void) {
+  USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
+
+  // Disable LPUART1 IRQ at NVIC level to prevent any ISR activity during reconfiguration
+  NVIC_DisableIRQ(LPUART1_IRQn);
+
+  LL_LPUART_Disable(dev);
+
+  serialDisable(&uart_handle);
+}
 
 // variable definitions
 static uint8_t lpUart1Buffer[LPUART1_LINE_BUFF_LEN];

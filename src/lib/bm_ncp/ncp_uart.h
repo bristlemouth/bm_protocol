@@ -11,6 +11,8 @@
 #include "nvmPartition.h"
 #include "serial.h"
 
+static constexpr uint16_t NCP_BUFF_LEN = 2048;
+
 // unused for now, but will be needed for bridge power sampling/interrupt driven uart comms
 typedef struct {
   IOPinHandle_t *intPin;
@@ -21,4 +23,3 @@ typedef struct {
 void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
              BridgePowerController *power_controller);
 bool ncp_negotiate_baud_rate(uint32_t baud);
-// bool bridgeStart(const BridgeConfig_t *config); // TODO - do we need something like this - probably?

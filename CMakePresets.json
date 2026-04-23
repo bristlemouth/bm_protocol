@@ -55,6 +55,13 @@
             }
         },
         {
+            "name": "aanderaa-salinity-rs232",
+            "inherits": "serial-payload-example-rs232",
+            "cacheVariables": {
+                "APP": "aanderaa_salinity"
+            }
+        },
+        {
             "name": "adin-test",
             "inherits": "default",
             "cacheVariables": {
@@ -130,6 +137,13 @@
             "inherits": "serial-payload-example-bristleback",
             "cacheVariables": {
                 "APP": "loadcell"
+            }
+        },
+        {
+            "name": "mavlink-bridge",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "mavlink_bridge"
             }
         },
         {
@@ -254,13 +268,6 @@
             "cacheVariables": {
                 "APP": "sub_example"
             }
-        },
-        {
-            "name": "aanderaa-salinity-rs232",
-            "inherits": "serial-payload-example-rs232",
-            "cacheVariables": {
-                "APP": "aanderaa_salinity"
-            }
         }
     ],
     "buildPresets": [
@@ -282,6 +289,11 @@
         {
             "configurePreset": "aanderaa-rs232",
             "name": "aanderaa-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "aanderaa-salinity-rs232",
+            "name": "aanderaa-salinity-rs232",
             "jobs": 8
         },
         {
@@ -332,6 +344,11 @@
         {
             "configurePreset": "loadcell-bristleback",
             "name": "loadcell-bristleback",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "mavlink-bridge",
+            "name": "mavlink-bridge",
             "jobs": 8
         },
         {
@@ -417,11 +434,6 @@
         {
             "configurePreset": "sub-example",
             "name": "sub-example",
-            "jobs": 8
-        },
-        {
-            "configurePreset": "aanderaa-salinity-rs232",
-            "name": "aanderaa-salinity-rs232",
             "jobs": 8
         }
     ]

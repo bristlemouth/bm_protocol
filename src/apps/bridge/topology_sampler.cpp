@@ -88,12 +88,15 @@ static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_con
 
 static void topology_sample_cb(NetworkTopology *topology) {
   if (!topology) {
-    printf("Network Topology NULL, task must be busy\n");
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Network Topology NULL, task must be busy\n");
     return;
   }
   // check to make sure bus was powered for the whole topo request
   // break if bus was powered down at some point
   if (!_bridge_power_controller->isBridgePowerOn()) {
+    bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                   "Bristlemouth network is powered off, cannot get topology\n");
     return;
   }
 
@@ -145,7 +148,9 @@ static void check_topology_report(uint32_t timeout_ms) {
       if (create_network_info_cbor_array(cbor_buffer, cbor_bufsize)) {
         network_crc32_calc = crc32_ieee(cbor_buffer, cbor_bufsize);
       } else {
-        printf("Failed to create network info cbor array\n");
+
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Failed to create network info cbor array\n");
         break;
       }
 
@@ -623,6 +628,8 @@ void topology_sampler_task(void *parameters) {
       if (!_sampling_enabled && _bridge_power_controller->waitForSignal(true, 0)) {
         // lets wait 5 seconds for the devices on the bus to power up
         vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Beginning sampling network topology...\n");
         topology_sample();
         // start the timer! here while the bus is powered we will sample topology every minute
         configASSERT(xTimerStart(topology_timer, 10));
@@ -632,6 +639,8 @@ void topology_sampler_task(void *parameters) {
       } else if (_sampling_enabled && _bridge_power_controller->waitForSignal(false, 0)) {
         _sampling_enabled = false;
         configASSERT(xTimerStop(topology_timer, 10));
+        bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
+                       "Pausing sampling network topology until next duration...\n");
       }
     } else {
       // still need to wait after init period for the bus to be turned back on

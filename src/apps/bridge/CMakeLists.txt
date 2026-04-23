@@ -17,6 +17,7 @@ set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors/sensors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensorController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bridgeLog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mavlink_integration.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cbor_sensor_report_encoder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/reportBuilder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/reportBuilderList.cpp
