@@ -268,6 +268,13 @@
             "cacheVariables": {
                 "APP": "sub_example"
             }
+        },
+        {
+            "name": "power-sub-example",
+            "inherits": "hello-world",
+            "cacheVariables": {
+                "APP": "power_sub_example"
+            }
         }
     ],
     "buildPresets": [
@@ -434,6 +441,11 @@
         {
             "configurePreset": "sub-example",
             "name": "sub-example",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "power-sub-example",
+            "name": "power-sub-example",
             "jobs": 8
         }
     ]
