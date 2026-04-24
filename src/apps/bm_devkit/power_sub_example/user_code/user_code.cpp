@@ -22,9 +22,7 @@ static void power_battery_avgs_callback(uint64_t node_id, const char *topic, uin
                                         const uint8_t *data, uint16_t data_len, uint8_t type,
                                         uint8_t version) {
   (void)topic_len;
-  (void)data_len;
   (void)topic;
-  (void)node_id;
   (void)type;
 
   /*
@@ -41,7 +39,7 @@ static void power_battery_avgs_callback(uint64_t node_id, const char *topic, uin
   PowerBatteryAveragesMsg::Data d = {};
   CborError err = PowerBatteryAveragesMsg::decode(d, data, data_len);
   if (err == CborNoError) {
-    printf("Spotter battery averages data:\n");
+    printf("Node ID %" PRIx64 " battery averages data:\n", node_id);
     printf("\tpower_reading_type: %d\n", d.power_reading_type);
     printf("\tstatus: %d\n", d.status);
     printf("\tnum_samples: %lu\n", d.num_samples);
@@ -61,23 +59,14 @@ static void power_battery_avgs_callback(uint64_t node_id, const char *topic, uin
   } else {
     printf("Failed to decode the battery averages message!\n");
   }
-  bm_free(d.cell_voltage_v_avg);
-  bm_free(d.cell_voltage_v_max);
-  bm_free(d.cell_voltage_v_min);
-  bm_free(d.cell_voltage_v_stdev);
-  bm_free(d.cell_temperature_c_avg);
-  bm_free(d.cell_temperature_c_max);
-  bm_free(d.cell_temperature_c_min);
-  bm_free(d.cell_temperature_c_stdev);
+  PowerBatteryAveragesMsg::free(d);
 }
 
 static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint16_t topic_len,
                                       const uint8_t *data, uint16_t data_len, uint8_t type,
                                       uint8_t version) {
   (void)topic_len;
-  (void)data_len;
   (void)topic;
-  (void)node_id;
   (void)type;
 
   if (version != PowerSolarAveragesMsg::VERSION) {
@@ -95,7 +84,7 @@ static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint1
       protected since this callback run in the middleware task.
     */
 
-    printf("Spotter solar averages data:\n");
+    printf("Node ID %" PRIx64 " solar averages data:\n", node_id);
     printf("\tnum_samples: %lu\n", d.num_samples);
     printf("\taveraging_window_length_s: %.3f\n", d.averaging_window_length_s);
     printf("\tnum_temp_sensors: %d\n", d.num_temp_sensors);
@@ -124,18 +113,7 @@ static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint1
   } else {
     printf("Failed to decode the solar averages message!\n");
   }
-  bm_free(d.panel_temperatures_average);
-  bm_free(d.panel_temperatures_max);
-  bm_free(d.panel_temperatures_min);
-  bm_free(d.panel_temperatures_stdev);
-  bm_free(d.panel_voltages_average);
-  bm_free(d.panel_voltages_max);
-  bm_free(d.panel_voltages_min);
-  bm_free(d.panel_voltages_stdev);
-  bm_free(d.panel_currents_average);
-  bm_free(d.panel_currents_max);
-  bm_free(d.panel_currents_min);
-  bm_free(d.panel_currents_stdev);
+  PowerSolarAveragesMsg::free(d);
 }
 
 void setup(void) {
