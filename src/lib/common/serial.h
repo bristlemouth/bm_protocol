@@ -28,6 +28,8 @@ typedef struct {
   void (*lineCallback)(void *serialHandle, uint8_t *line, size_t len);
 } SerialLineBuffer_t;
 
+typedef void (*HWBreakCb_t)(void);
+
 typedef struct SerialHandle {
   // Pointer to hardware struct
   void *device;
@@ -81,6 +83,9 @@ typedef struct SerialHandle {
 
   // Function to run after tx (called from ISR context)
   void (*postTxCb)(struct SerialHandle *handle);
+
+  // Break condition callback (called from ISR context)
+  HWBreakCb_t breakISR;
 } SerialHandle_t;
 
 // Dropped rx characters
@@ -117,6 +122,10 @@ void serialTxTask(void *parameters);
 void startSerial();
 void serialSetBaudRate(SerialHandle_t *handle, uint32_t baud);
 uint32_t serialGetBaudRate(SerialHandle_t *handle);
+
+// Handle break conditions
+void serialEnableBreakHandle(SerialHandle_t *handle, HWBreakCb_t cb);
+void serialDisableBreakHandle(SerialHandle_t *handle);
 
 void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len, void *arg);
 void serialWrite(SerialHandle_t *handle, const uint8_t *buff, size_t len, void *arg);

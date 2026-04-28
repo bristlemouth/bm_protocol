@@ -105,6 +105,23 @@ uint32_t serialGetBaudRate(SerialHandle_t *handle) {
   return ret;
 }
 
+// Handle break conditions
+void serialEnableBreakHandle(SerialHandle_t *handle, HWBreakCb_t cb) {
+  configASSERT(handle != NULL);
+  configASSERT(cb != NULL);
+
+  // Enable interrupt on errors
+  usart_EnableIT_EIE((USART_TypeDef *)handle->device);
+  handle->breakISR = cb;
+}
+
+void serialDisableBreakHandle(SerialHandle_t *handle) {
+  configASSERT(handle != NULL);
+
+  usart_DisableIT_EIE((USART_TypeDef *)handle->device);
+  handle->breakISR = NULL;
+}
+
 // Receive character from uart rx interrupt and place in stream buffer
 // to be processed in serialGenericRxTask
 BaseType_t serialGenericRxBytesFromISR(SerialHandle_t *handle, uint8_t *buffer, size_t len) {
@@ -220,6 +237,16 @@ void serialEnable(SerialHandle_t *handle) {
       usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
     }
 
+    // Clear framing error
+    if (usart_IsActiveFlag_FE((USART_TypeDef *)handle->device)) {
+      usart_ClearFlag_FE((USART_TypeDef *)handle->device);
+    }
+
+    // Clear noise error
+    if (usart_IsActiveFlag_NE((USART_TypeDef *)handle->device)) {
+      usart_ClearFlag_NE((USART_TypeDef *)handle->device);
+    }
+
     if (handle->txStreamBuffer) {
       xStreamBufferReset(handle->txStreamBuffer);
     }
@@ -315,6 +342,19 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
     // TODO - maybe differentiate overrun error from rx buffer full
     handle->flags |= SERIAL_FLAG_RXDROP;
     usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
+  }
+
+  // Clear noise error
+  if (usart_IsActiveFlag_NE((USART_TypeDef *)handle->device)) {
+    usart_ClearFlag_NE((USART_TypeDef *)handle->device);
+  }
+
+  // Handle framing error (break condition)
+  if (usart_IsActiveFlag_FE((USART_TypeDef *)handle->device)) {
+    if(handle->breakISR) {
+      handle->breakISR();
+    }
+    usart_ClearFlag_FE((USART_TypeDef *)handle->device);
   }
 
   // Let the RTOS know if a task needs to be woken up
