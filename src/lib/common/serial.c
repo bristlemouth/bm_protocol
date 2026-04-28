@@ -303,35 +303,6 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
 
   configASSERT(handle != NULL);
 
-  // If error drain the Receive Data Register, data is invalid
-  uint32_t isr = USART2->ISR;
-  if (isr & (USART_ISR_FE | USART_ISR_NE | USART_ISR_ORE)) {
-    while (USART2->ISR & USART_ISR_RXNE_RXFNE) {
-      volatile uint32_t dummy = USART2->RDR;
-      (void)dummy;
-    }
-  }
-
-  // Handle UART overrun error
-  if (usart_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
-    // TODO - maybe differentiate overrun error from rx buffer full
-    handle->flags |= SERIAL_FLAG_RXDROP;
-    usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
-  }
-
-  // Clear noise error
-  if (usart_IsActiveFlag_NE((USART_TypeDef *)handle->device)) {
-    usart_ClearFlag_NE((USART_TypeDef *)handle->device);
-  }
-
-  // Handle framing error (break condition)
-  if (usart_IsActiveFlag_FE((USART_TypeDef *)handle->device)) {
-    if(handle->breakISR) {
-      handle->breakISR();
-    }
-    usart_ClearFlag_FE((USART_TypeDef *)handle->device);
-  }
-
   // Process received bytes
   if( usart_IsActiveFlag_RXNE((USART_TypeDef *)handle->device) &&
       usart_IsEnabledIT_RXNE((USART_TypeDef *)handle->device)){
@@ -364,6 +335,26 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
       if(handle->postTxCb){
         handle->postTxCb(handle);
       }
+  }
+
+  // Handle UART overrun error
+  if (usart_IsActiveFlag_ORE((USART_TypeDef *)handle->device)) {
+    // TODO - maybe differentiate overrun error from rx buffer full
+    handle->flags |= SERIAL_FLAG_RXDROP;
+    usart_ClearFlag_ORE((USART_TypeDef *)handle->device);
+  }
+
+  // Clear noise error
+  if (usart_IsActiveFlag_NE((USART_TypeDef *)handle->device)) {
+    usart_ClearFlag_NE((USART_TypeDef *)handle->device);
+  }
+
+  // Handle framing error (break condition)
+  if (usart_IsActiveFlag_FE((USART_TypeDef *)handle->device)) {
+    if(handle->breakISR) {
+      handle->breakISR();
+    }
+    usart_ClearFlag_FE((USART_TypeDef *)handle->device);
   }
 
   // Let the RTOS know if a task needs to be woken up
