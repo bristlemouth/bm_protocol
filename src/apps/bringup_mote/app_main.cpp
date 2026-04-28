@@ -91,6 +91,7 @@ SerialHandle_t lpuart1 = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 #endif // DEBUG_USE_LPUART1
 
@@ -114,6 +115,7 @@ SerialHandle_t usart3 = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 #endif /// DEBUG_USE_USART3
 
@@ -137,6 +139,7 @@ SerialHandle_t usbCLI = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 
 // "bristlemouth" USB serial - Use TBD
@@ -159,6 +162,7 @@ SerialHandle_t usbPcap = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 
 static const DebugI2C_t debugI2CInterfaces[] = {{1, &i2c1}};
