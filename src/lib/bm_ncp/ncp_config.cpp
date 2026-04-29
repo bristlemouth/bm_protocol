@@ -202,8 +202,8 @@ BmErr _cfg_get_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
     BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
-    if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length,
-                            msg->data) != BM_SERIAL_OK) {
+    if (bm_serial_cfg_value(msg->header.source_node_id, (BmConfigPartition)msg->partition,
+                            msg->data_length, msg->data) != BM_SERIAL_OK) {
       printf("Failed to send get cfg response\n");
       rval = BmEBADMSG;
     }
@@ -217,8 +217,8 @@ BmErr _cfg_set_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
     BmConfigValue *msg = reinterpret_cast<BmConfigValue *>(payload);
-    if (bm_serial_cfg_value(msg->header.source_node_id, msg->partition, msg->data_length,
-                            msg->data) != BM_SERIAL_OK) {
+    if (bm_serial_cfg_value(msg->header.source_node_id, (BmConfigPartition)msg->partition,
+                            msg->data_length, msg->data) != BM_SERIAL_OK) {
       printf("Failed to send set cfg response\n");
       rval = BmEBADMSG;
     }
@@ -232,9 +232,9 @@ BmErr _cfg_status_request_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
     BmConfigStatusResponse *msg = reinterpret_cast<BmConfigStatusResponse *>(payload);
-    if (bm_serial_cfg_status_response(msg->header.source_node_id, msg->partition,
-                                      msg->committed, msg->num_keys,
-                                      msg->keyData) != BM_SERIAL_OK) {
+    if (bm_serial_cfg_status_response(msg->header.source_node_id,
+                                      (BmConfigPartition)msg->partition, msg->committed,
+                                      msg->num_keys, msg->keyData) != BM_SERIAL_OK) {
       printf("Failed to send status response\n");
       rval = BmEBADMSG;
     }
@@ -249,9 +249,9 @@ BmErr _cfg_key_del_bcmp_cb(uint8_t *payload) {
   BmErr rval = BmOK;
   if (payload != NULL) {
     BmConfigDeleteKeyResponse *msg = reinterpret_cast<BmConfigDeleteKeyResponse *>(payload);
-    if (bm_serial_cfg_delete_response(msg->header.source_node_id, msg->partition,
-                                      msg->key_length, msg->key,
-                                      msg->success) != BM_SERIAL_OK) {
+    if (bm_serial_cfg_delete_response(msg->header.source_node_id,
+                                      (BmConfigPartition)msg->partition, msg->key_length,
+                                      msg->key, msg->success) != BM_SERIAL_OK) {
       printf("Failed to send key del response\n");
       rval = BmEBADMSG;
     }
@@ -266,7 +266,8 @@ BmErr _cfg_clear_bcmp_cb(uint8_t *payload) {
 
   if (payload != NULL) {
     BmConfigClearResponse *msg = reinterpret_cast<BmConfigClearResponse *>(payload);
-    if (bm_serial_cfg_clear_response(msg->header.source_node_id, msg->partition,
+    if (bm_serial_cfg_clear_response(msg->header.source_node_id,
+                                     (BmConfigPartition)msg->partition,
                                      msg->success) != BM_SERIAL_OK) {
       printf("Failed to send config clear response\n");
       rval = BmEBADMSG;
