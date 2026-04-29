@@ -9,6 +9,30 @@ static inline void usart_ClearFlag_ORE(USART_TypeDef *USARTx){
   WRITE_REG(USARTx->ICR, USART_ICR_ORECF);
 }
 
+static inline uint32_t usart_IsActiveFlag_FE(USART_TypeDef *USARTx) {
+  return ((READ_BIT(USARTx->ISR, USART_ISR_FE) == (USART_ISR_FE)) ? 1UL : 0UL);
+}
+
+static inline void usart_ClearFlag_FE(USART_TypeDef *USARTx){
+  WRITE_REG(USARTx->ICR, USART_ICR_FECF);
+}
+
+static inline uint32_t usart_IsActiveFlag_NE(USART_TypeDef *USARTx) {
+  return ((READ_BIT(USARTx->ISR, USART_ISR_NE) == (USART_ISR_FE)) ? 1UL : 0UL);
+}
+
+static inline void usart_ClearFlag_NE(USART_TypeDef *USARTx){
+  WRITE_REG(USARTx->ICR, USART_ICR_NECF);
+}
+
+static inline void usart_DisableIT_EIE(USART_TypeDef *USARTx){
+  ATOMIC_CLEAR_BIT(USARTx->CR3, USART_CR3_EIE);
+}
+
+static inline void usart_EnableIT_EIE(USART_TypeDef *USARTx){
+  ATOMIC_SET_BIT(USARTx->CR3, USART_CR3_EIE);
+}
+
 static inline uint32_t usart_IsActiveFlag_RXNE(USART_TypeDef *USARTx) {
   return ((READ_BIT(USARTx->ISR, USART_ISR_RXNE_RXFNE) == (USART_ISR_RXNE_RXFNE)) ? 1UL : 0UL);
 }

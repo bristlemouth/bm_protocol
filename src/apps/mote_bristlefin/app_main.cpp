@@ -89,6 +89,7 @@ SerialHandle_t usart3 = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 
 // Serial console USB device
@@ -111,6 +112,7 @@ SerialHandle_t usbCLI = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 
 SerialHandle_t usbPcap = {
@@ -132,6 +134,7 @@ SerialHandle_t usbPcap = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 
 extern "C" void USART3_IRQHandler(void) { serialGenericUartIRQHandler(&usart3); }
