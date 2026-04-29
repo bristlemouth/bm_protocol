@@ -81,7 +81,7 @@ static void power_solar_avgs_callback(uint64_t node_id, const char *topic, uint1
     /*
       Print out the data. Here you could take actions based on the power data.
       If you are passing variables in/out of this function they must be mutex
-      protected since this callback run in the middleware task.
+      protected since this callback is run in the middleware task.
     */
 
     printf("Node ID %" PRIx64 " solar averages data:\n", node_id);
