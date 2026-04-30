@@ -26,6 +26,15 @@
     use_bootloader: True
     defines: -DCMAKE_APP_TYPE=BMDK
 
+- name: power_sub_example on bm_mote_v1.0
+  type: build_fw
+  args:
+    app: power_sub_example
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
+    defines: -DCMAKE_APP_TYPE=BMDK
+
 - name: rbr_coda_example on bm_mote_v1.0
   type: build_fw
   args:
