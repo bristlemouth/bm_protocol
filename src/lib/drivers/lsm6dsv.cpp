@@ -112,7 +112,8 @@ BmErr LSM6DSV::init(const Cfg *cfg) {
  @brief Handle interrupt from LSM6DSV
 
  @details This function is safe to call from interrupt context. Informs the
-          stream_handle function that data is available.
+          stream_handle function that data is available. Note the interrupt
+          pin is configured as active high.
 
  @see stream_handle
  */
@@ -219,14 +220,15 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   lsm6dsv_return_on_err(lsm6dsv_fifo_gy_batch_set(&m_ctx, batch_gy_dr));
 
   // Set filter settings, lp1 is only available when gyro is not in low power mode
+  // Note: these are disabled by default
   lsm6dsv_filt_settling_mask_t filt_settling_mask = {};
-  filt_settling_mask.drdy = PROPERTY_ENABLE;
-  filt_settling_mask.irq_xl = PROPERTY_ENABLE;
-  filt_settling_mask.irq_g = PROPERTY_ENABLE;
+  filt_settling_mask.drdy = PROPERTY_DISABLE;
+  filt_settling_mask.irq_xl = PROPERTY_DISABLE;
+  filt_settling_mask.irq_g = PROPERTY_DISABLE;
   lsm6dsv_return_on_err(lsm6dsv_filt_settling_mask_set(&m_ctx, filt_settling_mask));
-  lsm6dsv_return_on_err(lsm6dsv_filt_gy_lp1_set(&m_ctx, PROPERTY_ENABLE));
+  lsm6dsv_return_on_err(lsm6dsv_filt_gy_lp1_set(&m_ctx, PROPERTY_DISABLE));
   lsm6dsv_return_on_err(lsm6dsv_filt_gy_lp1_bandwidth_set(&m_ctx, LSM6DSV_GY_MEDIUM));
-  lsm6dsv_return_on_err(lsm6dsv_filt_xl_lp2_set(&m_ctx, PROPERTY_ENABLE));
+  lsm6dsv_return_on_err(lsm6dsv_filt_xl_lp2_set(&m_ctx, PROPERTY_DISABLE));
   lsm6dsv_return_on_err(lsm6dsv_filt_xl_lp2_bandwidth_set(&m_ctx, LSM6DSV_XL_MEDIUM));
 
   // Enable timestamp collection
@@ -243,10 +245,12 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, m_cfg.accelerometer.mode));
   lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, m_cfg.gyro.mode));
 
-  // Configure sensor hub to trigger from interrupt INT2
+  // Configure sensor hub to trigger from interrupt INT2, by default this is active low
   lsm6dsv_sh_syncro_mode_t trigger = LSM6DSV_SH_TRIG_INT2;
   if (sensor_hub_poll) {
     trigger = LSM6DSV_SH_TRG_XL_GY_DRDY;
+  } else {
+    lsm6dsv_return_on_err(lsm6dsv_den_polarity_set(&m_ctx, LSM6DSV_DEN_ACT_LOW));
   }
   lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, trigger));
 

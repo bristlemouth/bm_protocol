@@ -98,6 +98,7 @@ set(LIB_FILES
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
     ${LIB_DIR}/sensor_sampler/pressureSampler.cpp
+    ${LIB_DIR}/sensor_sampler/motionSampler.cpp
     ${TINYUSB_FILES}
     ${BM_SERIAL_FILES}
     ${BM_INTEGRATION_FILES}
