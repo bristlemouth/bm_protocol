@@ -28,6 +28,7 @@ set_source_files_properties(
     ${MCUBOOT_DIR}/boot/bootutil/src/bootutil_misc.c
     ${MCUBOOT_DIR}/boot/bootutil/src/bootutil_public.c
     ${MCUBOOT_DIR}/boot/bootutil/src/swap_misc.c
+    ${SRC_DIR}/third_party/lsm6dsv/lsm6dsv_reg.c
 
     DIRECTORY ${SRC_DIR}
 
@@ -77,6 +78,8 @@ include(${LWIP_DIR}/src/Filelists.cmake)
 set(THIRD_PARTY_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${SRC_DIR}/third_party/BME280_driver/bme280.c
+    ${SRC_DIR}/third_party/lsm6dsv/lsm6dsv_reg.c
+    ${SRC_DIR}/third_party/lis2mdl/lis2mdl_reg.c
     ${SRC_DIR}/third_party/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c
     ${SRC_DIR}/third_party/fnv/hash_32a.c
     ${SRC_DIR}/third_party/fnv/hash_64a.c
@@ -91,6 +94,8 @@ set(THIRD_PARTY_FILES
 
 set(THIRD_PARTY_INCLUDES
     ${SRC_DIR}/third_party/BME280_driver
+    ${SRC_DIR}/third_party/lsm6dsv
+    ${SRC_DIR}/third_party/lis2mdl
     ${SRC_DIR}/third_party/fnv
     ${SRC_DIR}/third_party/mbedtls_base64
     ${SRC_DIR}/third_party/cobs-c
