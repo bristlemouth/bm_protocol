@@ -78,7 +78,7 @@ else()
     # Setup testing
     include(CTest)
 
-    # Get v1.10.0 of googletest from github and compile
+    # Get googletest from github and compile
     CPMAddPackage(
       NAME googletest
       GITHUB_REPOSITORY google/googletest
