@@ -60,7 +60,7 @@ size_t frame_decode(uint8_t *l2_frame, size_t l2_len, const uint8_t *wire, size_
   // COBS-decode into a temporary buffer.
   // Firmware cobs-c API returns a cobs_decode_result struct, unlike bm_sbc's
   // minimal COBS which returns a bare size_t.
-  uint8_t decoded[2 + FRAME_CODEC_MAX_L2_SIZE + 4];
+  uint8_t decoded[FRAME_CODEC_MAX_L2_SIZE + FRAME_CODEC_OVERHEAD];
   cobs_decode_result dec = cobs_decode(decoded, sizeof(decoded), wire, wire_len);
   if (dec.status != COBS_DECODE_OK) {
     return 0;
@@ -78,7 +78,7 @@ size_t frame_decode(uint8_t *l2_frame, size_t l2_len, const uint8_t *wire, size_
   if (frame_len == 0 || frame_len > FRAME_CODEC_MAX_L2_SIZE) {
     return 0;
   }
-  if (dec.out_len != 2 + (size_t)frame_len + 4) {
+  if (dec.out_len != (size_t)frame_len + FRAME_CODEC_OVERHEAD) {
     return 0;
   }
 
