@@ -68,6 +68,7 @@ set(LIB_FILES
     ${LIB_DIR}/debug/debug_tca9546a.cpp
     ${LIB_DIR}/drivers/abstract/abstract_i2c.cpp
     ${LIB_DIR}/drivers/abstract/abstract_spi.cpp
+    ${LIB_DIR}/drivers/abstract/abstract_st_sensor.cpp
     ${LIB_DIR}/drivers/bm_dfu_wrapper.cpp
     ${LIB_DIR}/drivers/bm_rtc_wrapper.c
     ${LIB_DIR}/drivers/adin2111/src/adi_hal.c

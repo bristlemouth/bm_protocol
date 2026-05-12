@@ -1,62 +1,26 @@
 #ifndef __LSM6DSV_H__
 #define __LSM6DSV_H__
 
+#include "abstract_st_sensor.h"
 #include "bm_os.h"
-#include "lsm6dsv_reg.h"
 #include "q.h"
 #include "util.h"
 #include <span>
 #include <stddef.h>
 #include <stdint.h>
 
-struct SensorInterfaceBus {
-  virtual void begin(void) = 0;
-  virtual BmErr read(uint8_t *buf, size_t len, void *arg) = 0;
-  virtual BmErr write(const uint8_t *buf, size_t len, void *arg) = 0;
-  virtual void end(void) = 0;
-};
-
-class LSM6DSVSensor {
-
-private:
-  SensorInterfaceBus *m_bus = nullptr;
-
-  void set_driver_ctx(void);
-  static int32_t driver_write(void *handle, uint8_t reg, const uint8_t *buf, uint16_t len);
-  static int32_t driver_read(void *handle, uint8_t reg, uint8_t *buf, uint16_t len);
-  static void driver_delay_ms(uint32_t ms);
-
-protected:
-  stmdev_ctx_t m_ctx;
-
+class LSM6DSV : public AbstractSensorInterface, public SensorInterfaceBus {
 public:
-  LSM6DSVSensor(uint8_t address);
-  LSM6DSVSensor(SensorInterfaceBus *bus, uint8_t address);
-  LSM6DSVSensor(SensorInterfaceBus *bus);
-
-  uint8_t m_address = 0;
-  void *m_arg = nullptr;
-
-  virtual BmErr init(void) { return BmOK; };
-  virtual BmErr set_data(const uint8_t *buf, size_t len) {
-    (void)buf;
-    (void)len;
-    return BmOK;
-  }
-  void set_bus(SensorInterfaceBus *bus);
-};
-
-class LSM6DSV : public LSM6DSVSensor, public SensorInterfaceBus {
-public:
+  using AbstractSensorInterface::AbstractSensorInterface;
   BmErr init(void) override;
   void handle_interrupt(void);
 
   typedef struct {
-    LSM6DSVSensor *sensor = nullptr;
+    AbstractSensorInterface *sensor = nullptr;
     uint8_t reg = 0;
     uint8_t len = 0;
   } LSM6DSVSensorHub;
-  BmErr start_stream(std::span<LSM6DSVSensorHub *> sensor_hub_items, size_t fifo_threshold);
+  BmErr start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold);
   BmErr stream_handle(void);
 
   typedef struct {
@@ -119,7 +83,7 @@ private:
   BmSemaphore m_sensor_hub_mut;
   static constexpr uint8_t MAX_SENSOR_HUB_SENSORS = 4;
   struct {
-    LSM6DSVSensor *sensor = nullptr;
+    AbstractSensorInterface *sensor = nullptr;
     uint32_t nacks = 0;
   } m_sensor_hub[MAX_SENSOR_HUB_SENSORS];
 

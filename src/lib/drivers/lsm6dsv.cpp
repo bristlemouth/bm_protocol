@@ -26,60 +26,6 @@
     status.bit ? BmOK : BmETIMEDOUT;                                                           \
   })
 
-void LSM6DSVSensor::set_driver_ctx(void) {
-  // Set the read and write functions for the driver
-  m_ctx.write_reg = driver_write;
-  m_ctx.read_reg = driver_read;
-  m_ctx.mdelay = driver_delay_ms;
-  m_ctx.handle = this;
-}
-
-LSM6DSVSensor::LSM6DSVSensor(uint8_t address) : m_address(address) { set_driver_ctx(); }
-
-LSM6DSVSensor::LSM6DSVSensor(SensorInterfaceBus *bus, uint8_t address)
-    : m_bus(bus), m_address(address) {
-  set_driver_ctx();
-}
-
-LSM6DSVSensor::LSM6DSVSensor(SensorInterfaceBus *bus) : m_bus(bus) { set_driver_ctx(); }
-
-void LSM6DSVSensor::driver_delay_ms(uint32_t ms) { bm_delay(ms); }
-
-int32_t LSM6DSVSensor::driver_write(void *handle, uint8_t reg, const uint8_t *buf,
-                                    uint16_t len) {
-  LSM6DSVSensor *driver = static_cast<LSM6DSVSensor *>(handle);
-  SensorInterfaceBus *bus = driver->m_bus;
-  if (!bus) {
-    return BmENODEV;
-  }
-
-  BmErr err = BmOK;
-  bus->begin();
-  bm_err_check(err, bus->write(&reg, sizeof(reg), driver->m_arg));
-  bm_err_check(err, bus->write(buf, len, driver->m_arg));
-  bus->end();
-
-  return (int32_t)err;
-}
-
-int32_t LSM6DSVSensor::driver_read(void *handle, uint8_t reg, uint8_t *buf, uint16_t len) {
-  LSM6DSVSensor *driver = static_cast<LSM6DSVSensor *>(handle);
-  SensorInterfaceBus *bus = driver->m_bus;
-  if (!bus) {
-    return BmENODEV;
-  }
-
-  BmErr err = BmOK;
-  bus->begin();
-  bm_err_check(err, bus->write(&reg, sizeof(reg), driver->m_arg));
-  bm_err_check(err, bus->read(buf, len, driver->m_arg));
-  bus->end();
-
-  return (int32_t)err;
-}
-
-void LSM6DSVSensor::set_bus(SensorInterfaceBus *bus) { m_bus = bus; }
-
 BmErr LSM6DSV::init(void) {
   BmErr err = q_create_static(&m_reading_queue, m_readings_buf, sizeof(m_readings_buf));
   if (err != BmOK) {
@@ -137,7 +83,7 @@ void LSM6DSV::handle_interrupt(void) {
   portYIELD_FROM_ISR(task_yield);
 }
 
-BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub *> sensor_hub_items,
+BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items,
                             size_t fifo_threshold) {
   // Start in high performance mode
   lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD));
@@ -154,7 +100,7 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub *> sensor_hub_items,
     // Initialize all sensor hub elements first
     for (auto &item : sensor_hub_items) {
       // Set the argument used to point to the address of the device
-      LSM6DSVSensor *sensor = item->sensor;
+      AbstractSensorInterface *sensor = item.sensor;
       sensor->m_arg = &sensor->m_address;
       sensor->set_bus(this);
       sensor->init();
@@ -163,7 +109,7 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub *> sensor_hub_items,
     // Batch sensor hub registers to read
     lsm6dsv_sh_cfg_read_t sh_cfg_read;
     for (uint8_t i = 0; i < sensor_hub_count; i++) {
-      LSM6DSVSensorHub *item = sensor_hub_items[i];
+      LSM6DSVSensorHub *item = &sensor_hub_items[i];
       sh_cfg_read.slv_add = item->sensor->m_address;
       sh_cfg_read.slv_subadd = item->reg;
       sh_cfg_read.slv_len = item->len;
@@ -341,7 +287,7 @@ BmErr LSM6DSV::stream_handle(void) {
     if (f_data.tag >= LSM6DSV_SENSORHUB_SLAVE0_TAG &&
         f_data.tag <= LSM6DSV_SENSORHUB_SLAVE3_TAG) {
       uint8_t sensor_set_idx = f_data.tag - LSM6DSV_SENSORHUB_SLAVE0_TAG;
-      LSM6DSVSensor *sensor = m_sensor_hub[sensor_set_idx].sensor;
+      AbstractSensorInterface *sensor = m_sensor_hub[sensor_set_idx].sensor;
       if (sensor) {
         sensor->set_data(f_data.data, sizeof(f_data.data));
       }
@@ -390,7 +336,7 @@ BmErr LSM6DSV::write_sensor_hub(const uint8_t *data, size_t len, void *arg) {
   // Always 1 byte write
   (void)len;
 
-  // Handle first "write", ref: driver_write and driver_read for operation in LSM6DSVSensor
+  // Handle first "write", ref: driver_write and driver_read for operation in AbstractSensorInterface
   if (!m_sensor_hub_reg_set) {
     m_sensor_hub_reg = data[0];
     m_sensor_hub_reg_set = true;
