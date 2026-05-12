@@ -60,8 +60,6 @@ public:
   void end() override;
 
 private:
-  // Ref: 9.1 of AN5922, 6 bytes of data in 256 FIFO elements
-  static constexpr uint16_t MAX_UNCOMPRESSED_FIFO_BYTES = 6 * 256;
   // The following is sampled in this driver by default:
   //   - The accelerometer (sampled at 120Hz)
   //   - The gyro (sampled at 120Hz)
@@ -77,6 +75,9 @@ private:
   uint8_t m_readings_buf[QUEUE_BUF_SIZE] = {};
   BmSemaphore m_queue_mut;
   Q m_reading_queue;
+
+  // Count for timestamp, gyro and accelerometer
+  static constexpr uint8_t READING_COUNT = 3;
 
   struct {
     uint64_t resolution_ns = 0; // Resolution per bit in timestamp read

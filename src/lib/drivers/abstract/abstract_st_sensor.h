@@ -39,6 +39,10 @@ public:
   void *m_arg = nullptr;
 
   virtual BmErr init(void) { return BmOK; };
+
+  // Used to set data for the sensor externally from the driver, this is useful
+  // for sensor hub applications (where a sensor is accessed through another
+  // sensor, such as the LSM6DSV)
   virtual BmErr set_data(const uint8_t *buf, size_t len) {
     (void)buf;
     (void)len;

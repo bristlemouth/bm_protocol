@@ -10,7 +10,7 @@
     int32_t err = (f);                                                                         \
     if (err != 0) {                                                                            \
       bm_debug("lsm6dsv err %d:%" PRId32 "\n", __LINE__, err);                                 \
-      return !err ? BmOK : BmEACCES;                                                           \
+      return BmEACCES;                                                                         \
     }                                                                                          \
   })
 #define poll_bit(f, reg, bit)                                                                  \
@@ -35,13 +35,13 @@
             - Performs a software reset of the imu
             - Calculates the precise sampling period in nanoseconds
             - Configures the BDR as the interrupt source
-            - Creates mutices and a semaphore for protecting resources
+            - Creates mutexes and a semaphore for protecting resources
           The LSM6DSV is configured to use the FIFO functionality, allowing
           readings to buffer on the imu before offloading them to be handled
           by the processor.
 
  @return BmOK on success
-         BmENOMEM if there is insufficient memory to create mutices/semaphore
+         BmENOMEM if there is insufficient memory to create mutexes/semaphore
          BmENODEV if the imu is not found
          BmEACCES if bus operations fail when attempting communication to imu
  */
@@ -68,7 +68,7 @@ BmErr LSM6DSV::init(void) {
   int8_t freq_fine;
   lsm6dsv_return_on_err(lsm6dsv_odr_cal_reg_get(&m_ctx, &freq_fine));
   uint64_t denominator = 46080000 + 59904 * static_cast<uint64_t>(freq_fine);
-  uint64_t numerator = 1e9 * 1000;
+  uint64_t numerator = 1000000000ULL * 1000;
   m_timestamp.resolution_ns = numerator / denominator;
 
   // Configure interrupt sources for INT1
@@ -90,10 +90,10 @@ BmErr LSM6DSV::init(void) {
 }
 
 /*!
- @brief Handle iterrupt from LSM6DSV
+ @brief Handle interrupt from LSM6DSV
 
  @details This function is safe to call from interrupt context. Informs the
-          stream_handle function a data is available.
+          stream_handle function that data is available.
 
  @see stream_handle
  */
@@ -110,12 +110,12 @@ void LSM6DSV::handle_interrupt(void) {
  @details The following configuration is done for the LSM6DSV:
             - Initializes and adds sensor hub sensors to perform readings
             - Configures the resolution of the gyro and the accelerometer
-            - Configure low pass filer settings for gyro and accelerometer
+            - Configure low pass filter settings for gyro and accelerometer
             - Configure timestamp collection per gyro and accelerometer reading
             - Configure temperature readings to be obtained from the FIFO
             - Sets power modes for gyro and accelerometer
 
- @param sensor_hub_items array of sensors to be initialed and read from the
+ @param sensor_hub_items array of sensors to be initialized and read from the
                          sensor hub functionality
  @param fifo_threshold number of items in the FIFO before an interrupt is
                        triggered
@@ -124,7 +124,8 @@ void LSM6DSV::handle_interrupt(void) {
                         by INT2 line
 
  @return BmOK on success
-         BmEINVAL if fifo_threshold is larger than MAX_SENSOR_HUB_SENSORS
+         BmEINVAL if number of sensor_hub_items is larger than 
+         MAX_SENSOR_HUB_SENSORS or fifo_threshold is larger than what is allowed
          BmEACCES if bus operations fail when attempting communication to imu
  */
 BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold,
@@ -136,6 +137,11 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   // Configure sensor hub
   size_t sensor_hub_count = sensor_hub_items.size();
   if (sensor_hub_count > MAX_SENSOR_HUB_SENSORS) {
+    return BmEINVAL;
+  }
+
+  static constexpr uint16_t fifo_max_elements = 256;
+  if (fifo_threshold > (fifo_max_elements / (READING_COUNT + sensor_hub_count))) {
     return BmEINVAL;
   }
 
@@ -289,17 +295,15 @@ BmErr LSM6DSV::stream_handle(void) {
 
   num = fifo_status.fifo_level;
   LSM6DSVReading reading = {};
-
-  static const uint8_t samples_per_readings = 3;
   uint8_t samples_set = 0;
 
   while (num--) {
     lsm6dsv_fifo_out_raw_t f_data;
 
     lsm6dsv_return_on_err(lsm6dsv_fifo_out_raw_get(&m_ctx, &f_data));
-    int16_t datax = le_uint8_to_uint16(&f_data.data[0]);
-    int16_t datay = le_uint8_to_uint16(&f_data.data[2]);
-    int16_t dataz = le_uint8_to_uint16(&f_data.data[4]);
+    int16_t datax = static_cast<int16_t>(le_uint8_to_uint16(&f_data.data[0]));
+    int16_t datay = static_cast<int16_t>(le_uint8_to_uint16(&f_data.data[2]));
+    int16_t dataz = static_cast<int16_t>(le_uint8_to_uint16(&f_data.data[4]));
     uint32_t ts;
     uint8_t sensor_nack_idx;
     ConverterCb cb;
@@ -347,7 +351,7 @@ BmErr LSM6DSV::stream_handle(void) {
     }
 
     // If all information is collected, queue the data to be handled
-    if (samples_set >= samples_per_readings) {
+    if (samples_set >= READING_COUNT) {
       // Use latest temperature value
       reading.temp = m_temperature_dc;
 
@@ -377,7 +381,7 @@ BmErr LSM6DSV::stream_handle(void) {
 
  @details Grabs a single reading in the reading queue.
 
- @param reading reading
+ @param reading oldest reading in the queue if successful
 
  @return BmOK on success
          BmEINVAL if invalid parameters
