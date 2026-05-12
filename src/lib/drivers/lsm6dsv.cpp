@@ -5,7 +5,14 @@
 #include "semphr.h"
 #include "uptime.h"
 
-#define lsm6dsv_err_to_bm_err(f) (!f ? BmOK : BmEACCES)
+#define lsm6dsv_return_on_err(f)                                                               \
+  ({                                                                                           \
+    int32_t err = (f);                                                                         \
+    if (err != 0) {                                                                            \
+      bm_debug("lsm6dsv err %d:%" PRId32 "\n", __LINE__, err);                                 \
+      return !err ? BmOK : BmEACCES;                                                           \
+    }                                                                                          \
+  })
 #define poll_bit(f, reg, bit)                                                                  \
   ({                                                                                           \
     reg status = {};                                                                           \
@@ -81,28 +88,26 @@ BmErr LSM6DSV::init(void) {
 
   // Validate the LSM6DSV device ID
   uint8_t whoami = 0;
-  lsm6dsv_device_id_get(&m_ctx, &whoami);
-  if (whoami != LSM6DSV_ID)
+  lsm6dsv_return_on_err(lsm6dsv_device_id_get(&m_ctx, &whoami));
+  if (whoami != LSM6DSV_ID) {
     return BmENODEV;
-
-  // Reset the LSM6DSV
-  err = lsm6dsv_err_to_bm_err(lsm6dsv_sw_por(&m_ctx));
-  if (err != BmOK) {
-    return err;
   }
 
+  // Reset the LSM6DSV
+  lsm6dsv_return_on_err(lsm6dsv_sw_por(&m_ctx));
+
   // Ensures 16 bit registers can't be updated until high and low registers are read
-  lsm6dsv_block_data_update_set(&m_ctx, PROPERTY_ENABLE);
+  lsm6dsv_return_on_err(lsm6dsv_block_data_update_set(&m_ctx, PROPERTY_ENABLE));
 
   // Set the accelerometer resolution, the lower (ex: 2g) the more sensitive
-  lsm6dsv_xl_full_scale_set(&m_ctx, m_scale.accelerometer);
+  lsm6dsv_return_on_err(lsm6dsv_xl_full_scale_set(&m_ctx, m_scale.accelerometer));
 
   // Set the gyro resolution
-  lsm6dsv_gy_full_scale_set(&m_ctx, m_scale.gyro);
+  lsm6dsv_return_on_err(lsm6dsv_gy_full_scale_set(&m_ctx, m_scale.gyro));
 
   // Calculate sampling timestamp resolution t = 1 / (46080 * (1 + 0.0013 * FREQ_FINE), ref: 6.4 AN5922
   int8_t freq_fine;
-  lsm6dsv_odr_cal_reg_get(&m_ctx, &freq_fine);
+  lsm6dsv_return_on_err(lsm6dsv_odr_cal_reg_get(&m_ctx, &freq_fine));
   uint64_t denominator = 46080000 + 59904 * static_cast<uint64_t>(freq_fine);
   uint64_t numerator = 1e9 * 1000;
   m_timestamp.resolution_ns = numerator / denominator;
@@ -110,7 +115,7 @@ BmErr LSM6DSV::init(void) {
   // Configure interrupt sources for INT1
   lsm6dsv_pin_int_route_t int_route = {};
   int_route.cnt_bdr = PROPERTY_ENABLE;
-  lsm6dsv_pin_int1_route_set(&m_ctx, &int_route);
+  lsm6dsv_return_on_err(lsm6dsv_pin_int1_route_set(&m_ctx, &int_route));
 
   m_sensor_hub_mut = bm_mutex_create();
   m_queue_mut = bm_mutex_create();
@@ -135,8 +140,8 @@ void LSM6DSV::handle_interrupt(void) {
 BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub *> sensor_hub_items,
                             size_t fifo_threshold) {
   // Start in high performance mode
-  lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD);
-  lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD);
+  lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD));
+  lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD));
 
   // Configure sensor hub
   size_t sensor_hub_count = sensor_hub_items.size();
@@ -162,61 +167,61 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub *> sensor_hub_items,
       sh_cfg_read.slv_add = item->sensor->m_address;
       sh_cfg_read.slv_subadd = item->reg;
       sh_cfg_read.slv_len = item->len;
-      lsm6dsv_sh_slv_cfg_read(&m_ctx, i, &sh_cfg_read);
-      lsm6dsv_fifo_sh_batch_slave_set(&m_ctx, i, PROPERTY_ENABLE);
+      lsm6dsv_return_on_err(lsm6dsv_sh_slv_cfg_read(&m_ctx, i, &sh_cfg_read));
+      lsm6dsv_return_on_err(lsm6dsv_fifo_sh_batch_slave_set(&m_ctx, i, PROPERTY_ENABLE));
       m_sensor_hub[i].sensor = item->sensor;
     }
 
     // Configure sensor hub batch data rate if triggered by accelerometer or gyro
-    lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_120Hz);
+    lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_120Hz));
 
     // This must be set to enable reading from device 0
-    lsm6dsv_sh_write_mode_set(&m_ctx, LSM6DSV_ONLY_FIRST_CYCLE);
+    lsm6dsv_return_on_err(lsm6dsv_sh_write_mode_set(&m_ctx, LSM6DSV_ONLY_FIRST_CYCLE));
 
-    lsm6dsv_sh_slave_connected_set(
-        &m_ctx, static_cast<lsm6dsv_sh_slave_connected_t>(sensor_hub_count - 1));
-    lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE);
+    lsm6dsv_return_on_err(lsm6dsv_sh_slave_connected_set(
+        &m_ctx, static_cast<lsm6dsv_sh_slave_connected_t>(sensor_hub_count - 1)));
+    lsm6dsv_return_on_err(lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE));
   }
 
   // Set FIFO threshold
-  lsm6dsv_fifo_batch_counter_threshold_set(&m_ctx, fifo_threshold);
-  lsm6dsv_fifo_mode_set(&m_ctx, LSM6DSV_STREAM_MODE);
+  lsm6dsv_return_on_err(lsm6dsv_fifo_batch_counter_threshold_set(&m_ctx, fifo_threshold));
+  lsm6dsv_return_on_err(lsm6dsv_fifo_mode_set(&m_ctx, LSM6DSV_STREAM_MODE));
 
   // Set FIFO batch output data rate for accelerometer and gyro
-  lsm6dsv_fifo_xl_batch_set(&m_ctx, LSM6DSV_XL_BATCHED_AT_120Hz);
-  lsm6dsv_fifo_gy_batch_set(&m_ctx, LSM6DSV_GY_BATCHED_AT_120Hz);
+  lsm6dsv_return_on_err(lsm6dsv_fifo_xl_batch_set(&m_ctx, LSM6DSV_XL_BATCHED_AT_120Hz));
+  lsm6dsv_return_on_err(lsm6dsv_fifo_gy_batch_set(&m_ctx, LSM6DSV_GY_BATCHED_AT_120Hz));
 
   // Set filter settings, lp1 is only available when gyro is not in low power mode
   lsm6dsv_filt_settling_mask_t filt_settling_mask = {};
   filt_settling_mask.drdy = PROPERTY_ENABLE;
   filt_settling_mask.irq_xl = PROPERTY_ENABLE;
   filt_settling_mask.irq_g = PROPERTY_ENABLE;
-  lsm6dsv_filt_settling_mask_set(&m_ctx, filt_settling_mask);
-  lsm6dsv_filt_gy_lp1_set(&m_ctx, PROPERTY_ENABLE);
-  lsm6dsv_filt_gy_lp1_bandwidth_set(&m_ctx, LSM6DSV_GY_MEDIUM);
-  lsm6dsv_filt_xl_lp2_set(&m_ctx, PROPERTY_ENABLE);
-  lsm6dsv_filt_xl_lp2_bandwidth_set(&m_ctx, LSM6DSV_XL_MEDIUM);
+  lsm6dsv_return_on_err(lsm6dsv_filt_settling_mask_set(&m_ctx, filt_settling_mask));
+  lsm6dsv_return_on_err(lsm6dsv_filt_gy_lp1_set(&m_ctx, PROPERTY_ENABLE));
+  lsm6dsv_return_on_err(lsm6dsv_filt_gy_lp1_bandwidth_set(&m_ctx, LSM6DSV_GY_MEDIUM));
+  lsm6dsv_return_on_err(lsm6dsv_filt_xl_lp2_set(&m_ctx, PROPERTY_ENABLE));
+  lsm6dsv_return_on_err(lsm6dsv_filt_xl_lp2_bandwidth_set(&m_ctx, LSM6DSV_XL_MEDIUM));
 
   // Enable timestamp collection
-  lsm6dsv_fifo_timestamp_batch_set(&m_ctx, LSM6DSV_TMSTMP_DEC_1);
-  lsm6dsv_timestamp_set(&m_ctx, PROPERTY_ENABLE);
+  lsm6dsv_return_on_err(lsm6dsv_fifo_timestamp_batch_set(&m_ctx, LSM6DSV_TMSTMP_DEC_1));
+  lsm6dsv_return_on_err(lsm6dsv_timestamp_set(&m_ctx, PROPERTY_ENABLE));
 
-  // Enable temperature collection
-  lsm6dsv_fifo_temp_batch_set(&m_ctx, LSM6DSV_TEMP_BATCHED_AT_1Hz875);
+  // Enable temperature collection and obtain initial temperature
+  lsm6dsv_return_on_err(lsm6dsv_fifo_temp_batch_set(&m_ctx, LSM6DSV_TEMP_BATCHED_AT_1Hz875));
   int16_t reg;
-  lsm6dsv_temperature_raw_get(&m_ctx, &reg);
+  lsm6dsv_return_on_err(lsm6dsv_temperature_raw_get(&m_ctx, &reg));
   m_temperature_dc = static_cast<int16_t>(lsm6dsv_from_lsb_to_celsius(reg) * 10.0);
 
   // Set Power Modes
-  lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD);
-  lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD);
+  lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD));
+  lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD));
 
   // Set data rate of accelerometer and gyro
-  lsm6dsv_xl_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz);
-  lsm6dsv_gy_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz);
+  lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz));
+  lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz));
 
   // Configure sensor hub to trigger from interrupt INT2
-  lsm6dsv_sh_syncro_mode_set(&m_ctx, LSM6DSV_SH_TRIG_INT2);
+  lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, LSM6DSV_SH_TRIG_INT2));
 
   return BmOK;
 }
@@ -259,7 +264,7 @@ BmErr LSM6DSV::stream_handle(void) {
 
   bm_semaphore_take(m_streaming_sem, m_streaming_sample_time_ms);
 
-  lsm6dsv_fifo_status_get(&m_ctx, &fifo_status);
+  lsm6dsv_return_on_err(lsm6dsv_fifo_status_get(&m_ctx, &fifo_status));
 
   num = fifo_status.fifo_level;
   LSM6DSVReading reading = {};
@@ -270,7 +275,7 @@ BmErr LSM6DSV::stream_handle(void) {
   while (num--) {
     lsm6dsv_fifo_out_raw_t f_data;
 
-    lsm6dsv_fifo_out_raw_get(&m_ctx, &f_data);
+    lsm6dsv_return_on_err(lsm6dsv_fifo_out_raw_get(&m_ctx, &f_data));
     int16_t datax = le_uint8_to_uint16(&f_data.data[0]);
     int16_t datay = le_uint8_to_uint16(&f_data.data[2]);
     int16_t dataz = le_uint8_to_uint16(&f_data.data[4]);
@@ -393,24 +398,19 @@ BmErr LSM6DSV::write_sensor_hub(const uint8_t *data, size_t len, void *arg) {
   }
 
   // Set the tx data rate high to reduce latency in this function
-  lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_120Hz);
+  lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_120Hz));
 
   lsm6dsv_sh_cfg_write_t sh_cfg_write;
   sh_cfg_write.slv0_add = *static_cast<uint8_t *>(arg);
   sh_cfg_write.slv0_subadd = m_sensor_hub_reg;
   sh_cfg_write.slv0_data = *data;
-  int32_t ret = lsm6dsv_sh_cfg_write(&m_ctx, &sh_cfg_write);
-  if (ret) {
-    return static_cast<BmErr>(ret);
-  }
+  lsm6dsv_return_on_err(lsm6dsv_sh_cfg_write(&m_ctx, &sh_cfg_write));
 
   // Enable I2C master mode
-  lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE);
+  lsm6dsv_return_on_err(lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE));
 
   // Wait until write is performed
-  ret = poll_bit(lsm6dsv_sh_status_get, lsm6dsv_status_master_t, wr_once_done);
-
-  return static_cast<BmErr>(ret);
+  return poll_bit(lsm6dsv_sh_status_get, lsm6dsv_status_master_t, wr_once_done);
 }
 
 BmErr LSM6DSV::read_sensor_hub(uint8_t *data, size_t len, void *arg) {
@@ -421,16 +421,13 @@ BmErr LSM6DSV::read_sensor_hub(uint8_t *data, size_t len, void *arg) {
   sh_cfg_read.slv_add = *static_cast<uint8_t *>(arg);
   sh_cfg_read.slv_subadd = m_sensor_hub_reg;
   sh_cfg_read.slv_len = len;
-  ret = lsm6dsv_sh_slv_cfg_read(&m_ctx, 0, &sh_cfg_read);
-  if (ret) {
-    return static_cast<BmErr>(ret);
-  }
+  lsm6dsv_return_on_err(lsm6dsv_sh_slv_cfg_read(&m_ctx, 0, &sh_cfg_read));
 
   // Enable I2C master mode
-  lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE);
+  lsm6dsv_return_on_err(lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE));
 
   // Wait accelerometer operation flag set
-  lsm6dsv_acceleration_raw_get(&m_ctx, raw_xl);
+  lsm6dsv_return_on_err(lsm6dsv_acceleration_raw_get(&m_ctx, raw_xl));
   ret = poll_bit(lsm6dsv_flag_data_ready_get, lsm6dsv_data_ready_t, drdy_xl);
   if (ret) {
     return static_cast<BmErr>(ret);
@@ -443,17 +440,17 @@ BmErr LSM6DSV::read_sensor_hub(uint8_t *data, size_t len, void *arg) {
   }
 
   // Read SensorHub registers
-  lsm6dsv_sh_read_data_raw_get(&m_ctx, data, len);
+  lsm6dsv_return_on_err(lsm6dsv_sh_read_data_raw_get(&m_ctx, data, len));
 
   return BmOK;
 }
 
 void LSM6DSV::end_sensor_hub(void) {
-  // Disable I2C master
-  lsm6dsv_sh_master_set(&m_ctx, PROPERTY_DISABLE);
-
   // Reset sensor hub address
   m_sensor_hub_reg_set = false;
+
+  // Disable I2C master
+  lsm6dsv_sh_master_set(&m_ctx, PROPERTY_DISABLE);
 
   bm_semaphore_give(m_sensor_hub_mut);
 }
