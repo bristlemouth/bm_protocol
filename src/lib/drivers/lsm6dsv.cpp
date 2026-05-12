@@ -218,8 +218,8 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   m_temperature_dc = static_cast<int16_t>(lsm6dsv_from_lsb_to_celsius(reg) * 10.0);
 
   // Set Power Modes
-  lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD));
-  lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD));
+  lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, m_power_mode.accelerometer));
+  lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, m_power_mode.gyro));
 
   // Configure sensor hub to trigger from interrupt INT2
   lsm6dsv_sh_syncro_mode_t trigger = LSM6DSV_SH_TRIG_INT2;

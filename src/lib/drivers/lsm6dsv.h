@@ -18,6 +18,13 @@ public:
     lsm6dsv_gy_full_scale_t gyro = LSM6DSV_125dps;
   } m_scale;
 
+  // Power mode for the accelerometer and gyro, can be adjusted prior to
+  // calling start_stream
+  struct {
+    lsm6dsv_xl_mode_t accelerometer = LSM6DSV_XL_HIGH_PERFORMANCE_MD;
+    lsm6dsv_gy_mode_t gyro = LSM6DSV_GY_HIGH_PERFORMANCE_MD;
+  } m_power_mode;
+
   using AbstractSensorInterface::AbstractSensorInterface;
   BmErr init(void) override;
   void handle_interrupt(void);
@@ -44,7 +51,7 @@ public:
   } LSM6DSVGyro;
 
   typedef struct __attribute__((__packed__)) {
-    uint64_t ns;
+    uint64_t ns; // reading timestamp in nanoseconds since boot of the LSM6DSV
     LSM6DSVAccelerometer acc;
     LSM6DSVGyro gyro;
     int16_t temp; // temperature in decidegree celsius
