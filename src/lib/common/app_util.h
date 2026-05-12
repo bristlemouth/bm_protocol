@@ -30,6 +30,14 @@ char *duplicateStr(const char *inStr);
 bool isASCIIString(const char *str);
 double degToRad(double deg);
 
+static inline uint16_t le_uint8_to_uint16(const uint8_t *buf) {
+  return ((uint16_t)buf[1] << 8 | (uint16_t)buf[0]);
+}
+static inline uint32_t le_uint8_to_uint32(const uint8_t *buf) {
+  return ((uint32_t)buf[3] << 24 | (uint32_t)buf[2] << 16 | (uint32_t)buf[1] << 8 |
+          (uint32_t)buf[0]);
+}
+
 #define timeRemainingTicks(startTicks, timeoutTicks)                                           \
   timeRemainingGeneric(startTicks, xTaskGetTickCount(), timeoutTicks)
 #define timeRemainingTicksFromISR(startTicks, timeoutTicks)                                    \
