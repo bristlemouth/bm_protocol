@@ -11,6 +11,13 @@
 
 class LSM6DSV : public AbstractSensorInterface, public SensorInterfaceBus {
 public:
+  // Resolution for accelerometer and gyro, can be adjusted prior to calling
+  // start_stream
+  struct {
+    lsm6dsv_xl_full_scale_t accelerometer = LSM6DSV_2g;
+    lsm6dsv_gy_full_scale_t gyro = LSM6DSV_125dps;
+  } m_scale;
+
   using AbstractSensorInterface::AbstractSensorInterface;
   BmErr init(void) override;
   void handle_interrupt(void);
@@ -20,7 +27,8 @@ public:
     uint8_t reg = 0;
     uint8_t len = 0;
   } LSM6DSVSensorHub;
-  BmErr start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold);
+  BmErr start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold,
+                     bool sensor_hub_poll = false);
   BmErr stream_handle(void);
 
   typedef struct {
@@ -90,12 +98,7 @@ private:
   uint16_t m_streaming_sample_time_ms = 1000;
   BmSemaphore m_streaming_sem;
 
-  // Scale can be adjusted and conversions will work as expected
-  struct {
-    lsm6dsv_xl_full_scale_t accelerometer = LSM6DSV_2g;
-    lsm6dsv_gy_full_scale_t gyro = LSM6DSV_125dps;
-  } m_scale;
-
+  // Function to access sensor hub sensors
   void begin_sensor_hub(void);
   BmErr write_sensor_hub(const uint8_t *data, size_t len, void *arg);
   BmErr read_sensor_hub(uint8_t *data, size_t len, void *arg);

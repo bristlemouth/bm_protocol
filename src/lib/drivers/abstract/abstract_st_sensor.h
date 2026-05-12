@@ -1,6 +1,7 @@
 #ifndef __ABSTRACT_SENSOR_INTERFACE_H__
 #define __ABSTRACT_SENSOR_INTERFACE_H__
 
+#include "lis2mdl_reg.h"
 #include "lsm6dsv_reg.h"
 #include "util.h"
 #include <stdint.h>
@@ -23,6 +24,7 @@ private:
   static void driver_delay_ms(uint32_t ms);
 
 protected:
+  // ST sensors share the same context
   stmdev_ctx_t m_ctx;
 
 public:

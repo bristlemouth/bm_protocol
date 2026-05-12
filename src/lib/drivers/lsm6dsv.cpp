@@ -26,6 +26,25 @@
     status.bit ? BmOK : BmETIMEDOUT;                                                           \
   })
 
+/*!
+ @brief Initialize LSM6DSV IMU
+
+ @details This function performs the following:
+            - Creates a queue to hold LSM6DSVReading data
+            - Ensures the imu exists and can be recognized on the bus
+            - Performs a software reset of the imu
+            - Calculates the precise sampling period in nanoseconds
+            - Configures the BDR as the interrupt source
+            - Creates mutices and a semaphore for protecting resources
+          The LSM6DSV is configured to use the FIFO functionality, allowing
+          readings to buffer on the imu before offloading them to be handled
+          by the processor.
+
+ @return BmOK on success
+         BmENOMEM if there is insufficient memory to create mutices/semaphore
+         BmENODEV if the imu is not found
+         BmEACCES if bus operations fail when attempting communication to imu
+ */
 BmErr LSM6DSV::init(void) {
   BmErr err = q_create_static(&m_reading_queue, m_readings_buf, sizeof(m_readings_buf));
   if (err != BmOK) {
@@ -44,12 +63,6 @@ BmErr LSM6DSV::init(void) {
 
   // Ensures 16 bit registers can't be updated until high and low registers are read
   lsm6dsv_return_on_err(lsm6dsv_block_data_update_set(&m_ctx, PROPERTY_ENABLE));
-
-  // Set the accelerometer resolution, the lower (ex: 2g) the more sensitive
-  lsm6dsv_return_on_err(lsm6dsv_xl_full_scale_set(&m_ctx, m_scale.accelerometer));
-
-  // Set the gyro resolution
-  lsm6dsv_return_on_err(lsm6dsv_gy_full_scale_set(&m_ctx, m_scale.gyro));
 
   // Calculate sampling timestamp resolution t = 1 / (46080 * (1 + 0.0013 * FREQ_FINE), ref: 6.4 AN5922
   int8_t freq_fine;
@@ -76,6 +89,14 @@ BmErr LSM6DSV::init(void) {
   return BmOK;
 }
 
+/*!
+ @brief Handle iterrupt from LSM6DSV
+
+ @details This function is safe to call from interrupt context. Informs the
+          stream_handle function a data is available.
+
+ @see stream_handle
+ */
 void LSM6DSV::handle_interrupt(void) {
   BaseType_t task_yield;
 
@@ -83,8 +104,31 @@ void LSM6DSV::handle_interrupt(void) {
   portYIELD_FROM_ISR(task_yield);
 }
 
-BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items,
-                            size_t fifo_threshold) {
+/*!
+ @brief Configure the LSM6DSV and begin data collection
+
+ @details The following configuration is done for the LSM6DSV:
+            - Initializes and adds sensor hub sensors to perform readings
+            - Configures the resolution of the gyro and the accelerometer
+            - Configure low pass filer settings for gyro and accelerometer
+            - Configure timestamp collection per gyro and accelerometer reading
+            - Configure temperature readings to be obtained from the FIFO
+            - Sets power modes for gyro and accelerometer
+
+ @param sensor_hub_items array of sensors to be initialed and read from the
+                         sensor hub functionality
+ @param fifo_threshold number of items in the FIFO before an interrupt is
+                       triggered
+ @param sensor_hub_poll should the sensor hub be polled at the data rate of
+                        the accelerometer and gyro, if false, it is triggered
+                        by INT2 line
+
+ @return BmOK on success
+         BmEINVAL if fifo_threshold is larger than MAX_SENSOR_HUB_SENSORS
+         BmEACCES if bus operations fail when attempting communication to imu
+ */
+BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold,
+                            bool sensor_hub_poll) {
   // Start in high performance mode
   lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD));
   lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD));
@@ -104,6 +148,9 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items,
       sensor->m_arg = &sensor->m_address;
       sensor->set_bus(this);
       sensor->init();
+      // Once data collection begins this device should become unreachable or
+      // else data collection will need to be restarted
+      sensor->set_bus(nullptr);
     }
 
     // Batch sensor hub registers to read
@@ -128,6 +175,12 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items,
         &m_ctx, static_cast<lsm6dsv_sh_slave_connected_t>(sensor_hub_count - 1)));
     lsm6dsv_return_on_err(lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE));
   }
+
+  // Set the accelerometer resolution, the lower (ex: 2g) the more sensitive
+  lsm6dsv_return_on_err(lsm6dsv_xl_full_scale_set(&m_ctx, m_scale.accelerometer));
+
+  // Set the gyro resolution
+  lsm6dsv_return_on_err(lsm6dsv_gy_full_scale_set(&m_ctx, m_scale.gyro));
 
   // Set FIFO threshold
   lsm6dsv_return_on_err(lsm6dsv_fifo_batch_counter_threshold_set(&m_ctx, fifo_threshold));
@@ -162,12 +215,16 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items,
   lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD));
   lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD));
 
+  // Configure sensor hub to trigger from interrupt INT2
+  lsm6dsv_sh_syncro_mode_t trigger = LSM6DSV_SH_TRIG_INT2;
+  if (sensor_hub_poll) {
+    trigger = LSM6DSV_SH_TRG_XL_GY_DRDY;
+  }
+  lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, trigger));
+
   // Set data rate of accelerometer and gyro
   lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz));
   lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz));
-
-  // Configure sensor hub to trigger from interrupt INT2
-  lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, LSM6DSV_SH_TRIG_INT2));
 
   return BmOK;
 }
@@ -204,6 +261,24 @@ LSM6DSV::ConverterCb LSM6DSV::gyro_convert(lsm6dsv_gy_full_scale_t scale) {
   }
 }
 
+/*!
+ @brief Handle collecting data from the FIFO
+
+ @details Waits for an interrupt to occur indicating data is ready, once
+          available the FIFO will be drained and the readings will be queued.
+          Each reading will have:
+            - A gyroscope reading
+            - An accelerometer reading
+            - A timestamp reading in nanoseconds since the LSM6DSV has booted
+            - The last temperature reading
+          This should be run in a task dedicated to this driver as it blocks
+          with a semaphore. Readings can be taken asyn with get_reading
+
+ @see get_reading
+
+ @return BmOK on success
+         BmEACCES if bus operations fail when attempting communication to imu
+ */
 BmErr LSM6DSV::stream_handle(void) {
   uint16_t num = 0;
   lsm6dsv_fifo_status_t fifo_status;
@@ -297,6 +372,19 @@ BmErr LSM6DSV::stream_handle(void) {
   return BmOK;
 }
 
+/*!
+ @brief Obtain a reading collected in stream_handle
+
+ @details Grabs a single reading in the reading queue.
+
+ @param reading reading
+
+ @return BmOK on success
+         BmEINVAL if invalid parameters
+         BmENODATA if there are no elements in the queue to dequeue
+         BmENOMEM if size of data is smaller than the size of the element being
+                  dequeued
+ */
 BmErr LSM6DSV::get_reading(LSM6DSVReading *reading) {
   if (!reading) {
     return BmEINVAL;

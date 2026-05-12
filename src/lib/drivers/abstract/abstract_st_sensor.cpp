@@ -59,4 +59,12 @@ int32_t AbstractSensorInterface::driver_read(void *handle, uint8_t reg, uint8_t 
   return (int32_t)err;
 }
 
+/*!
+ @brief Set the SensorInterfaceBus for the ST sensor
+
+ @details The sensor interface bus can be set after the constructor. If the bus
+          is NULL, the device will be inaccessible.
+
+ @param bus bus to assign to the sensor
+ */
 void AbstractSensorInterface::set_bus(SensorInterfaceBus *bus) { m_bus = bus; }
