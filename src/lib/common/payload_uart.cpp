@@ -179,14 +179,9 @@ static void processLine(void *serialHandle, uint8_t *line, size_t len) {
   memcpy(queued_line.buffer, line, len);
   queued_line.len = len;
 
-  // Try to enqueue the line without blocking (we're in an ISR context)
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  if (xQueueSendFromISR(_line_queue, &queued_line, &xHigherPriorityTaskWoken) != pdTRUE) {
-    // Queue is full - increment dropped line counter
-    // Use assignment to avoid C++20 deprecated volatile increment
+  if (xQueueSend(_line_queue, &queued_line, 0) != pdTRUE) {
     _dropped_lines = _dropped_lines + 1;
   }
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 char getTerminationCharacter() { return terminationCharacter; }
