@@ -384,6 +384,15 @@ BmErr LSM6DSV::stream_handle(void) {
   return BmOK;
 }
 
+/*!
+ @brief Determine if data is ready to be read from FIFO
+
+ @param timeout_ms
+
+ @return BmOK if data is available in FIFO to read
+         BmETIMEDOUT if data is not ready
+         BmENODEV if LSM6DSV was not initialized
+ */
 BmErr LSM6DSV::reading_ready(uint32_t timeout_ms) {
   if (!m_reading_sem) {
     return BmENODEV;
@@ -404,6 +413,7 @@ BmErr LSM6DSV::reading_ready(uint32_t timeout_ms) {
          BmENODATA if there are no elements in the queue to dequeue
          BmENOMEM if size of data is smaller than the size of the element being
                   dequeued
+         BmENODEV if LSM6DSV was not initialized
  */
 BmErr LSM6DSV::get_reading(LSM6DSVReading *reading) {
   if (!reading) {
