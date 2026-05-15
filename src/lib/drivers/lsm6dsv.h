@@ -58,6 +58,7 @@ public:
   } LSM6DSVReading;
   static_assert(sizeof(LSM6DSVReading) == 34);
 
+  BmErr reading_ready(uint32_t timeout_ms);
   BmErr get_reading(LSM6DSVReading *reading);
 
   // Override inherited SensorInterfaceBus functions to support passthrough to sensor hub objects
@@ -103,6 +104,7 @@ private:
 
   uint16_t m_streaming_sample_time_ms = 1000;
   BmSemaphore m_streaming_sem;
+  BmSemaphore m_reading_sem;
 
   // Function to access sensor hub sensors
   void begin_sensor_hub(void);

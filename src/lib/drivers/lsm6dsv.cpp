@@ -79,10 +79,12 @@ BmErr LSM6DSV::init(void) {
   m_sensor_hub_mut = bm_mutex_create();
   m_queue_mut = bm_mutex_create();
   m_streaming_sem = bm_semaphore_create();
+  m_reading_sem = bm_semaphore_create();
   if (!m_sensor_hub_mut || !m_queue_mut || !m_streaming_sem) {
     bm_free(m_sensor_hub_mut);
     bm_free(m_queue_mut);
     bm_free(m_streaming_sem);
+    bm_free(m_reading_sem);
     return BmENOMEM;
   }
 
@@ -289,7 +291,11 @@ BmErr LSM6DSV::stream_handle(void) {
   uint16_t num = 0;
   lsm6dsv_fifo_status_t fifo_status;
 
-  bm_semaphore_take(m_streaming_sem, m_streaming_sample_time_ms);
+  if (!m_streaming_sem) {
+    return BmENODEV;
+  }
+
+  bm_semaphore_take(m_streaming_sem, BM_MAX_DELAY_UINT32);
 
   lsm6dsv_return_on_err(lsm6dsv_fifo_status_get(&m_ctx, &fifo_status));
 
@@ -373,7 +379,17 @@ BmErr LSM6DSV::stream_handle(void) {
     }
   }
 
+  bm_semaphore_give(m_reading_sem);
+
   return BmOK;
+}
+
+BmErr LSM6DSV::reading_ready(uint32_t timeout_ms) {
+  if (!m_reading_sem) {
+    return BmENODEV;
+  }
+
+  return bm_semaphore_take(m_reading_sem, timeout_ms);
 }
 
 /*!
@@ -392,6 +408,10 @@ BmErr LSM6DSV::stream_handle(void) {
 BmErr LSM6DSV::get_reading(LSM6DSVReading *reading) {
   if (!reading) {
     return BmEINVAL;
+  }
+
+  if (!m_queue_mut) {
+    return BmENODEV;
   }
 
   bm_semaphore_take(m_queue_mut, BM_MAX_DELAY_UINT32);
