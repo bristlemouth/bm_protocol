@@ -62,8 +62,8 @@ public:
 
   // Override inherited SensorInterfaceBus functions to support passthrough to sensor hub objects
   void begin() override;
-  BmErr read(uint8_t *buf, size_t len, void *arg) override;
-  BmErr write(const uint8_t *buf, size_t len, void *arg) override;
+  BmErr read(uint8_t reg, uint8_t *buf, size_t len, void *arg) override;
+  BmErr write(uint8_t reg, const uint8_t *buf, size_t len, void *arg) override;
   void end() override;
 
 private:
@@ -94,8 +94,6 @@ private:
 
   int16_t m_temperature_dc = 0;
 
-  bool m_sensor_hub_reg_set = false;
-  uint8_t m_sensor_hub_reg = 0;
   BmSemaphore m_sensor_hub_mut;
   static constexpr uint8_t MAX_SENSOR_HUB_SENSORS = 4;
   struct {
@@ -108,8 +106,8 @@ private:
 
   // Function to access sensor hub sensors
   void begin_sensor_hub(void);
-  BmErr write_sensor_hub(const uint8_t *data, size_t len, void *arg);
-  BmErr read_sensor_hub(uint8_t *data, size_t len, void *arg);
+  BmErr write_sensor_hub(uint8_t reg, const uint8_t *data, size_t len, void *arg);
+  BmErr read_sensor_hub(uint8_t reg, uint8_t *data, size_t len, void *arg);
   void end_sensor_hub(void);
 
   typedef float (*ConverterCb)(int16_t);

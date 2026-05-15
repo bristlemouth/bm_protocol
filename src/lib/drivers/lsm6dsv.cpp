@@ -172,7 +172,7 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
     }
 
     // Configure sensor hub batch data rate if triggered by accelerometer or gyro
-    lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_120Hz));
+    lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_60Hz));
 
     // This must be set to enable reading from device 0
     lsm6dsv_return_on_err(lsm6dsv_sh_write_mode_set(&m_ctx, LSM6DSV_ONLY_FIRST_CYCLE));
@@ -403,11 +403,11 @@ BmErr LSM6DSV::get_reading(LSM6DSVReading *reading) {
 
 void LSM6DSV::begin() { begin_sensor_hub(); }
 
-BmErr LSM6DSV::read(uint8_t *buf, size_t len, void *arg) {
-  return read_sensor_hub(buf, len, arg);
+BmErr LSM6DSV::read(uint8_t reg, uint8_t *buf, size_t len, void *arg) {
+  return read_sensor_hub(reg, buf, len, arg);
 }
-BmErr LSM6DSV::write(const uint8_t *buf, size_t len, void *arg) {
-  return write_sensor_hub(buf, len, arg);
+BmErr LSM6DSV::write(uint8_t reg, const uint8_t *buf, size_t len, void *arg) {
+  return write_sensor_hub(reg, buf, len, arg);
 }
 
 void LSM6DSV::end() { end_sensor_hub(); }
@@ -424,23 +424,16 @@ void LSM6DSV::begin_sensor_hub(void) {
   lsm6dsv_sh_slave_connected_set(&m_ctx, LSM6DSV_SLV_0);
 }
 
-BmErr LSM6DSV::write_sensor_hub(const uint8_t *data, size_t len, void *arg) {
+BmErr LSM6DSV::write_sensor_hub(uint8_t reg, const uint8_t *data, size_t len, void *arg) {
   // Always 1 byte write
   (void)len;
-
-  // Handle first "write", ref: driver_write and driver_read for operation in AbstractSensorInterface
-  if (!m_sensor_hub_reg_set) {
-    m_sensor_hub_reg = data[0];
-    m_sensor_hub_reg_set = true;
-    return BmOK;
-  }
 
   // Set the tx data rate high to reduce latency in this function
   lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_120Hz));
 
   lsm6dsv_sh_cfg_write_t sh_cfg_write;
   sh_cfg_write.slv0_add = *static_cast<uint8_t *>(arg);
-  sh_cfg_write.slv0_subadd = m_sensor_hub_reg;
+  sh_cfg_write.slv0_subadd = static_cast<uint8_t>(reg);
   sh_cfg_write.slv0_data = *data;
   lsm6dsv_return_on_err(lsm6dsv_sh_cfg_write(&m_ctx, &sh_cfg_write));
 
@@ -451,13 +444,13 @@ BmErr LSM6DSV::write_sensor_hub(const uint8_t *data, size_t len, void *arg) {
   return poll_bit(lsm6dsv_sh_status_get, lsm6dsv_status_master_t, wr_once_done);
 }
 
-BmErr LSM6DSV::read_sensor_hub(uint8_t *data, size_t len, void *arg) {
+BmErr LSM6DSV::read_sensor_hub(uint8_t reg, uint8_t *data, size_t len, void *arg) {
   int16_t raw_xl[3];
   int32_t ret;
 
   lsm6dsv_sh_cfg_read_t sh_cfg_read;
   sh_cfg_read.slv_add = *static_cast<uint8_t *>(arg);
-  sh_cfg_read.slv_subadd = m_sensor_hub_reg;
+  sh_cfg_read.slv_subadd = static_cast<uint8_t>(reg);
   sh_cfg_read.slv_len = len;
   lsm6dsv_return_on_err(lsm6dsv_sh_slv_cfg_read(&m_ctx, 0, &sh_cfg_read));
 
@@ -484,9 +477,6 @@ BmErr LSM6DSV::read_sensor_hub(uint8_t *data, size_t len, void *arg) {
 }
 
 void LSM6DSV::end_sensor_hub(void) {
-  // Reset sensor hub address
-  m_sensor_hub_reg_set = false;
-
   // Disable I2C master
   lsm6dsv_sh_master_set(&m_ctx, PROPERTY_DISABLE);
 

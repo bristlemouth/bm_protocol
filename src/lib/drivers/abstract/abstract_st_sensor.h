@@ -8,8 +8,8 @@
 
 struct SensorInterfaceBus {
   virtual void begin(void) = 0;
-  virtual BmErr read(uint8_t *buf, size_t len, void *arg) = 0;
-  virtual BmErr write(const uint8_t *buf, size_t len, void *arg) = 0;
+  virtual BmErr read(uint8_t reg, uint8_t *buf, size_t len, void *arg) = 0;
+  virtual BmErr write(uint8_t reg, const uint8_t *buf, size_t len, void *arg) = 0;
   virtual void end(void) = 0;
 };
 

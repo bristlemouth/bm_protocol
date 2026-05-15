@@ -35,8 +35,7 @@ int32_t AbstractSensorInterface::driver_write(void *handle, uint8_t reg, const u
 
   BmErr err = BmOK;
   bus->begin();
-  bm_err_check(err, bus->write(&reg, sizeof(reg), driver->m_arg));
-  bm_err_check(err, bus->write(buf, len, driver->m_arg));
+  bm_err_check(err, bus->write(reg, buf, len, driver->m_arg));
   bus->end();
 
   return (int32_t)err;
@@ -52,8 +51,7 @@ int32_t AbstractSensorInterface::driver_read(void *handle, uint8_t reg, uint8_t 
 
   BmErr err = BmOK;
   bus->begin();
-  bm_err_check(err, bus->write(&reg, sizeof(reg), driver->m_arg));
-  bm_err_check(err, bus->read(buf, len, driver->m_arg));
+  bm_err_check(err, bus->read(reg, buf, len, driver->m_arg));
   bus->end();
 
   return (int32_t)err;
