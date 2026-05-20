@@ -157,6 +157,16 @@
     build_type: Release
   sign: false
 
+- name: borealisV2
+  type: ext_fw
+  repo: git@github.com:appliedoceansciences/borealis_mote_firmware.git
+  sha: 624b349
+  args:
+    app: borealisV2
+    bsp: bm_mote_v1.0
+    build_type: Release
+  sign: false
+
 - name: mavlink_bridge_release
   type: build_fw
   args:
