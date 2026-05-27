@@ -350,9 +350,8 @@ BmErr LSM6DSV::stream_handle(void) {
       samples_set++;
       break;
     case LSM6DSV_SENSORHUB_NACK_TAG:
-      lsm
-          // Increment nack count here, ref: table 92 of AN5922
-          sensor_nack_idx = static_cast<uint8_t>(datax);
+      // Increment nack count here, ref: table 92 of AN5922
+      sensor_nack_idx = static_cast<uint8_t>(datax);
       if (sensor_nack_idx < MAX_SENSOR_HUB_SENSORS) {
         m_sensor_hub[sensor_nack_idx].nacks++;
       }
