@@ -51,6 +51,10 @@ BmErr LSM6DSV::init(void) {
     return err;
   }
 
+  // Wait 10ms for calibration data to be stored in internal registers, ref 4.1 AN5922
+  static constexpr uint8_t cal_delay_ms = 10;
+  bm_delay(cal_delay_ms);
+
   // Validate the LSM6DSV device ID
   uint8_t whoami = 0;
   lsm6dsv_return_on_err(lsm6dsv_device_id_get(&m_ctx, &whoami));
@@ -346,8 +350,9 @@ BmErr LSM6DSV::stream_handle(void) {
       samples_set++;
       break;
     case LSM6DSV_SENSORHUB_NACK_TAG:
-      // Increment nack count here, ref: table 92 of AN5922
-      sensor_nack_idx = static_cast<uint8_t>(datax);
+      lsm
+          // Increment nack count here, ref: table 92 of AN5922
+          sensor_nack_idx = static_cast<uint8_t>(datax);
       if (sensor_nack_idx < MAX_SENSOR_HUB_SENSORS) {
         m_sensor_hub[sensor_nack_idx].nacks++;
       }
