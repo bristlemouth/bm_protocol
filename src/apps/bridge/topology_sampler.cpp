@@ -63,7 +63,6 @@ typedef struct node_list {
 
 static BridgePowerController *_bridge_power_controller;
 static TimerHandle_t topology_timer;
-static bool _sampling_enabled;
 static bool _send_on_boot;
 static node_list_s _node_list;
 static QueueHandle_t _sys_info_queue;
@@ -580,7 +579,6 @@ void topology_sampler_init(BridgePowerController *power_controller) {
   // TODO - add unit tests with mocking timer callbacks
   configASSERT(power_controller);
   _bridge_power_controller = power_controller;
-  _sampling_enabled = false;
   _send_on_boot = true;
   int tmr_id = 2;
   _node_list.node_list_mutex = xSemaphoreCreateMutex();
@@ -625,7 +623,8 @@ void topology_sampler_task(void *parameters) {
       check_topology_report(1000);
       // Check if we are already sampling, if not, wait (using blocking waitForSignal) for power to turn on
       // if we are sampling, wait for power to turn off
-      if (!_sampling_enabled && _bridge_power_controller->waitForSignal(true, 0)) {
+      bool is_timer_active = xTimerIsTimerActive(topology_timer);
+      if (!is_timer_active && _bridge_power_controller->waitForSignal(true, 0)) {
         // lets wait 5 seconds for the devices on the bus to power up
         vTaskDelay(pdMS_TO_TICKS(BUS_POWER_ON_DELAY));
         bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
@@ -634,10 +633,7 @@ void topology_sampler_task(void *parameters) {
         // start the timer! here while the bus is powered we will sample topology every minute
         configASSERT(xTimerStart(topology_timer, 10));
 
-        _sampling_enabled = true;
-
-      } else if (_sampling_enabled && _bridge_power_controller->waitForSignal(false, 0)) {
-        _sampling_enabled = false;
+      } else if (is_timer_active && _bridge_power_controller->waitForSignal(false, 0)) {
         configASSERT(xTimerStop(topology_timer, 10));
         bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
                        "Pausing sampling network topology until next duration...\n");

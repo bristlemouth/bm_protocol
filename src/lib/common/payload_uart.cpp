@@ -377,6 +377,7 @@ SerialHandle_t uart_handle = {
     .flags = 0,
     .preTxCb = NULL,
     .postTxCb = NULL,
+    .breakISR = NULL,
 };
 
 BaseType_t init(uint8_t task_priority) {

@@ -72,7 +72,7 @@ void RbrSensor::maybeProbeType(uint64_t last_power_on_time) {
       RBR_READING_PERIOD_MS / 2 + PROBE_WINDOW_WIDTH_MS / 2;
   bool lower_window = now > _last_data_time + window_start_time;
   bool upper_window = now < _last_data_time + window_end_time;
-  bool can_transmit = lower_window && upper_window;
+  bool can_transmit = (lower_window && upper_window) || _type == BmRbrDataMsg::UNKNOWN;
 
   if (now - _lastProbeTime >= _minProbePeriodMs &&
       now - last_power_on_time >= _minProbePeriodMs && can_transmit) {
@@ -96,9 +96,7 @@ bool RbrSensor::getData(BmRbrDataMsg::Data &d) {
       handleOutputformat(_payload_buffer, read_len);
     } else if (BmRbrSensorUtil::validSensorDataString(_payload_buffer, read_len)) {
       success = handleDataString(_payload_buffer, read_len, d);
-      if (success) {
-        _last_data_time = uptimeGetMs();
-      }
+      _last_data_time = uptimeGetMs();
     } else {
       spotter_log(0, RBR_RAW_LOG, USE_TIMESTAMP, "Invalid line from sensor: %.*s\n", read_len,
                   _payload_buffer);
