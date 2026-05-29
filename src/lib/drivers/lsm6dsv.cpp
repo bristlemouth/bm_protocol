@@ -40,12 +40,24 @@
           readings to buffer on the imu before offloading them to be handled
           by the processor.
 
+ @param cfg Pointer to a configuration to use for driver, if NULL use default
+
  @return BmOK on success
          BmENOMEM if there is insufficient memory to create mutexes/semaphore
          BmENODEV if the imu is not found
          BmEACCES if bus operations fail when attempting communication to imu
  */
-BmErr LSM6DSV::init(void) {
+BmErr LSM6DSV::init(const Cfg *cfg) {
+  if (cfg) {
+    m_cfg = *cfg;
+  }
+
+  // Do not support high accuracy data rates ref: 6.5 DS13476
+  if (m_cfg.gyro.rate > LSM6DSV_ODR_AT_7680Hz ||
+      m_cfg.accelerometer.rate > LSM6DSV_ODR_AT_7680Hz) {
+    return BmEINVAL;
+  }
+
   BmErr err = q_create_static(&m_reading_queue, m_readings_buf, sizeof(m_readings_buf));
   if (err != BmOK) {
     return err;
@@ -189,18 +201,21 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   }
 
   // Set the accelerometer resolution, the lower (ex: 2g) the more sensitive
-  lsm6dsv_return_on_err(lsm6dsv_xl_full_scale_set(&m_ctx, m_scale.accelerometer));
+  lsm6dsv_return_on_err(lsm6dsv_xl_full_scale_set(&m_ctx, m_cfg.accelerometer.scale));
 
   // Set the gyro resolution
-  lsm6dsv_return_on_err(lsm6dsv_gy_full_scale_set(&m_ctx, m_scale.gyro));
+  lsm6dsv_return_on_err(lsm6dsv_gy_full_scale_set(&m_ctx, m_cfg.gyro.scale));
 
   // Set FIFO threshold
   lsm6dsv_return_on_err(lsm6dsv_fifo_batch_counter_threshold_set(&m_ctx, fifo_threshold));
   lsm6dsv_return_on_err(lsm6dsv_fifo_mode_set(&m_ctx, LSM6DSV_STREAM_MODE));
 
   // Set FIFO batch output data rate for accelerometer and gyro
-  lsm6dsv_return_on_err(lsm6dsv_fifo_xl_batch_set(&m_ctx, LSM6DSV_XL_BATCHED_AT_120Hz));
-  lsm6dsv_return_on_err(lsm6dsv_fifo_gy_batch_set(&m_ctx, LSM6DSV_GY_BATCHED_AT_120Hz));
+  lsm6dsv_fifo_xl_batch_t batch_xl_dr =
+      static_cast<lsm6dsv_fifo_xl_batch_t>(m_cfg.accelerometer.rate);
+  lsm6dsv_return_on_err(lsm6dsv_fifo_xl_batch_set(&m_ctx, batch_xl_dr));
+  lsm6dsv_fifo_gy_batch_t batch_gy_dr = static_cast<lsm6dsv_fifo_gy_batch_t>(m_cfg.gyro.rate);
+  lsm6dsv_return_on_err(lsm6dsv_fifo_gy_batch_set(&m_ctx, batch_gy_dr));
 
   // Set filter settings, lp1 is only available when gyro is not in low power mode
   lsm6dsv_filt_settling_mask_t filt_settling_mask = {};
@@ -224,8 +239,8 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   m_temperature_dc = static_cast<int16_t>(lsm6dsv_from_lsb_to_celsius(reg) * 10.0);
 
   // Set Power Modes
-  lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, m_power_mode.accelerometer));
-  lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, m_power_mode.gyro));
+  lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, m_cfg.accelerometer.mode));
+  lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, m_cfg.gyro.mode));
 
   // Configure sensor hub to trigger from interrupt INT2
   lsm6dsv_sh_syncro_mode_t trigger = LSM6DSV_SH_TRIG_INT2;
@@ -235,8 +250,8 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, trigger));
 
   // Set data rate of accelerometer and gyro
-  lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz));
-  lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, LSM6DSV_ODR_AT_120Hz));
+  lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, m_cfg.accelerometer.rate));
+  lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, m_cfg.gyro.rate));
 
   return BmOK;
 }
@@ -320,14 +335,14 @@ BmErr LSM6DSV::stream_handle(void) {
 
     switch (f_data.tag) {
     case LSM6DSV_GY_NC_TAG:
-      cb = gyro_convert(m_scale.gyro);
+      cb = gyro_convert(m_cfg.gyro.scale);
       reading.gyro.x = cb(datax);
       reading.gyro.y = cb(datay);
       reading.gyro.z = cb(dataz);
       samples_set++;
       break;
     case LSM6DSV_XL_NC_TAG:
-      cb = accelerometer_convert(m_scale.accelerometer);
+      cb = accelerometer_convert(m_cfg.accelerometer.scale);
       reading.acc.x = cb(datax);
       reading.acc.y = cb(datay);
       reading.acc.z = cb(dataz);

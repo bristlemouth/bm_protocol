@@ -11,22 +11,23 @@
 
 class LSM6DSV : public AbstractSensorInterface, public SensorInterfaceBus {
 public:
-  // Resolution for accelerometer and gyro, can be adjusted prior to calling
-  // start_stream
-  struct {
-    lsm6dsv_xl_full_scale_t accelerometer = LSM6DSV_2g;
-    lsm6dsv_gy_full_scale_t gyro = LSM6DSV_125dps;
-  } m_scale;
-
-  // Power mode for the accelerometer and gyro, can be adjusted prior to
-  // calling start_stream
-  struct {
-    lsm6dsv_xl_mode_t accelerometer = LSM6DSV_XL_HIGH_PERFORMANCE_MD;
-    lsm6dsv_gy_mode_t gyro = LSM6DSV_GY_HIGH_PERFORMANCE_MD;
-  } m_power_mode;
+  typedef struct {
+    struct {
+      lsm6dsv_xl_full_scale_t scale;
+      lsm6dsv_xl_mode_t mode;
+      lsm6dsv_data_rate_t rate;
+    } accelerometer;
+    struct {
+      lsm6dsv_gy_full_scale_t scale;
+      lsm6dsv_gy_mode_t mode;
+      lsm6dsv_data_rate_t rate;
+    } gyro;
+  } Cfg;
 
   using AbstractSensorInterface::AbstractSensorInterface;
-  BmErr init(void) override;
+  virtual BmErr init(void) override { return init(NULL); }
+
+  BmErr init(const Cfg *cfg);
   void handle_interrupt(void);
 
   typedef struct {
@@ -83,6 +84,21 @@ private:
   uint8_t m_readings_buf[QUEUE_BUF_SIZE] = {};
   BmSemaphore m_queue_mut;
   Q m_reading_queue;
+
+  Cfg m_cfg = {
+      .accelerometer =
+          {
+              .scale = LSM6DSV_2g,
+              .mode = LSM6DSV_XL_HIGH_PERFORMANCE_MD,
+              .rate = LSM6DSV_ODR_AT_120Hz,
+          },
+      .gyro =
+          {
+              .scale = LSM6DSV_125dps,
+              .mode = LSM6DSV_GY_HIGH_PERFORMANCE_MD,
+              .rate = LSM6DSV_ODR_AT_120Hz,
+          },
+  };
 
   // Count for timestamp, gyro and accelerometer
   static constexpr uint8_t READING_COUNT = 3;
