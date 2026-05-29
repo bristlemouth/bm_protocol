@@ -4,6 +4,7 @@
 #include "bm_config.h"
 #include "semphr.h"
 #include "uptime.h"
+#include <cstring>
 
 #define lsm6dsv_return_on_err(f)                                                               \
   ({                                                                                           \
@@ -322,18 +323,25 @@ BmErr LSM6DSV::stream_handle(void) {
   LSM6DSVReading reading = {};
   uint8_t samples_set = 0;
 
-  while (num--) {
-    lsm6dsv_fifo_out_raw_t f_data;
+  uint32_t i = 0;
+  lsm6dsv_read_reg(&m_ctx, LSM6DSV_FIFO_DATA_OUT_TAG, m_fifo_buf, 7 * num);
 
-    lsm6dsv_return_on_err(lsm6dsv_fifo_out_raw_get(&m_ctx, &f_data));
-    int16_t datax = static_cast<int16_t>(le_uint8_to_uint16(&f_data.data[0]));
-    int16_t datay = static_cast<int16_t>(le_uint8_to_uint16(&f_data.data[2]));
-    int16_t dataz = static_cast<int16_t>(le_uint8_to_uint16(&f_data.data[4]));
+  while (num--) {
+    uint8_t *data = &m_fifo_buf[i];
+    lsm6dsv_fifo_data_out_tag_t tag_data;
+    memcpy(&tag_data, &data[0], sizeof(lsm6dsv_fifo_data_out_tag_t));
+    uint8_t tag = tag_data.tag_sensor;
+    data++;
+    i += 7;
+
+    int16_t datax = static_cast<int16_t>(le_uint8_to_uint16(&data[0]));
+    int16_t datay = static_cast<int16_t>(le_uint8_to_uint16(&data[2]));
+    int16_t dataz = static_cast<int16_t>(le_uint8_to_uint16(&data[4]));
     uint32_t ts;
     uint8_t sensor_nack_idx;
     ConverterCb cb;
 
-    switch (f_data.tag) {
+    switch (tag) {
     case LSM6DSV_GY_NC_TAG:
       cb = gyro_convert(m_cfg.gyro.scale);
       reading.gyro.x = cb(datax);
@@ -355,7 +363,7 @@ BmErr LSM6DSV::stream_handle(void) {
       // Timestamp register is typically 21.7uS per bit, but the precise
       // measurement is calculated with m_timestamp.resolution_ns,
       // ref: 6.4 AN5922
-      ts = le_uint8_to_uint32(&f_data.data[0]);
+      ts = le_uint8_to_uint32(&data[0]);
 
       // Account for rollover here by examining the last timestamp count
       m_timestamp.ns += (ts - m_timestamp.last_count) * m_timestamp.resolution_ns;
@@ -388,12 +396,11 @@ BmErr LSM6DSV::stream_handle(void) {
     }
 
     // Set sensor hub data, ref: 9.6.1 of AN5922
-    if (f_data.tag >= LSM6DSV_SENSORHUB_SLAVE0_TAG &&
-        f_data.tag <= LSM6DSV_SENSORHUB_SLAVE3_TAG) {
-      uint8_t sensor_set_idx = f_data.tag - LSM6DSV_SENSORHUB_SLAVE0_TAG;
+    if (tag >= LSM6DSV_SENSORHUB_SLAVE0_TAG && tag <= LSM6DSV_SENSORHUB_SLAVE3_TAG) {
+      uint8_t sensor_set_idx = tag - LSM6DSV_SENSORHUB_SLAVE0_TAG;
       AbstractSensorInterface *sensor = m_sensor_hub[sensor_set_idx].sensor;
       if (sensor) {
-        sensor->set_data(f_data.data, sizeof(f_data.data));
+        sensor->set_data(data, sizeof(data));
       }
     }
   }

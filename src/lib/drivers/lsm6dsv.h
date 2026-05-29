@@ -111,6 +111,8 @@ private:
 
   int16_t m_temperature_dc = 0;
 
+  alignas(4) uint8_t m_fifo_buf[2048];
+
   BmSemaphore m_sensor_hub_mut;
   static constexpr uint8_t MAX_SENSOR_HUB_SENSORS = 4;
   struct {
