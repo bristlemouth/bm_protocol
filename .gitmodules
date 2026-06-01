@@ -34,3 +34,9 @@
 [submodule "src/lib/bm_core"]
 	path = src/lib/bm_core
 	url = https://github.com/bristlemouth/bm_core.git
+[submodule "src/third_party/lsm6dsv"]
+	path = src/third_party/lsm6dsv
+	url = https://github.com/STMicroelectronics/lsm6dsv-pid.git
+[submodule "src/third_party/lis2mdl"]
+	path = src/third_party/lis2mdl
+	url = https://github.com/STMicroelectronics/lis2mdl-pid.git

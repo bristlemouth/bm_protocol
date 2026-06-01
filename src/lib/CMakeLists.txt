@@ -68,6 +68,7 @@ set(LIB_FILES
     ${LIB_DIR}/debug/debug_tca9546a.cpp
     ${LIB_DIR}/drivers/abstract/abstract_i2c.cpp
     ${LIB_DIR}/drivers/abstract/abstract_spi.cpp
+    ${LIB_DIR}/drivers/abstract/abstract_st_sensor.cpp
     ${LIB_DIR}/drivers/bm_dfu_wrapper.cpp
     ${LIB_DIR}/drivers/bm_rtc_wrapper.c
     ${LIB_DIR}/drivers/adin2111/src/adi_hal.c
@@ -75,6 +76,7 @@ set(LIB_FILES
     ${LIB_DIR}/drivers/htu21d.cpp
     ${LIB_DIR}/drivers/ina232.cpp
     ${LIB_DIR}/drivers/bq25820.cpp
+    ${LIB_DIR}/drivers/lsm6dsv.cpp
     ${LIB_DIR}/drivers/nau7802.cpp
     ${LIB_DIR}/drivers/ms5803.cpp
     ${LIB_DIR}/drivers/pca9535.c
