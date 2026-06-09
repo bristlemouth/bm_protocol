@@ -90,7 +90,9 @@ class AutoBuilder:
         if not config["name"].startswith("bootloader"):
             cmd += ["-DUSE_BOOTLOADER=1"]
 
-        if config["args"]["bsp"] == "bm_mote_bristleback_v1_0":
+        if config["args"].get("external_init", False) is True:
+            pass
+        elif config["args"]["bsp"] == "bm_mote_bristleback_v1_0":
             cmd += ["-DCMAKE_APP_TYPE=bristleback"]
         elif (
             config["args"]["bsp"] == "bm_mote_v1.0"
