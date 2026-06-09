@@ -165,6 +165,7 @@
     app: borealis2
     bsp: bm_mote_v1.0
     build_type: Release
+    external_init: true
   sign: false
 
 - name: mavlink_bridge_release
