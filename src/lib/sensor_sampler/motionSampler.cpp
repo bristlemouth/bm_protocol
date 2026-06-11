@@ -12,6 +12,7 @@ static struct {
   IOPinHandle_t *cs;
   IOPinHandle_t *isr;
   uint32_t lpm_mask;
+  LSM6DSV::Cfg cfg;
 } ctx = {};
 
 class SpiBus : public SensorInterfaceBus {
@@ -50,21 +51,9 @@ static bool lsm6dsv_isr_handle(const void *pin, uint8_t value, void *args) {
 
 static void motion_task(void *arg) {
   (void)arg;
-  LSM6DSV::Cfg cfg = {
-      .accelerometer =
-          {
-              .scale = LSM6DSV_2g,
-              .mode = LSM6DSV_XL_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_1920Hz,
-          },
-      .gyro =
-          {
-              .scale = LSM6DSV_125dps,
-              .mode = LSM6DSV_GY_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_1920Hz,
-          },
-  };
-  lsm6dsv.init(&cfg);
+  if (lsm6dsv.init(&ctx.cfg) != BmOK) {
+    return;
+  }
 
   static constexpr uint8_t num_fifo_readings = 12;
 
@@ -78,11 +67,31 @@ static void motion_task(void *arg) {
   }
 }
 
-BmErr motionSensorAdd(SPIInterface_t *spi, IOPinHandle_t *cs_pin, IOPinHandle_t *int_pin) {
+MotionSamplerConfig motionSensorGetDefaultConfig(void) {
+  static const LSM6DSV::Cfg lsm6dsv_default_cfg = {
+      .accelerometer =
+          {
+              .scale = LSM6DSV_2g,
+              .mode = LSM6DSV_XL_HIGH_PERFORMANCE_MD,
+              .rate = LSM6DSV_ODR_AT_1920Hz,
+          },
+      .gyro =
+          {
+              .scale = LSM6DSV_125dps,
+              .mode = LSM6DSV_GY_HIGH_PERFORMANCE_MD,
+              .rate = LSM6DSV_ODR_AT_1920Hz,
+          },
+  };
+  return lsm6dsv_default_cfg;
+}
+
+BmErr motionSensorAdd(MotionSamplerConfig cfg, SPIInterface_t *spi, IOPinHandle_t *cs_pin,
+                      IOPinHandle_t *int_pin) {
   if (!spi || !cs_pin || !int_pin) {
     return BmEINVAL;
   }
 
+  ctx.cfg = cfg;
   ctx.spi = spi;
   ctx.cs = cs_pin;
   ctx.isr = int_pin;

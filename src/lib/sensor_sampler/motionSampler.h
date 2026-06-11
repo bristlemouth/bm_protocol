@@ -7,8 +7,11 @@
 #include "util.h"
 
 typedef LSM6DSV::LSM6DSVReading MotionSensorReading;
+typedef LSM6DSV::Cfg MotionSamplerConfig;
 
-BmErr motionSensorAdd(SPIInterface_t *spi, IOPinHandle_t *cs_pin, IOPinHandle_t *int_pin);
+MotionSamplerConfig motionSensorGetDefaultConfig(void);
+BmErr motionSensorAdd(MotionSamplerConfig cfg, SPIInterface_t *spi, IOPinHandle_t *cs_pin,
+                      IOPinHandle_t *int_pin);
 BmErr motionSensorDataReady(uint32_t timeout_ms = 50);
 BmErr motionSensorGet(MotionSensorReading *reading);
 
