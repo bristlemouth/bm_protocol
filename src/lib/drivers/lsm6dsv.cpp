@@ -55,8 +55,7 @@ BmErr LSM6DSV::init(const Cfg *cfg) {
 
   // Do not support high accuracy data rates ref: 6.5 DS13476
   // Gyro cannot support 1.875Hz rate ref: Table 54 DS13476
-  if (m_cfg.gyro.rate > LSM6DSV_ODR_AT_7680Hz || cfg->gyro.rate == LSM6DSV_ODR_AT_1Hz875 ||
-      m_cfg.accelerometer.rate > LSM6DSV_ODR_AT_7680Hz) {
+  if (m_cfg.sample_rate > LSM6DSV_ODR_AT_7680Hz || cfg->sample_rate == LSM6DSV_ODR_AT_1Hz875) {
     return BmEINVAL;
   }
 
@@ -214,10 +213,9 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   lsm6dsv_return_on_err(lsm6dsv_fifo_mode_set(&m_ctx, LSM6DSV_STREAM_MODE));
 
   // Set FIFO batch output data rate for accelerometer and gyro
-  lsm6dsv_fifo_xl_batch_t batch_xl_dr =
-      static_cast<lsm6dsv_fifo_xl_batch_t>(m_cfg.accelerometer.rate);
+  lsm6dsv_fifo_xl_batch_t batch_xl_dr = static_cast<lsm6dsv_fifo_xl_batch_t>(m_cfg.sample_rate);
   lsm6dsv_return_on_err(lsm6dsv_fifo_xl_batch_set(&m_ctx, batch_xl_dr));
-  lsm6dsv_fifo_gy_batch_t batch_gy_dr = static_cast<lsm6dsv_fifo_gy_batch_t>(m_cfg.gyro.rate);
+  lsm6dsv_fifo_gy_batch_t batch_gy_dr = static_cast<lsm6dsv_fifo_gy_batch_t>(m_cfg.sample_rate);
   lsm6dsv_return_on_err(lsm6dsv_fifo_gy_batch_set(&m_ctx, batch_gy_dr));
 
   // Set filter settings, lp1 is only available when gyro is not in low power mode
@@ -256,8 +254,8 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, trigger));
 
   // Set data rate of accelerometer and gyro
-  lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, m_cfg.accelerometer.rate));
-  lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, m_cfg.gyro.rate));
+  lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, m_cfg.sample_rate));
+  lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, m_cfg.sample_rate));
 
   return BmOK;
 }

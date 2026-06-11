@@ -27,18 +27,16 @@ void sensorsInit() {
 
   // Obtain configs for motion sensing module
   MotionSamplerConfig cfg = motionSensorGetDefaultConfig();
-  uint32_t acc_scale = 0, acc_rate = 0, gyro_scale = 0, gyro_rate = 0;
+  uint32_t acc_scale = 0, gyro_scale = 0, sample_rate = 0;
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, "accScale", strlen("accScale"), &acc_scale)) {
     cfg.accelerometer.scale = static_cast<lsm6dsv_xl_full_scale_t>(acc_scale);
-  }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, "accRate", strlen("accRate"), &acc_rate)) {
-    cfg.accelerometer.rate = static_cast<lsm6dsv_data_rate_t>(acc_rate);
   }
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, "gyroScale", strlen("gyroScale"), &gyro_scale)) {
     cfg.gyro.scale = static_cast<lsm6dsv_gy_full_scale_t>(gyro_scale);
   }
-  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, "gyroRate", strlen("gyroRate"), &gyro_rate)) {
-    cfg.gyro.rate = static_cast<lsm6dsv_data_rate_t>(gyro_rate);
+  if (get_config_uint(BM_CFG_PARTITION_SYSTEM, "sampleRate", strlen("sampleRate"),
+                      &sample_rate)) {
+    cfg.sample_rate = static_cast<lsm6dsv_data_rate_t>(sample_rate);
   }
 
   motionSensorAdd(cfg, &spi1, &BM_CS, &BM_INT);
