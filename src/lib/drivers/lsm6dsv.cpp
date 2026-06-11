@@ -54,7 +54,8 @@ BmErr LSM6DSV::init(const Cfg *cfg) {
   }
 
   // Do not support high accuracy data rates ref: 6.5 DS13476
-  if (m_cfg.gyro.rate > LSM6DSV_ODR_AT_7680Hz ||
+  // Gyro cannot support 1.875Hz rate ref: Table 54 DS13476
+  if (m_cfg.gyro.rate > LSM6DSV_ODR_AT_7680Hz || cfg->gyro.rate == LSM6DSV_ODR_AT_1Hz875 ||
       m_cfg.accelerometer.rate > LSM6DSV_ODR_AT_7680Hz) {
     return BmEINVAL;
   }
@@ -85,7 +86,7 @@ BmErr LSM6DSV::init(const Cfg *cfg) {
   int8_t freq_fine;
   lsm6dsv_return_on_err(lsm6dsv_odr_cal_reg_get(&m_ctx, &freq_fine));
   uint64_t denominator = 46080000 + 59904 * static_cast<uint64_t>(freq_fine);
-  uint64_t numerator = 1000000000ULL * 1000;
+  static constexpr uint64_t numerator = 1000000000ULL * 1000;
   m_timestamp.resolution_ns = numerator / denominator;
 
   // Configure interrupt sources for INT1
@@ -97,7 +98,7 @@ BmErr LSM6DSV::init(const Cfg *cfg) {
   m_queue_mut = bm_mutex_create();
   m_streaming_sem = bm_semaphore_create();
   m_reading_sem = bm_semaphore_create();
-  if (!m_sensor_hub_mut || !m_queue_mut || !m_streaming_sem) {
+  if (!m_sensor_hub_mut || !m_queue_mut || !m_streaming_sem || !m_reading_sem) {
     bm_free(m_sensor_hub_mut);
     bm_free(m_queue_mut);
     bm_free(m_streaming_sem);
@@ -315,7 +316,7 @@ BmErr LSM6DSV::stream_handle(void) {
   uint16_t num = 0;
   lsm6dsv_fifo_status_t fifo_status;
 
-  if (!m_streaming_sem) {
+  if (!m_streaming_sem || !m_queue_mut || !m_reading_sem) {
     return BmENODEV;
   }
 

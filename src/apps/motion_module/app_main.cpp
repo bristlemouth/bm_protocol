@@ -291,7 +291,13 @@ static void defaultTask(void *parameters) {
   lpmPeripheralInactive(LPM_BOOT);
 
   while (1) {
-    if (motionSensorDataReady()) {
+    static constexpr uint32_t data_ready_poll_ms = 50;
+    BmErr err = motionSensorDataReady(data_ready_poll_ms);
+
+    if (err == BmENODEV) {
+      bm_delay(data_ready_poll_ms);
+      continue;
+    } else if (err != BmOK) {
       continue;
     }
 
