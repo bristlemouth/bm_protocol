@@ -73,14 +73,13 @@ MotionSamplerConfig motionSensorGetDefaultConfig(void) {
           {
               .scale = LSM6DSV_2g,
               .mode = LSM6DSV_XL_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_1920Hz,
           },
       .gyro =
           {
               .scale = LSM6DSV_125dps,
               .mode = LSM6DSV_GY_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_1920Hz,
           },
+      .sample_rate = LSM6DSV_ODR_AT_120Hz,
   };
   return lsm6dsv_default_cfg;
 }

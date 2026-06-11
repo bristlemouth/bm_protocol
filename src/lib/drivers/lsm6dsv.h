@@ -15,13 +15,12 @@ public:
     struct {
       lsm6dsv_xl_full_scale_t scale;
       lsm6dsv_xl_mode_t mode;
-      lsm6dsv_data_rate_t rate;
     } accelerometer;
     struct {
       lsm6dsv_gy_full_scale_t scale;
       lsm6dsv_gy_mode_t mode;
-      lsm6dsv_data_rate_t rate;
     } gyro;
+    lsm6dsv_data_rate_t sample_rate;
   } Cfg;
 
   using AbstractSensorInterface::AbstractSensorInterface;
@@ -90,14 +89,13 @@ private:
           {
               .scale = LSM6DSV_2g,
               .mode = LSM6DSV_XL_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_120Hz,
           },
       .gyro =
           {
               .scale = LSM6DSV_125dps,
               .mode = LSM6DSV_GY_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_120Hz,
           },
+      .sample_rate = LSM6DSV_ODR_AT_120Hz,
   };
 
   // Count for timestamp, gyro and accelerometer
