@@ -57,6 +57,8 @@ void GPDMA1_Channel13_IRQHandler(void);
 void GPDMA1_Channel14_IRQHandler(void);
 void GPDMA1_Channel15_IRQHandler(void);
 void SPI3_IRQHandler(void);
+void LPDMA1_Channel0_IRQHandler(void);
+void LPDMA1_Channel1_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

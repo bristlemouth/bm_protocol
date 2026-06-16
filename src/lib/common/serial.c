@@ -22,6 +22,8 @@
 
 // Queue for all serial outputs
 static xQueueHandle serialTxQueue = NULL;
+static SerialHandle_t *lpuart = NULL;
+static uint8_t rx_data[2048];
 
 xQueueHandle serialGetTxQueue() {
   return serialTxQueue;
@@ -259,7 +261,11 @@ void serialEnable(SerialHandle_t *handle) {
     // Clear any data that might be in the rx buffer
     (void)usart_ReceiveData8((USART_TypeDef *)handle->device);
 
-    if (handle->rxStreamBuffer) {
+    if (handle->device == LPUART1) {
+        lpuart = handle;
+        HAL_UART_AbortReceive(hlpuart1);
+        HAL_UARTEx_ReceiveToIdle_DMA(hlpuart1, rx_data, sizeof(rx_data));
+    } else if (handle->rxStreamBuffer) {
       xStreamBufferReset(handle->rxStreamBuffer);
       // Enable Uart RX interrupt
       usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
@@ -391,6 +397,11 @@ void serialGenericTx(SerialHandle_t *handle, uint8_t *data, size_t len, void *ar
   }
   uint32_t startTime = xTaskGetTickCount();
 
+  if (handle->device == (void *)LPUART1) {
+    HAL_UART_Transmit_DMA(handle->device, data, (uint16_t)len);
+    return;
+  }
+
   // Make sure we properly handle buffers larger than the streamBuffer
   // totalBytesSent < len takes care of the len == 0 case as well
   // Timeout just in case...
@@ -505,5 +516,18 @@ void serialWriteNocopy(SerialHandle_t *handle, uint8_t *buff, size_t len, void *
   if(xQueueSend(serialGetTxQueue(), &serialWriteMessage, 100) != pdTRUE) {
     // If we couldn't send the buffer, make sure to free buff
     vPortFree(buff);
+  }
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
+  xStreamBufferSend(lpuart->rxStreamBuffer, rx_data, size, 0);
+  HAL_UARTEx_ReceiveToIdle_DMA(huart, rx_data, sizeof(rx_data));
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  (void)huart;
+  // If have a postTxCb, call it.
+  if(lpuart->postTxCb){
+    lpuart->postTxCb(lpuart);
   }
 }
