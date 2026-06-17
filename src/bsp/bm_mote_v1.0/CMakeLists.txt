@@ -10,6 +10,7 @@ set(BSP_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/iwdg.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/rtc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/lpdma.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/spi.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/syscalls.c
         ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/stm32u5xx_hal_msp.c

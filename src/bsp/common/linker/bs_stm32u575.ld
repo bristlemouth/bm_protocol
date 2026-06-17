@@ -222,6 +222,16 @@ SECTIONS
     __MfltCoredumpRamEnd = ORIGIN(RAM) + LENGTH(RAM);
   } > FLASH__
 
+  .sram4 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _ssram4 = .;
+    *(.SRAM4)
+    *(.SRAM4*)
+    . = ALIGN(4);
+    _esram4 = .;
+  } >SRAM4
+
   .noinit (NOLOAD):
   {
     /* place all symbols in input sections that start with .noinit */

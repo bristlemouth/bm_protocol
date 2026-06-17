@@ -1,10 +1,12 @@
 #include "payload_uart.h"
 #include "bm_os.h"
 #include "bm_usart.h"
+#include "lpdma.h"
 #include "spotter.h"
 #include "stm32_io.h"
 #include "stm32_rtc.h"
 #include "stm32u5xx_hal_uart.h"
+#include "stm32u5xx_ll_pwr.h"
 #include "uptime.h"
 #include "usart.h"
 #include "util.h"
@@ -15,6 +17,7 @@
 
 namespace PLUART {
 
+#define SRAM4_BSS __attribute__((section(".SRAM4")))
 #define USER_BYTE_BUFFER_LEN 2048
 // Stream buffer for user bytes
 static StreamBufferHandle_t user_byte_stream_buffer = NULL;
@@ -28,7 +31,7 @@ static struct {
 } _user_line;
 
 #define DMA_BUF_SIZE (2048)
-#define DMA_BUF_COUNT (4)
+#define DMA_BUF_COUNT (2)
 typedef struct {
   alignas(4) uint8_t data[DMA_BUF_SIZE];
   uint16_t size;
@@ -43,8 +46,8 @@ typedef struct {
   uint8_t read;
 } DmaCtx;
 
-static DmaCtx rx = {};
-static DmaCtx tx = {};
+SRAM4_BSS static DmaCtx rx = {};
+SRAM4_BSS static DmaCtx tx = {};
 
 static void increment_idx(uint8_t *idx, uint8_t length) {
   *idx = *idx < length - 1 ? *idx + 1 : 0;
@@ -286,7 +289,7 @@ void write(uint8_t *buffer, size_t len) {
   if (_transactionInProgress) {
     _writeDuringTransaction = true;
   }
-  DmaBuf *buf = &tx.buf[rx.write];
+  DmaBuf *buf = &tx.buf[tx.write];
   if (len > array_size(buf->data)) {
     return;
   }
@@ -295,6 +298,9 @@ void write(uint8_t *buffer, size_t len) {
   //  endTransaction has to wait for this transmission to complete.
   // Note - multiple writes will likely be grouped in the same UART Tx transmission if there is no
   //  delay between them in the transaction in the user thread.
+  if (!uart_handle.enabled) {
+    return;
+  }
   xSemaphoreTake(_postTxSemaphore, 0);
   check_and_drop_oldest(&tx);
   memcpy(buf->data, buffer, len);
@@ -371,6 +377,8 @@ void configTxPinAlternate(void) {
 void enable(void) {
   USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
 
+  uart_handle.enabled = true;
+
   LL_LPUART_Enable(dev);
 
   // Clear any pending NVIC bit from the disabled period, then re-enable
@@ -384,6 +392,8 @@ void enable(void) {
 
 void disable(void) {
   USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
+
+  uart_handle.enabled = false;
 
   HAL_UART_AbortReceive(&hlpuart1);
   HAL_UART_AbortTransmit(&hlpuart1);
@@ -455,6 +465,17 @@ BaseType_t init(uint8_t task_priority) {
   _postTxSemaphore = xSemaphoreCreateBinary();
   configASSERT(_postTxSemaphore != NULL);
 
+  __HAL_RCC_SRAM4_CLK_ENABLE();
+  __HAL_RCC_SRAM4_CLKAM_ENABLE();
+  __HAL_RCC_SRAM4_CLK_SLEEP_ENABLE();
+  LL_PWR_SetSRAM4RunRetention(LL_PWR_SRAM4_RUN_FULL_RETENTION);
+  MX_LPDMA1_Init();
+  __HAL_RCC_LPDMA1_CLKAM_ENABLE();     // autonomous-mode clock (Stop)
+  __HAL_RCC_LPDMA1_CLK_SLEEP_ENABLE(); // sleep-mode clock
+
+  memset(&rx, 0, sizeof(rx));
+  memset(&tx, 0, sizeof(tx));
+
   rx.ready = bm_semaphore_create();
 
   MX_LPUART1_UART_Init();
@@ -471,7 +492,7 @@ BaseType_t init(uint8_t task_priority) {
   return rval;
 }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
+extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
   (void)huart;
   DmaBuf *buf = &rx.buf[rx.write];
   buf->size = size;
@@ -483,7 +504,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
   bm_semaphore_give(rx.ready);
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   (void)huart;
   increment_idx(&tx.read, array_size(tx.buf));
   // If have a postTxCb, call it.
