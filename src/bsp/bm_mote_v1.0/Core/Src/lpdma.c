@@ -36,9 +36,9 @@ void MX_LPDMA1_Init(void)
   __HAL_RCC_LPDMA1_CLK_ENABLE();
 
   /* LPDMA1 interrupt Init */
-    HAL_NVIC_SetPriority(LPDMA1_Channel0_IRQn, 3, 0);
+    HAL_NVIC_SetPriority(LPDMA1_Channel0_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(LPDMA1_Channel0_IRQn);
-    HAL_NVIC_SetPriority(LPDMA1_Channel1_IRQn, 3, 0);
+    HAL_NVIC_SetPriority(LPDMA1_Channel1_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(LPDMA1_Channel1_IRQn);
 
   /* USER CODE BEGIN LPDMA1_Init 1 */

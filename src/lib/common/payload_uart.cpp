@@ -1,9 +1,13 @@
 #include "payload_uart.h"
+#include "bm_os.h"
 #include "bm_usart.h"
 #include "spotter.h"
 #include "stm32_io.h"
 #include "stm32_rtc.h"
+#include "stm32u5xx_hal_uart.h"
 #include "uptime.h"
+#include "usart.h"
+#include "util.h"
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
@@ -22,6 +26,37 @@ static struct {
   uint16_t len = 0;
   bool ready = false;
 } _user_line;
+
+#define DMA_BUF_SIZE (2048)
+#define DMA_BUF_COUNT (4)
+typedef struct {
+  alignas(4) uint8_t data[DMA_BUF_SIZE];
+  uint16_t size;
+  bool in_use;
+} DmaBuf;
+
+typedef struct {
+  DmaBuf buf[DMA_BUF_COUNT];
+  BmSemaphore ready;
+  uint32_t dropped;
+  uint8_t write;
+  uint8_t read;
+} DmaCtx;
+
+static DmaCtx rx = {};
+static DmaCtx tx = {};
+
+static void increment_idx(uint8_t *idx, uint8_t length) {
+  *idx = *idx < length - 1 ? *idx + 1 : 0;
+}
+
+static void check_and_drop_oldest(DmaCtx *ctx) {
+  if (ctx->write == ctx->read) {
+    // Drop the last item in the buffer
+    ctx->dropped++;
+    increment_idx(&ctx->read, array_size(ctx->buf));
+  }
+}
 
 // Line termination character
 static char terminationCharacter = 0;
@@ -251,13 +286,21 @@ void write(uint8_t *buffer, size_t len) {
   if (_transactionInProgress) {
     _writeDuringTransaction = true;
   }
+  DmaBuf *buf = &tx.buf[rx.write];
+  if (len > array_size(buf->data)) {
+    return;
+  }
   // Token being available in the semaphore here means TC has already fired in a transation,
   //  and this write is starting a subsequent transmission in the transaction. Take the token so
   //  endTransaction has to wait for this transmission to complete.
   // Note - multiple writes will likely be grouped in the same UART Tx transmission if there is no
   //  delay between them in the transaction in the user thread.
   xSemaphoreTake(_postTxSemaphore, 0);
-  serialWrite(&PLUART::uart_handle, buffer, len, NULL);
+  check_and_drop_oldest(&tx);
+  memcpy(buf->data, buffer, len);
+  buf->size = len;
+  HAL_UART_Transmit_DMA(&hlpuart1, buf->data, buf->size);
+  increment_idx(&tx.write, array_size(tx.buf));
 }
 
 void setBaud(uint32_t new_baud_rate) {
@@ -330,22 +373,25 @@ void enable(void) {
 
   LL_LPUART_Enable(dev);
 
-  serialEnable(&uart_handle);
-
   // Clear any pending NVIC bit from the disabled period, then re-enable
   NVIC_ClearPendingIRQ(LPUART1_IRQn);
   NVIC_EnableIRQ(LPUART1_IRQn);
+
+  HAL_UART_AbortReceive(&hlpuart1);
+  DmaBuf *buf = &rx.buf[rx.write];
+  HAL_UARTEx_ReceiveToIdle_DMA(&hlpuart1, buf->data, array_size(buf->data));
 }
 
 void disable(void) {
   USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
 
+  HAL_UART_AbortReceive(&hlpuart1);
+  HAL_UART_AbortTransmit(&hlpuart1);
+
   // Disable LPUART1 IRQ at NVIC level to prevent any ISR activity during reconfiguration
   NVIC_DisableIRQ(LPUART1_IRQn);
 
   LL_LPUART_Disable(dev);
-
-  serialDisable(&uart_handle);
 }
 
 // variable definitions
@@ -380,6 +426,22 @@ SerialHandle_t uart_handle = {
     .breakISR = NULL,
 };
 
+static void rx_task(void *arg) {
+  (void)arg;
+
+  while (1) {
+    if (bm_semaphore_take(rx.ready, BM_MAX_DELAY_UINT32) != BmOK) {
+      continue;
+    }
+
+    while (rx.read != rx.write) {
+      DmaBuf *buf = &rx.buf[rx.read];
+      xStreamBufferSend(uart_handle.rxStreamBuffer, buf->data, buf->size, 0);
+      increment_idx(&rx.read, array_size(rx.buf));
+    }
+  }
+}
+
 BaseType_t init(uint8_t task_priority) {
   // Create the stream buffer for the user bytes to be buffered into and read from
   user_byte_stream_buffer = xStreamBufferCreate(USER_BYTE_BUFFER_LEN, 1);
@@ -393,13 +455,15 @@ BaseType_t init(uint8_t task_priority) {
   _postTxSemaphore = xSemaphoreCreateBinary();
   configASSERT(_postTxSemaphore != NULL);
 
+  rx.ready = bm_semaphore_create();
+
   MX_LPUART1_UART_Init();
   // Single byte trigger levels for Rx and Tx for fast response time
   uart_handle.txStreamBuffer = xStreamBufferCreate(uart_handle.txBufferSize, 1);
   configASSERT(uart_handle.txStreamBuffer != NULL);
   uart_handle.rxStreamBuffer = xStreamBufferCreate(uart_handle.rxBufferSize, 1);
   configASSERT(uart_handle.rxStreamBuffer != NULL);
-  BaseType_t rval = xTaskCreate(serialGenericRxTask, "LPUartRx",
+  BaseType_t rval = xTaskCreate(rx_task, "LPUartRx",
                                 // TODO - verify stack size
                                 2048, &PLUART::uart_handle, task_priority, NULL);
   configASSERT(rval == pdTRUE);
@@ -407,9 +471,30 @@ BaseType_t init(uint8_t task_priority) {
   return rval;
 }
 
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
+  (void)huart;
+  DmaBuf *buf = &rx.buf[rx.write];
+  buf->size = size;
+
+  increment_idx(&rx.write, array_size(rx.buf));
+  check_and_drop_oldest(&rx);
+  buf = &rx.buf[rx.write];
+  HAL_UARTEx_ReceiveToIdle_DMA(&hlpuart1, buf->data, array_size(buf->data));
+  bm_semaphore_give(rx.ready);
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  (void)huart;
+  increment_idx(&tx.read, array_size(tx.buf));
+  // If have a postTxCb, call it.
+  if (uart_handle.postTxCb) {
+    uart_handle.postTxCb(&uart_handle);
+  }
+}
+
 extern "C" void LPUART1_IRQHandler(void) {
   configASSERT(&uart_handle);
-  serialGenericUartIRQHandler(&uart_handle);
+  HAL_UART_IRQHandler(&hlpuart1);
 }
 
 } // namespace PLUART
