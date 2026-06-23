@@ -1,5 +1,5 @@
 #include "sensors.h"
-#include "FreeRTOS.h"
+#include "bm_config.h"
 #include "bsp.h"
 #include "configuration.h"
 #include "lpm.h"
@@ -17,8 +17,9 @@ static INA::INA232 debugIna1(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
     &debugIna1,
 };
+static MotionSampler motion(&spi1, &BM_CS, &BM_INT);
 
-void sensorsInit() {
+void sensorsInit(void) {
   // Wait for the 3V3 rail to stabilize before communicating with the mux
   vTaskDelay(pdMS_TO_TICKS(5));
 
@@ -26,7 +27,7 @@ void sensorsInit() {
   powerSamplerInit(debugIna);
 
   // Obtain configs for motion sensing module
-  MotionSamplerConfig cfg = motionSensorGetDefaultConfig();
+  MotionSamplerConfig cfg = motion_sampler_get_default_config();
   uint32_t acc_scale = 0, gyro_scale = 0, sample_rate = 0;
   if (get_config_uint(BM_CFG_PARTITION_SYSTEM, "accScale", strlen("accScale"), &acc_scale)) {
     cfg.accelerometer.scale = static_cast<lsm6dsv_xl_full_scale_t>(acc_scale);
@@ -38,6 +39,16 @@ void sensorsInit() {
                       &sample_rate)) {
     cfg.sample_rate = static_cast<lsm6dsv_data_rate_t>(sample_rate);
   }
+  motion.set_cfg(cfg);
+  motion_sampler_add(&motion);
+}
 
-  motionSensorAdd(cfg, &spi1, &BM_CS, &BM_INT);
+void sensorsHandle(void) {
+  if (motion.data_ready()) {
+    MotionSensorReading reading = {};
+    while (motion.data_get(&reading) == BmOK) {
+      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y,
+               reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z);
+    }
+  }
 }

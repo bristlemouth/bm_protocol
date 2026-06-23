@@ -291,20 +291,6 @@ static void defaultTask(void *parameters) {
   lpmPeripheralInactive(LPM_BOOT);
 
   while (1) {
-    static constexpr uint32_t data_ready_poll_ms = 50;
-    BmErr err = motionSensorDataReady(data_ready_poll_ms);
-
-    if (err == BmENODEV) {
-      bm_delay(data_ready_poll_ms);
-      continue;
-    } else if (err != BmOK) {
-      continue;
-    }
-
-    MotionSensorReading reading = {};
-    while (motionSensorGet(&reading) == BmOK) {
-      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y,
-               reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z);
-    }
+    sensorsHandle();
   }
 }

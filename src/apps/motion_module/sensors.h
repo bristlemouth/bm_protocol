@@ -9,8 +9,8 @@ extern "C" {
 #define DEFAULT_SENSORS_POLL_MS 10000
 #define DEFAULT_SENSORS_CHECK_S 60000
 
-void sensorsInit();
-extern Bristlefin bristlefin;
+void sensorsInit(void);
+void sensorsHandle(void);
 #ifdef __cplusplus
 }
 #endif
