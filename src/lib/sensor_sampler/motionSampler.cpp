@@ -7,51 +7,63 @@
 #define MOTION_TASK_PRIORITY 3
 #endif
 
-static struct {
-  SPIInterface_t *spi;
-  IOPinHandle_t *cs;
-  IOPinHandle_t *isr;
-  uint32_t lpm_mask;
-  LSM6DSV::Cfg cfg;
-} ctx = {};
+MotionSampler::MotionSampler(SPIInterface_t *spi, IOPinHandle_t *cs_pin, IOPinHandle_t *int_pin)
+    : m_lsm6dsv(this) {
+  m_ctx.spi = spi;
+  m_ctx.cs = cs_pin;
+  m_ctx.isr = int_pin;
+}
 
-class SpiBus : public SensorInterfaceBus {
-  void begin(void) override { IOWrite(ctx.cs, 0); }
+void MotionSampler::begin(void) { IOWrite(m_ctx.cs, 0); }
 
-  BmErr read(uint8_t reg, uint8_t *buf, size_t len, void *arg) override {
-    (void)arg;
-    reg = 1 << 7 | reg;
-    spiTx(ctx.spi, NULL, 1, &reg, 100);
-    return static_cast<BmErr>(spiRxNonblocking(ctx.spi, NULL, len, buf, 100));
+BmErr MotionSampler::read(uint8_t reg, uint8_t *buf, size_t len, void *arg) {
+  (void)arg;
+  reg = 1 << 7 | reg;
+  spiTx(m_ctx.spi, NULL, 1, &reg, 100);
+  return static_cast<BmErr>(spiRxNonblocking(m_ctx.spi, NULL, len, buf, 100));
+}
+
+BmErr MotionSampler::write(uint8_t reg, const uint8_t *buf, size_t len, void *arg) {
+  (void)arg;
+
+  spiTx(m_ctx.spi, NULL, 1, &reg, 100);
+  return static_cast<BmErr>(spiTx(m_ctx.spi, NULL, len, (uint8_t *)buf, 100));
+}
+
+void MotionSampler::end(void) { IOWrite(m_ctx.cs, 1); }
+
+void MotionSampler::set_cfg(MotionSamplerConfig cfg) { m_ctx.cfg = cfg; }
+
+bool MotionSampler::data_ready(uint32_t timeout_ms) {
+  BmErr err = m_lsm6dsv.reading_ready(timeout_ms);
+  if (err == BmENODEV) {
+    bm_delay(timeout_ms);
   }
 
-  BmErr write(uint8_t reg, const uint8_t *buf, size_t len, void *arg) override {
-    (void)arg;
+  return err == BmOK;
+}
 
-    spiTx(ctx.spi, NULL, 1, &reg, 100);
-    return static_cast<BmErr>(spiTx(ctx.spi, NULL, len, (uint8_t *)buf, 100));
-  }
+BmErr MotionSampler::data_get(MotionSensorReading *reading) {
 
-  void end(void) override { IOWrite(ctx.cs, 1); }
-};
-
-static SpiBus spi_bus;
-static LSM6DSV lsm6dsv(&spi_bus);
+  return m_lsm6dsv.get_reading(reading);
+}
 
 static bool lsm6dsv_isr_handle(const void *pin, uint8_t value, void *args) {
   (void)pin;
-  (void)args;
+  MotionSampler *sampler = static_cast<MotionSampler *>(args);
 
   if (value) {
-    lsm6dsv.handle_interrupt();
+    sampler->m_lsm6dsv.handle_interrupt();
   }
 
   return true;
 }
 
 static void motion_task(void *arg) {
-  (void)arg;
-  if (lsm6dsv.init(&ctx.cfg) != BmOK) {
+  MotionSampler *sampler = static_cast<MotionSampler *>(arg);
+  LSM6DSV *lsm6dsv = &sampler->m_lsm6dsv;
+
+  if (lsm6dsv->init(&sampler->m_ctx.cfg) != BmOK) {
     return;
   }
 
@@ -60,14 +72,14 @@ static void motion_task(void *arg) {
   //TODO: add LISM compass to sensor hub
   std::array<LSM6DSV::LSM6DSVSensorHub, 0> sensor_hub = {};
 
-  lsm6dsv.start_stream(sensor_hub, num_fifo_readings);
+  lsm6dsv->start_stream(sensor_hub, num_fifo_readings);
 
   while (1) {
-    lsm6dsv.stream_handle();
+    lsm6dsv->stream_handle();
   }
 }
 
-MotionSamplerConfig motionSensorGetDefaultConfig(void) {
+MotionSamplerConfig motion_sampler_get_default_config(void) {
   static const LSM6DSV::Cfg lsm6dsv_default_cfg = {
       .accelerometer =
           {
@@ -84,26 +96,16 @@ MotionSamplerConfig motionSensorGetDefaultConfig(void) {
   return lsm6dsv_default_cfg;
 }
 
-BmErr motionSensorAdd(MotionSamplerConfig cfg, SPIInterface_t *spi, IOPinHandle_t *cs_pin,
-                      IOPinHandle_t *int_pin) {
-  if (!spi || !cs_pin || !int_pin) {
+BmErr motion_sampler_add(MotionSampler *sampler) {
+  if (!sampler) {
     return BmEINVAL;
   }
 
-  ctx.cfg = cfg;
-  ctx.spi = spi;
-  ctx.cs = cs_pin;
-  ctx.isr = int_pin;
-
-  IORegisterCallback(ctx.isr, lsm6dsv_isr_handle, nullptr);
+  IORegisterCallback(sampler->m_ctx.isr, lsm6dsv_isr_handle, sampler);
 
   // Start with chip select pin high
-  IOWrite(ctx.cs, 1);
+  IOWrite(sampler->m_ctx.cs, 1);
 
   static constexpr uint32_t stack_size = 1024;
-  return bm_task_create(motion_task, "motion", stack_size, NULL, MOTION_TASK_PRIORITY, NULL);
+  return bm_task_create(motion_task, "motion", stack_size, sampler, MOTION_TASK_PRIORITY, NULL);
 }
-
-BmErr motionSensorDataReady(uint32_t timeout_ms) { return lsm6dsv.reading_ready(timeout_ms); }
-
-BmErr motionSensorGet(MotionSensorReading *reading) { return lsm6dsv.get_reading(reading); }
