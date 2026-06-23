@@ -207,11 +207,33 @@ static void check_topology_report(uint32_t timeout_ms) {
         getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
         fw_info.gitSHA = getGitSHA();
 
+        static constexpr uint16_t NETWORK_INFO_CHUNK_SIZE = 1024;
+        if (cbor_bufsize > NETWORK_INFO_CHUNK_SIZE) {
+          uint32_t chunk_data_to_send_bytes = cbor_bufsize - NETWORK_INFO_CHUNK_SIZE;
+          uint32_t offset = 0;
+          while (offset < chunk_data_to_send_bytes) {
+            uint32_t remaining = chunk_data_to_send_bytes - offset;
+            uint16_t chunk_size = remaining > NETWORK_INFO_CHUNK_SIZE
+                                      ? NETWORK_INFO_CHUNK_SIZE
+                                      : static_cast<uint16_t>(remaining);
+            bm_serial_send_network_info_chunk(cbor_bufsize, offset, chunk_size,
+                                              &cbor_buffer[offset]);
+            offset += chunk_size;
+          }
+          bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
+                                      _node_list.num_nodes, _node_list.nodes,
+                                      cbor_bufsize - chunk_data_to_send_bytes,
+                                      &cbor_buffer[chunk_data_to_send_bytes]);
+          if (_send_on_boot) {
+            _send_on_boot = false;
+          }
+        } else {
         bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
                                     _node_list.num_nodes, _node_list.nodes, cbor_bufsize,
                                     cbor_buffer);
         if (_send_on_boot) {
           _send_on_boot = false;
+        }
         }
       }
 
@@ -775,6 +797,9 @@ uint8_t *topology_sampler_alloc_last_network_config(uint32_t &network_crc32,
 void bm_topology_last_network_info_cb(void) {
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
     do {
+      if (!_node_list.last_network_configuration_info.cbor_config_map) {
+        break;
+      }
 
       BmConfigCrc config_crc = {
           .partition = BM_CFG_PARTITION_SYSTEM,
@@ -790,11 +815,35 @@ void bm_topology_last_network_info_cb(void) {
 
       getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
       fw_info.gitSHA = getGitSHA();
+
+      size_t cbor_map_size = _node_list.last_network_configuration_info.cbor_config_map_size;
+      uint8_t *cbor_map = _node_list.last_network_configuration_info.cbor_config_map;
+      uint32_t net_crc = _node_list.last_network_configuration_info.network_crc32;
+
+      static constexpr uint16_t NETWORK_INFO_CHUNK_SIZE = 1024;
+      if (cbor_map_size > NETWORK_INFO_CHUNK_SIZE) {
+        uint32_t chunk_data_to_send_bytes = cbor_map_size - NETWORK_INFO_CHUNK_SIZE;
+        uint32_t offset = 0;
+        while (offset < chunk_data_to_send_bytes) {
+          uint32_t remaining = chunk_data_to_send_bytes - offset;
+          uint16_t chunk_size = remaining > NETWORK_INFO_CHUNK_SIZE
+                                    ? NETWORK_INFO_CHUNK_SIZE
+                                    : static_cast<uint16_t>(remaining);
+          bm_serial_send_network_info_chunk(cbor_map_size, offset, chunk_size,
+                                            &cbor_map[offset]);
+          offset += chunk_size;
+        }
+        bm_serial_send_network_info(net_crc, &config_crc, &fw_info,
+                                    _node_list.num_nodes, _node_list.nodes,
+                                    cbor_map_size - chunk_data_to_send_bytes,
+                                    &cbor_map[chunk_data_to_send_bytes]);
+      } else {
       bm_serial_send_network_info(
           _node_list.last_network_configuration_info.network_crc32, &config_crc, &fw_info,
           _node_list.num_nodes, _node_list.nodes,
           _node_list.last_network_configuration_info.cbor_config_map_size,
           _node_list.last_network_configuration_info.cbor_config_map);
+      }
     } while (0);
     xSemaphoreGive(_node_list.node_list_mutex);
   }
