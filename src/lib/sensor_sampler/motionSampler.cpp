@@ -14,8 +14,28 @@ MotionSampler::MotionSampler(SPIInterface_t *spi, IOPinHandle_t *cs_pin, IOPinHa
   m_ctx.isr = int_pin;
 }
 
+/*!
+ @brief Begin sensor communication handler
+
+ @details This is invoked before communication to the sensor has started.
+          Being a SPI device, the chip select line is driven low.
+ */
 void MotionSampler::begin(void) { IOWrite(m_ctx.cs, 0); }
 
+/*!
+ @brief Read from the sensor using SPI with DMA
+
+ @details The LSM6DSV requires the most significant bit to be set to 1 in order
+          to indicate a read from the device.
+
+ @param reg Register to read
+ @param buf Buffer size
+ @param len Length of buffer
+ @param arg unused
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr MotionSampler::read(uint8_t reg, uint8_t *buf, size_t len, void *arg) {
   (void)arg;
   reg = 1 << 7 | reg;
@@ -23,6 +43,17 @@ BmErr MotionSampler::read(uint8_t reg, uint8_t *buf, size_t len, void *arg) {
   return static_cast<BmErr>(spiRxNonblocking(m_ctx.spi, NULL, len, buf, 100));
 }
 
+/*!
+ @brief Write to the sensor using SPI
+
+ @param reg Register to write to
+ @param buf Buffer size
+ @param len Length of buffer
+ @param arg unused
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr MotionSampler::write(uint8_t reg, const uint8_t *buf, size_t len, void *arg) {
   (void)arg;
 
@@ -30,10 +61,34 @@ BmErr MotionSampler::write(uint8_t reg, const uint8_t *buf, size_t len, void *ar
   return static_cast<BmErr>(spiTx(m_ctx.spi, NULL, len, (uint8_t *)buf, 100));
 }
 
+/*!
+ @brief End sensor communication handler
+
+ @details This is invoked after communication to the sensor has finished.
+          Being a SPI device, the chip select line is driven high.
+ */
 void MotionSampler::end(void) { IOWrite(m_ctx.cs, 1); }
 
+/*!
+ @brief Set configuration for motion sampler
+
+ @details Must be invoked before running motion_sampler_add.
+
+ @param cfg Configuration to set
+ */
 void MotionSampler::set_cfg(MotionSamplerConfig cfg) { m_ctx.cfg = cfg; }
 
+/*!
+ @brief Indicates if data is ready to be collected from the sensor
+
+ @details If there is no sensor connected, this function will delay the
+          timeout value.
+
+ @param timeout_ms Timeout to wait for data to become available
+
+ @return True if data is available
+         False otherwise
+ */
 bool MotionSampler::data_ready(uint32_t timeout_ms) {
   BmErr err = m_lsm6dsv.reading_ready(timeout_ms);
   if (err == BmENODEV) {
@@ -43,6 +98,20 @@ bool MotionSampler::data_ready(uint32_t timeout_ms) {
   return err == BmOK;
 }
 
+/*!
+ @brief Obtain data from the sensor
+
+ @details If data is available, this function can be polled to clear out all
+          of the available data reported from the sensor. i.e.:
+            while (sensor.data_get(&reading) == BmOK) {
+              // perform readings here
+            }
+
+ @param reading A single reading from the sensor
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr MotionSampler::data_get(MotionSensorReading *reading) {
 
   return m_lsm6dsv.get_reading(reading);
@@ -59,6 +128,14 @@ static bool lsm6dsv_isr_handle(const void *pin, uint8_t value, void *args) {
   return true;
 }
 
+/*!
+ @brief Motion sensor task
+
+ @details Will initialize/configure, and handle streaming data from the motion
+          sensor.
+
+ @param arg Sampler instance
+ */
 static void motion_task(void *arg) {
   MotionSampler *sampler = static_cast<MotionSampler *>(arg);
   LSM6DSV *lsm6dsv = &sampler->m_lsm6dsv;
@@ -79,6 +156,11 @@ static void motion_task(void *arg) {
   }
 }
 
+/*!
+ @brief Obtain the default configuration for the motion sensor
+
+ @return Default motion sensor sampler configuration
+ */
 MotionSamplerConfig motion_sampler_get_default_config(void) {
   static const LSM6DSV::Cfg lsm6dsv_default_cfg = {
       .accelerometer =
@@ -96,14 +178,24 @@ MotionSamplerConfig motion_sampler_get_default_config(void) {
   return lsm6dsv_default_cfg;
 }
 
+/*!
+ @brief Add a motion sensor sampler
+
+ @details Configures interrupt for the sampler ISR pin, raises the chip select
+          line and creates an instance of a motion_task. Sensor must be
+          configured beforehand.
+
+ @param sampler Sampler instance to begin sampling
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr motion_sampler_add(MotionSampler *sampler) {
   if (!sampler) {
     return BmEINVAL;
   }
 
   IORegisterCallback(sampler->m_ctx.isr, lsm6dsv_isr_handle, sampler);
-
-  // Start with chip select pin high
   IOWrite(sampler->m_ctx.cs, 1);
 
   static constexpr uint32_t stack_size = 1024;
