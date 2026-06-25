@@ -82,6 +82,7 @@ SerialHandle_t usart1 = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
+    .fifoEnabled = false,
 };
 #endif /// DEBUG_USE_USART1
 
@@ -106,6 +107,7 @@ SerialHandle_t usbCLI = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
+    .fifoEnabled = false,
 };
 
 // "bristlemouth" USB serial - Use TBD
@@ -129,6 +131,7 @@ SerialHandle_t usbPcap = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
+    .fifoEnabled = false,
 };
 
 static const DebugI2C_t debugI2CInterfaces[] = {

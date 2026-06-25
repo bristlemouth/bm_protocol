@@ -86,6 +86,8 @@ typedef struct SerialHandle {
 
   // Break condition callback (called from ISR context)
   HWBreakCb_t breakISR;
+
+  bool fifoEnabled;
 } SerialHandle_t;
 
 // Dropped rx characters

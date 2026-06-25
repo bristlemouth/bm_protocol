@@ -103,6 +103,7 @@ SerialHandle_t usart1 = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
+    .fifoEnabled = false,
 };
 
 // Serial console USB device
@@ -126,6 +127,7 @@ SerialHandle_t usbCLI = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
+    .fifoEnabled = false,
 };
 
 SerialHandle_t usbPcap = {
@@ -148,6 +150,7 @@ SerialHandle_t usbPcap = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
+    .fifoEnabled = false,
 };
 
 NvmPartition *userConfigurationPartition = NULL;
