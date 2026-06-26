@@ -121,3 +121,19 @@ BmErr LIS2MDL::get_reading(LIS2MDLReading *reading) {
 
   return err;
 }
+
+BmErr LIS2MDL::get_reading(LIS2MDLReading *reading) {
+  if (!reading) {
+    return BmEINVAL;
+  }
+
+  if (!m_queue_mut) {
+    return BmENODEV;
+  }
+
+  bm_semaphore_take(m_queue_mut, BM_MAX_DELAY_UINT32);
+  BmErr err = q_dequeue(&m_reading_queue, reading, sizeof(LIS2MDLReading));
+  bm_semaphore_give(m_queue_mut);
+
+  return err;
+}
