@@ -427,10 +427,18 @@ void BorealisSensor::borealisSubCallback(uint64_t node_id, const char *topic,
     sub_type = HYDROTWIN_HDR;
   }
 
-  if (sub_type < BOREALIS_SUB_COUNT) {
-    borealis = static_cast<Borealis_t *>(
-        sensorControllerFindSensorById(node_id, SENSOR_TYPE_BOREALIS));
+  if (sub_type == BOREALIS_SUB_COUNT) {
+    return;
   }
+
+  // Obtain Node ID from topic as Pi on Borealis 2 has a different node ID and
+  // will publish data with an unexpected node ID value
+  uint64_t borealis_mote_node_id = 0;
+  static const uint8_t offset = sizeof("sensor/") - 1;
+  borealis_mote_node_id = strtoull(&topic[offset], nullptr, 16);
+
+  borealis = static_cast<Borealis_t *>(
+      sensorControllerFindSensorById(borealis_mote_node_id, SENSOR_TYPE_BOREALIS));
 
   bm_debug("Borealis data received from node %016" PRIx64 ", on topic: %.*s\n", node_id,
            topic_len, topic);
