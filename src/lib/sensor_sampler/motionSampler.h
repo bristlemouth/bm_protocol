@@ -3,11 +3,13 @@
 
 #include "abstract_st_sensor.h"
 #include "io.h"
+#include "lis2mdl.h"
 #include "lsm6dsv.h"
 #include "protected_spi.h"
 #include "util.h"
 
-typedef LSM6DSV::LSM6DSVReading MotionSensorReading;
+typedef LSM6DSV::LSM6DSVReading IMUReading;
+typedef LIS2MDL::LIS2MDLReading CompassReading;
 typedef LSM6DSV::Cfg MotionSamplerConfig;
 
 class MotionSampler : public SensorInterfaceBus {
@@ -16,7 +18,8 @@ public:
 
   void set_cfg(MotionSamplerConfig cfg);
   bool data_ready(uint32_t timeout_ms = 50);
-  BmErr data_get(MotionSensorReading *reading);
+  BmErr data_get(IMUReading *reading);
+  BmErr data_get(CompassReading *reading);
 
   struct {
     SPIInterface_t *spi;
@@ -26,6 +29,7 @@ public:
   } m_ctx;
 
   LSM6DSV m_lsm6dsv;
+  LIS2MDL m_lis2mdl;
 
 private:
   void begin(void) override;

@@ -199,6 +199,16 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
 
     lsm6dsv_return_on_err(lsm6dsv_sh_slave_connected_set(
         &m_ctx, static_cast<lsm6dsv_sh_slave_connected_t>(sensor_hub_count - 1)));
+
+    // Configure sensor hub to trigger from interrupt INT2, by default this is active low
+    lsm6dsv_sh_syncro_mode_t trigger = LSM6DSV_SH_TRIG_INT2;
+    if (sensor_hub_poll) {
+      trigger = LSM6DSV_SH_TRG_XL_GY_DRDY;
+    } else {
+      lsm6dsv_return_on_err(lsm6dsv_den_polarity_set(&m_ctx, LSM6DSV_DEN_ACT_LOW));
+    }
+    lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, trigger));
+
     lsm6dsv_return_on_err(lsm6dsv_sh_master_set(&m_ctx, PROPERTY_ENABLE));
   }
 
@@ -243,15 +253,6 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   // Set Power Modes
   lsm6dsv_return_on_err(lsm6dsv_xl_mode_set(&m_ctx, m_cfg.accelerometer.mode));
   lsm6dsv_return_on_err(lsm6dsv_gy_mode_set(&m_ctx, m_cfg.gyro.mode));
-
-  // Configure sensor hub to trigger from interrupt INT2, by default this is active low
-  lsm6dsv_sh_syncro_mode_t trigger = LSM6DSV_SH_TRIG_INT2;
-  if (sensor_hub_poll) {
-    trigger = LSM6DSV_SH_TRG_XL_GY_DRDY;
-  } else {
-    lsm6dsv_return_on_err(lsm6dsv_den_polarity_set(&m_ctx, LSM6DSV_DEN_ACT_LOW));
-  }
-  lsm6dsv_return_on_err(lsm6dsv_sh_syncro_mode_set(&m_ctx, trigger));
 
   // Set data rate of accelerometer and gyro
   lsm6dsv_return_on_err(lsm6dsv_xl_data_rate_set(&m_ctx, m_cfg.sample_rate));
@@ -330,12 +331,15 @@ BmErr LSM6DSV::stream_handle(void) {
   lsm6dsv_read_reg(&m_ctx, LSM6DSV_FIFO_DATA_OUT_TAG, m_fifo_buf, 7 * num);
 
   while (num--) {
+    static constexpr uint8_t fifo_byte_count = 7;
+    static constexpr uint8_t tag_byte_count = 1;
+    static constexpr uint8_t data_byte_count = fifo_byte_count - tag_byte_count;
     uint8_t *data = &m_fifo_buf[i];
     lsm6dsv_fifo_data_out_tag_t tag_data;
     memcpy(&tag_data, &data[0], sizeof(lsm6dsv_fifo_data_out_tag_t));
     uint8_t tag = tag_data.tag_sensor;
     data++;
-    i += 7;
+    i += fifo_byte_count;
 
     int16_t datax = static_cast<int16_t>(le_uint8_to_uint16(&data[0]));
     int16_t datay = static_cast<int16_t>(le_uint8_to_uint16(&data[2]));
@@ -403,7 +407,7 @@ BmErr LSM6DSV::stream_handle(void) {
       uint8_t sensor_set_idx = tag - LSM6DSV_SENSORHUB_SLAVE0_TAG;
       AbstractSensorInterface *sensor = m_sensor_hub[sensor_set_idx].sensor;
       if (sensor) {
-        sensor->set_data(data, sizeof(data));
+        sensor->set_data(data, data_byte_count);
       }
     }
   }

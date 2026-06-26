@@ -35,7 +35,7 @@ public:
     uint8_t len = 0; // Length of data from the register to collect, max 6 bytes
   } LSM6DSVSensorHub;
   BmErr start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold,
-                     bool sensor_hub_poll = false);
+                     bool sensor_hub_poll = true);
   BmErr stream_handle(void);
 
   typedef struct {

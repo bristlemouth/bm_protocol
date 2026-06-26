@@ -45,10 +45,14 @@ void sensorsInit(void) {
 
 void sensorsHandle(void) {
   if (motion.data_ready()) {
-    MotionSensorReading reading = {};
-    while (motion.data_get(&reading) == BmOK) {
-      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y,
-               reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z);
+    IMUReading imu = {};
+    CompassReading compass = {};
+    while (motion.data_get(&imu) == BmOK) {
+      //bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", imu.ns, imu.acc.x, imu.acc.y, imu.acc.z,
+      //         imu.gyro.x, imu.gyro.y, imu.gyro.z);
+    }
+    while (motion.data_get(&compass) == BmOK) {
+      bm_debug("compass: %" PRIu64 ",%f,%f,%f\n", compass.ns, compass.x, compass.y, compass.z);
     }
   }
 }

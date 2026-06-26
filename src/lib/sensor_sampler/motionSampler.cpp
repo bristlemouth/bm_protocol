@@ -8,7 +8,7 @@
 #endif
 
 MotionSampler::MotionSampler(SPIInterface_t *spi, IOPinHandle_t *cs_pin, IOPinHandle_t *int_pin)
-    : m_lsm6dsv(this) {
+    : m_lsm6dsv(this), m_lis2mdl(LIS2MDL_I2C_ADD) {
   m_ctx.spi = spi;
   m_ctx.cs = cs_pin;
   m_ctx.isr = int_pin;
@@ -99,7 +99,7 @@ bool MotionSampler::data_ready(uint32_t timeout_ms) {
 }
 
 /*!
- @brief Obtain data from the sensor
+ @brief Obtain imu data from the sensor
 
  @details If data is available, this function can be polled to clear out all
           of the available data reported from the sensor. i.e.:
@@ -112,9 +112,24 @@ bool MotionSampler::data_ready(uint32_t timeout_ms) {
  @return BmOK on success
          BmErr on failure
  */
-BmErr MotionSampler::data_get(MotionSensorReading *reading) {
+BmErr MotionSampler::data_get(IMUReading *reading) { return m_lsm6dsv.get_reading(reading); }
 
-  return m_lsm6dsv.get_reading(reading);
+/*!
+ @brief Obtain compass data from the sensor
+
+ @details If data is available, this function can be polled to clear out all
+          of the available data reported from the sensor. i.e.:
+            while (sensor.data_get(&reading) == BmOK) {
+              // perform readings here
+            }
+
+ @param reading A single reading from the sensor
+
+ @return BmOK on success
+         BmErr on failure
+ */
+BmErr MotionSampler::data_get(CompassReading *reading) {
+  return m_lis2mdl.get_reading(reading);
 }
 
 static bool lsm6dsv_isr_handle(const void *pin, uint8_t value, void *args) {
@@ -139,6 +154,7 @@ static bool lsm6dsv_isr_handle(const void *pin, uint8_t value, void *args) {
 static void motion_task(void *arg) {
   MotionSampler *sampler = static_cast<MotionSampler *>(arg);
   LSM6DSV *lsm6dsv = &sampler->m_lsm6dsv;
+  LIS2MDL *lis2mdl = &sampler->m_lis2mdl;
 
   if (lsm6dsv->init(&sampler->m_ctx.cfg) != BmOK) {
     return;
@@ -147,7 +163,7 @@ static void motion_task(void *arg) {
   static constexpr uint8_t num_fifo_readings = 12;
 
   //TODO: add LISM compass to sensor hub
-  std::array<LSM6DSV::LSM6DSVSensorHub, 0> sensor_hub = {};
+  std::array<LSM6DSV::LSM6DSVSensorHub, 1> sensor_hub = {lis2mdl->m_sensor_hub};
 
   lsm6dsv->start_stream(sensor_hub, num_fifo_readings);
 
