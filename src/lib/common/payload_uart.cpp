@@ -328,9 +328,9 @@ void configTxPinAlternate(void) {
 void enable(void) {
   USART_TypeDef *dev = static_cast<USART_TypeDef *>(uart_handle.device);
 
-  LL_LPUART_Enable(dev);
-
   serialEnable(&uart_handle);
+
+  LL_LPUART_Enable(dev);
 
   // Clear any pending NVIC bit from the disabled period, then re-enable
   NVIC_ClearPendingIRQ(LPUART1_IRQn);
@@ -378,7 +378,8 @@ SerialHandle_t uart_handle = {
     .preTxCb = NULL,
     .postTxCb = NULL,
     .breakISR = NULL,
-};
+    .fifoEnabled = true,
+}; // namespace PLUART
 
 BaseType_t init(uint8_t task_priority) {
   // Create the stream buffer for the user bytes to be buffered into and read from

@@ -261,8 +261,16 @@ void serialEnable(SerialHandle_t *handle) {
 
     if (handle->rxStreamBuffer) {
       xStreamBufferReset(handle->rxStreamBuffer);
-      // Enable Uart RX interrupt
-      usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
+      if (handle->fifoEnabled) {
+        LL_USART_EnableIT_IDLE(handle->device);
+        LL_USART_EnableIT_RXFT(handle->device);
+        LL_USART_EnableIT_RXFF(handle->device);
+        LL_USART_SetRXFIFOThreshold(handle->device, LL_USART_FIFOTHRESHOLD_1_2);
+        LL_USART_EnableFIFO(handle->device);
+      } else {
+        // Enable Uart RX interrupt
+        usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
+      }
     }
   }
 #endif
@@ -303,13 +311,25 @@ void serialGenericUartIRQHandler(SerialHandle_t *handle) {
 
   configASSERT(handle != NULL);
 
+  // When line is idle, data must be cleared
+  bool idle_int =
+      LL_USART_IsActiveFlag_IDLE(handle->device) && LL_USART_IsEnabledIT_IDLE(handle->device);
+  bool fifo_int = (LL_USART_IsActiveFlag_RXFF(handle->device) ||
+                   LL_USART_IsActiveFlag_RXFT(handle->device)) &&
+                  LL_USART_IsEnabledIT_RXFT(handle->device);
+  bool rx_int = usart_IsActiveFlag_RXNE((USART_TypeDef *)handle->device) &&
+                usart_IsEnabledIT_RXNE((USART_TypeDef *)handle->device);
   // Process received bytes
-  if( usart_IsActiveFlag_RXNE((USART_TypeDef *)handle->device) &&
-      usart_IsEnabledIT_RXNE((USART_TypeDef *)handle->device)){
+  if (idle_int || fifo_int || rx_int) {
+    while (LL_USART_IsActiveFlag_RXNE_RXFNE(handle->device)) {
+      uint8_t byte = usart_ReceiveData8((USART_TypeDef *)handle->device);
+      configASSERT(handle->rxBytesFromISR);
+      higherPriorityTaskWoken = handle->rxBytesFromISR(handle, &byte, 1);
+    }
 
-    uint8_t byte = usart_ReceiveData8((USART_TypeDef *)handle->device);
-    configASSERT(handle->rxBytesFromISR);
-    higherPriorityTaskWoken = handle->rxBytesFromISR(handle, &byte, 1);
+    if (idle_int) {
+      LL_USART_ClearFlag_IDLE(handle->device);
+    }
   }
 
   // TXE will set when Tx Data Reg (TDR) is empty. Process next byte to transmit
