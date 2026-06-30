@@ -131,7 +131,7 @@ static void topology_sample_cb(NetworkTopology *topology) {
 // Returns the new pointer location of where the cbor_map now exists
 static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size,
                                          uint32_t &chunk_data_to_send_bytes) {
-  static constexpr uint16_t NETWORK_INFO_CHUNK_SIZE = 1024;
+  static constexpr uint16_t NETWORK_INFO_CHUNK_SIZE = 1800;
   if (cbor_map_size <= NETWORK_INFO_CHUNK_SIZE) {
     return cbor_map;
   }
