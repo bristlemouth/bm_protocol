@@ -394,6 +394,8 @@ BaseType_t init(uint8_t task_priority) {
   _postTxSemaphore = xSemaphoreCreateBinary();
   configASSERT(_postTxSemaphore != NULL);
 
+  LL_PWR_EnableFlashFastWakeUp();
+
   MX_LPUART1_UART_Init();
   // Single byte trigger levels for Rx and Tx for fast response time
   uart_handle.txStreamBuffer = xStreamBufferCreate(uart_handle.txBufferSize, 1);
