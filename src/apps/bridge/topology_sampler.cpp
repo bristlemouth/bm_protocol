@@ -85,6 +85,9 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
+static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size,
+                                         uint32_t &chunk_data_to_send_bytes);
+
 static void topology_sample_cb(NetworkTopology *topology) {
   if (!topology) {
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
@@ -123,6 +126,26 @@ static void topology_sample_cb(NetworkTopology *topology) {
   }
   xSemaphoreGive(_node_list.node_list_mutex);
   bm_semaphore_give(network_topology_semaphore);
+}
+
+// Returns the new pointer location of where the cbor_map now exists
+static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size,
+                                         uint32_t &chunk_data_to_send_bytes) {
+  static constexpr uint16_t NETWORK_INFO_CHUNK_SIZE = 1800;
+  if (cbor_map_size <= NETWORK_INFO_CHUNK_SIZE) {
+    return cbor_map;
+  }
+  uint32_t offset = 0;
+  chunk_data_to_send_bytes = cbor_map_size - NETWORK_INFO_CHUNK_SIZE;
+  while (offset < chunk_data_to_send_bytes) {
+    uint32_t remaining = chunk_data_to_send_bytes - offset;
+    uint16_t chunk_size = remaining > NETWORK_INFO_CHUNK_SIZE
+                              ? NETWORK_INFO_CHUNK_SIZE
+                              : static_cast<uint16_t>(remaining);
+    bm_serial_send_network_info_chunk(cbor_map_size, offset, chunk_size, &cbor_map[offset]);
+    offset += chunk_size;
+  }
+  return &cbor_map[offset];
 }
 
 static void check_topology_report(uint32_t timeout_ms) {
@@ -207,9 +230,12 @@ static void check_topology_report(uint32_t timeout_ms) {
         getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
         fw_info.gitSHA = getGitSHA();
 
+        uint32_t chunk_data_to_send_bytes = 0;
+        uint8_t *cbor_buffer_updated = send_network_info_chunks(cbor_buffer, cbor_bufsize, chunk_data_to_send_bytes);
         bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
-                                    _node_list.num_nodes, _node_list.nodes, cbor_bufsize,
-                                    cbor_buffer);
+                                      _node_list.num_nodes, _node_list.nodes,
+                                      cbor_bufsize - chunk_data_to_send_bytes,
+                                      cbor_buffer_updated);
         if (_send_on_boot) {
           _send_on_boot = false;
         }
@@ -775,7 +801,6 @@ uint8_t *topology_sampler_alloc_last_network_config(uint32_t &network_crc32,
 void bm_topology_last_network_info_cb(void) {
   if (xSemaphoreTake(_node_list.node_list_mutex, pdMS_TO_TICKS(NETWORK_CONFIG_TIMEOUT_MS))) {
     do {
-
       BmConfigCrc config_crc = {
           .partition = BM_CFG_PARTITION_SYSTEM,
           .crc32 = services_cbor_encoded_as_crc32(BM_CFG_PARTITION_SYSTEM),
@@ -790,11 +815,17 @@ void bm_topology_last_network_info_cb(void) {
 
       getFWVersion(&fw_info.major, &fw_info.minor, &fw_info.revision);
       fw_info.gitSHA = getGitSHA();
-      bm_serial_send_network_info(
-          _node_list.last_network_configuration_info.network_crc32, &config_crc, &fw_info,
-          _node_list.num_nodes, _node_list.nodes,
-          _node_list.last_network_configuration_info.cbor_config_map_size,
-          _node_list.last_network_configuration_info.cbor_config_map);
+
+      size_t cbor_map_size = _node_list.last_network_configuration_info.cbor_config_map_size;
+      uint8_t *cbor_map = _node_list.last_network_configuration_info.cbor_config_map;
+      uint32_t net_crc = _node_list.last_network_configuration_info.network_crc32;
+
+      uint32_t chunk_data_to_send_bytes = 0;
+      uint8_t *cbor_buffer_updated = send_network_info_chunks(cbor_map, cbor_map_size, chunk_data_to_send_bytes);
+      bm_serial_send_network_info(net_crc, &config_crc, &fw_info,
+                                      _node_list.num_nodes, _node_list.nodes,
+                                      cbor_map_size - chunk_data_to_send_bytes,
+                                      cbor_buffer_updated);
     } while (0);
     xSemaphoreGive(_node_list.node_list_mutex);
   }
