@@ -85,7 +85,7 @@ static void _update_sensor_type_list(uint64_t node_id, char *app_name, uint32_t 
 
 static void log_network_crc_info(uint32_t network_crc32, SMConfigCRCList &sm_config_crc_list);
 
-static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size,
+static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size, uint16_t num_nodes,
                                          uint32_t &chunk_data_to_send_bytes);
 
 static void topology_sample_cb(NetworkTopology *topology) {
@@ -129,7 +129,7 @@ static void topology_sample_cb(NetworkTopology *topology) {
 }
 
 // Returns the new pointer location of where the cbor_map now exists
-static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size,
+static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size, uint16_t num_nodes,
                                          uint32_t &chunk_data_to_send_bytes) {
   static constexpr uint16_t NETWORK_INFO_CHUNK_SIZE = 1800;
   if (cbor_map_size <= NETWORK_INFO_CHUNK_SIZE) {
@@ -142,7 +142,7 @@ static uint8_t *send_network_info_chunks(uint8_t *cbor_map, size_t cbor_map_size
     uint16_t chunk_size = remaining > NETWORK_INFO_CHUNK_SIZE
                               ? NETWORK_INFO_CHUNK_SIZE
                               : static_cast<uint16_t>(remaining);
-    bm_serial_send_network_info_chunk(cbor_map_size, offset, chunk_size, &cbor_map[offset]);
+    bm_serial_send_network_info_chunk(cbor_map_size, offset, chunk_size, num_nodes, &cbor_map[offset]);
     offset += chunk_size;
   }
   return &cbor_map[offset];
@@ -231,7 +231,7 @@ static void check_topology_report(uint32_t timeout_ms) {
         fw_info.gitSHA = getGitSHA();
 
         uint32_t chunk_data_to_send_bytes = 0;
-        uint8_t *cbor_buffer_updated = send_network_info_chunks(cbor_buffer, cbor_bufsize, chunk_data_to_send_bytes);
+        uint8_t *cbor_buffer_updated = send_network_info_chunks(cbor_buffer, cbor_bufsize, _node_list.num_nodes, chunk_data_to_send_bytes);
         bm_serial_send_network_info(network_crc32_calc, &config_crc, &fw_info,
                                       _node_list.num_nodes, _node_list.nodes,
                                       cbor_bufsize - chunk_data_to_send_bytes,
@@ -821,7 +821,7 @@ void bm_topology_last_network_info_cb(void) {
       uint32_t net_crc = _node_list.last_network_configuration_info.network_crc32;
 
       uint32_t chunk_data_to_send_bytes = 0;
-      uint8_t *cbor_buffer_updated = send_network_info_chunks(cbor_map, cbor_map_size, chunk_data_to_send_bytes);
+      uint8_t *cbor_buffer_updated = send_network_info_chunks(cbor_map, cbor_map_size, _node_list.num_nodes, chunk_data_to_send_bytes);
       bm_serial_send_network_info(net_crc, &config_crc, &fw_info,
                                       _node_list.num_nodes, _node_list.nodes,
                                       cbor_map_size - chunk_data_to_send_bytes,
