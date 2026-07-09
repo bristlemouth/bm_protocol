@@ -5,12 +5,11 @@
 //
 
 #include <stdbool.h>
-// #include "stm32l4xx.h"
-#include "stm32u5xx.h"
 #include "FreeRTOS.h"
+#include "stm32u5xx.h"
+#include "stm32u5xx_ll_iwdg.h"
 #include "task.h"
 #include "lpm.h"
-#include "watchdog.h"
 
 #define SUPPORT_VREG_RANGES_1_THROUGH_3
 
@@ -110,6 +109,7 @@ static uint32_t rccIcscr1Save;
 static uint32_t pwrVosrSave;
 #endif
 
+__attribute__((section(".RamFunc")))
 void lpmPreSleepProcessing() {
   int useDeepSleep = pdFALSE;
    if (deepSleepForbiddenFlags == 0)
@@ -151,11 +151,12 @@ void lpmPreSleepProcessing() {
    }
 }
 
+__attribute__((section(".RamFunc")))
 void lpmPostSleepProcessing() {
   // reference xMaximumSuppressedTicks, the maximum amount of time we can sleep
   // is 1998 ticks (or ms, ref configTICK_RATE_HZ). Feed the watchdog here
   // before moving onto next tasks
-  watchdogFeed();
+  LL_IWDG_ReloadCounter(IWDG);
   if (SCB->SCR & SCB_SCR_SLEEPDEEP_Msk)
    {
       //      We may have been in deep sleep.  If we were, the RCC cleared several enable bits in the CR, and

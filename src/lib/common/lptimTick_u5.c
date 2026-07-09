@@ -342,6 +342,7 @@ void vPortSetupTimerInterrupt( void )
 //      FreeRTOS version 10.4.0 or newer is recommended to ensure this function doesn't potentially return one
 // OS tick *after* the intended time.
 //
+__attribute__((section(".RamFunc"), noinline))
 void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 {
    //      Limit the time we plan to spend in tickless idle.  LPTIM has only so much range.
