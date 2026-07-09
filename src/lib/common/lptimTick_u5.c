@@ -342,10 +342,14 @@ void vPortSetupTimerInterrupt( void )
 //      FreeRTOS version 10.4.0 or newer is recommended to ensure this function doesn't potentially return one
 // OS tick *after* the intended time.
 //
+#include "bsp.h"
+#include "stm32_io.h"
+#include "io.h"
 void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 {
    //      Limit the time we plan to spend in tickless idle.  LPTIM has only so much range.
    //
+   IOWrite(&BM_CS, 1);
    if (xExpectedIdleTime > xMaximumSuppressedTicks)
    {
       xExpectedIdleTime = xMaximumSuppressedTicks;
@@ -769,6 +773,7 @@ void LPTIM_IRQHandler( void )
          isCmpWriteInProgress = pdFALSE;
       }
    }
+   IOWrite(&BM_CS, 0);
 }
 
 #endif  // configUSE_TICKLESS_IDLE == 2

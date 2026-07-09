@@ -75,6 +75,18 @@ void bspInit() {
     IORegisterCallback(&IOEXP_INT, pca9535IRQHandler, &bristlefinIOExpander);
   }
 
+LL_GPIO_InitTypeDef cfg =
+{
+    .Pin = BM_CS_Pin,
+  .Mode = LL_GPIO_MODE_OUTPUT,
+  .Speed = LL_GPIO_SPEED_FREQ_LOW,
+  .OutputType = LL_GPIO_OUTPUT_PUSHPULL,
+  .Pull = LL_GPIO_PULL_NO,
+  .Alternate = LL_GPIO_AF_5,
+};
+
+  IOConfigure(&BM_CS, &cfg);
+
   // Turn LEDS on by default
   IOWrite(&BF_LED_G1, 0);
   IOWrite(&BF_LED_R1, 0);
