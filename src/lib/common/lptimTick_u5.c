@@ -240,7 +240,7 @@ static volatile uint8_t isTickNowSuppressed;    //   This field helps the tick I
 static inline void enter_sleep_mode(void) {
     __asm__ volatile (
         ".balign 16\n\t"  // Align to 16-byte boundary (128 bits)
-        "wfi\n\t"
+        "wfe\n\t"
         ::: "memory"
     );
 }
@@ -367,8 +367,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
    // mode.  We must stay in the critical section until we go to sleep so that any interrupt starting now
    // wakes us up from sleep.
    //
-   __disable_irq();
-   // __ISB() is not needed here.  The CPSID instruction used by  __disable_irq() is self synchronizing.
 
    //      If a context switch is pending or a task is waiting for the scheduler to be unsuspended, then
    // abandon the low power entry and the critical section.  This status cannot change while interrupts are
@@ -376,7 +374,6 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
    //
    if (eTaskConfirmSleepModeStatus() == eAbortSleep)
    {
-      __enable_irq();
    }
    else
    {
@@ -451,30 +448,23 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
          {
             //      Wait for an interrupt.
             //
-            __DSB();
             enter_sleep_mode();
-            __ISB();
          }
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
 
          //      Re-enable interrupts, and then execute the ISR tied to the interrupt that brought the MCU out
          // of sleep mode.
          //
-         __enable_irq();
-         __ISB();  // ISB is recommended by ARM; not strictly needed in Cortex-M when __disable_irq() is next.
 
          //      Disable interrupts for our call to eTaskConfirmSleepModeStatus() and in case we iterate again
          // in the loop.
          //
-         __disable_irq();
-         // __ISB() is not needed here.  The CPSID instruction used by  __disable_irq() is self synchronizing.
 
       } while (usIdealCmp == ulExpectedEndCmp && eTaskConfirmSleepModeStatus() != eAbortSleep);
 
       //      Re-enable interrupts.  We try our best to support short ISR latency, especially for interrupt
       // priorities higher than configMAX_SYSCALL_INTERRUPT_PRIORITY.
       //
-      __enable_irq();
 
       //      Determine how many tick periods elapsed during our sleep.  And if something other than the tick
       // timer woke us up, reschedule the tick that would normally come after the ones we've just skipped (if
