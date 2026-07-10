@@ -12,7 +12,7 @@ public:
   } Cfg;
 
   typedef struct {
-    uint64_t timestamp_ns;
+    uint64_t ns;
     float x;
     float y;
     float z;
@@ -45,7 +45,6 @@ private:
   Q m_reading_queue;
 
   BmSemaphore m_queue_mut = NULL;
-  ;
 };
 
 #endif

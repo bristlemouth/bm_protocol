@@ -11,15 +11,26 @@
     }                                                                                          \
   })
 
+/*!
+ @brief Initialize the LIS2MDL driver
+
+ @details This function performs the following:
+            - Creates a queue to hold LIS2MDLReading data
+            - Validates the LIS2MDL device exists
+            - Performs a software reset on the device
+            - Compensates for temperature when performing readings
+            - Enables the data is ready by driving the INT line low
+            - Configures customizable power mode and data rate
+
+ @return BmOK on success
+         BmENOMEM if there is insufficient memory to create mutexes/semaphore
+         BmENODEV if the device is not found
+         BmEACCES if bus operations fail when attempting communication to imu
+ */
 BmErr LIS2MDL::init(void) {
   BmErr err = q_create_static(&m_reading_queue, m_readings_buf, sizeof(m_readings_buf));
   if (err != BmOK) {
     return err;
-  }
-
-  m_queue_mut = bm_mutex_create();
-  if (!m_queue_mut) {
-    return BmENOMEM;
   }
 
   // Validate the LIS2MDL device ID
@@ -27,6 +38,11 @@ BmErr LIS2MDL::init(void) {
   lis2mdl_return_on_err(lis2mdl_device_id_get(&m_ctx, &whoami));
   if (whoami != LIS2MDL_ID) {
     return BmENODEV;
+  }
+
+  m_queue_mut = bm_mutex_create();
+  if (!m_queue_mut) {
+    return BmENOMEM;
   }
 
   lis2mdl_return_on_err(lis2mdl_sw_reset(&m_ctx));
@@ -40,6 +56,20 @@ BmErr LIS2MDL::init(void) {
   return BmOK;
 }
 
+/*!
+ @brief Set data on the device from Sensor Hub Application
+
+ @details If using the LIS2MDL from the LSM6DSV's (or another ST product's)
+          sensor hub functionality. This will enqueue the data directly from
+          there as it is required in AbstractSensorInterface. 
+
+ @param buf data received from the sensor hub
+ @param len length of data in bytes
+
+ @return BmOK on success
+         BmEINVAL if input arguments are invalid
+         BmENOMEM if not enough space in the queue's buffer for incoming data
+ */
 BmErr LIS2MDL::set_data(const uint8_t *buf, size_t len) {
 
   if (!buf || len < EXPECTED_DATA_LENGTH) {
@@ -53,15 +83,41 @@ BmErr LIS2MDL::set_data(const uint8_t *buf, size_t len) {
   //TODO: should we put timestamps here?
   //
   LIS2MDLReading reading = {
-      .timestamp_ns = 0,
+      .ns = 0,
       .x = lis2mdl_from_lsb_to_mgauss(datax),
       .y = lis2mdl_from_lsb_to_mgauss(datay),
       .z = lis2mdl_from_lsb_to_mgauss(dataz),
   };
 
   bm_semaphore_take(m_queue_mut, BM_MAX_DELAY_UINT32);
-  q_enqueue(&m_reading_queue, &reading, sizeof(LIS2MDLReading));
+  BmErr err = q_enqueue(&m_reading_queue, &reading, sizeof(LIS2MDLReading));
   bm_semaphore_give(m_queue_mut);
 
-  return BmOK;
+  return err;
+}
+
+/*!
+ @brief Obtain reading from device
+
+ @param reading pointer to structure to hold the singular reading.
+
+ @return BmOK on success
+         BmEINVAL if input arguments are invalid
+         BmENODEV if the device does not exist
+         BmENODATA if there are no elements in the queue to dequeue
+ */
+BmErr LIS2MDL::get_reading(LIS2MDLReading *reading) {
+  if (!reading) {
+    return BmEINVAL;
+  }
+
+  if (!m_queue_mut) {
+    return BmENODEV;
+  }
+
+  bm_semaphore_take(m_queue_mut, BM_MAX_DELAY_UINT32);
+  BmErr err = q_dequeue(&m_reading_queue, reading, sizeof(LIS2MDLReading));
+  bm_semaphore_give(m_queue_mut);
+
+  return err;
 }
