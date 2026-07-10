@@ -456,6 +456,12 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             enter_sleep_mode();
             __ISB();
          }
+         __NOP();
+         __NOP();
+         __NOP();
+         __NOP();
+         __NOP();
+         __NOP();
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
 
          //      Re-enable interrupts, and then execute the ISR tied to the interrupt that brought the MCU out
