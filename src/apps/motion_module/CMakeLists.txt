@@ -3,10 +3,17 @@ set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 set(APP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sensors.cpp
+    ${SRC_DIR}/third_party/ceva_sh2/sh2.c
+    ${SRC_DIR}/third_party/ceva_sh2/shtp.c
+    ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
+    ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
+    ${SRC_DIR}/lib/drivers/bno085.cpp
 )
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SRC_DIR}/third_party/ceva_sh2/
+    ${SRC_DIR}/lib/drivers/
 )
 
 set(APP_LIBS

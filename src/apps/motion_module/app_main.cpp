@@ -41,7 +41,7 @@ extern "C" {
 #include "w25.h"
 #include <inttypes.h>
 
-#include "motionSampler.h"
+//#include "motionSampler.h"
 
 #define LED_ON (0)
 #define LED_OFF (1)
@@ -292,5 +292,6 @@ static void defaultTask(void *parameters) {
 
   while (1) {
     sensorsHandle();
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
