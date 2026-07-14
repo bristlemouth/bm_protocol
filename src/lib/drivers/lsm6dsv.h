@@ -128,6 +128,8 @@ private:
   BmErr read_sensor_hub(uint8_t reg, uint8_t *data, size_t len, void *arg);
   void end_sensor_hub(void);
 
+  static lsm6dsv_sh_data_rate_t sensor_hub_data_rate_convert(lsm6dsv_data_rate_t data_rate);
+
   typedef float (*ConverterCb)(int16_t);
   static ConverterCb accelerometer_convert(lsm6dsv_xl_full_scale_t scale);
   static ConverterCb gyro_convert(lsm6dsv_gy_full_scale_t scale);

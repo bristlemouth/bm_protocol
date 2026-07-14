@@ -192,7 +192,8 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
     }
 
     // Configure sensor hub batch data rate if triggered by accelerometer or gyro
-    lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, LSM6DSV_SH_60Hz));
+    lsm6dsv_sh_data_rate_t sh_data_rate = sensor_hub_data_rate_convert(m_cfg.sample_rate);
+    lsm6dsv_return_on_err(lsm6dsv_sh_data_rate_set(&m_ctx, sh_data_rate));
 
     // This must be set to enable reading from device 0
     lsm6dsv_return_on_err(lsm6dsv_sh_write_mode_set(&m_ctx, LSM6DSV_ONLY_FIRST_CYCLE));
@@ -259,6 +260,30 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
   lsm6dsv_return_on_err(lsm6dsv_gy_data_rate_set(&m_ctx, m_cfg.sample_rate));
 
   return BmOK;
+}
+
+lsm6dsv_sh_data_rate_t LSM6DSV::sensor_hub_data_rate_convert(lsm6dsv_data_rate_t data_rate) {
+  lsm6dsv_sh_data_rate_t sh_data_rate = LSM6DSV_SH_15Hz;
+  switch (data_rate) {
+  case LSM6DSV_ODR_AT_30Hz:
+    sh_data_rate = LSM6DSV_SH_30Hz;
+    break;
+  case LSM6DSV_ODR_AT_60Hz:
+    sh_data_rate = LSM6DSV_SH_60Hz;
+    break;
+  case LSM6DSV_ODR_AT_120Hz:
+    sh_data_rate = LSM6DSV_SH_120Hz;
+    break;
+  case LSM6DSV_ODR_AT_240Hz:
+    sh_data_rate = LSM6DSV_SH_240Hz;
+    break;
+  case LSM6DSV_ODR_AT_480Hz:
+    sh_data_rate = LSM6DSV_SH_480Hz;
+  default:
+    break;
+  }
+
+  return sh_data_rate;
 }
 
 LSM6DSV::ConverterCb LSM6DSV::accelerometer_convert(lsm6dsv_xl_full_scale_t scale) {
