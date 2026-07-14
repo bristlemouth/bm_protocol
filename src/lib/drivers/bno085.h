@@ -10,6 +10,10 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "task.h"
 
+#ifndef BNO085_TASK_PRIORITY
+#define BNO085_TASK_PRIORITY 21
+#endif
+
 class Bno085 {
 public:
     // SPI bus + chip-select + INT + the three control pins (RST/BOOTN/WAKE)
