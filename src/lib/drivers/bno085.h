@@ -22,7 +22,7 @@ public:
            IOPinHandle_t *rstPin, IOPinHandle_t *bootPin, IOPinHandle_t *wakePin);
 
     BmErr init(sh2_EventCallback_t *eventCallback,
-              sh2_SensorCallback_t *sensorCallback);
+              sh2_SensorCallback_t *sensorCallback, void *cookie = nullptr);
 
     BmErr configureSensor(sh2_SensorId_t sensorId, uint32_t reportInterval_us);
 private:
@@ -55,6 +55,7 @@ private:
 
     sh2_EventCallback_t *_eventCallback;
     sh2_SensorCallback_t *_sensorCallback;
+    void *_cookie;
 
     bool _initialized;
     bool _resetSeen;
