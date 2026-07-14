@@ -41,7 +41,7 @@ extern "C" {
 #include "w25.h"
 #include <inttypes.h>
 
-//#include "motionSampler.h"
+#include "motionSampler.h"
 
 #define LED_ON (0)
 #define LED_OFF (1)

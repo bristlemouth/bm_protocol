@@ -7,9 +7,8 @@
 #include "lsm6dsv.h"
 #include "protected_spi.h"
 #include "util.h"
+#include "imu_types.h"
 
-typedef LSM6DSV::LSM6DSVReading IMUReading;
-typedef LIS2MDL::LIS2MDLReading CompassReading;
 typedef LSM6DSV::Cfg MotionSamplerConfig;
 
 class MotionSampler : public SensorInterfaceBus {
