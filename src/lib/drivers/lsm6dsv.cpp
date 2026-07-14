@@ -263,10 +263,6 @@ BmErr LSM6DSV::start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t
 }
 
 lsm6dsv_sh_data_rate_t LSM6DSV::sensor_hub_data_rate_convert(lsm6dsv_data_rate_t data_rate) {
-  if (data_rate <= LSM6DSV_ODR_AT_15Hz) {
-    return LSM6DSV_SH_15Hz;
-  }
-
   lsm6dsv_sh_data_rate_t sh_data_rate = LSM6DSV_SH_15Hz;
   switch (data_rate) {
   case LSM6DSV_ODR_AT_30Hz:
