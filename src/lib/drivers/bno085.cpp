@@ -32,7 +32,7 @@ bool Bno085::init(sh2_EventCallback_t *eventCallback,
     printf("BNO085: Creating service task\n");
 
     return xTaskCreate(serviceTask, "BNO085", configMINIMAL_STACK_SIZE * 8,
-                       this, 21, &_serviceTaskHandle) == pdPASS;
+                       this, BNO085_TASK_PRIORITY, &_serviceTaskHandle) == pdPASS;
 }
 
 bool Bno085::intCallback(const void *pinHandle, uint8_t value, void *args) {
