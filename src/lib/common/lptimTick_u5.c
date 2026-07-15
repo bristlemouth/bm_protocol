@@ -453,6 +453,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
             //
             __DSB();
             enter_sleep_mode();
+            __NOP();
             __ISB();
          }
          configPOST_SLEEP_PROCESSING( (const TickType_t)xExpectedIdleTime );
