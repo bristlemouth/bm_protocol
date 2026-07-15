@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "ina232.h"
 #if defined(IMU_BNO085)
-#include "bno085.h"
+#include "bno085Sampler.h"
 #else
 #include "motionSampler.h"
 #endif
@@ -80,7 +80,7 @@ void sensorsInit(void) {
   powerSamplerInit(debugIna);
 
   #if defined(IMU_BNO085)
-    configASSERT(imu.init());
+    configASSERT(imu.init() == BmOK);
   #else
 
   // Obtain configs for motion sensing module
@@ -105,12 +105,12 @@ void sensorsInit(void) {
 }
 
 void sensorsHandle(void) {
-  if (motion.data_ready()) {
-    IMUReading imu = {};
+  if (imu.data_ready()) {
+    IMUReading reading = {};
     CompassReading compass = {};
-    while (motion.data_get(&imu) == BmOK) {
-      //bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", imu.ns, imu.acc.x, imu.acc.y, imu.acc.z,
-      //         imu.gyro.x, imu.gyro.y, imu.gyro.z);
+    while (imu.data_get(&reading) == BmOK) {
+      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y, reading.acc.z,
+               reading.gyro.x, reading.gyro.y, reading.gyro.z);
     }
     while (motion.data_get(&compass) == BmOK) {
       //bm_debug("compass: %" PRIu64 ",%f,%f,%f\n", compass.ns, compass.x, compass.y, compass.z);

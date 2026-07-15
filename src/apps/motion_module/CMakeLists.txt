@@ -31,9 +31,11 @@ if(IMU STREQUAL "BNO085")
         ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
         ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
         ${SRC_DIR}/lib/drivers/bno085.cpp
+        ${SRC_DIR}/lib/sensor_sampler/bno085Sampler.cpp
     )
     list(APPEND APP_INCLUDES ${SRC_DIR}/third_party/ceva_sh2/)
     list(APPEND APP_DEFINES IMU_BNO085=1)
+
 endif()
 
 
