@@ -15,13 +15,12 @@ public:
     struct {
       lsm6dsv_xl_full_scale_t scale;
       lsm6dsv_xl_mode_t mode;
-      lsm6dsv_data_rate_t rate;
     } accelerometer;
     struct {
       lsm6dsv_gy_full_scale_t scale;
       lsm6dsv_gy_mode_t mode;
-      lsm6dsv_data_rate_t rate;
     } gyro;
+    lsm6dsv_data_rate_t sample_rate;
   } Cfg;
 
   using AbstractSensorInterface::AbstractSensorInterface;
@@ -32,11 +31,11 @@ public:
 
   typedef struct {
     AbstractSensorInterface *sensor = nullptr;
-    uint8_t reg = 0;
-    uint8_t len = 0;
+    uint8_t reg = 0; // Register to access from sensor hub
+    uint8_t len = 0; // Length of data from the register to collect, max 6 bytes
   } LSM6DSVSensorHub;
   BmErr start_stream(std::span<LSM6DSVSensorHub> sensor_hub_items, size_t fifo_threshold,
-                     bool sensor_hub_poll = false);
+                     bool sensor_hub_poll = true);
   BmErr stream_handle(void);
 
   typedef struct {
@@ -90,14 +89,13 @@ private:
           {
               .scale = LSM6DSV_2g,
               .mode = LSM6DSV_XL_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_120Hz,
           },
       .gyro =
           {
               .scale = LSM6DSV_125dps,
               .mode = LSM6DSV_GY_HIGH_PERFORMANCE_MD,
-              .rate = LSM6DSV_ODR_AT_120Hz,
           },
+      .sample_rate = LSM6DSV_ODR_AT_120Hz,
   };
 
   // Count for timestamp, gyro and accelerometer
@@ -129,6 +127,8 @@ private:
   BmErr write_sensor_hub(uint8_t reg, const uint8_t *data, size_t len, void *arg);
   BmErr read_sensor_hub(uint8_t reg, uint8_t *data, size_t len, void *arg);
   void end_sensor_hub(void);
+
+  static lsm6dsv_sh_data_rate_t sensor_hub_data_rate_convert(lsm6dsv_data_rate_t data_rate);
 
   typedef float (*ConverterCb)(int16_t);
   static ConverterCb accelerometer_convert(lsm6dsv_xl_full_scale_t scale);
