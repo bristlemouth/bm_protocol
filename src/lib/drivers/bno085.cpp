@@ -16,16 +16,14 @@ Bno085::Bno085(SPIInterface_t *spi, IOPinHandle_t *csPin, IOPinHandle_t *intPin,
       _serviceTaskHandle(NULL),
       _eventCallback(NULL),
       _sensorCallback(NULL),
-      _cookie(nullptr),
       _initialized(false),
       _resetSeen(false) {
 }
 
 BmErr Bno085::init(sh2_EventCallback_t *eventCallback,
-                  sh2_SensorCallback_t *sensorCallback, void *cookie) {
+                  sh2_SensorCallback_t *sensorCallback) {
     _eventCallback = eventCallback;
     _sensorCallback = sensorCallback;
-    _cookie = cookie;
     printf("BNO085: Creating service task\n");
 
     return xTaskCreate(serviceTask, "BNO085", configMINIMAL_STACK_SIZE * 8,
@@ -92,7 +90,7 @@ void Bno085::serviceTask(void *arg) {
 
     // Set sensor callback
     if (instance->_sensorCallback) {
-        sh2_setSensorCallback(instance->_sensorCallback, instance->_cookie);
+        sh2_setSensorCallback(instance->_sensorCallback, instance);
     }
 
     instance->_initialized = true;
@@ -168,7 +166,7 @@ void Bno085::eventHandler(void *cookie, sh2_AsyncEvent_t *event) {
         self->_resetSeen = true;   // serviceTask re-applies sensor config
     }
     if (self->_eventCallback) {
-        self->_eventCallback(self->_cookie, event);   // forward to the app callback
+        self->_eventCallback(self, event);   // forward to the app callback
     }
 }
 

@@ -113,15 +113,15 @@ bool MotionSampler::data_ready(uint32_t timeout_ms) {
          BmErr on failure
  */
 BmErr MotionSampler::data_get(IMUReading *reading) {
-    LSM6DSV::LSM6DSVReading r;
-    BmErr err = m_lsm6dsv.get_reading(&r);
-    if (err == BmOK) {
-      reading->ns   = r.ns;
-      reading->acc  = { r.acc.x,  r.acc.y,  r.acc.z  };
-      reading->gyro = { r.gyro.x, r.gyro.y, r.gyro.z };
-    }
-    return err;
- }
+  LSM6DSV::LSM6DSVReading r;
+  BmErr err = m_lsm6dsv.get_reading(&r);
+  if (err == BmOK) {
+    reading->ns = r.ns;
+    reading->acc = {r.acc.x, r.acc.y, r.acc.z};
+    reading->gyro = {r.gyro.x, r.gyro.y, r.gyro.z};
+  }
+  return err;
+}
 
 /*!
  @brief Obtain compass data from the sensor

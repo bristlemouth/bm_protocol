@@ -35,9 +35,7 @@ if(IMU STREQUAL "BNO085")
     )
     list(APPEND APP_INCLUDES ${SRC_DIR}/third_party/ceva_sh2/)
     list(APPEND APP_DEFINES IMU_BNO085=1)
-
 endif()
-
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)

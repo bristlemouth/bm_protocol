@@ -2,12 +2,12 @@
 #define __MOTION_SAMPLER_H__
 
 #include "abstract_st_sensor.h"
+#include "imu_types.h"
 #include "io.h"
 #include "lis2mdl.h"
 #include "lsm6dsv.h"
 #include "protected_spi.h"
 #include "util.h"
-#include "imu_types.h"
 
 typedef LSM6DSV::Cfg MotionSamplerConfig;
 
