@@ -7,11 +7,16 @@
 // Adapter: presents the BNO085 through the same data_ready()/data_get() interface
 // as MotionSampler, so the app can consume either IMU identically. The driver stays
 // thin; all queueing/latching/neutralization lives here.
+
+typedef struct {
+  uint32_t sample_rate_hz;
+} Bno085SamplerConfig;
+
 class Bno085Sampler {
 public:
     Bno085Sampler(SPIInterface_t *spi, IOPinHandle_t *csPin, IOPinHandle_t *intPin,
                     IOPinHandle_t *rstPin, IOPinHandle_t *bootPin, IOPinHandle_t *wakePin);
-
+    void  set_cfg(Bno085SamplerConfig cfg);
     BmErr init();
     bool  data_ready(uint32_t timeout_ms = 50);
     BmErr data_get(IMUReading *reading);
@@ -35,4 +40,8 @@ private:
 
     IMUReading _latch;       // accel + latest gyro, emitted on each accel report
     bool _haveGyro;
+    Bno085SamplerConfig _cfg;
 };
+
+Bno085SamplerConfig bno085_sampler_get_default_config(void);
+BmErr bno085_sampler_add(Bno085Sampler *sampler);

@@ -26,6 +26,7 @@ BmErr Bno085Sampler::init() {
     }
     _latch = {};
     _haveGyro = false;
+    _driver.setReportInterval(1000000 / _cfg.sample_rate_hz);   // convert Hz to us
 
     return _driver.init(eventCallback, sensorCallback);
 }
@@ -34,8 +35,8 @@ BmErr Bno085Sampler::init() {
 // as separate reports (accel ~2x the others), so we latch the latest gyro and emit a
 // combined IMUReading anchored on each accel. Native BNO units: m/s^2, rad/s, uT.
 void Bno085Sampler::sensorCallback(void *cookie, sh2_SensorEvent_t *event) {
-(void)cookie;
-Bno085Sampler *self = _instance;
+    (void)cookie;
+    Bno085Sampler *self = _instance;
     if (!self || !event) return;
 
     sh2_SensorValue_t v;
@@ -75,9 +76,9 @@ Bno085Sampler *self = _instance;
     default:
         break;
     }
-    }
+}
 
-    void Bno085Sampler::eventCallback(void *cookie, sh2_AsyncEvent_t *event) {
+void Bno085Sampler::eventCallback(void *cookie, sh2_AsyncEvent_t *event) {
     (void)cookie;
     Bno085Sampler *self = _instance;
     if (!self || !event) return;
@@ -109,4 +110,17 @@ BmErr Bno085Sampler::data_get(CompassReading *reading) {
     BmErr err = q_dequeue(&_magQueue, reading, sizeof(CompassReading));
     bm_semaphore_give(_queueMut);
     return err;
+}
+
+void Bno085Sampler::set_cfg(Bno085SamplerConfig cfg) { _cfg = cfg; }
+
+Bno085SamplerConfig bno085_sampler_get_default_config(void) {
+    return Bno085SamplerConfig{ .sample_rate_hz = 10 };
+}
+
+// Parallel to motion_sampler_add, but no task is created here: the Bno085 driver
+// spawns its own service task inside init(), so the "add" just runs init directly.
+BmErr bno085_sampler_add(Bno085Sampler *sampler) {
+    if (!sampler) return BmEINVAL;
+    return sampler->init();
 }

@@ -25,6 +25,7 @@ public:
               sh2_SensorCallback_t *sensorCallback);
 
     BmErr configureSensor(sh2_SensorId_t sensorId, uint32_t reportInterval_us);
+    void setReportInterval(uint32_t interval_us);
 private:
     // HAL functions (called by sh2 library)
     static int open(sh2_Hal_t *self);
@@ -58,4 +59,5 @@ private:
 
     bool _initialized;
     bool _resetSeen;
+    uint32_t _reportInterval_us;
 };

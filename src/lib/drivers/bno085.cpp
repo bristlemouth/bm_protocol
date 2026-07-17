@@ -17,7 +17,8 @@ Bno085::Bno085(SPIInterface_t *spi, IOPinHandle_t *csPin, IOPinHandle_t *intPin,
       _eventCallback(NULL),
       _sensorCallback(NULL),
       _initialized(false),
-      _resetSeen(false) {
+      _resetSeen(false),
+      _reportInterval_us(100000) {
 }
 
 BmErr Bno085::init(sh2_EventCallback_t *eventCallback,
@@ -134,6 +135,8 @@ BmErr Bno085::configureSensor(sh2_SensorId_t sensorId, uint32_t reportInterval_u
     return BmOK;
 }
 
+void Bno085::setReportInterval(uint32_t interval_us) { _reportInterval_us = interval_us; }
+
 void Bno085::enableSensors() {
     const struct { sh2_SensorId_t id; const char *name; } wanted[] = {
         { SH2_ACCELEROMETER,             "accelerometer" },
@@ -141,8 +144,8 @@ void Bno085::enableSensors() {
         { SH2_MAGNETIC_FIELD_CALIBRATED, "magnetometer" },
     };
     for (auto &w : wanted) {
-        if (configureSensor(w.id, 100000) == BmOK) {   // 10 Hz
-            printf("BNO085: %s enabled @ 10 Hz\n", w.name);
+        if (configureSensor(w.id, _reportInterval_us) == BmOK) {
+            printf("BNO085: %s enabled @ %lu Hz\n", w.name, 1000000 / _reportInterval_us);
         } else {
             printf("BNO085: failed to enable %s\n", w.name);
         }

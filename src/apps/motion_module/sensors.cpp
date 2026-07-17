@@ -80,9 +80,10 @@ void sensorsInit(void) {
   powerSamplerInit(debugIna);
 
   #if defined(IMU_BNO085)
-    configASSERT(imu.init() == BmOK);
+    Bno085SamplerConfig cfg = bno085_sampler_get_default_config();
+    imu.set_cfg(cfg);
+    configASSERT(bno085_sampler_add(&imu) == BmOK);
   #else
-
   // Obtain configs for motion sensing module
   MotionSamplerConfig cfg = motion_sampler_get_default_config();
   uint32_t acc_scale = 0, gyro_scale = 0, sample_rate = 0;
@@ -97,7 +98,7 @@ void sensorsInit(void) {
     cfg.sample_rate = static_cast<lsm6dsv_data_rate_t>(sample_rate);
   }
   imu.set_cfg(cfg);
-  motion_sampler_add(&imu);
+  configASSERT(motion_sampler_add(&imu) == BmOK);
   #endif
 
   init_gpio2();
