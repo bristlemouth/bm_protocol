@@ -262,11 +262,14 @@ void serialEnable(SerialHandle_t *handle) {
     if (handle->rxStreamBuffer) {
       xStreamBufferReset(handle->rxStreamBuffer);
       if (handle->fifoEnabled) {
+        // Control registers can only be written when peripheral is disabled
+        LL_USART_Disable(handle->device);
         LL_USART_EnableIT_IDLE(handle->device);
         LL_USART_EnableIT_RXFT(handle->device);
         LL_USART_EnableIT_RXFF(handle->device);
         LL_USART_SetRXFIFOThreshold(handle->device, LL_USART_FIFOTHRESHOLD_1_2);
         LL_USART_EnableFIFO(handle->device);
+        LL_USART_Enable(handle->device);
       } else {
         // Enable Uart RX interrupt
         usart_EnableIT_RXNE((USART_TypeDef *)handle->device);
