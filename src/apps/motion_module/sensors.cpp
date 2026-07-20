@@ -2,22 +2,20 @@
 #include "bm_config.h"
 #include "bsp.h"
 #include "configuration.h"
+#include "ina232.h"
 #include "kellerSampler.h"
 #include "lpm.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "ina232.h"
 #if defined(IMU_BNO085)
 #include "bno085Sampler.h"
 #else
 #include "motionSampler.h"
 #endif
-
-#include "uptime.h"
-
 #include "main.h"
 #include "stm32_io.h"
 #include "stm32u5xx_ll_exti.h"
+
 extern "C" void EXTI13_IRQHandler(void) {
   BaseType_t rval = pdFALSE;
   if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_13) != RESET) {
@@ -59,12 +57,11 @@ void powerSamplerInit(
 
 static INA::INA232 debugIna1(&i2c1, I2C_INA_PODL_ADDR);
 static INA::INA232 *debugIna[NUM_INA232_DEV] = {
-   &debugIna1,
+    &debugIna1,
 };
 
-
 #if defined(IMU_BNO085)
-static Bno085 imu(&spi1, &BM_CS, &BM_INT, &I2C_MUX_RESET, &GPIO1, &GPIO2);
+static Bno085Sampler imu(&spi1, &BM_CS, &BM_INT, &I2C_MUX_RESET, &GPIO1, &GPIO2);
 #else
 static MotionSampler imu(&spi1, &BM_CS, &BM_INT);
 #endif
@@ -79,11 +76,11 @@ void sensorsInit(void) {
   // Power monitor
   powerSamplerInit(debugIna);
 
-  #if defined(IMU_BNO085)
-    Bno085SamplerConfig cfg = bno085_sampler_get_default_config();
-    imu.set_cfg(cfg);
-    configASSERT(bno085_sampler_add(&imu) == BmOK);
-  #else
+#if defined(IMU_BNO085)
+  Bno085SamplerConfig cfg = bno085_sampler_get_default_config();
+  imu.set_cfg(cfg);
+  configASSERT(bno085_sampler_add(&imu) == BmOK);
+#else
   // Obtain configs for motion sensing module
   MotionSamplerConfig cfg = motion_sampler_get_default_config();
   uint32_t acc_scale = 0, gyro_scale = 0, sample_rate = 0;
@@ -99,7 +96,7 @@ void sensorsInit(void) {
   }
   imu.set_cfg(cfg);
   configASSERT(motion_sampler_add(&imu) == BmOK);
-  #endif
+#endif
 
   init_gpio2();
   keller_sampler_add(&keller);
@@ -110,8 +107,8 @@ void sensorsHandle(void) {
     IMUReading reading = {};
     CompassReading compass = {};
     while (imu.data_get(&reading) == BmOK) {
-      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y, reading.acc.z,
-               reading.gyro.x, reading.gyro.y, reading.gyro.z);
+      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y,
+               reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z);
     }
     while (motion.data_get(&compass) == BmOK) {
       //bm_debug("compass: %" PRIu64 ",%f,%f,%f\n", compass.ns, compass.x, compass.y, compass.z);
