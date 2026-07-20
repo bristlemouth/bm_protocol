@@ -45,6 +45,8 @@
 #include "l2.h"
 #include "memfault_platform_core.h"
 #include "messages/neighbors.h"
+#include "metrics_sampler.h"
+#include "metrics_service.h"
 #include "ncp_uart.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
@@ -441,9 +443,11 @@ static void defaultTask(void *parameters) {
   sensorControllerInit(&bridge_power_controller);
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
+  metrics_sampler_init();
   debug_ncp_init();
   debugBmServiceInit();
   sys_info_service_init();
+  metrics_service_init();
   config_cbor_map_service_init();
   IOWrite(&ALARM_OUT, 1);
   IOWrite(&LED_BLUE, LED_OFF);
