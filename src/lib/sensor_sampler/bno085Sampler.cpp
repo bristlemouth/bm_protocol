@@ -90,7 +90,10 @@ void Bno085Sampler::eventCallback(void *cookie, sh2_AsyncEvent_t *event) {
 }
 
 bool Bno085Sampler::data_ready(uint32_t timeout_ms) {
-    if (!_imuSem) return false;
+    if (!_imuSem) {
+        bm_delay(timeout_ms);
+        return false;
+    }
     return bm_semaphore_take(_imuSem, timeout_ms) == BmOK;
 }
 

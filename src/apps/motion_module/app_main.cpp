@@ -292,6 +292,5 @@ static void defaultTask(void *parameters) {
 
   while (1) {
     sensorsHandle();
-    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }

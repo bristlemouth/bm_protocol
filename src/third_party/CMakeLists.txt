@@ -75,6 +75,16 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 set(LWIP_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LWIP_DIR}/src/Filelists.cmake)
 
+if(IMU STREQUAL "BNO085")
+    set(CEVA_SH2_FILES
+        ${SRC_DIR}/third_party/ceva_sh2/sh2.c
+        ${SRC_DIR}/third_party/ceva_sh2/shtp.c
+        ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
+        ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
+    )
+    set(CEVA_SH2_INCLUDES ${SRC_DIR}/third_party/ceva_sh2/)
+endif()
+
 set(THIRD_PARTY_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
     ${SRC_DIR}/third_party/BME280_driver/bme280.c
@@ -89,6 +99,7 @@ set(THIRD_PARTY_FILES
     ${FREERTOS_FILES}
     ${MEMFAULT_SOURCES}
     ${MCUBOOT_FILES}
+    ${CEVA_SH2_FILES}
     PARENT_SCOPE
 )
 
@@ -103,6 +114,7 @@ set(THIRD_PARTY_INCLUDES
     ${FREERTOS_INCLUDES}
     ${MEMFAULT_INCLUDES}
     ${MCUBOOT_INCLUDES}
+    ${CEVA_SH2_INCLUDES}
     PARENT_SCOPE
 )
 

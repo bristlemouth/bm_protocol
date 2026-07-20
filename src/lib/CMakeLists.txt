@@ -150,6 +150,13 @@ if(CMAKE_APP_TYPE STREQUAL "BMDK" OR
     endif()
 endif()
 
+if(IMU STREQUAL "BNO085")
+    list(APPEND LIB_FILES
+        ${LIB_DIR}/drivers/bno085.cpp
+        ${LIB_DIR}/sensor_sampler/bno085Sampler.cpp
+    )
+endif()
+
 set(LIB_INCLUDES
     ${LIB_DIR}/bristlefin
     ${LIB_DIR}/bm_integration
