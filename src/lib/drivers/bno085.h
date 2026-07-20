@@ -43,6 +43,7 @@ private:
     int  readBytes(uint8_t *pBuffer, unsigned len, uint32_t *t_us);
     int  writeBytes(uint8_t *pBuffer, unsigned len);
     void enableSensors();
+    void configureSpiMode();   // BNO085 requires SPI mode 3; BSP default is mode 0
 
     sh2_Hal_t _hal;
     SPIInterface_t* _interface;

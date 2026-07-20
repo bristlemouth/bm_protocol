@@ -82,6 +82,7 @@ void Bno085::serviceTask(void *arg) {
     instance->_hal.read = Bno085::read;
     instance->_hal.write = Bno085::write;
     instance->_hal.getTimeUs = Bno085::getTimeUs;
+    instance->configureSpiMode();
     int status = sh2_open(&instance->_hal, Bno085::eventHandler, instance);
     if (status != SH2_OK) {
         printf("BNO085: Failed to open sensor hub: %d\n", status);
@@ -116,6 +117,12 @@ void Bno085::serviceTask(void *arg) {
             instance->enableSensors();
         }
     }
+}
+
+void Bno085::configureSpiMode() {
+    _interface->handle->Init.CLKPolarity = SPI_POLARITY_HIGH;  // CPOL = 1
+    _interface->handle->Init.CLKPhase    = SPI_PHASE_2EDGE;    // CPHA = 1  -> mode 3
+    HAL_SPI_Init(_interface->handle);
 }
 
 BmErr Bno085::configureSensor(sh2_SensorId_t sensorId, uint32_t reportInterval_us) {
