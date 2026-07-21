@@ -75,15 +75,14 @@ include(${SRC_DIR}/third_party/memfault.cmake)
 set(LWIP_COMPILER_FLAGS ${COMPILE_FLAGS})
 include(${LWIP_DIR}/src/Filelists.cmake)
 
-if(IMU STREQUAL "BNO085")
-    set(CEVA_SH2_FILES
-        ${SRC_DIR}/third_party/ceva_sh2/sh2.c
-        ${SRC_DIR}/third_party/ceva_sh2/shtp.c
-        ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
-        ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
-    )
-    set(CEVA_SH2_INCLUDES ${SRC_DIR}/third_party/ceva_sh2/)
-endif()
+set(CEVA_SH2_FILES
+    ${SRC_DIR}/third_party/ceva_sh2/sh2.c
+    ${SRC_DIR}/third_party/ceva_sh2/shtp.c
+    ${SRC_DIR}/third_party/ceva_sh2/sh2_SensorValue.c
+    ${SRC_DIR}/third_party/ceva_sh2/sh2_util.c
+)
+set(CEVA_SH2_INCLUDES ${SRC_DIR}/third_party/ceva_sh2/)
+
 
 set(THIRD_PARTY_FILES
     ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
