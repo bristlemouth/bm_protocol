@@ -81,6 +81,13 @@ static bool xld_isr_handle(const void *pin, uint8_t value, void *args) {
   return true;
 }
 
+/*!
+ @brief Keller sensor task
+
+ @details Will initialize/configure and handle taking readings from the sensor.
+
+ @param arg Sampler instance
+ */
 static void keller_task(void *arg) {
   KellerSampler *sampler = static_cast<KellerSampler *>(arg);
   XLD *xld = &sampler->m_xld;
