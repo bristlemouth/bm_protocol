@@ -20,7 +20,7 @@ public:
 
   using AbstractSensorInterface::AbstractSensorInterface;
   BmErr init(void) override;
-  BmErr set_data(const uint8_t *buf, size_t len) override;
+  BmErr set_data(uint64_t timestamp_ns, const uint8_t *buf, size_t len) override;
   BmErr get_reading(LIS2MDLReading *reading);
 
   LSM6DSV::LSM6DSVSensorHub m_sensor_hub = {
