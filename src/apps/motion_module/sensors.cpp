@@ -16,6 +16,7 @@
 #include "stm32_io.h"
 #include "stm32u5xx_ll_exti.h"
 
+#if !defined(IMU_BNO085)
 extern "C" void EXTI13_IRQHandler(void) {
   BaseType_t rval = pdFALSE;
   if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_13) != RESET) {
@@ -29,6 +30,7 @@ extern "C" void EXTI13_IRQHandler(void) {
   portYIELD_FROM_ISR(rval);
 }
 
+// Initialize GPIO2 for Keller (GPIO2 is also the BNO085 wake pin)
 static void init_gpio2(void) {
   // Configure GPIO2 interrupt line
   LL_EXTI_InitTypeDef exti_cfg = {
@@ -50,6 +52,7 @@ static void init_gpio2(void) {
 static void keller_sample_cb(float mbar, float temp) {
   bm_debug("pressure: %" PRIu64 ",%f,%f\n", uptimeGetMicroSeconds(), mbar, temp);
 }
+#endif
 
 // Sampler initialization functions (so we don't need individual headers)
 void powerSamplerInit(
@@ -66,8 +69,10 @@ static Bno085Sampler imu(&spi1, &BM_CS, &BM_INT, &I2C_MUX_RESET, &GPIO1, &GPIO2)
 static MotionSampler imu(&spi1, &BM_CS, &BM_INT);
 #endif
 
+#if !defined(IMU_BNO085)
 //TODO: change to GPIO2 when new boards come in
 static KellerSampler keller(&i2c1, &IOEXP_INT, keller_sample_cb);
+#endif
 
 void sensorsInit(void) {
   // Wait for the 3V3 rail to stabilize before communicating with the mux
@@ -96,10 +101,10 @@ void sensorsInit(void) {
   }
   imu.set_cfg(cfg);
   configASSERT(motion_sampler_add(&imu) == BmOK);
-#endif
 
   init_gpio2();
   keller_sampler_add(&keller);
+#endif
 }
 
 void sensorsHandle(void) {
