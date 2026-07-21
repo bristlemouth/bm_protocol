@@ -1,4 +1,6 @@
 #include "xld.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 #include <string.h>
 
 XLD::XLD(SensorInterfaceBus *bus, void *arg) : m_bus(bus), m_arg(arg) {}
@@ -52,9 +54,11 @@ BmErr XLD::init(void) {
           Indicates when a reading has been performed. Pin is active low.
  */
 void XLD::handle_interrupt(void) {
+  BaseType_t task_yield = pdFALSE;
   if (m_data_ready_sem) {
-    bm_semaphore_give(m_data_ready_sem);
+    xSemaphoreGiveFromISR(m_data_ready_sem, &task_yield);
   }
+  portYIELD_FROM_ISR(task_yield);
 }
 
 /*!
