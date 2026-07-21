@@ -432,7 +432,8 @@ BmErr LSM6DSV::stream_handle(void) {
       uint8_t sensor_set_idx = tag - LSM6DSV_SENSORHUB_SLAVE0_TAG;
       AbstractSensorInterface *sensor = m_sensor_hub[sensor_set_idx].sensor;
       if (sensor) {
-        sensor->set_data(data, data_byte_count);
+        // Use the latest sample's timestamp
+        sensor->set_data(reading.ns, data, data_byte_count);
       }
     }
   }
