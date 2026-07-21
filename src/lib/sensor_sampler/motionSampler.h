@@ -18,7 +18,6 @@ public:
   void set_cfg(MotionSamplerConfig cfg);
   bool data_ready(uint32_t timeout_ms = 50);
   BmErr data_get(IMUReading *reading);
-  BmErr data_get(CompassReading *reading);
 
   struct {
     SPIInterface_t *spi;
@@ -29,6 +28,7 @@ public:
 
   LSM6DSV m_lsm6dsv;
   LIS2MDL m_lis2mdl;
+  LIS2MDL::LIS2MDLReading m_compass_prev = {};
 
 private:
   void begin(void) override;

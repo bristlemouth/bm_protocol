@@ -110,13 +110,10 @@ void sensorsInit(void) {
 void sensorsHandle(void) {
   if (imu.data_ready()) {
     IMUReading reading = {};
-    CompassReading compass = {};
     while (imu.data_get(&reading) == BmOK) {
-      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x, reading.acc.y,
-               reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z);
-    }
-    while (imu.data_get(&compass) == BmOK) {
-      bm_debug("compass: %" PRIu64 ",%f,%f,%f\n", compass.ns, compass.x, compass.y, compass.z);
+      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x,
+               reading.acc.y, reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z,
+               reading.mag.x, reading.mag.y, reading.mag.z);
     }
   }
 }

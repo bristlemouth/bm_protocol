@@ -120,32 +120,15 @@ BmErr MotionSampler::data_get(IMUReading *reading) {
     reading->ns = r.ns;
     reading->acc = {r.acc.x, r.acc.y, r.acc.z};
     reading->gyro = {r.gyro.x, r.gyro.y, r.gyro.z};
-  }
-  return err;
-}
 
-/*!
- @brief Obtain compass data from the sensor
-
- @details If data is available, this function can be polled to clear out all
-          of the available data reported from the sensor. i.e.:
-            while (sensor.data_get(&reading) == BmOK) {
-              // perform readings here
-            }
-
- @param reading A single reading from the sensor
-
- @return BmOK on success
-         BmErr on failure
- */
-BmErr MotionSampler::data_get(CompassReading *reading) {
-  LIS2MDL::LIS2MDLReading r;
-  BmErr err = m_lis2mdl.get_reading(&r);
-  if (err == BmOK) {
-    reading->ns = r.ns;
-    reading->x = r.x;
-    reading->y = r.y;
-    reading->z = r.z;
+    // Use previous magnetometer reading if LSM is sampled at a higher rate
+    LIS2MDL::LIS2MDLReading compass = m_compass_prev;
+    if (m_compass_prev.ns <= reading->ns) {
+      if (m_lis2mdl.get_reading(&compass) == BmOK) {
+        m_compass_prev = compass;
+      }
+    }
+    reading->mag = {compass.x, compass.y, compass.z};
   }
   return err;
 }
