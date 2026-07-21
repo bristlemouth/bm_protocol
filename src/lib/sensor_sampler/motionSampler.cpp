@@ -1,5 +1,6 @@
 #include "motionSampler.h"
 #include "lpm.h"
+#include "task.h"
 #include <array>
 #include <string.h>
 
@@ -157,6 +158,7 @@ static void motion_task(void *arg) {
   LIS2MDL *lis2mdl = &sampler->m_lis2mdl;
 
   if (lsm6dsv->init(&sampler->m_ctx.cfg) != BmOK) {
+    vTaskDelete(NULL);
     return;
   }
 

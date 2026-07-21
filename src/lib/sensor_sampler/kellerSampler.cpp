@@ -1,4 +1,5 @@
 #include "kellerSampler.h"
+#include "task.h"
 #include "uptime.h"
 
 #ifndef KELLER_TASK_PRIORITY
@@ -79,7 +80,10 @@ static void keller_task(void *arg) {
   KellerSamplerCb cb = sampler->m_ctx.cb;
   uint32_t delay_ms = 1000 / sampler->m_cfg.sample_rate;
 
-  xld->init();
+  if (xld->init() != BmOK) {
+    vTaskDelete(NULL);
+    return;
+  }
 
   float mbar;
   float temp;
