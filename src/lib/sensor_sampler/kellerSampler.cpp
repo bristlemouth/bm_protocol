@@ -13,6 +13,13 @@ KellerSampler::KellerSampler(I2CInterface_t *i2c, IOPinHandle_t *int_pin, Keller
   m_ctx.cb = cb;
 }
 
+/*!
+ @brief Set the configuration used for the Keller sensor
+
+ @details Must be invoked before keller_sampler_add
+
+ @param cfg Configuration to set
+ */
 void KellerSampler::set_cfg(KellerSamplerCfg cfg) { m_cfg = cfg; }
 
 /*!
@@ -100,6 +107,17 @@ static void keller_task(void *arg) {
   }
 }
 
+/*!
+ @brief Add a keller sensor sampler
+
+ @details Configures interrupt for the sampler ISR pin and creates an instance
+          of a keller_task.
+
+ @param sampler Sampler instance to begin sampling
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr keller_sampler_add(KellerSampler *sampler) {
   constexpr uint8_t max_sample_rate = 125;
   if (!sampler || sampler->m_cfg.sample_rate > max_sample_rate) {
