@@ -107,6 +107,9 @@ bool MotionSampler::data_ready(uint32_t timeout_ms) {
             while (sensor.data_get(&reading) == BmOK) {
               // perform readings here
             }
+          If magnetometer readings are not ready by the next time the
+          IMU has a reading, the previous magnetometer reading will be
+          used to interpolate the data.
 
  @param reading A single reading from the sensor
 
