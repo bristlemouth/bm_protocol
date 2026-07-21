@@ -25,6 +25,7 @@ public:
               sh2_SensorCallback_t *sensorCallback);
 
     BmErr configureSensor(sh2_SensorId_t sensorId, uint32_t reportInterval_us);
+    void setReportInterval(uint32_t interval_us);
 private:
     // HAL functions (called by sh2 library)
     static int open(sh2_Hal_t *self);
@@ -42,6 +43,7 @@ private:
     int  readBytes(uint8_t *pBuffer, unsigned len, uint32_t *t_us);
     int  writeBytes(uint8_t *pBuffer, unsigned len);
     void enableSensors();
+    void configureSpiMode();   // BNO085 requires SPI mode 3; BSP default is mode 0
 
     sh2_Hal_t _hal;
     SPIInterface_t* _interface;
@@ -58,4 +60,5 @@ private:
 
     bool _initialized;
     bool _resetSeen;
+    uint32_t _reportInterval_us;
 };
