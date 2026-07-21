@@ -93,7 +93,7 @@ set(LIB_FILES
     ${LIB_DIR}/mcuboot/port_flash.c
     ${LIB_DIR}/mcuboot/port_misc.c
     ${LIB_DIR}/memfault/memfault_platform_core_u5.c
-    ${LIB_DIR}/sensor_sampler/sensorSampler.cpp
+    ${LIB_DIR}/sensor_sampler/sensorSampler.c
     ${LIB_DIR}/sensor_sampler/powerSampler.cpp
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
