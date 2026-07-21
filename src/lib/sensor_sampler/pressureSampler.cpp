@@ -4,6 +4,7 @@
 #include "pressureSampler.h"
 #include "abstract_pressure_sensor.h"
 #include "spotter.h"
+#include "sensorSamplerConfigs.h"
 #include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
@@ -13,6 +14,13 @@
 #include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+typedef struct {
+  uint64_t uptime;
+  RTCTimeAndDate_t rtcTime;
+  float temperature;
+  float pressure;
+} __attribute__((packed)) pressureSample_t;
 
 static AbstractPressureSensor *_pressureSensor;
 static float _latestPressure = 0.0;
@@ -81,6 +89,7 @@ static bool baroCheck() {
 }
 
 static sensor_t pressureSensor = {
+  .intervalMs = DEFAULT_SENSORS_POLL_MS,
   .initFn = baroInit,
   .sampleFn = baroSample,
   .checkFn = baroCheck
@@ -89,6 +98,7 @@ static sensor_t pressureSensor = {
 
 void pressureSamplerInit(AbstractPressureSensor *sensor) {
   _pressureSensor = sensor;
+  get_sensor_poll_interval_ms(&pressureSensor);
   sensorSamplerAdd(&pressureSensor, "BARO");
 }
 

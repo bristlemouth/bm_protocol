@@ -7,7 +7,6 @@ extern "C" {
 
 #define SENSORS_NUM_RETRIES 3
 
-#define DEFAULT_SENSORS_POLL_MS 0
 #define DEFAULT_SENSORS_CHECK_S 0
 
 void sensorsInit();

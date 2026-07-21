@@ -7,13 +7,23 @@
 #include "bsp.h"
 #include "debug.h"
 #include "ina232.h"
+#include "sensorSamplerConfigs.h"
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "uptime.h"
+#include "stm32_rtc.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 using namespace INA;
+
+typedef struct {
+  uint64_t uptime;
+  RTCTimeAndDate_t rtcTime;
+  uint16_t address;
+  float voltage;
+  float current;
+} __attribute__((packed)) powerSample_t;
 
 static INA232 **_inaSensors;
 static float _latestVoltage[NUM_INA232_DEV] = {};
@@ -102,6 +112,7 @@ static bool powerInit() {
 }
 
 static sensor_t powerSensors = {
+  .intervalMs = DEFAULT_SENSORS_POLL_MS,
   .initFn = powerInit,
   .sampleFn = powerSample,
   .checkFn = NULL
@@ -109,6 +120,7 @@ static sensor_t powerSensors = {
 
 void powerSamplerInit(INA::INA232 **sensors) {
   _inaSensors = sensors;
+  get_sensor_poll_interval_ms(&powerSensors);
   sensorSamplerAdd(&powerSensors, "PWR");
 }
 

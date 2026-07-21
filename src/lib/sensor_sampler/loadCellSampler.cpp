@@ -3,6 +3,7 @@
 #include "pubsub.h"
 #include "bsp.h"
 #include "debug.h"
+#include "sensorSamplerConfigs.h"
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "stm32_rtc.h"
@@ -202,10 +203,11 @@ static bool loadCellCheck() {
 }
 
 static sensor_t loadCellSensor = {
-    .initFn = loadCellInit, .sampleFn = loadCellSample, .checkFn = loadCellCheck};
+    .intervalMs = DEFAULT_SENSORS_POLL_MS, .initFn = loadCellInit, .sampleFn = loadCellSample, .checkFn = loadCellCheck};
 
 void loadCellSamplerInit(NAU7802 *sensor, LoadCellConfig_t cfg) {
   _loadCell = sensor;
   _cfg = cfg;
+  get_sensor_poll_interval_ms(&loadCellSensor);
   sensorSamplerAdd(&loadCellSensor, "LCL");
 }

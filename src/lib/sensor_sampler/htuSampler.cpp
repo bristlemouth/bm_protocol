@@ -9,11 +9,20 @@
 #include "debug.h"
 #include "sensorSampler.h"
 #include "sensors.h"
+#include "sensorSamplerConfigs.h"
 #include "stm32_rtc.h"
 #include "uptime.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include "bm_printf.h"
+
+typedef struct {
+  uint64_t uptime;
+  RTCTimeAndDate_t rtcTime;
+  float temperature;
+  float humidity;
+} __attribute__((packed)) humTempSample_t;
+
 
 static AbstractHtu *_htu;
 static float _latestHumidity = 0.0;
@@ -74,6 +83,7 @@ static bool htuSample() {
 }
 
 static sensor_t htuSensor = {
+  .intervalMs = DEFAULT_SENSORS_POLL_MS,
   .initFn = htuInit,
   .sampleFn = htuSample,
   .checkFn = NULL
@@ -81,6 +91,7 @@ static sensor_t htuSensor = {
 
 void htuSamplerInit(AbstractHtu *sensor) {
   _htu = sensor;
+  get_sensor_poll_interval_ms(&htuSensor);
   sensorSamplerAdd(&htuSensor, "HTU");
 }
 

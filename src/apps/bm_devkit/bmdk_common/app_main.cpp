@@ -154,7 +154,6 @@ NvmPartition *systemConfigurationPartition = NULL;
 NvmPartition *hardwareConfigurationPartition = NULL;
 NvmPartition *dfu_partition_global = NULL;
 
-uint32_t sys_cfg_sensorsPollIntervalMs = DEFAULT_SENSORS_POLL_MS;
 uint32_t sys_cfg_sensorsCheckIntervalS = DEFAULT_SENSORS_CHECK_S;
 
 extern "C" void USART3_IRQHandler(void) { serialGenericUartIRQHandler(&usart3); }
@@ -392,14 +391,11 @@ static void defaultTask(void *parameters) {
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init();
-  get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
-                  strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",
                   strlen("sensorsCheckIntervalS"), &sys_cfg_sensorsCheckIntervalS);
   debugConfigurationInit();
 
-  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS,
-                                 .sensorsPollIntervalMs = sys_cfg_sensorsPollIntervalMs};
+  sensorConfig_t sensorConfig = {.sensorCheckIntervalS = sys_cfg_sensorsCheckIntervalS};
   sensorSamplerInit(&sensorConfig);
   // must call sensorsInit after sensorSamplerInit
   sensorsInit();

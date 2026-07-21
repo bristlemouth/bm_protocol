@@ -24,6 +24,7 @@
 #include "sensorSampler.h"
 #include "sensors.h"
 #include "spotter.h"
+#include "sensorSamplerConfigs.h"
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
@@ -61,6 +62,7 @@ static AveragingSampler power_current_stats;
 static AveragingSampler hum_stats;
 static AveragingSampler temp_stats;
 static AveragingSampler pressure_stats;
+static uint32_t sys_cfg_sensorsPollIntervalMs;
 
 char stats_print_buffer[750]; // Buffer to store debug print data for the stats aggregation.
 // The size of this buffer is trial and error, but 750 should be plenty of space.
@@ -81,6 +83,10 @@ sensorStatData_t aggregateStats(AveragingSampler &sampler) {
 }
 
 void setup() {
+  sensor_t fake_sensor;
+  get_sensor_poll_interval_ms(&fake_sensor);
+  sys_cfg_sensorsPollIntervalMs = fake_sensor.intervalMs;
+
   /* USER ONE-TIME SETUP CODE GOES HERE */
   // Allocate memory for stats data buffers.
   power_voltage_stats.initBuffer(MAX_SENSOR_SAMPLES);
