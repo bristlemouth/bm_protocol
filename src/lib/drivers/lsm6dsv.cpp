@@ -113,7 +113,7 @@ BmErr LSM6DSV::init(const Cfg *cfg) {
 
  @details This function is safe to call from interrupt context. Informs the
           stream_handle function that data is available. Note the interrupt
-          pin is configured as active high.
+          pin (INT1) is configured as active high.
 
  @see stream_handle
  */

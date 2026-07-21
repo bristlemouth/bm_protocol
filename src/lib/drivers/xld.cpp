@@ -1,4 +1,6 @@
 #include "xld.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 #include <string.h>
 
 XLD::XLD(SensorInterfaceBus *bus, void *arg) : m_bus(bus), m_arg(arg) {}
@@ -24,7 +26,7 @@ BmErr XLD::init(void) {
     return BmEINVAL;
   }
 
-  // Ensure product ID matches
+  // Ensure device is reachable
   uint32_t prod_id;
   BmErr err = get_prod_id(&prod_id);
   if (err != BmOK) {
@@ -52,9 +54,11 @@ BmErr XLD::init(void) {
           Indicates when a reading has been performed. Pin is active low.
  */
 void XLD::handle_interrupt(void) {
+  BaseType_t task_yield = pdFALSE;
   if (m_data_ready_sem) {
-    bm_semaphore_give(m_data_ready_sem);
+    xSemaphoreGiveFromISR(m_data_ready_sem, &task_yield);
   }
+  portYIELD_FROM_ISR(task_yield);
 }
 
 /*!
@@ -77,8 +81,6 @@ BmErr XLD::request_reading(void) {
 /*!
  @brief Get reading from sensor if ready
 
- @details Will still delay for the timeout_ms value if there is no device.
-
  @param mbar optional pressure value to populate from reading in millibar
  @param temp optional temperature value to populate from reading in celsius
  @param timeout_ms timeout to wait for reading
@@ -91,7 +93,6 @@ BmErr XLD::request_reading(void) {
  */
 BmErr XLD::get_reading(float *mbar, float *temp, uint32_t timeout_ms) {
   if (!m_data_ready_sem) {
-    bm_delay(timeout_ms);
     return BmENODEV;
   }
 
