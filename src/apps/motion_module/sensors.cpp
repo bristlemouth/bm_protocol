@@ -12,47 +12,10 @@
 #else
 #include "motionSampler.h"
 #endif
-#include "main.h"
-#include "stm32_io.h"
-#include "stm32u5xx_ll_exti.h"
-
-#if !defined(IMU_BNO085)
-extern "C" void EXTI13_IRQHandler(void) {
-  BaseType_t rval = pdFALSE;
-  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_13) != RESET) {
-    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_13);
-    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)GPIO2.pin);
-  }
-  if (LL_EXTI_IsActiveRisingFlag_0_31(LL_EXTI_LINE_13) != RESET) {
-    LL_EXTI_ClearRisingFlag_0_31(LL_EXTI_LINE_13);
-    rval |= STM32IOHandleInterrupt((const STM32Pin_t *)GPIO2.pin);
-  }
-  portYIELD_FROM_ISR(rval);
-}
-
-// Initialize GPIO2 for Keller (GPIO2 is also the BNO085 wake pin)
-static void init_gpio2(void) {
-  // Configure GPIO2 interrupt line
-  LL_EXTI_InitTypeDef exti_cfg = {
-      .Line_0_31 = LL_EXTI_LINE_13,
-      .LineCommand = ENABLE,
-      .Mode = LL_EXTI_MODE_IT,
-      .Trigger = LL_EXTI_TRIGGER_RISING_FALLING,
-  };
-  LL_EXTI_SetEXTISource(LL_EXTI_EXTI_PORTC, LL_EXTI_EXTI_LINE13);
-  LL_EXTI_Init(&exti_cfg);
-
-  LL_GPIO_SetPinPull(GPIO2_GPIO_Port, GPIO2_Pin, LL_GPIO_PULL_NO);
-  LL_GPIO_SetPinMode(GPIO2_GPIO_Port, GPIO2_Pin, LL_GPIO_MODE_INPUT);
-
-  NVIC_SetPriority(EXTI13_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 6, 0));
-  NVIC_EnableIRQ(EXTI13_IRQn);
-}
 
 static void keller_sample_cb(float mbar, float temp) {
   bm_debug("pressure: %" PRIu64 ",%f,%f\n", uptimeGetMicroSeconds(), mbar, temp);
 }
-#endif
 
 // Sampler initialization functions (so we don't need individual headers)
 void powerSamplerInit(
@@ -69,10 +32,7 @@ static Bno085Sampler imu(&spi1, &BM_CS, &BM_INT, &I2C_MUX_RESET, &GPIO1, &GPIO2)
 static MotionSampler imu(&spi1, &BM_CS, &BM_INT);
 #endif
 
-#if !defined(IMU_BNO085)
-//TODO: change to GPIO2 when new boards come in
 static KellerSampler keller(&i2c1, &IOEXP_INT, keller_sample_cb);
-#endif
 
 void sensorsInit(void) {
   // Wait for the 3V3 rail to stabilize before communicating with the mux
@@ -101,10 +61,8 @@ void sensorsInit(void) {
   }
   imu.set_cfg(cfg);
   configASSERT(motion_sampler_add(&imu) == BmOK);
-
-  init_gpio2();
-  keller_sampler_add(&keller);
 #endif
+  keller_sampler_add(&keller);
 }
 
 void sensorsHandle(void) {
