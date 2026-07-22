@@ -18,9 +18,3 @@ typedef struct {
     float x, y, z;
   } mag;
 } IMUReading;
-
-// Compass native units -- LIS2MDL (via LSM sensor hub): mgauss;  BNO085: uT
-typedef struct {
-  uint64_t ns;
-  float x, y, z;
-} CompassReading;

@@ -7,7 +7,8 @@ Bno085Sampler::Bno085Sampler(SPIInterface_t *spi, IOPinHandle_t *csPin, IOPinHan
     : _driver(spi, csPin, intPin, rstPin, bootPin, wakePin),
       _queueMut(NULL),
       _imuSem(NULL),
-      _haveGyro(false) {
+      _haveGyro(false),
+      _haveMag(false) {
         configASSERT(_instance == nullptr);   // one BNO on this board -> one sampler
         _instance = this;
 }
@@ -20,8 +21,7 @@ BmErr Bno085Sampler::init() {
     if (!_queueMut || !_imuSem) {
         return BmENOMEM;
     }
-    if (q_create_static(&_imuQueue, _imuBuf, sizeof(_imuBuf)) != BmOK ||
-        q_create_static(&_magQueue, _magBuf, sizeof(_magBuf)) != BmOK) {
+    if (q_create_static(&_imuQueue, _imuBuf, sizeof(_imuBuf)) != BmOK) {
         return BmENOMEM;
     }
     _latch = {};
@@ -48,7 +48,7 @@ void Bno085Sampler::sensorCallback(void *cookie, sh2_SensorEvent_t *event) {
     case SH2_ACCELEROMETER:
         self->_latch.ns  = ns;
         self->_latch.acc = { v.un.accelerometer.x, v.un.accelerometer.y, v.un.accelerometer.z };
-        if (self->_haveGyro) {   // wait for at least one gyro sample before emitting
+        if (self->_haveGyro && self->_haveMag) {   // wait for at least one gyro/mag sample before emitting
         bm_semaphore_take(self->_queueMut, BM_MAX_DELAY_UINT32);
         q_enqueue(&self->_imuQueue, &self->_latch, sizeof(IMUReading));
         bm_semaphore_give(self->_queueMut);
@@ -62,17 +62,10 @@ void Bno085Sampler::sensorCallback(void *cookie, sh2_SensorEvent_t *event) {
         break;
 
     case SH2_MAGNETIC_FIELD_CALIBRATED: {
-        CompassReading c;
-        c.ns = ns;
-        c.x  = v.un.magneticField.x;
-        c.y  = v.un.magneticField.y;
-        c.z  = v.un.magneticField.z;
-        bm_semaphore_take(self->_queueMut, BM_MAX_DELAY_UINT32);
-        q_enqueue(&self->_magQueue, &c, sizeof(CompassReading));
-        bm_semaphore_give(self->_queueMut);
+        self->_latch.mag = { v.un.magneticField.x, v.un.magneticField.y, v.un.magneticField.z };
+        self->_haveMag = true;
         break;
     }
-
     default:
         break;
     }
@@ -86,6 +79,7 @@ void Bno085Sampler::eventCallback(void *cookie, sh2_AsyncEvent_t *event) {
     // so a post-reset reading never pairs a fresh accel with a pre-reset gyro.
     if (event->eventId == SH2_RESET) {
         self->_haveGyro = false;
+        self->_haveMag = false;
     }
 }
 
@@ -102,15 +96,6 @@ BmErr Bno085Sampler::data_get(IMUReading *reading) {
     if (!_queueMut) return BmENODEV;
     bm_semaphore_take(_queueMut, BM_MAX_DELAY_UINT32);
     BmErr err = q_dequeue(&_imuQueue, reading, sizeof(IMUReading));
-    bm_semaphore_give(_queueMut);
-    return err;
-}
-
-BmErr Bno085Sampler::data_get(CompassReading *reading) {
-    if (!reading)   return BmEINVAL;
-    if (!_queueMut) return BmENODEV;
-    bm_semaphore_take(_queueMut, BM_MAX_DELAY_UINT32);
-    BmErr err = q_dequeue(&_magQueue, reading, sizeof(CompassReading));
     bm_semaphore_give(_queueMut);
     return err;
 }

@@ -20,7 +20,6 @@ public:
     BmErr init();
     bool  data_ready(uint32_t timeout_ms = 50);
     BmErr data_get(IMUReading *reading);
-    BmErr data_get(CompassReading *reading);
 
 private:
     static void sensorCallback(void *cookie, sh2_SensorEvent_t *event);
@@ -30,16 +29,14 @@ private:
     static Bno085Sampler *_instance;
 
     static constexpr uint16_t IMU_QUEUE_COUNT = 32;
-    static constexpr uint16_t MAG_QUEUE_COUNT = 32;
     Q _imuQueue;
-    Q _magQueue;
     uint8_t _imuBuf[(sizeof(QItem) + sizeof(IMUReading)) * IMU_QUEUE_COUNT];
-    uint8_t _magBuf[(sizeof(QItem) + sizeof(CompassReading)) * MAG_QUEUE_COUNT];
     BmSemaphore _queueMut;   // guards both queues (driver task <-> app task)
     BmSemaphore _imuSem;     // "IMU reading ready" -- mirrors LSM6DSV m_reading_sem
 
     IMUReading _latch;       // accel + latest gyro, emitted on each accel report
     bool _haveGyro;
+    bool _haveMag;
     Bno085SamplerConfig _cfg;
 };
 
