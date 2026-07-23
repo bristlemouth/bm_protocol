@@ -4,6 +4,8 @@
 #include "task.h"
 
 #include "app_config.h"
+#include "bm_os.h"
+#include "mbedtls_base64/base64.h"
 #include "bridgeLog.h"
 #include "configuration.h"
 #include "metrics_service.h"
@@ -18,7 +20,6 @@
 #define METRICS_SAMPLER_TASK_STACK_SIZE (1024)
 #define METRICS_REQUEST_TIMEOUT_S (5)
 #define TOPO_TIMEOUT_MS (10 * 1000)
-#define METRICS_MAX_REPLY_BYTES (256) // MVP cap; current reply is ~80 bytes
 
 #define metrics_log_file "network_metrics.log"
 
@@ -34,21 +35,32 @@ static bool metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
     return true;
   }
 
-  size_t n = reply_len;
-  if (n > METRICS_MAX_REPLY_BYTES) {
+  // Raw CBOR travels on the wire; base64 is applied only here
+  size_t b64_len = 0;
+  mbedtls_base64_encode(NULL, 0, &b64_len, reply_data, reply_len);
+  if (b64_len == 0) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Metrics reply from %.*s truncated: %u > %u bytes\n", (int)service_strlen,
-                   service, (unsigned)reply_len, (unsigned)METRICS_MAX_REPLY_BYTES);
-    n = METRICS_MAX_REPLY_BYTES;
+                   "Empty metrics reply from %.*s\n", (int)service_strlen, service);
+    return true;
   }
 
-  char hex[2 * METRICS_MAX_REPLY_BYTES + 1];
-  for (size_t i = 0; i < n; i++) {
-    snprintf(&hex[i * 2], 3, "%02x", reply_data[i]);
+  uint8_t *b64 = (uint8_t *)bm_malloc(b64_len);
+  if (b64 == NULL) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Failed to allocate %u B for metrics b64\n", (unsigned)b64_len);
+    return true;
   }
-  hex[n * 2] = '\0';
-  spotter_log(0, metrics_log_file, USE_TIMESTAMP, "%.*s %s\n", (int)service_strlen, service,
-              hex);
+
+  size_t olen = 0;
+  if (mbedtls_base64_encode(b64, b64_len, &olen, reply_data, reply_len) == 0) {
+    spotter_log(0, metrics_log_file, USE_TIMESTAMP, "%.*s %.*s\n",
+                (int)service_strlen, service, (int)olen, b64);
+  } else {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Failed to base64-encode metrics reply from %.*s\n",
+                   (int)service_strlen, service);
+  }
+  bm_free(b64);
   return true;
 }
 

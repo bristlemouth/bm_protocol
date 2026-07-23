@@ -45,6 +45,7 @@
 #include "l2.h"
 #include "memfault_platform_core.h"
 #include "messages/neighbors.h"
+#include "metrics_network_component.h"
 #include "metrics_sampler.h"
 #include "metrics_service.h"
 #include "ncp_uart.h"
@@ -448,6 +449,7 @@ static void defaultTask(void *parameters) {
   debugBmServiceInit();
   sys_info_service_init();
   metrics_service_init();
+  metrics_network_component_init();
   config_cbor_map_service_init();
   IOWrite(&ALARM_OUT, 1);
   IOWrite(&LED_BLUE, LED_OFF);
