@@ -20,6 +20,7 @@ extern "C" {
 #include "topology.h"
 }
 #include "ncp_config.h"
+#include "ncp_metrics.h"
 #include "ncp_dfu.h"
 #include "ncp_uart.h"
 #include "pubsub.h"
@@ -476,6 +477,8 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.baud_rate_negotiation_reply_fn = baud_rate_reply_cb;
   bm_serial_callbacks.power_stats_request_fn = power_stats_request_cb;
   bm_serial_callbacks.power_stats_reply_fn = NULL;
+  bm_serial_callbacks.metrics_request_fn = ncp_metrics_request_cb;
+  bm_serial_callbacks.metrics_reply_fn = NULL;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 
