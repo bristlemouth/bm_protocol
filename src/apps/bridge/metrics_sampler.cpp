@@ -8,7 +8,6 @@
 #include "mbedtls_base64/base64.h"
 #include "bridgeLog.h"
 #include "configuration.h"
-#include "metrics_service.h"
 #include "spotter.h"
 #include "task_priorities.h"
 #include "topology_sampler.h"

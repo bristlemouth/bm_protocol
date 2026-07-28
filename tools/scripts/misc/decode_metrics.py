@@ -7,15 +7,15 @@ import cbor2
 LINK_QUALITY = {0: "poor", 1: "marginal", 2: "good"}
 LINE_RE = re.compile(r"^(?P<ts>\S+)\s*\|\s*(?P<node>\S+)/metrics\s+(?P<b64>[A-Za-z0-9+/=]+)")
 
-# Per-port fields flattened by the bm_core network component as "<name>_<port>".
+# One component per ADIN port: "adin_port_stats_<port>", each with bare field names.
 PORT_FIELDS = ["sqi", "mse", "lq", "rxe", "sye", "fc", "len", "algn"]
 
 """
 Each reply is a base64-encoded CBOR envelope:
-  { "mv": <envelope version>, "node": <id>, "up": <uptime_ms>,
-    "data": { "network_port_stats": { "num_ports": N, "sqi_1":.., "mse_1":.., ... },
-              <other components...> } }
-Field meanings (network_port_stats, per ADIN2111 port, cumulative since boot):
+  { "version": <v>, "node_id": <id>, "uptime_ms": <ms>,
+    "data": { "adin_port_stats_1": { "sqi":.., "mse":.., ... },
+              "adin_port_stats_2": { ... }, <other components...> } }
+Field meanings (adin_port_stats_<port>, per ADIN2111 port, cumulative since boot):
   sqi  - Signal Quality Indicator 0-7 (7 best)
   mse  - raw MSE_VAL register (lower = cleaner signal; no units)
   lq   - link quality enum: 0 poor / 1 marginal / 2 good
@@ -29,6 +29,7 @@ Counters are monotonic; diff consecutive samples per (node, port) for a rate.
 The leading log field is a millisecond tick from the bridge (not wall-clock time).
 """
 
+
 def load_metrics(log_path: str) -> pd.DataFrame:
     rows = []
     with open(log_path, "r") as f:
@@ -40,8 +41,12 @@ def load_metrics(log_path: str) -> pd.DataFrame:
                 env = cbor2.loads(base64.b64decode(m.group("b64")))
             except Exception:
                 continue  # skip malformed lines
-            net = env.get("data", {}).get("network_port_stats")
-            if not net:
+            data = env.get("data", {})
+            port_components = sorted(
+                (k for k in data if k.startswith("adin_port_stats_")),
+                key=lambda k: int(k.rsplit("_", 1)[1]),
+            )
+            if not port_components:
                 continue  # only network stats for now; other components ignored
 
             tick = m.group("ts").rstrip("t")
@@ -49,7 +54,9 @@ def load_metrics(log_path: str) -> pd.DataFrame:
             node = env.get("node_id")
             node_id = f"{node:016x}" if isinstance(node, int) else m.group("node")
 
-            for port in range(1, net.get("num_ports", 0) + 1):
+            for key in port_components:
+                port = int(key.rsplit("_", 1)[1])
+                stats = data[key]
                 row = {
                     "tick_ms": tick_ms,
                     "node_id": node_id,
@@ -58,10 +65,11 @@ def load_metrics(log_path: str) -> pd.DataFrame:
                     "port": port,
                 }
                 for fld in PORT_FIELDS:
-                    row[fld] = net.get(f"{fld}_{port}")
+                    row[fld] = stats.get(fld)
                 row["lq_label"] = LINK_QUALITY.get(row.get("lq"), "?")
                 rows.append(row)
     return pd.DataFrame(rows)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Decode a Bristlemouth network_metrics.log")

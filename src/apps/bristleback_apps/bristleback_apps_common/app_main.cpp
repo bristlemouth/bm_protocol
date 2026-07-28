@@ -38,8 +38,6 @@
 #include "l2.h"
 #include "loadCellSampler.h"
 #include "memfault_platform_core.h"
-#include "metrics_service.h"
-#include "metrics_network_component.h"
 #include "ms5803.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
@@ -379,8 +377,6 @@ static void defaultTask(void *parameters) {
   sensorsInit();
   debugBmServiceInit();
   sys_info_service_init();
-  metrics_service_init();
-  metrics_network_component_init();
   config_cbor_map_service_init();
   SensorWatchdog::SensorWatchdogInit();
   bm_sub(APP_PUB_SUB_UTC_TOPIC, handle_bm_subscriptions);
