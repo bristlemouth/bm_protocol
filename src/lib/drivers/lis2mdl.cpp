@@ -63,6 +63,7 @@ BmErr LIS2MDL::init(void) {
           sensor hub functionality. This will enqueue the data directly from
           there as it is required in AbstractSensorInterface. 
 
+ @param timestamp_ns timestamp in nanoseconds the reading was taken
  @param buf data received from the sensor hub
  @param len length of data in bytes
 
@@ -70,7 +71,7 @@ BmErr LIS2MDL::init(void) {
          BmEINVAL if input arguments are invalid
          BmENOMEM if not enough space in the queue's buffer for incoming data
  */
-BmErr LIS2MDL::set_data(const uint8_t *buf, size_t len) {
+BmErr LIS2MDL::set_data(uint64_t timestamp_ns, const uint8_t *buf, size_t len) {
 
   if (!buf || len < EXPECTED_DATA_LENGTH) {
     return BmEINVAL;
@@ -83,7 +84,7 @@ BmErr LIS2MDL::set_data(const uint8_t *buf, size_t len) {
   //TODO: should we put timestamps here?
   //
   LIS2MDLReading reading = {
-      .ns = 0,
+      .ns = timestamp_ns,
       .x = lis2mdl_from_lsb_to_mgauss(datax),
       .y = lis2mdl_from_lsb_to_mgauss(datay),
       .z = lis2mdl_from_lsb_to_mgauss(dataz),
