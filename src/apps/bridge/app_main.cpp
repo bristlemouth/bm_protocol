@@ -18,6 +18,7 @@
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "app_util.h"
+#include "bm_config.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
