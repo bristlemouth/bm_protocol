@@ -24,7 +24,7 @@ constexpr const char *RBR_CODA_READING_PERIOD_MS = "rbrCodaReadingPeriodMs";
 constexpr const char *TICKS_SAMPLING_ENABLED = "ticksSamplingEnabled";
 constexpr const char *TURBIDITY_READING_PERIOD_MS = "turbidityReadingPeriodMs";
 constexpr const char *AANDERAA_SALINITY_READING_PERIOD_MS = "salinityReadingPeriodMs";
-constexpr const char *METRICS_POLL_INTERVAL_MS = "metricsPollIntervalMs";
+constexpr const char *METRICS_POLL_INTERVAL_S = "metricsPollIntervalS";
 constexpr const char *HARDWARE_VERSION = "hwVersion";
 #ifdef RAW_PRESSURE_ENABLE
 constexpr const char *RBR_RAW_DIFFERENTIAL_SIGNAL_PERIOD_S = "rbrRawSampleS";

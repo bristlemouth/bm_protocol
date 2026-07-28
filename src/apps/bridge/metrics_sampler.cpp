@@ -1,29 +1,30 @@
 #include "metrics_sampler.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "app_config.h"
 #include "bm_os.h"
+#include "bm_service_common.h"
 #include "mbedtls_base64/base64.h"
 #include "bridgeLog.h"
 #include "configuration.h"
 #include "spotter.h"
 #include "task_priorities.h"
 #include "topology_sampler.h"
+#include "metrics_service.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
-#define DEFAULT_METRICS_POLL_INTERVAL_MS (10 * 1000)
 #define METRICS_SAMPLER_TASK_STACK_SIZE (1024)
 #define METRICS_REQUEST_TIMEOUT_S (5)
 #define TOPO_TIMEOUT_MS (10 * 1000)
 
 #define metrics_log_file "network_metrics.log"
 
-static uint32_t _poll_interval_ms = DEFAULT_METRICS_POLL_INTERVAL_MS;
+#define METRICS_B64_BUF_SIZE (((MAX_BM_SERVICE_DATA_SIZE + 2) / 3) * 4 + 1)
+
+static uint32_t _poll_interval_s;
 static uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
+static uint8_t _b64[METRICS_B64_BUF_SIZE];
 
 static bool metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                              const char *service, size_t reply_len, uint8_t *reply_data) {
@@ -34,39 +35,22 @@ static bool metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
     return true;
   }
 
-  // Raw CBOR travels on the wire; base64 is applied only here
-  size_t b64_len = 0;
-  mbedtls_base64_encode(NULL, 0, &b64_len, reply_data, reply_len);
-  if (b64_len == 0) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Empty metrics reply from %.*s\n", (int)service_strlen, service);
-    return true;
-  }
-
-  uint8_t *b64 = (uint8_t *)bm_malloc(b64_len);
-  if (b64 == NULL) {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Failed to allocate %u B for metrics b64\n", (unsigned)b64_len);
-    return true;
-  }
-
   size_t olen = 0;
-  if (mbedtls_base64_encode(b64, b64_len, &olen, reply_data, reply_len) == 0) {
+  if (mbedtls_base64_encode(_b64, sizeof(_b64), &olen, reply_data, reply_len) == 0) {
     spotter_log(0, metrics_log_file, USE_TIMESTAMP, "%.*s %.*s\n",
-                (int)service_strlen, service, (int)olen, b64);
+                (int)service_strlen, service, (int)olen, _b64);
   } else {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                    "Failed to base64-encode metrics reply from %.*s\n",
                    (int)service_strlen, service);
   }
-  bm_free(b64);
   return true;
 }
 
 static void metrics_sampler_task(void *parameters) {
   (void)parameters;
   for (;;) {
-    vTaskDelay(pdMS_TO_TICKS(_poll_interval_ms));
+    bm_delay(_poll_interval_s * 1000);
 
     size_t node_list_size = sizeof(_node_list);
     uint32_t num_nodes = 0;
@@ -88,21 +72,19 @@ static void metrics_sampler_task(void *parameters) {
 }
 
 void metrics_sampler_init(void) {
-  // Poll interval is configurable; fall back to the default and persist it if absent.
-  _poll_interval_ms = DEFAULT_METRICS_POLL_INTERVAL_MS;
-  if (!get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::METRICS_POLL_INTERVAL_MS,
-                       strlen(AppConfig::METRICS_POLL_INTERVAL_MS), &_poll_interval_ms)) {
+  _poll_interval_s = 0;
+  get_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::METRICS_POLL_INTERVAL_S,
+                  strlen(AppConfig::METRICS_POLL_INTERVAL_S), &_poll_interval_s);
+  if (_poll_interval_s == 0) {
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                   "No metrics poll interval in config, using default %" PRIu32
-                   " ms and saving to config\n",
-                   _poll_interval_ms);
-    set_config_uint(BM_CFG_PARTITION_SYSTEM, AppConfig::METRICS_POLL_INTERVAL_MS,
-                    strlen(AppConfig::METRICS_POLL_INTERVAL_MS), _poll_interval_ms);
-    save_config(BM_CFG_PARTITION_SYSTEM, false);
+                   "Metrics poll interval is 0; network metrics polling disabled\n");
+    return;
   }
-
-  BaseType_t rval =
-      xTaskCreate(metrics_sampler_task, "METRICS_SAMPLER", METRICS_SAMPLER_TASK_STACK_SIZE,
-                  NULL, METRICS_SAMPLER_TASK_PRIORITY, NULL);
-  configASSERT(rval == pdPASS);
+  BmErr err = bm_task_create(metrics_sampler_task, "METRICS_SAMPLER",
+                             METRICS_SAMPLER_TASK_STACK_SIZE, NULL,
+                             METRICS_SAMPLER_TASK_PRIORITY, NULL);
+  if (err != BmOK) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_ERROR, USE_HEADER,
+                   "Failed to create metrics sampler task\n");
+  }
 }

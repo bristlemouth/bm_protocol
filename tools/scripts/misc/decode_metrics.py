@@ -7,15 +7,17 @@ import cbor2
 LINK_QUALITY = {0: "poor", 1: "marginal", 2: "good"}
 LINE_RE = re.compile(r"^(?P<ts>\S+)\s*\|\s*(?P<node>\S+)/metrics\s+(?P<b64>[A-Za-z0-9+/=]+)")
 
-# One component per ADIN port: "adin_port_stats_<port>", each with bare field names.
-PORT_FIELDS = ["sqi", "mse", "lq", "rxe", "sye", "fc", "len", "algn"]
-
 """
 Each reply is a base64-encoded CBOR envelope:
   { "version": <v>, "node_id": <id>, "uptime_ms": <ms>,
-    "data": { "adin_port_stats_1": { "sqi":.., "mse":.., ... },
-              "adin_port_stats_2": { ... }, <other components...> } }
-Field meanings (adin_port_stats_<port>, per ADIN2111 port, cumulative since boot):
+    "data": { "<component>": { "<field>": <value>, ... }, ... } }
+
+The decoder is generic: every component becomes a row and its fields become
+columns, so new component types are captured with no changes here. Component-
+specific niceties are layered on top only where they apply (see load_metrics).
+
+Today the only producer is the ADIN2111 driver, which reports one component per
+port, "adin_port_stats_<port>", with these fields (cumulative since boot):
   sqi  - Signal Quality Indicator 0-7 (7 best)
   mse  - raw MSE_VAL register (lower = cleaner signal; no units)
   lq   - link quality enum: 0 poor / 1 marginal / 2 good
@@ -25,7 +27,7 @@ Field meanings (adin_port_stats_<port>, per ADIN2111 port, cumulative since boot
   len  - frame length-error count
   algn - frame alignment-error count
 Note: an idle port with no link partner reports sqi=7/mse=0 - not a real "good" link.
-Counters are monotonic; diff consecutive samples per (node, port) for a rate.
+Counters are monotonic; diff consecutive samples per (node, component) for a rate.
 The leading log field is a millisecond tick from the bridge (not wall-clock time).
 """
 
@@ -41,32 +43,30 @@ def load_metrics(log_path: str) -> pd.DataFrame:
                 env = cbor2.loads(base64.b64decode(m.group("b64")))
             except Exception:
                 continue  # skip malformed lines
-            data = env.get("data", {})
-            port_components = sorted(
-                (k for k in data if k.startswith("adin_port_stats_")),
-                key=lambda k: int(k.rsplit("_", 1)[1]),
-            )
-            if not port_components:
-                continue  # only network stats for now; other components ignored
 
             tick = m.group("ts").rstrip("t")
             tick_ms = int(tick) if tick.isdigit() else None
             node = env.get("node_id")
             node_id = f"{node:016x}" if isinstance(node, int) else m.group("node")
 
-            for key in port_components:
-                port = int(key.rsplit("_", 1)[1])
-                stats = data[key]
+            # Generic: every component becomes a row and its fields become
+            # columns, so new component types need no changes here.
+            for component, fields in env.get("data", {}).items():
+                if not isinstance(fields, dict):
+                    continue
                 row = {
                     "tick_ms": tick_ms,
                     "node_id": node_id,
                     "version": env.get("version"),
                     "uptime_ms": env.get("uptime_ms"),
-                    "port": port,
+                    "component": component,
                 }
-                for fld in PORT_FIELDS:
-                    row[fld] = stats.get(fld)
-                row["lq_label"] = LINK_QUALITY.get(row.get("lq"), "?")
+                row.update(fields)
+                # Component-specific niceties, added only where they apply:
+                if component.startswith("adin_port_stats_"):
+                    row["port"] = int(component.rsplit("_", 1)[1])
+                if "lq" in fields:
+                    row["lq_label"] = LINK_QUALITY.get(fields["lq"], "?")
                 rows.append(row)
     return pd.DataFrame(rows)
 
