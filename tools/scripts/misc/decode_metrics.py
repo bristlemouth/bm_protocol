@@ -66,7 +66,8 @@ def load_metrics(log_path: str) -> pd.DataFrame:
                 if component.startswith("adin_port_stats_"):
                     row["port"] = int(component.rsplit("_", 1)[1])
                 if "lq" in fields:
-                    row["lq_label"] = LINK_QUALITY.get(fields["lq"], "?")
+                     # mse==0 means no link partner (idle port), even though lq/sqi read "good"
+                    row["lq_label"] = "no-link" if fields.get("mse") == 0 else LINK_QUALITY.get(fields["lq"], "?")
                 rows.append(row)
     return pd.DataFrame(rows)
 
