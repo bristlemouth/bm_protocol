@@ -3,13 +3,14 @@
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "cbor.h"
+#include "metrics_log.h"
 #include "metrics_service.h"
 #include "ncp_uart.h"
 #include "topology.h"
 #include <inttypes.h>
-#include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define NCP_METRICS_TIMEOUT_S (5)
 #define NCP_METRICS_PRETTY_BUF_LEN (NCP_BUFF_LEN / 2)
@@ -47,6 +48,8 @@ static bool ncp_metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strle
     bm_serial_send_metrics_reply(node_id, no_reply, sizeof(no_reply) - 1);
     return true;
   }
+
+  metrics_log_reply_b64(service, service_strlen, reply_data, reply_len);
 
   static char pretty_buf[NCP_METRICS_PRETTY_BUF_LEN];
   MetricsPrettyState state = {pretty_buf, sizeof(pretty_buf), 0};
