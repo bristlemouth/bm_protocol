@@ -2,14 +2,12 @@
 
 #include "app_config.h"
 #include "bm_os.h"
-#include "bm_service_common.h"
-#include "mbedtls_base64/base64.h"
 #include "bridgeLog.h"
 #include "configuration.h"
-#include "spotter.h"
+#include "metrics_log.h"
+#include "metrics_service.h"
 #include "task_priorities.h"
 #include "topology_sampler.h"
-#include "metrics_service.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,13 +16,8 @@
 #define METRICS_REQUEST_TIMEOUT_S (5)
 #define TOPO_TIMEOUT_MS (10 * 1000)
 
-#define metrics_log_file "network_metrics.log"
-
-#define METRICS_B64_BUF_SIZE (((MAX_BM_SERVICE_DATA_SIZE + 2) / 3) * 4 + 1)
-
 static uint32_t _poll_interval_s;
 static uint64_t _node_list[TOPOLOGY_SAMPLER_MAX_NODE_LIST_SIZE];
-static uint8_t _b64[METRICS_B64_BUF_SIZE];
 
 static bool metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                              const char *service, size_t reply_len, uint8_t *reply_data) {
@@ -34,16 +27,7 @@ static bool metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
                    "Metrics request NACK'd for %.*s\n", (int)service_strlen, service);
     return true;
   }
-
-  size_t olen = 0;
-  if (mbedtls_base64_encode(_b64, sizeof(_b64), &olen, reply_data, reply_len) == 0) {
-    spotter_log(0, metrics_log_file, USE_TIMESTAMP, "%.*s %.*s\n",
-                (int)service_strlen, service, (int)olen, _b64);
-  } else {
-    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
-                   "Failed to base64-encode metrics reply from %.*s\n",
-                   (int)service_strlen, service);
-  }
+  metrics_log_reply_b64(service, service_strlen, reply_data, reply_len);
   return true;
 }
 
