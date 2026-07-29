@@ -32,6 +32,7 @@ set(LIB_FILES
     ${LIB_DIR}/common/OrderedSeparatorLineParser.cpp
     ${LIB_DIR}/common/lpm_u5.c
     ${LIB_DIR}/common/lptimTick_u5.c
+    ${LIB_DIR}/common/metrics_log.cpp
     ${LIB_DIR}/common/nvmPartition.cpp
     ${LIB_DIR}/common/pcap.c
     ${LIB_DIR}/common/port_monitor.c
