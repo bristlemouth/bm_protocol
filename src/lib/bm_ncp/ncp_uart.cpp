@@ -20,8 +20,8 @@ extern "C" {
 #include "topology.h"
 }
 #include "ncp_config.h"
-#include "ncp_metrics.h"
 #include "ncp_dfu.h"
+#include "ncp_metrics.h"
 #include "ncp_uart.h"
 #include "pubsub.h"
 #include "reset_reason.h"

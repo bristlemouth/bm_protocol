@@ -1,5 +1,4 @@
 #include "ncp_metrics.h"
-#include "FreeRTOS.h"
 #include "bcmp.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
@@ -9,6 +8,8 @@
 #include "topology.h"
 #include <inttypes.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #define NCP_METRICS_TIMEOUT_S (5)
 #define NCP_METRICS_PRETTY_BUF_LEN (NCP_BUFF_LEN / 2)
