@@ -46,7 +46,6 @@ static bool ncp_metrics_reply_cb(bool ack, uint32_t msg_id, size_t service_strle
     bm_serial_send_metrics_reply(node_id, no_reply, sizeof(no_reply) - 1);
     return true;
   }
-  uint64_t node_id = strtoull(service, NULL, 16); // service is "<node_id>/metrics"
 
   static char pretty_buf[NCP_METRICS_PRETTY_BUF_LEN];
   MetricsPrettyState state = {pretty_buf, sizeof(pretty_buf), 0};
