@@ -21,7 +21,7 @@ extern "C" {
 #define raw_log(fmt, ...) spotter_log(0, RAW_LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
 #define sensor_log(fmt, ...) spotter_log(0, LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
 
-void AanderaaAdcpSendor::init() {
+void AanderaaAdcpSensor::init() {
   _parser.init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
                   &_sensorBmLogEnable);
@@ -45,7 +45,7 @@ void AanderaaAdcpSendor::init() {
   PLUART::enable();
 }
 
-void AanderaaAdcpSendor::configureSensor(void) {
+void AanderaaAdcpSensor::configureSensor(void) {
   // takes sensor a few ms between each commands
   uint16_t read_len = 0;
   sendCommand(CMD_WAKE);
@@ -124,7 +124,7 @@ void AanderaaAdcpSendor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
-void AanderaaAdcpSendor::clearPayloadBuffer(void) {
+void AanderaaAdcpSensor::clearPayloadBuffer(void) {
   memset(_payload_buffer, 0, sizeof(_payload_buffer));
 }
 
@@ -147,7 +147,7 @@ static bool isCellIndex(const char *tok, size_t toklen) {
          (idx >= 3000 && idx <= 3024);
 }
 
-void AanderaaAdcpSendor::handleMeasurement(const char *begin, const char *end) {
+void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
   uint16_t len = end - begin;
   _parser.parseLine(begin, len);
 
@@ -165,7 +165,7 @@ void AanderaaAdcpSendor::handleMeasurement(const char *begin, const char *end) {
            horizontal_speed.data.double_val, direction.data.double_val);
 }
 
-BmErr AanderaaAdcpSendor::parseMeasurements(const char *line) {
+BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
   static const char *field_lut[] = {
       "MEASUREMENT",
       "5400",
@@ -217,7 +217,7 @@ BmErr AanderaaAdcpSendor::parseMeasurements(const char *line) {
   return BmOK;
 }
 
-bool AanderaaAdcpSendor::getData(void *data) {
+bool AanderaaAdcpSensor::getData(void *data) {
   if (!PLUART::byteAvailable()) {
     return false;
   }
