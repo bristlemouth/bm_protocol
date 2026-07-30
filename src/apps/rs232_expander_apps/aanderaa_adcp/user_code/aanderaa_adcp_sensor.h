@@ -37,10 +37,10 @@
 
 #define CMD_PING_COUNT "Ping Number"
 
-class AanderaaAdcpSendor : public AanderaaSensor {
+class AanderaaAdcpSensor : public AanderaaSensor {
 public:
   static constexpr uint8_t FIELDS_PER_MEASUREMENT = 5;
-  AanderaaAdcpSendor() : _parser("\t", 256, PARSER_VALUE_TYPE, FIELDS_PER_MEASUREMENT) {};
+  AanderaaAdcpSensor() : _parser("\t", 256, PARSER_VALUE_TYPE, FIELDS_PER_MEASUREMENT) {};
 
   void init();
   void configureSensor(void);
