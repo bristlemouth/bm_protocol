@@ -58,11 +58,11 @@ void AanderaaAdcpSensor::init() {
 
  @return number of cells for distance
  */
-static uint32_t depth_to_supported_distance(uint32_t depth, char s[6]) {
+static uint32_t depth_to_supported_distance(float depth, char *s) {
 
   static const char *supported_distances[] = {
       "1.5m",  "1.6m",  "1.7m",  "1.8m",  "1.9m",  "2.0m",  "2.1m",  "2.2m",  "2.3m",  "2.4m",
-      "2.5m",  "2.6m",  "2.7m",  "2.8m",  " 2.9m", " 3.0m", "3.5m",  "4.0m",  "4.5m",  "5.0m",
+      "2.5m",  "2.6m",  "2.7m",  "2.8m",  "2.9m",  "3.0m",  "3.5m",  "4.0m",  "4.5m",  "5.0m",
       "5.5m",  "6.0m",  "6.5m",  "7.0m",  "7.5m",  "8.0m",  "8.5m",  "9.0m",  "9.5m",  "10.0m",
       "11.0m", "12.0m", "13.0m", "14.0m", "15.0m", "16.0m", "17.0m", "18.0m", "19.0m", "20.0m",
       "22.0m", "24.0m", "26.0m", "28.0m", "30.0m", "32.0m", "34.0m", "36.0m", "38.0m", "40.0m",
@@ -113,7 +113,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   // set interval, define default interval
   readValidateWriteValue(CMD_INTERVAL, "1 min");
-  readValidateWriteValue(CMD_PING_COUNT, 600);
+  readValidateWriteValue(CMD_PING_COUNT, static_cast<AanderaaUint>(600));
 
   // Narrowband is recommended to use If the sensor is moving (as under a buoy
   // for example), reference 4.10.4 in TD 304
@@ -138,9 +138,9 @@ void AanderaaAdcpSensor::configureSensor(void) {
   // num_cells * (cell_size + center_cell_spacing) + distance_first_cell
   // must be below 80m
   char s[6] = {0};
-  uint32_t cell_count = depth_to_supported_distance(_sensorDepthM, s);
+  AanderaaUint cell_count = depth_to_supported_distance(_sensorDepthM, s);
   readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), s);
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), const_cast<const char *>(s));
   readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), cell_count);
   readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), "1.0m");
   readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");

@@ -35,8 +35,8 @@ public:
 
 private:
   typedef struct {
-    AanderaaConductivityUint serial_number;
-    AanderaaConductivityFloat cell_coef;
+    AanderaaUint serial_number;
+    AanderaaFloat cell_coef;
   } ProductionConfigs;
 
   static constexpr uint32_t BAUD_RATE = 9600;
@@ -63,7 +63,7 @@ private:
   uint32_t _readingPeriodS = 2;
   OrderedSeparatorLineParser _parser;
   char _payload_buffer[2048];
-  AanderaaConductivityUint _serialNumber;
+  AanderaaUint _serialNumber;
   bool _serialNumberErrSet = false;
 
   float _cellCoef = 0.000000f;

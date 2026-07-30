@@ -45,9 +45,9 @@ extern "C" {
 class AanderaaSensor {
 
 public:
-  typedef uint32_t AanderaaConductivityUint;
-  typedef float AanderaaConductivityFloat;
-  typedef char AanderaaConductivityString[64];
+  typedef uint32_t AanderaaUint;
+  typedef float AanderaaFloat;
+  typedef char AanderaaString[64];
 
   void startStreaming(void);
   void stopStreaming(void);
@@ -58,15 +58,12 @@ public:
 private:
   void clearCmdBuffer(void);
 
-  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString *buf,
-                                   const AanderaaConductivityUint read,
-                                   const AanderaaConductivityUint validate);
-  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString *buf,
-                                   const AanderaaConductivityFloat read,
-                                   const AanderaaConductivityFloat validate);
-  bool compareValuesPopulateBuffer(const char *parameter, AanderaaConductivityString *buf,
-                                   const AanderaaConductivityString read,
-                                   const AanderaaConductivityString validate);
+  bool compareValuesPopulateBuffer(const char *parameter, AanderaaString *buf,
+                                   const AanderaaUint read, const AanderaaUint validate);
+  bool compareValuesPopulateBuffer(const char *parameter, AanderaaString *buf,
+                                   const AanderaaFloat read, const AanderaaFloat validate);
+  bool compareValuesPopulateBuffer(const char *parameter, AanderaaString *buf,
+                                   const AanderaaString read, const AanderaaString validate);
   char _cmd_buffer[248] = {};
   bool _sensorConfigDirty = false;
 
@@ -78,11 +75,9 @@ protected:
   static constexpr char LINE_TERM = '\n';
 
   BmErr sendCommand(const char *command, uint32_t timeout_ms = 1000);
-  void checkTypeAndAssign(const char *output, uint16_t length, AanderaaConductivityUint *value);
-  void checkTypeAndAssign(const char *output, uint16_t length,
-                          AanderaaConductivityFloat *value);
-  void checkTypeAndAssign(const char *output, uint16_t length,
-                          AanderaaConductivityString *value);
+  void checkTypeAndAssign(const char *output, uint16_t length, AanderaaUint *value);
+  void checkTypeAndAssign(const char *output, uint16_t length, AanderaaFloat *value);
+  void checkTypeAndAssign(const char *output, uint16_t length, AanderaaString *value);
   BmErr readValidateWriteValue(const char *parameter, const char *expected_val,
                                uint8_t retries = 3);
 
@@ -197,7 +192,7 @@ protected:
   template <typename T>
   BmErr readValidateWriteValue(const char *parameter, T expected_val, uint8_t retries = 3) {
     T read_val;
-    AanderaaConductivityString command_buf = {};
+    AanderaaString command_buf = {};
     BmErr ret = BmOK;
 
     do {

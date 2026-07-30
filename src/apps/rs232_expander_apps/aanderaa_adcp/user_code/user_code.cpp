@@ -38,7 +38,7 @@ void setup(void) {
 
 void loop(void) {
   // Read and handle line from sensor
-  if (aanderaa_sensor.getData(d)) {
+  if (aanderaa_sensor.getData()) {
     debug_printf("Obtained data from aanderaa sensor\n");
   }
 }
