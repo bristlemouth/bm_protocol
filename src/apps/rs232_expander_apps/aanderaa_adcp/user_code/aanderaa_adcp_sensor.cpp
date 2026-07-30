@@ -111,7 +111,11 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   setDefaultConfigs();
 
-  // set interval, define default interval
+  // Setup tilt parameters
+  readValidateWriteValue(CMD_TILT_PING_DISCARD, CMD_NO);
+  readValidateWriteValue(CMD_ENABLE_TILT_COMPENSATION, CMD_YES);
+
+  // Set interval and ping count
   readValidateWriteValue(CMD_INTERVAL, "1 min");
   readValidateWriteValue(CMD_PING_COUNT, static_cast<AanderaaUint>(600));
 
