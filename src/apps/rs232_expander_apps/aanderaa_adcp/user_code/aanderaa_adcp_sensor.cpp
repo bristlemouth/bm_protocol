@@ -45,8 +45,56 @@ void AanderaaAdcpSensor::init() {
   PLUART::enable();
 }
 
+/*!
+ @brief Convert depth to ADCP supported distance
+
+ @details The Aanderaa ADCP only supports certain depth parameters. This
+          converts an integer based depth to the string needed to set for
+          CMD_DISTANCE_FIRST_CELL_CENTER as well as return the number of
+          cells needed for CMD_NUMBER_OF_CELLS.
+
+ @param depth configured depth in meters
+ @param s[6] input string to write for CMD_DISTANCE_FIRST_CELL_CENTER
+
+ @return number of cells for distance
+ */
+static uint32_t depth_to_supported_distance(uint32_t depth, char s[6]) {
+
+  static const char *supported_distances[] = {
+      "1.5m",  "1.6m",  "1.7m",  "1.8m",  "1.9m",  "2.0m",  "2.1m",  "2.2m",  "2.3m",  "2.4m",
+      "2.5m",  "2.6m",  "2.7m",  "2.8m",  " 2.9m", " 3.0m", "3.5m",  "4.0m",  "4.5m",  "5.0m",
+      "5.5m",  "6.0m",  "6.5m",  "7.0m",  "7.5m",  "8.0m",  "8.5m",  "9.0m",  "9.5m",  "10.0m",
+      "11.0m", "12.0m", "13.0m", "14.0m", "15.0m", "16.0m", "17.0m", "18.0m", "19.0m", "20.0m",
+      "22.0m", "24.0m", "26.0m", "28.0m", "30.0m", "32.0m", "34.0m", "36.0m", "38.0m", "40.0m",
+      "42.0m", "44.0m", "46.0m", "48.0m", "50.0m", "60.0m", "65.0m", "70.0m"};
+
+  uint32_t distance_idx = 0;
+  // 1 is the minimum distance here
+  uint32_t ret = 1;
+
+  // This rounds down to the nearest supported depth
+  for (uint32_t i = 0; i < array_size(supported_distances); i++) {
+    float value = strtof(supported_distances[i], NULL);
+    if (value > static_cast<float>(depth)) {
+      break;
+    }
+    ret = static_cast<uint32_t>(value);
+    distance_idx = i;
+  }
+
+  strcpy(s, supported_distances[distance_idx]);
+
+  return ret;
+}
+
+/*!
+ @brief Configures the Aanderaa ADCP sensor
+
+ @details The ADCP is facing downwards, which means the sensor must be set up
+          to accomodate this configuration. Will print off configurations after
+          they have been validated and/or written.
+ */
 void AanderaaAdcpSensor::configureSensor(void) {
-  // takes sensor a few ms between each commands
   uint16_t read_len = 0;
   sendCommand(CMD_WAKE);
 
@@ -78,19 +126,26 @@ void AanderaaAdcpSensor::configureSensor(void) {
   // Set simple output
   readValidateWriteValue(CMD_SELECT_PROFILE_PARAMETERS, "Simple Output");
 
+  // Enable upside down
+  readValidateWriteValue(CMD_ENABLE_UPSIDE_DOWN, CMD_YES);
+
   // Set up columns:
-  //   - reference the ocean surface when setting up distances
+  //   - do not reference the ocean surface when setting up distances
+  //   - set the distance from the sensor to the first cell
   //   - set the number of cells
-  //   - set the cell distance apart
   //   - set the cell size
+  //   - set the cell distance apart
   // num_cells * (cell_size + center_cell_spacing) + distance_first_cell
   // must be below 80m
-  readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_YES);
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), "1.0m");
-  readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), _sensorDepthM - 1);
+  char s[6] = {0};
+  uint32_t cell_count = depth_to_supported_distance(_sensorDepthM, s);
+  readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), s);
+  readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), cell_count);
   readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), "1.0m");
   readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");
 
+  // Must be run after setting the
   sendCommand(CMD_DO_REFRESH);
 
   // save
@@ -124,10 +179,21 @@ void AanderaaAdcpSensor::configureSensor(void) {
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
+/*!
+ @brief Clears the payload buffer used to read from the ADCP
+ */
 void AanderaaAdcpSensor::clearPayloadBuffer(void) {
   memset(_payload_buffer, 0, sizeof(_payload_buffer));
 }
 
+/*!
+ @brief Determine if the current output field is a cell index
+
+ @param tok token to examine
+ @param toklen token length
+
+ @return Returns true if the index is an expected cell field
+ */
 static bool isCellIndex(const char *tok, size_t toklen) {
   char buf[8];
   if (toklen == 0 || toklen >= sizeof(buf)) {
@@ -147,6 +213,12 @@ static bool isCellIndex(const char *tok, size_t toklen) {
          (idx >= 3000 && idx <= 3024);
 }
 
+/*!
+ @brief Handles a single measurement from output string
+
+ @param begin pointer to beginning string of measurement
+ @param end pointer to end of string of measurement
+ */
 void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
   uint16_t len = end - begin;
   _parser.parseLine(begin, len);
@@ -165,6 +237,28 @@ void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
            horizontal_speed.data.double_val, direction.data.double_val);
 }
 
+/*!
+ @brief Validates and parses a measurement output string
+
+ @details The output from the ADCP will have all of the cells readings in a 
+          single message. The output format is as follows:
+
+            MEASUREMENT 5400 {serial_number} {record_state} {ping_count}
+              {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
+              {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
+              {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
+              {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
+              ...
+          
+          Each field in the output is delimited by a tab (\t). In order to
+          parse the message, this function obtains the fields for each cell
+          and runs them through the _parser.
+
+ @param line line to parse cell output values
+
+ @return BmOK on success
+         BmEBADMSG if message could not be parsed
+ */
 BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
   static const char *field_lut[] = {
       "MEASUREMENT",
@@ -217,7 +311,13 @@ BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
   return BmOK;
 }
 
-bool AanderaaAdcpSensor::getData(void *data) {
+/*!
+ @brief Obtain and parse data for Aanderaa ADCP sensor
+
+ @return true if message was obtained and properly parsed
+         false otherwise 
+ */
+bool AanderaaAdcpSensor::getData(void) {
   if (!PLUART::byteAvailable()) {
     return false;
   }

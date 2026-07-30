@@ -18,6 +18,8 @@
 // Whether readings should happen at the beginning or end of an interval
 #define CMD_BURST_PERIOD_PLACEMENT "Burst Period Placement"
 
+#define CMD_ENABLE_UPSIDE_DOWN "Enable Upside Down"
+
 // The followinh commands are used to confiugure columns in the water the ADCP
 // measures
 #define CMD_ENABLE_SURFACE_REFERENCE "Enable Surface Reference"
@@ -45,7 +47,7 @@ public:
   void init();
   void configureSensor(void);
   BmErr parseMeasurements(const char *line);
-  bool getData(void *data);
+  bool getData(void);
   void clearPayloadBuffer(void);
 
   static constexpr char RAW_LOG[] = "aanderaa_adcp_raw.log";
