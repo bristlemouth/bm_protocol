@@ -20,8 +20,8 @@
 
 #define CMD_ENABLE_UPSIDE_DOWN "Enable Upside Down"
 
-// The followinh commands are used to confiugure columns in the water the ADCP
-// measures
+// The following commands are used to configure columns in the water, supports
+// up to 3 columns that can be overlapping if desired
 #define CMD_ENABLE_SURFACE_REFERENCE "Enable Surface Reference"
 #define CMD_CELL_SIZE "Cell Size"
 #define CMD_DISTANCE_FIRST_CELL_CENTER "Distance First Cell Center"
