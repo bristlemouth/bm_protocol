@@ -51,7 +51,7 @@ void AanderaaSensor::resetSensor(uint32_t timeout_ms) { sendCommand(CMD_RESET, t
  @param value pointer to store the parsed unsigned integer value
  */
 void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
-                                        AanderaaSensor::AanderaaConductivityUint *value) {
+                                        AanderaaSensor::AanderaaUint *value) {
   (void)length;
 
   if (value) {
@@ -67,7 +67,7 @@ void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
  @param value pointer to store the parsed float value
  */
 void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
-                                        AanderaaSensor::AanderaaConductivityFloat *value) {
+                                        AanderaaSensor::AanderaaFloat *value) {
   (void)length;
 
   if (value) {
@@ -83,8 +83,8 @@ void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
  @param value pointer to string buffer to store the copied string
  */
 void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
-                                        AanderaaSensor::AanderaaConductivityString *value) {
-  const size_t copy_len = sizeof(AanderaaConductivityString) - 1;
+                                        AanderaaSensor::AanderaaString *value) {
+  const size_t copy_len = sizeof(AanderaaString) - 1;
 
   if (length > copy_len) {
     return;
@@ -135,15 +135,15 @@ void AanderaaSensor::clearCmdBuffer(void) { memset(_cmd_buffer, 0, sizeof(_cmd_b
          false if the read value does not match the expected value
  */
 bool AanderaaSensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaSensor::AanderaaConductivityString *buf,
-    const AanderaaSensor::AanderaaConductivityUint read,
-    const AanderaaSensor::AanderaaConductivityUint expected) {
+    const char *parameter, AanderaaSensor::AanderaaString *buf,
+    const AanderaaSensor::AanderaaUint read,
+    const AanderaaSensor::AanderaaUint expected) {
 
   if (read == expected) {
     return true;
   }
 
-  snprintf(*buf, sizeof(AanderaaConductivityString), "%s %s(%" PRIu32 ")\r\n", CMD_SET,
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%" PRIu32 ")\r\n", CMD_SET,
            parameter, expected);
   return false;
 }
@@ -163,16 +163,16 @@ bool AanderaaSensor::compareValuesPopulateBuffer(
          false if the read value does not match the expected value
  */
 bool AanderaaSensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaSensor::AanderaaConductivityString *buf,
-    const AanderaaSensor::AanderaaConductivityFloat read,
-    const AanderaaSensor::AanderaaConductivityFloat expected) {
+    const char *parameter, AanderaaSensor::AanderaaString *buf,
+    const AanderaaSensor::AanderaaFloat read,
+    const AanderaaSensor::AanderaaFloat expected) {
 
   constexpr float epsilon = 0.0001f;
   if (fabs(read - expected) < epsilon) {
     return true;
   }
 
-  snprintf(*buf, sizeof(AanderaaConductivityString), "%s %s(%f)\r\n", CMD_SET, parameter,
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%f)\r\n", CMD_SET, parameter,
            expected);
   return false;
 }
@@ -192,15 +192,15 @@ bool AanderaaSensor::compareValuesPopulateBuffer(
          false if the read value does not match the expected value
  */
 bool AanderaaSensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaSensor::AanderaaConductivityString *buf,
-    const AanderaaSensor::AanderaaConductivityString read,
-    const AanderaaSensor::AanderaaConductivityString expected) {
+    const char *parameter, AanderaaSensor::AanderaaString *buf,
+    const AanderaaSensor::AanderaaString read,
+    const AanderaaSensor::AanderaaString expected) {
 
-  if (!strncmp(read, expected, sizeof(AanderaaConductivityString))) {
+  if (!strncmp(read, expected, sizeof(AanderaaString))) {
     return true;
   }
 
-  snprintf(*buf, sizeof(AanderaaConductivityString), "%s %s(%s)\r\n", CMD_SET, parameter,
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%s)\r\n", CMD_SET, parameter,
            expected);
   return false;
 }
@@ -213,11 +213,11 @@ bool AanderaaSensor::compareValuesPopulateBuffer(
  @param retries number of times to retry getting/setting the parameter
 
  @return BmOk on success,
-         BmEINVAL if expected value is longer than AanderaaConductivityString
+         BmEINVAL if expected value is longer than AanderaaString
  */
 BmErr AanderaaSensor::readValidateWriteValue(const char *parameter, const char *expected_val,
                                              uint8_t retries) {
-  AanderaaConductivityString str_buf = {};
+  AanderaaString str_buf = {};
 
   if (strlen(expected_val) > sizeof(str_buf)) {
     return BmEINVAL;
@@ -225,5 +225,5 @@ BmErr AanderaaSensor::readValidateWriteValue(const char *parameter, const char *
 
   strncpy(str_buf, expected_val, sizeof(str_buf));
 
-  return readValidateWriteValue<AanderaaConductivityString>(parameter, str_buf, retries);
+  return readValidateWriteValue<AanderaaString>(parameter, str_buf, retries);
 }

@@ -78,7 +78,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   sendCommand(CMD_SET_PASSKEY_1);
 
   // set interval, define default interval
-  readValidateWriteValue(CMD_INTERVAL, (AanderaaConductivityFloat)_readingPeriodS);
+  readValidateWriteValue(CMD_INTERVAL, (AanderaaFloat)_readingPeriodS);
 
   // enable Temperature
   readValidateWriteValue(CMD_ENABLE_TEMPERATURE, CMD_YES);
@@ -107,7 +107,7 @@ void AanderaaConductivitySensor::configureSensor(void) {
   // set pressure command
   spotter_log(0, AANDERAA_CONDUCTIVITY_RAW_LOG, USE_TIMESTAMP,
               "Calculated pressure for depth %.2f m is %f kPa\n", _sensorDepthM, _pressureKpa);
-  readValidateWriteValue(CMD_PRESSURE, (AanderaaConductivityFloat)_pressureKpa);
+  readValidateWriteValue(CMD_PRESSURE, (AanderaaFloat)_pressureKpa);
 
   // save
   saveConfiguration();
@@ -277,7 +277,7 @@ void AanderaaConductivitySensor::calibrateCellCoef(void) {
                 _cellCoef);
 
     // write new cellCoef to sensor
-    AanderaaConductivityString calibrate_cmd;
+    AanderaaString calibrate_cmd;
     snprintf(calibrate_cmd, sizeof(calibrate_cmd), CMD_SET_CELL_COEF, _cellCoef);
     sendCommand(calibrate_cmd);
     sendCommand(CMD_SAVE, _saveTimeMs);
@@ -366,7 +366,7 @@ bool AanderaaConductivitySensor::checkAssignEpochValues(void) {
  @param str pointer to string containing the serial number to validate
  */
 void AanderaaConductivitySensor::validateSerialNumber(const char *str) {
-  AanderaaConductivityUint detected_serial_number = 0;
+  AanderaaUint detected_serial_number = 0;
   uint32_t serial_number_err = 0;
 
   if (!str) {

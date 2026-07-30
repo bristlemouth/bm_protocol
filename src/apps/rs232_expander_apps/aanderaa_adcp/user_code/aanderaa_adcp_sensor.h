@@ -55,7 +55,7 @@ public:
 
 private:
   typedef struct {
-    AanderaaConductivityUint serial_number;
+    AanderaaUint serial_number;
   } ProductionConfigs;
 
   // Baud set to 115200 default, which is expected by the DCP sensor,
@@ -76,7 +76,7 @@ private:
   OrderedSeparatorLineParser _parser;
   char _payload_buffer[8192];
   uint32_t _payload_idx = 0;
-  AanderaaConductivityUint _serialNumber;
+  AanderaaUint _serialNumber;
 
   void handleMeasurement(const char *begin, const char *end);
 };
