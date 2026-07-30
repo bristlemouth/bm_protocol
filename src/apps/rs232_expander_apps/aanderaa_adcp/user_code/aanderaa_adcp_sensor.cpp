@@ -175,7 +175,6 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   // Start streaming
   sendCommand(CMD_START);
-  clearPayloadBuffer();
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
