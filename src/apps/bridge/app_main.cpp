@@ -18,6 +18,7 @@
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "app_util.h"
+#include "bm_config.h"
 #include "bm_serial.h"
 #include "bridgeLog.h"
 #include "bridgePowerController.h"
@@ -45,6 +46,7 @@
 #include "l2.h"
 #include "memfault_platform_core.h"
 #include "messages/neighbors.h"
+#include "metrics_sampler.h"
 #include "ncp_uart.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
@@ -441,6 +443,9 @@ static void defaultTask(void *parameters) {
   sensorControllerInit(&bridge_power_controller);
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
+  #if (bm_metrics_enabled != 0)
+  metrics_sampler_init();
+  #endif
   debug_ncp_init();
   debugBmServiceInit();
   sys_info_service_init();
