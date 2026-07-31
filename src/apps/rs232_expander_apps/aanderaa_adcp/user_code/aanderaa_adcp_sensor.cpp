@@ -46,48 +46,6 @@ void AanderaaAdcpSensor::init() {
 }
 
 /*!
- @brief Convert depth to ADCP supported distance
-
- @details The Aanderaa ADCP only supports certain depth parameters. This
-          converts an integer based depth to the string needed to set for
-          CMD_DISTANCE_FIRST_CELL_CENTER as well as return the number of
-          cells needed for CMD_NUMBER_OF_CELLS.
-
- @param depth configured depth in meters
- @param s[6] input string to write for CMD_DISTANCE_FIRST_CELL_CENTER
-
- @return number of cells for distance
- */
-static uint32_t depth_to_supported_distance(float depth, char *s) {
-
-  static const char *supported_distances[] = {
-      "1.5m",  "1.6m",  "1.7m",  "1.8m",  "1.9m",  "2.0m",  "2.1m",  "2.2m",  "2.3m",  "2.4m",
-      "2.5m",  "2.6m",  "2.7m",  "2.8m",  "2.9m",  "3.0m",  "3.5m",  "4.0m",  "4.5m",  "5.0m",
-      "5.5m",  "6.0m",  "6.5m",  "7.0m",  "7.5m",  "8.0m",  "8.5m",  "9.0m",  "9.5m",  "10.0m",
-      "11.0m", "12.0m", "13.0m", "14.0m", "15.0m", "16.0m", "17.0m", "18.0m", "19.0m", "20.0m",
-      "22.0m", "24.0m", "26.0m", "28.0m", "30.0m", "32.0m", "34.0m", "36.0m", "38.0m", "40.0m",
-      "42.0m", "44.0m", "46.0m", "48.0m", "50.0m", "60.0m", "65.0m", "70.0m"};
-
-  uint32_t distance_idx = 0;
-  // 1 is the minimum distance here
-  uint32_t ret = 1;
-
-  // This rounds down to the nearest supported depth
-  for (uint32_t i = 0; i < array_size(supported_distances); i++) {
-    float value = strtof(supported_distances[i], NULL);
-    if (value > static_cast<float>(depth)) {
-      break;
-    }
-    ret = static_cast<uint32_t>(value);
-    distance_idx = i;
-  }
-
-  strcpy(s, supported_distances[distance_idx]);
-
-  return ret;
-}
-
-/*!
  @brief Configures the Aanderaa ADCP sensor
 
  @details The ADCP is facing downwards, which means the sensor must be set up
@@ -141,10 +99,9 @@ void AanderaaAdcpSensor::configureSensor(void) {
   //   - set the cell distance apart
   // num_cells * (cell_size + center_cell_spacing) + distance_first_cell
   // must be below 80m
-  char s[6] = {0};
-  AanderaaUint cell_count = depth_to_supported_distance(_sensorDepthM, s);
   readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), const_cast<const char *>(s));
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), "1.5m");
+  AanderaaUint cell_count = static_cast<AanderaaUint>(_sensorDepthM);
   readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), cell_count);
   readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), "1.0m");
   readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");
