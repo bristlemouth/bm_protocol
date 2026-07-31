@@ -12,6 +12,7 @@
 #include "task_priorities.h"
 #include "uptime.h"
 #include "usart.h"
+#define DEFAULT_CONSOLE_PRINT_INTERVAL_MS 10000
 
 #define LED_ON_TIME_MS 20
 #define LED_PERIOD_MS 1000
@@ -19,6 +20,7 @@
 #define DEFAULT_LINE_TERM 10 // newline, '\n', 0x0A
 #define BYTES_CLUSTER_MS 50  // used for console printing convenience
 #define DEFAULT_UART_MODE MODE_RS232
+static u_int32_t console_print_interval_ms_config = DEFAULT_CONSOLE_PRINT_INTERVAL_MS;
 
 // A timer variable we can set to trigger a pulse on LED2 when we get payload serial data
 static int32_t ledLinePulse = -1;
@@ -37,6 +39,8 @@ void setup(void) {
   get_config_uint(BM_CFG_PARTITION_USER, "plUartLineTerm", strlen("plUartLineTerm"),
                   &line_term_config);
   get_config_uint(BM_CFG_PARTITION_USER, "plUartMode", strlen("plUartMode"), &uart_mode_config);
+  get_config_uint(BM_CFG_PARTITION_USER, "plConsolePeriodMs", strlen("plConsolePeriodMs"),
+                  &console_print_interval_ms_config);
   if (uart_mode_config >= MODE_MAX) {
     printf("ERROR - PLUART UART MODE %lu is not supported. Reverting to MODE_RS232\n",
            uart_mode_config);
@@ -176,8 +180,14 @@ void loop(void) {
     // Print the payload data to a file, to the spotter_log_console console, and to the printf console.
     spotter_log(0, "payload_data.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
                uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-    spotter_log_console(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
-              read_len, payload_buffer);
+    static u_int32_t last_console_print_ms = 0;
+    u_int32_t now_ms = (u_int32_t)uptimeGetMs();
+    if (console_print_interval_ms_config == 0 ||
+        (now_ms - last_console_print_ms) >= console_print_interval_ms_config) {
+      last_console_print_ms = now_ms;
+      spotter_log_console(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+                          rtcTimeBuffer, read_len, payload_buffer);
+    }
     printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
            read_len, payload_buffer);
 
