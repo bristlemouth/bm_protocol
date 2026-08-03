@@ -1,7 +1,7 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerUnbuffered.h"
 #include "sensorController.h"
 
 #include <cmath>
@@ -17,7 +17,7 @@ typedef struct soft_aggregations_s {
 
 typedef struct SoftSensor : public AbstractSensor {
   uint32_t current_agg_period_ms;
-  AveragingSampler temp_deg_c;
+  AveragingSamplerUnbuffered temp_deg_c;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;

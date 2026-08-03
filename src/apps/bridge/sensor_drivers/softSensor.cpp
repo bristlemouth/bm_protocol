@@ -158,7 +158,7 @@ Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
   new_sub->type = SENSOR_TYPE_SOFT;
   new_sub->next = NULL;
   new_sub->current_agg_period_ms = current_agg_period_ms;
-  new_sub->temp_deg_c.initBuffer(averager_max_samples);
+  (void)averager_max_samples;
   new_sub->reading_count = 0;
   return new_sub;
 }
