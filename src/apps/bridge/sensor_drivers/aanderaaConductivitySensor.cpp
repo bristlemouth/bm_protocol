@@ -26,9 +26,7 @@ AanderaaConductivitySensor::AanderaaConductivitySensor(uint64_t conductivity_nod
                                                        uint32_t agg_period_ms,
                                                        uint32_t averager_max_samples) {
 
-  for (auto &sampler : samplers.data) {
-    sampler.initBuffer(averager_max_samples);
-  }
+  (void)averager_max_samples;
 
   reading_count = 0;
   last_timestamp = 0;

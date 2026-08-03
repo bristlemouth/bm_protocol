@@ -4,7 +4,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-//  Drop-in for the mean only usage of AveragingSampler
+/*
+  Bufferless samplers:
+    for mean only use AveragingSamplerUnbuffered (this file)
+    for mean + std/variance + min/max use AveragingSamplerStats (avgSamplerStats.h)
+    for circular mean + std use AveragingSamplerCircular (avgSamplerCircular.h)
+*/
 class AveragingSamplerUnbuffered {
 public:
   AveragingSamplerUnbuffered() { clear(); }

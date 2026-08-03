@@ -1,7 +1,9 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerCircular.h"
+#include "avgSamplerStats.h"
+#include "avgSamplerUnbuffered.h"
 #include "sensorController.h"
 #include <cmath>
 #include <stdint.h>
@@ -27,11 +29,11 @@ typedef struct aanderaa_aggregations_s {
 
 typedef struct AanderaaSensor : public AbstractSensor {
   uint32_t current_agg_period_ms;
-  AveragingSampler abs_speed_cm_s;
-  AveragingSampler direction_rad;
-  AveragingSampler temp_deg_c;
-  AveragingSampler abs_tilt_rad;
-  AveragingSampler std_tilt_rad;
+  AveragingSamplerStats abs_speed_cm_s;
+  AveragingSamplerCircular direction_rad;
+  AveragingSamplerUnbuffered temp_deg_c;
+  AveragingSamplerUnbuffered abs_tilt_rad;
+  AveragingSamplerUnbuffered std_tilt_rad;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;

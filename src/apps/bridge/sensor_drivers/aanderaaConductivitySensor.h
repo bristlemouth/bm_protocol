@@ -22,7 +22,7 @@
 #pragma once
 #include "aanderaa_conductivity_msg.h"
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerStats.h"
 #include "reportBuilder.h"
 #include "reportBuilderList.h"
 #include <array>
@@ -80,10 +80,12 @@ private:
   // Provides operator[] overloads so we can write samplers[SamplerType::X]
   // instead of manually casting enum values to array indices.
   struct SamplerSet {
-    std::array<AveragingSampler, static_cast<size_t>(SamplerType::Count)> data{};
+    std::array<AveragingSamplerStats, static_cast<size_t>(SamplerType::Count)> data{};
 
-    AveragingSampler &operator[](SamplerType type) { return data[static_cast<size_t>(type)]; }
-    const AveragingSampler &operator[](SamplerType type) const {
+    AveragingSamplerStats &operator[](SamplerType type) {
+      return data[static_cast<size_t>(type)];
+    }
+    const AveragingSamplerStats &operator[](SamplerType type) const {
       return data[static_cast<size_t>(type)];
     }
   };

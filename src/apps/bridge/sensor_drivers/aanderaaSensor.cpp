@@ -2,7 +2,6 @@
 #include "aanderaa_current_meter_msg.h"
 #include "app_config.h"
 #include "app_util.h"
-#include "avgSampler.h"
 #include "bridgeLog.h"
 #include "device_info.h"
 #include "pubsub.h"
@@ -130,13 +129,13 @@ void AanderaaSensor::aggregate(void) {
     // If not send NaNs for all the values.
     // TODO - verify that we can assume if one sampler is below the min then all of them are.
     if (abs_speed_cm_s.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
-      agg.abs_speed_mean_cm_s = abs_speed_cm_s.getMean(true);
-      agg.abs_speed_std_cm_s = abs_speed_cm_s.getStd(agg.abs_speed_mean_cm_s, 0.0, true);
+      agg.abs_speed_mean_cm_s = abs_speed_cm_s.getMean();
+      agg.abs_speed_std_cm_s = abs_speed_cm_s.getStd();
       agg.direction_circ_mean_rad = direction_rad.getCircularMean();
       agg.direction_circ_std_rad = direction_rad.getCircularStd();
-      agg.temp_mean_deg_c = temp_deg_c.getMean(true);
-      agg.abs_tilt_mean_rad = abs_tilt_rad.getMean(true);
-      agg.std_tilt_mean_rad = std_tilt_rad.getMean(true);
+      agg.temp_mean_deg_c = temp_deg_c.getMean();
+      agg.abs_tilt_mean_rad = abs_tilt_rad.getMean();
+      agg.std_tilt_mean_rad = std_tilt_rad.getMean();
       agg.reading_count = reading_count;
       if (agg.abs_speed_mean_cm_s < ABS_SPEED_SAMPLE_MEMBER_MIN ||
           agg.abs_speed_mean_cm_s > ABS_SPEED_SAMPLE_MEMBER_MAX) {
@@ -228,11 +227,7 @@ Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms,
   new_sub->type = SENSOR_TYPE_AANDERAA;
   new_sub->next = NULL;
   new_sub->current_agg_period_ms = current_agg_period_ms;
-  new_sub->abs_speed_cm_s.initBuffer(averager_max_samples);
-  new_sub->direction_rad.initBuffer(averager_max_samples);
-  new_sub->temp_deg_c.initBuffer(averager_max_samples);
-  new_sub->abs_tilt_rad.initBuffer(averager_max_samples);
-  new_sub->std_tilt_rad.initBuffer(averager_max_samples);
+  (void)averager_max_samples;
   new_sub->reading_count = 0;
   return new_sub;
 }

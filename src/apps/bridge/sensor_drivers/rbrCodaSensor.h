@@ -1,7 +1,8 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerStats.h"
+#include "avgSamplerUnbuffered.h"
 #include "bm_rbr_data_msg.h"
 #include "sensorController.h"
 
@@ -21,8 +22,8 @@ typedef struct rbr_coda_aggregations_s {
 
 typedef struct RbrCodaSensor : public AbstractSensor {
   uint32_t rbr_coda_agg_period_ms;
-  AveragingSampler temp_deg_c;
-  AveragingSampler pressure_deci_bar;
+  AveragingSamplerUnbuffered temp_deg_c;
+  AveragingSamplerStats pressure_deci_bar;
   uint32_t reading_count;
   BmRbrDataMsg::SensorType_t latest_sensor_type;
   int8_t node_position;
