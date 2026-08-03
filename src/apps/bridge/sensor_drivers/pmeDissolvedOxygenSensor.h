@@ -1,7 +1,7 @@
 #pragma once
 
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerUnbuffered.h"
 
 #include <cmath>
 #include <stdint.h>
@@ -19,11 +19,11 @@ typedef struct pme_dissolved_oxygen_aggregations_s {
 } pme_dissolved_oxygen_aggregations_t;
 
 typedef struct PmeDissolvedOxygenSensor : public AbstractSensor {
-  AveragingSampler temperature_deg_c;
-  AveragingSampler do_mg_per_l;
-  AveragingSampler quality;
-  AveragingSampler do_saturation_pct;
-  AveragingSampler salinity_ppt;
+  AveragingSamplerUnbuffered temperature_deg_c;
+  AveragingSamplerUnbuffered do_mg_per_l;
+  AveragingSamplerUnbuffered quality;
+  AveragingSamplerUnbuffered do_saturation_pct;
+  AveragingSamplerUnbuffered salinity_ppt;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;

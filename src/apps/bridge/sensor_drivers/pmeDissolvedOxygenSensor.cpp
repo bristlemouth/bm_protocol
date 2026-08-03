@@ -1,7 +1,6 @@
 #include "pmeDissolvedOxygenSensor.h"
 #include "FreeRTOS.h"
 #include "app_config.h"
-#include "avgSampler.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
@@ -182,10 +181,7 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
                        "Updating the PME Dissolved Oxygen buffers with max samples  %" PRIu32
                        "\n",
                        averager_max_samples);
-        CURRENT_SUB->temperature_deg_c.initBuffer(averager_max_samples);
-        CURRENT_SUB->do_mg_per_l.initBuffer(averager_max_samples);
-        CURRENT_SUB->quality.initBuffer(averager_max_samples);
-        CURRENT_SUB->do_saturation_pct.initBuffer(averager_max_samples);
+        (void)averager_max_samples;
       } else {
         bm_debug("Failed to decode PME Dissolved Oxygen config get, err: %d\n", err);
       }
@@ -234,11 +230,7 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
                                        PmeDissolvedOxygenSensor::N_SAMPLES_PAD));
       }
 
-      new_sub->temperature_deg_c.initBuffer(averager_max_samples);
-      new_sub->do_mg_per_l.initBuffer(averager_max_samples);
-      new_sub->quality.initBuffer(averager_max_samples);
-      new_sub->do_saturation_pct.initBuffer(averager_max_samples);
-      new_sub->salinity_ppt.initBuffer(averager_max_samples);
+      (void)averager_max_samples;
       new_sub->reading_count = 0;
 
       CURRENT_SUB = new_sub;

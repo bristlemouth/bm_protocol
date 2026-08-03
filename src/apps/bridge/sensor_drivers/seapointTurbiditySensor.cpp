@@ -1,17 +1,16 @@
 #include "seapointTurbiditySensor.h"
 #include "app_config.h"
-#include "avgSampler.h"
-#include "spotter.h"
-#include "pubsub.h"
+#include "app_util.h"
 #include "bm_seapoint_turbidity_data_msg.h"
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <new>
 
 #define DEFAULT_TURBIDITY_READING_PERIOD_MS 1000 // 1 second
@@ -179,8 +178,7 @@ SeapointTurbidity_t *createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_p
   new_sub->type = SENSOR_TYPE_SEAPOINT_TURBIDITY;
   new_sub->next = NULL;
   new_sub->agg_period_ms = agg_period_ms;
-  new_sub->turbidity_s_ftu.initBuffer(averager_max_samples);
-  new_sub->turbidity_r_ftu.initBuffer(averager_max_samples);
+  (void)averager_max_samples;
   new_sub->reading_count = 0;
   return new_sub;
 }

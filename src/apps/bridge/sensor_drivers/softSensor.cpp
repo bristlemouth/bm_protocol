@@ -1,16 +1,15 @@
 #include "softSensor.h"
 #include "app_config.h"
-#include "avgSampler.h"
-#include "spotter.h"
-#include "pubsub.h"
+#include "app_util.h"
 #include "bm_soft_data_msg.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <new>
 
 // TODO - get this from the sensor node itself

@@ -1,7 +1,7 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerUnbuffered.h"
 #include "sensorController.h"
 
 #include <cmath>
@@ -18,8 +18,8 @@ typedef struct seapoint_turbidity_aggregations_s {
 
 typedef struct SeapointTurbiditySensor : public AbstractSensor {
   uint32_t agg_period_ms;
-  AveragingSampler turbidity_s_ftu;
-  AveragingSampler turbidity_r_ftu;
+  AveragingSamplerUnbuffered turbidity_s_ftu;
+  AveragingSamplerUnbuffered turbidity_r_ftu;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;
