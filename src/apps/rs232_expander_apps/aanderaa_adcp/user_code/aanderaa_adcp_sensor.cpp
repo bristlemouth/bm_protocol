@@ -1,6 +1,7 @@
 #include "aanderaa_adcp_sensor.h"
 #include "FreeRTOS.h"
 #include "bm_config.h"
+#include "bm_os.h"
 #include "configuration.h"
 #include "payload_uart.h"
 #include "spotter.h"
@@ -54,7 +55,14 @@ void AanderaaAdcpSensor::init() {
  */
 void AanderaaAdcpSensor::configureSensor(void) {
   uint16_t read_len = 0;
-  sendCommand(CMD_WAKE);
+  constexpr uint8_t wake_retry_max = 3;
+  uint8_t retries = 0;
+
+  BmErr err;
+  do {
+    bm_delay(1000);
+    err = sendCommand(CMD_WAKE);
+  } while (err != BmOK && retries++ < wake_retry_max);
 
   // send stop command to stop streaming
   sendCommand(CMD_STOP);
@@ -70,7 +78,9 @@ void AanderaaAdcpSensor::configureSensor(void) {
   setDefaultConfigs();
 
   // Setup tilt parameters
+  sendCommand(CMD_SET_PASSKEY_1000);
   readValidateWriteValue(CMD_TILT_PING_DISCARD, CMD_NO);
+  sendCommand(CMD_SET_PASSKEY_1);
   readValidateWriteValue(CMD_ENABLE_TILT_COMPENSATION, CMD_YES);
 
   // Set interval and ping count
