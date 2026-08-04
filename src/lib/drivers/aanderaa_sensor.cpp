@@ -35,10 +35,10 @@ BmErr AanderaaSensor::saveConfiguration(void) {
     return BmEALREADY;
   }
 
-  sendCommand(CMD_SAVE, _saveTimeMs);
+  BmErr err = sendCommand(CMD_SAVE, _saveTimeMs);
   _sensorConfigDirty = false;
 
-  return BmOK;
+  return err;
 }
 
 void AanderaaSensor::resetSensor(uint32_t timeout_ms) { sendCommand(CMD_RESET, timeout_ms); }
@@ -134,17 +134,17 @@ void AanderaaSensor::clearCmdBuffer(void) { memset(_cmd_buffer, 0, sizeof(_cmd_b
  @return true if the read value matches the expected value
          false if the read value does not match the expected value
  */
-bool AanderaaSensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaSensor::AanderaaString *buf,
-    const AanderaaSensor::AanderaaUint read,
-    const AanderaaSensor::AanderaaUint expected) {
+bool AanderaaSensor::compareValuesPopulateBuffer(const char *parameter,
+                                                 AanderaaSensor::AanderaaString *buf,
+                                                 const AanderaaSensor::AanderaaUint read,
+                                                 const AanderaaSensor::AanderaaUint expected) {
 
   if (read == expected) {
     return true;
   }
 
-  snprintf(*buf, sizeof(AanderaaString), "%s %s(%" PRIu32 ")\r\n", CMD_SET,
-           parameter, expected);
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%" PRIu32 ")\r\n", CMD_SET, parameter,
+           expected);
   return false;
 }
 
@@ -162,18 +162,17 @@ bool AanderaaSensor::compareValuesPopulateBuffer(
  @return true if the read value matches the expected value
          false if the read value does not match the expected value
  */
-bool AanderaaSensor::compareValuesPopulateBuffer(
-    const char *parameter, AanderaaSensor::AanderaaString *buf,
-    const AanderaaSensor::AanderaaFloat read,
-    const AanderaaSensor::AanderaaFloat expected) {
+bool AanderaaSensor::compareValuesPopulateBuffer(const char *parameter,
+                                                 AanderaaSensor::AanderaaString *buf,
+                                                 const AanderaaSensor::AanderaaFloat read,
+                                                 const AanderaaSensor::AanderaaFloat expected) {
 
   constexpr float epsilon = 0.0001f;
   if (fabs(read - expected) < epsilon) {
     return true;
   }
 
-  snprintf(*buf, sizeof(AanderaaString), "%s %s(%f)\r\n", CMD_SET, parameter,
-           expected);
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%f)\r\n", CMD_SET, parameter, expected);
   return false;
 }
 
@@ -193,15 +192,13 @@ bool AanderaaSensor::compareValuesPopulateBuffer(
  */
 bool AanderaaSensor::compareValuesPopulateBuffer(
     const char *parameter, AanderaaSensor::AanderaaString *buf,
-    const AanderaaSensor::AanderaaString read,
-    const AanderaaSensor::AanderaaString expected) {
+    const AanderaaSensor::AanderaaString read, const AanderaaSensor::AanderaaString expected) {
 
   if (!strncmp(read, expected, sizeof(AanderaaString))) {
     return true;
   }
 
-  snprintf(*buf, sizeof(AanderaaString), "%s %s(%s)\r\n", CMD_SET, parameter,
-           expected);
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%s)\r\n", CMD_SET, parameter, expected);
   return false;
 }
 

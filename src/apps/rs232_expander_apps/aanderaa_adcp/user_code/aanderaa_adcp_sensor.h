@@ -34,7 +34,7 @@
 #define COLUMN_3(cmd) "C3 " cmd
 
 // Must set after setting cell commands
-#define CMD_DO_REFRESH "Do Refresh"
+#define CMD_DO_REFRESH "Do Refresh\r\n"
 
 #define CMD_SELECT_PROFILE_PARAMETERS "Select Profile Parameters"
 
