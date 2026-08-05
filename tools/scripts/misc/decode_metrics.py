@@ -3,6 +3,7 @@ import base64
 import re
 import pandas as pd
 import cbor2
+from datetime import datetime, timezone
 
 LINK_QUALITY = {0: "poor", 1: "marginal", 2: "good"}
 LINE_RE = re.compile(r"^(?P<ts>\S+)\s*\|\s*(?P<node>\S+)/metrics\s+(?P<b64>[A-Za-z0-9+/=]+)")
@@ -28,8 +29,27 @@ port, "adin_port_stats_<port>", with these fields (cumulative since boot):
   algn - frame alignment-error count
 Note: an idle port with no link partner reports sqi=7/mse=0 - not a real "good" link.
 Counters are monotonic; diff consecutive samples per (node, component) for a rate.
-The leading log field is a millisecond tick from the bridge (not wall-clock time).
+The leading log field is added by the Spotter: either a boot-
+relative millisecond tick (RTC-less) or an ISO-8601 UTC timestamp (GPS/RTC time).
 """
+
+
+def _parse_log_time(ts: str):
+    """Parse the Spotter's leading log field.
+
+    Returns (tick_ms, timestamp_utc):
+      tick_ms       - milliseconds; a boot-relative tick, or Unix epoch ms when the
+                      source is a UTC timestamp.
+      timestamp_utc - ISO-8601 UTC string when wall-clock time is available, else None.
+    """
+    tick = ts.rstrip("t")
+    if tick.isdigit():
+        return int(tick), None
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return int(dt.timestamp() * 1000), dt.astimezone(timezone.utc).isoformat()
+    except ValueError:
+        return None, None
 
 
 def load_metrics(log_path: str) -> pd.DataFrame:
@@ -43,9 +63,7 @@ def load_metrics(log_path: str) -> pd.DataFrame:
                 env = cbor2.loads(base64.b64decode(m.group("b64")))
             except Exception:
                 continue  # skip malformed lines
-
-            tick = m.group("ts").rstrip("t")
-            tick_ms = int(tick) if tick.isdigit() else None
+            tick_ms, timestamp_utc = _parse_log_time(m.group("ts"))
             node = env.get("node_id")
             node_id = f"{node:016x}" if isinstance(node, int) else m.group("node")
 
@@ -56,6 +74,7 @@ def load_metrics(log_path: str) -> pd.DataFrame:
                     continue
                 row = {
                     "tick_ms": tick_ms,
+                    "timestamp_utc": timestamp_utc,
                     "node_id": node_id,
                     "version": env.get("version"),
                     "uptime_ms": env.get("uptime_ms"),
