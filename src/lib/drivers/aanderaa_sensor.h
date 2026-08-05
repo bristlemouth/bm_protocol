@@ -16,6 +16,9 @@ extern "C" {
 #define CMD_SET_PASSKEY_1 "Set Passkey(1)\r\n"
 #define CMD_SET_PASSKEY_1000 "Set Passkey(1000)\r\n"
 
+#define CMD_FLOW_CONTROL "Flow Control"
+#define CMD_MODE "Mode"
+
 #define CMD_ENABLE_SLEEP "Enable Sleep"
 #define CMD_ENABLE_POLLEDMODE "Enable Polled Mode"
 #define CMD_ENABLE_TEXT "Enable Text"

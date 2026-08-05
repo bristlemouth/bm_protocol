@@ -22,6 +22,9 @@ extern "C" {
 #define raw_log(fmt, ...) spotter_log(0, RAW_LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
 #define sensor_log(fmt, ...) spotter_log(0, LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
 
+AanderaaAdcpSensor::AanderaaAdcpSensor()
+    : _parser("\t", 256, PARSER_VALUE_TYPE, FIELDS_PER_MEASUREMENT) {};
+
 void AanderaaAdcpSensor::init() {
   _parser.init();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_BM_LOG_ENABLE, strlen(SENSOR_BM_LOG_ENABLE),
@@ -39,7 +42,7 @@ void AanderaaAdcpSensor::init() {
 
   PLUART::init(USER_TASK_PRIORITY);
   PLUART::setBaud(BAUD_RATE);
-  // Disable passing raw bytes to user app.
+  // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
   PLUART::setUseLineBuffer(false);
   // Turn on the UART.
@@ -64,6 +67,31 @@ void AanderaaAdcpSensor::configureSensor(void) {
     err = sendCommand(CMD_WAKE);
   } while (err != BmOK && retries++ < wake_retry_max);
 
+  PLUART::setUseLineBuffer(true);
+  PLUART::setTerminationCharacter(LINE_TERM);
+  PLUART::write((uint8_t *)"Get SW Version\r\n", strlen("Get SW Version\r\n"));
+  uint32_t read_duration_ms = 2000;
+  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+    if (PLUART::lineAvailable()) {
+      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+      if (read_len > 0) {
+        debug_printf("%.*s\n", read_len, _payload_buffer);
+      }
+    }
+  }
+  clearPayloadBuffer();
+  PLUART::write((uint8_t *)"help\r\n", strlen("help\r\n"));
+  start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+    if (PLUART::lineAvailable()) {
+      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
+      if (read_len > 0) {
+        debug_printf("%.*s\n", read_len, _payload_buffer);
+      }
+    }
+  }
+
   // send stop command to stop streaming
   sendCommand(CMD_STOP);
 
@@ -78,13 +106,19 @@ void AanderaaAdcpSensor::configureSensor(void) {
   setDefaultConfigs();
 
   // Setup tilt parameters
+#if AANDERAA_5400_FW_VERSION > 80129
   sendCommand(CMD_SET_PASSKEY_1000);
   readValidateWriteValue(CMD_TILT_PING_DISCARD, CMD_NO);
+#endif
   sendCommand(CMD_SET_PASSKEY_1);
   readValidateWriteValue(CMD_ENABLE_TILT_COMPENSATION, CMD_YES);
 
   // Set interval and ping count
+#if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(CMD_INTERVAL, "1 min");
+#else
+  readValidateWriteValue(CMD_INTERVAL, "10 min");
+#endif
   readValidateWriteValue(CMD_PING_COUNT, static_cast<AanderaaUint>(600));
 
   // Narrowband is recommended to use If the sensor is moving (as under a buoy
@@ -93,10 +127,12 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   // Perform in burst mode to optimize sleep time of the ADCP
   readValidateWriteValue(CMD_ENABLE_BURST_MODE, CMD_YES);
+#if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(CMD_BURST_PERIOD_PLACEMENT, "End of Interval");
 
   // Set simple output
   readValidateWriteValue(CMD_SELECT_PROFILE_PARAMETERS, "Simple Output");
+#endif
 
   // Enable upside down
   readValidateWriteValue(CMD_ENABLE_UPSIDE_DOWN, CMD_YES);
@@ -110,11 +146,46 @@ void AanderaaAdcpSensor::configureSensor(void) {
   // num_cells * (cell_size + center_cell_spacing) + distance_first_cell
   // must be below 80m
   readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
+#if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), "1.5m");
+  readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");
+#else
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL), "1.0m");
+  readValidateWriteValue(COLUMN_1(CMD_CELL_OVERLAP), "0%");
+#endif
   AanderaaUint cell_count = static_cast<AanderaaUint>(_sensorDepthM);
   readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), cell_count);
   readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), "1.0m");
-  readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");
+
+  // Disable unwanted outputs
+  readValidateWriteValue("NE Speed Output", "Off");
+  readValidateWriteValue("3-Beam Combination Output", "Off");
+  readValidateWriteValue("AutoBeam Output", "Off");
+  readValidateWriteValue("Vertical Speed Output", "Off");
+  readValidateWriteValue("Strength Output", "Off");
+  readValidateWriteValue("Beam Speed Output", "Off");
+  readValidateWriteValue("Beam Strength Output", "Off");
+  readValidateWriteValue("Heading Output", "Off");
+  readValidateWriteValue("Pitch Roll Output", "Off");
+  readValidateWriteValue("Abs Tilt Output", "Off");
+  readValidateWriteValue("Max Tilt Output", "Off");
+  readValidateWriteValue("Tilt Direction Output", "Off");
+  readValidateWriteValue("Noise Level Output", "Off");
+  readValidateWriteValue("Std Dev Speed Output", "Off");
+  readValidateWriteValue("Std Dev Beam Speed Output", "Off");
+  readValidateWriteValue("Cross Difference Output", "Off");
+  readValidateWriteValue("Correlation Factor Output", "Off");
+  readValidateWriteValue("Std Dev Heading Output", "Off");
+  readValidateWriteValue("Std Dev Tilt Output", "Off");
+  readValidateWriteValue("Charge Voltage Output", "Off");
+  readValidateWriteValue("Memory Used Output", "Off");
+  readValidateWriteValue("Voltage Output", "Off");
+  readValidateWriteValue("Current Output", "Off");
+  readValidateWriteValue("Air Detect Output", "Off");
+  readValidateWriteValue("Speed Of Sound Output", "Off");
+  readValidateWriteValue("Depth Output", "Off");
+  readValidateWriteValue("Salinity Output", "Off");
+  readValidateWriteValue("Density Output", "Off");
 
   // Must be run after setting the
   sendCommand(CMD_DO_REFRESH);
@@ -128,8 +199,8 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   // send get_all command
   PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
-  uint32_t read_duration_ms = 1000;
-  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+  read_duration_ms = 1000;
+  start_time = pdTICKS_TO_MS(xTaskGetTickCount());
   while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
     if (PLUART::lineAvailable()) {
       read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
@@ -143,10 +214,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
       }
     }
   }
-
-  // Start streaming
-  sendCommand(CMD_START);
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  PLUART::setUseLineBuffer(false);
 }
 
 /*!
@@ -192,18 +260,26 @@ static bool isCellIndex(const char *tok, size_t toklen) {
 void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
   uint16_t len = end - begin;
   _parser.parseLine(begin, len);
+  uint8_t idx = 0;
 
-  Value column = _parser.getValue(0);
-  Value cell_state_1 = _parser.getValue(1);
-  Value cell_state_2 = _parser.getValue(2);
-  Value horizontal_speed = _parser.getValue(3);
-  Value direction = _parser.getValue(4);
+  Value column = _parser.getValue(idx++);
+  Value cell_state_1 = _parser.getValue(idx++);
+#if AANDERAA_5400_FW_VERSION > 80129
+  Value cell_state_2 = _parser.getValue(idx++);
+#endif
+  Value horizontal_speed = _parser.getValue(idx++);
+  Value direction = _parser.getValue(idx++);
 
   bm_debug("tick: %" PRIu64 ", column: %" PRIu16 ", cell_state_1: %" PRIu32
-           ", cell_state_2: %" PRIu32 ", speed: %0.3f, direction: %0.3f\n",
+#if AANDERAA_5400_FW_VERSION > 80129
+           ", cell_state_2: %" PRIu32
+#endif
+           ", speed: %0.3f, direction: %0.3f\n",
            uptimeGetMs(), static_cast<uint16_t>(column.data.uint64_val),
            static_cast<uint32_t>(cell_state_1.data.uint64_val),
+#if AANDERAA_5400_FW_VERSION > 80129
            static_cast<uint32_t>(cell_state_2.data.uint64_val),
+#endif
            horizontal_speed.data.double_val, direction.data.double_val);
 }
 
@@ -231,9 +307,17 @@ void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
  */
 BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
   static const char *field_lut[] = {
+#if AANDERAA_5400_FW_VERSION > 80129
       "MEASUREMENT",
+#endif
       "5400",
   };
+
+#if AANDERAA_5400_FW_VERSION > 80129
+  static constexpr uint8_t throwaway_fields = 4;
+#else
+  static constexpr uint8_t throwaway_fields = 3;
+#endif
 
   uint8_t ireading = 0;
   const char *reading_start = NULL;
@@ -255,7 +339,7 @@ BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
       if (strlen(field_lut[itok]) != toklen || strncmp(token, field_lut[itok], toklen) != 0) {
         return BmEBADMSG;
       }
-    } else if (itok > 4) {
+    } else if (itok > throwaway_fields) {
       if (ireading == FIELDS_PER_MEASUREMENT) {
         handleMeasurement(reading_start, token);
         ireading = 0;
@@ -288,26 +372,39 @@ BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
          false otherwise 
  */
 bool AanderaaAdcpSensor::getData(void) {
-  if (!PLUART::byteAvailable()) {
-    return false;
-  }
+  bool ret = false;
+  while (PLUART::byteAvailable()) {
+    if (_payload_idx >= array_size(_payload_buffer)) {
+      bm_debug("Buffer overflow, clearing buffer\n");
+      _payload_idx = 0;
+    }
 
-  _payload_buffer[_payload_idx] = PLUART::readByte();
+    char byte = PLUART::readByte();
 
-  if (_payload_buffer[_payload_idx] != LINE_TERM) {
+    if (byte == 0x13) {
+      _payload_idx = 0;
+    }
+
+    _payload_buffer[_payload_idx] = byte;
     _payload_idx++;
-    return false;
-  }
+    if (byte != LINE_TERM) {
+      continue;
+    }
 
-  _payload_idx = 0;
-  if (_payload_buffer[0] != 0x13 || _payload_buffer[1] != 0x11) {
+    _payload_buffer[_payload_idx] = '\0';
+
+    bm_debug("Data from sensor: %s\n", _payload_buffer);
+
+    _payload_idx = 0;
+    if (_payload_buffer[0] != 0x13 || _payload_buffer[1] != 0x11) {
+      clearPayloadBuffer();
+      continue;
+    }
+
+    const char *line = &_payload_buffer[2];
+    ret = parseMeasurements(line) == BmOK;
     clearPayloadBuffer();
-    return false;
+    break;
   }
-
-  const char *line = &_payload_buffer[2];
-  bool ret = parseMeasurements(line) == BmOK;
-  clearPayloadBuffer();
-
   return ret;
 }

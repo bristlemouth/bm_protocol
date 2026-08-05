@@ -12,6 +12,12 @@ BmErr AanderaaSensor::setDefaultConfigs(void) {
   // enable sleep
   bm_err_check(err, readValidateWriteValue(CMD_ENABLE_SLEEP, CMD_YES));
 
+  // set mode
+  bm_err_check(err, readValidateWriteValue(CMD_MODE, "Smart Sensor Terminal"));
+
+  // enable xon/xoff
+  bm_err_check(err, readValidateWriteValue(CMD_FLOW_CONTROL, "Xon/Xoff"));
+
   // set sleep timeout to 10s
   bm_err_check(err, readValidateWriteValue(CMD_COMM_TIMEOUT, "10 s"));
 
