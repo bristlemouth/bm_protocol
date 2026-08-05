@@ -402,9 +402,8 @@ bool AanderaaAdcpSensor::getData(void) {
     }
 
     const char *line = &_payload_buffer[2];
-    ret = parseMeasurements(line) == BmOK;
+    ret |= parseMeasurements(line) == BmOK;
     clearPayloadBuffer();
-    break;
   }
   return ret;
 }
