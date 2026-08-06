@@ -2,6 +2,12 @@
 #include "bm_config.h"
 #include "bm_os.h"
 
+/*!
+ @brief Wake the aanderaa sensor
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr AanderaaSensor::wakeSensor(void) {
   constexpr uint8_t wake_retry_max = 3;
   constexpr uint32_t wake_wait_ms = 1000;
@@ -16,10 +22,28 @@ BmErr AanderaaSensor::wakeSensor(void) {
   return err;
 }
 
+/*!
+ @brief Start streaming data from the sensor at the configured interval
+ */
 void AanderaaSensor::startStreaming(void) { sendCommand(CMD_START); }
 
+/*!
+ @brief Stop streaming data from the sensor
+
+ @details This is useful for setting configurations and reading command output
+          from the sensor.
+ */
 void AanderaaSensor::stopStreaming(void) { sendCommand(CMD_STOP); }
 
+/*!
+ @brief Set default configurations for aanderaa sensors
+
+ @details The configurations set here align with how bristlemouth devices will
+          poll data from the sensor.
+
+ @return BmOK on success
+         BmErr on failure
+ */
 BmErr AanderaaSensor::setDefaultConfigs(void) {
   // passkey command
   BmErr err = sendCommand(CMD_SET_PASSKEY_1000);
@@ -51,6 +75,16 @@ BmErr AanderaaSensor::setDefaultConfigs(void) {
   return err;
 }
 
+/*!
+ @brief Save the configuration to the sensor
+
+ @details Will only save the configuration if it is marked dirty, AKA an actual
+          config value has been written to the sensor.
+
+ @return BmOK on success
+         BmEALREADY if the configs are not dirty
+         BmErr on another failure
+ */
 BmErr AanderaaSensor::saveConfiguration(void) {
   if (!_sensorConfigDirty) {
     return BmEALREADY;
@@ -62,9 +96,25 @@ BmErr AanderaaSensor::saveConfiguration(void) {
   return err;
 }
 
+/*!
+ @brief Resets the sensor
+
+ @details This is important to do after the sensor's configuration has been
+          saved
+
+ @param timeout_ms timeout to wait for sensor to reset in milliseconds
+ */
 void AanderaaSensor::resetSensor(uint32_t timeout_ms) { sendCommand(CMD_RESET, timeout_ms); }
 
-void AanderaaSensor::printLongCommand(void) {
+/*!
+ @brief Prints a long output command from a device
+
+ @details This includes the help and Get All command which print many
+          lines to the terminal
+ */
+void AanderaaSensor::printLongOutput(const char *command) {
+  PLUART::write((uint8_t *)command, strlen(command));
+  clearCmdBuffer();
   uint32_t read_duration_ms = 2000;
   uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
   static constexpr uint8_t max_count = 2;
@@ -77,7 +127,7 @@ void AanderaaSensor::printLongCommand(void) {
         debug_printf("%.*s\n", read_len, _cmd_buffer);
       }
 
-      // Cmd is over once # is received
+      // Cmd is over once 2 # are received
       if (_cmd_buffer[0] == '#' && ++count == max_count) {
         break;
       }
@@ -85,17 +135,15 @@ void AanderaaSensor::printLongCommand(void) {
   }
 }
 
-void AanderaaSensor::getMultiLineOutputAbstract(const char *command) {
-  PLUART::write((uint8_t *)command, strlen(command));
-  clearCmdBuffer();
-  printLongCommand();
-}
+/*!
+ @brief Print help command to console, debug builds only
+ */
+void AanderaaSensor::getSensorHelp(void) { printLongOutput("help\r\n"); }
 
-void AanderaaSensor::getSensorHelp(void) { getMultiLineOutputAbstract("help\r\n"); }
-
-void AanderaaSensor::getAllConfigurationParameters(void) {
-  getMultiLineOutputAbstract(CMD_GET_ALL);
-}
+/*!
+ @brief Print get all command to console, debug builds only
+ */
+void AanderaaSensor::getAllConfigurationParameters(void) { printLongOutput(CMD_GET_ALL); }
 
 /*!
  @brief Parse And Assign Unsigned Integer Value From Sensor Output String

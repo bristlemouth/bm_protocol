@@ -65,8 +65,7 @@ public:
 private:
   void clearCmdBuffer(void);
 
-  void printLongCommand(void);
-  void getMultiLineOutputAbstract(const char *command);
+  void printLongOutput(const char *command);
 
   bool compareValuesPopulateBuffer(const char *parameter, AanderaaString *buf,
                                    const AanderaaUint read, const AanderaaUint validate);
