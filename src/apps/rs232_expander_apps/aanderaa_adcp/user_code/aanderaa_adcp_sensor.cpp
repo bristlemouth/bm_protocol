@@ -101,7 +101,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
 #if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(CMD_INTERVAL, "1 min");
 #else
-  readValidateWriteValue(CMD_INTERVAL, "10 min");
+  readValidateWriteValue(CMD_INTERVAL, "3 min");
 #endif
   readValidateWriteValue(CMD_PING_COUNT, static_cast<AanderaaUint>(600));
 
@@ -356,8 +356,6 @@ bool AanderaaAdcpSensor::getData(void) {
       continue;
     }
 
-    bm_debug("Byte: %c index: %lu\n", byte, _payload_idx);
-
     _payload_buffer[_payload_idx] = byte;
     _payload_idx++;
     if (byte != LINE_TERM) {
@@ -369,7 +367,7 @@ bool AanderaaAdcpSensor::getData(void) {
     bm_debug("Data from sensor: %s\n", _payload_buffer);
 
     _payload_idx = 0;
-    const char *line = &_payload_buffer[2];
+    const char *line = _payload_buffer;
     ret |= parseMeasurements(line) == BmOK;
     clearPayloadBuffer();
   }
