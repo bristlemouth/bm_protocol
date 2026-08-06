@@ -1,5 +1,19 @@
 #include "aanderaa_sensor.h"
 #include "bm_config.h"
+#include "bm_os.h"
+
+BmErr AanderaaSensor::wakeSensor(void) {
+  constexpr uint8_t wake_retry_max = 3;
+  constexpr uint32_t wake_timeout_ms = 5000;
+  uint8_t retries = 0;
+
+  BmErr err;
+  do {
+    err = sendCommand(CMD_WAKE, wake_timeout_ms);
+  } while (err != BmOK && retries++ < wake_retry_max);
+
+  return err;
+}
 
 void AanderaaSensor::startStreaming(void) { sendCommand(CMD_START); }
 

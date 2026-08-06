@@ -58,14 +58,6 @@ void AanderaaAdcpSensor::init() {
  */
 void AanderaaAdcpSensor::configureSensor(void) {
   uint16_t read_len = 0;
-  constexpr uint8_t wake_retry_max = 3;
-  uint8_t retries = 0;
-
-  BmErr err;
-  do {
-    bm_delay(1000);
-    err = sendCommand(CMD_WAKE);
-  } while (err != BmOK && retries++ < wake_retry_max);
 
   PLUART::setUseLineBuffer(true);
   PLUART::setTerminationCharacter(LINE_TERM);
@@ -156,6 +148,8 @@ void AanderaaAdcpSensor::configureSensor(void) {
   AanderaaUint cell_count = static_cast<AanderaaUint>(_sensorDepthM);
   readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), cell_count);
   readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), "1.0m");
+  readValidateWriteValue(COLUMN_2(CMD_ENABLE_COLUMN), CMD_NO);
+  readValidateWriteValue(COLUMN_3(CMD_ENABLE_COLUMN), CMD_NO);
 
   // Disable unwanted outputs
   readValidateWriteValue("NE Speed Output", "Off");
@@ -188,12 +182,12 @@ void AanderaaAdcpSensor::configureSensor(void) {
   readValidateWriteValue("Density Output", "Off");
 
   // Must be run after setting the
-  sendCommand(CMD_DO_REFRESH);
+  sendCommand(CMD_DO_REFRESH, 10000);
 
   // save
   if (saveConfiguration() == BmOK) {
     resetSensor(10000);
-    sendCommand(CMD_WAKE);
+    wakeSensor();
     sendCommand(CMD_STOP);
   }
 
