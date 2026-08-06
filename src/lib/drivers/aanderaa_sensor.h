@@ -59,8 +59,14 @@ public:
   BmErr saveConfiguration(void);
   void resetSensor(uint32_t timeout_ms = 5000);
 
+  void getSensorHelp(void);
+  void getAllConfigurationParameters(void);
+
 private:
   void clearCmdBuffer(void);
+
+  void printLongCommand(void);
+  void getMultiLineOutputAbstract(const char *command);
 
   bool compareValuesPopulateBuffer(const char *parameter, AanderaaString *buf,
                                    const AanderaaUint read, const AanderaaUint validate);
