@@ -352,7 +352,7 @@ bool AanderaaAdcpSensor::getData(void) {
 
     char byte = PLUART::readByte();
 
-    if (byte == 0x13 || byte == 0x11 || byte == '%') {
+    if (byte == 0x13 || byte == 0x11 || byte == '%' || byte == '!') {
       continue;
     }
 
