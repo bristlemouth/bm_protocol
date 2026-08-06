@@ -44,7 +44,8 @@ void AanderaaAdcpSensor::init() {
   PLUART::setBaud(BAUD_RATE);
   // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
-  PLUART::setUseLineBuffer(false);
+  PLUART::setUseLineBuffer(true);
+  PLUART::setTerminationCharacter(LINE_TERM);
   // Turn on the UART.
   PLUART::enable();
 }
@@ -59,8 +60,11 @@ void AanderaaAdcpSensor::init() {
 void AanderaaAdcpSensor::configureSensor(void) {
   uint16_t read_len = 0;
 
-  PLUART::setUseLineBuffer(true);
-  PLUART::setTerminationCharacter(LINE_TERM);
+  wakeSensor();
+
+  // send stop command to stop streaming
+  sendCommand(CMD_STOP);
+
   PLUART::write((uint8_t *)"Get SW Version\r\n", strlen("Get SW Version\r\n"));
   uint32_t read_duration_ms = 2000;
   uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
@@ -73,19 +77,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
     }
   }
   clearPayloadBuffer();
-  PLUART::write((uint8_t *)"help\r\n", strlen("help\r\n"));
-  start_time = pdTICKS_TO_MS(xTaskGetTickCount());
-  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-    if (PLUART::lineAvailable()) {
-      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      if (read_len > 0) {
-        debug_printf("%.*s\n", read_len, _payload_buffer);
-      }
-    }
-  }
-
-  // send stop command to stop streaming
-  sendCommand(CMD_STOP);
+  getSensorHelp();
 
   if (sendCommand(CMD_GET_SERIAL_NUMBER, &_serialNumber) == BmOK) {
     debug_printf("Serial number is %" PRIu32 "\n", _serialNumber);
@@ -192,22 +184,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
   }
 
   // send get_all command
-  PLUART::write((uint8_t *)CMD_GET_ALL, strlen(CMD_GET_ALL));
-  read_duration_ms = 1000;
-  start_time = pdTICKS_TO_MS(xTaskGetTickCount());
-  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-    if (PLUART::lineAvailable()) {
-      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      if (read_len > 0) {
-        debug_printf("%.*s\n", read_len, _payload_buffer);
-        if (_sensorBmLogEnable) {
-          sensor_log("tick: %" PRIu64 ", line: %.*s\n", uptimeGetMs(), read_len,
-                     _payload_buffer);
-        }
-        clearPayloadBuffer();
-      }
-    }
-  }
+  getAllConfigurationParameters();
   PLUART::setUseLineBuffer(false);
 }
 
@@ -375,9 +352,11 @@ bool AanderaaAdcpSensor::getData(void) {
 
     char byte = PLUART::readByte();
 
-    if (byte == 0x13) {
-      _payload_idx = 0;
+    if (byte == 0x13 || byte == 0x11 || byte == '%') {
+      continue;
     }
+
+    bm_debug("Byte: %c index: %lu\n", byte, _payload_idx);
 
     _payload_buffer[_payload_idx] = byte;
     _payload_idx++;
@@ -390,11 +369,6 @@ bool AanderaaAdcpSensor::getData(void) {
     bm_debug("Data from sensor: %s\n", _payload_buffer);
 
     _payload_idx = 0;
-    if (_payload_buffer[0] != 0x13 || _payload_buffer[1] != 0x11) {
-      clearPayloadBuffer();
-      continue;
-    }
-
     const char *line = &_payload_buffer[2];
     ret |= parseMeasurements(line) == BmOK;
     clearPayloadBuffer();

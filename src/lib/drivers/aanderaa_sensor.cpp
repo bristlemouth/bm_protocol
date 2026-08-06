@@ -4,12 +4,13 @@
 
 BmErr AanderaaSensor::wakeSensor(void) {
   constexpr uint8_t wake_retry_max = 3;
-  constexpr uint32_t wake_timeout_ms = 5000;
+  constexpr uint32_t wake_wait_ms = 1000;
   uint8_t retries = 0;
 
   BmErr err;
   do {
-    err = sendCommand(CMD_WAKE, wake_timeout_ms);
+    bm_delay(wake_wait_ms);
+    err = sendCommand(CMD_WAKE);
   } while (err != BmOK && retries++ < wake_retry_max);
 
   return err;
@@ -62,6 +63,39 @@ BmErr AanderaaSensor::saveConfiguration(void) {
 }
 
 void AanderaaSensor::resetSensor(uint32_t timeout_ms) { sendCommand(CMD_RESET, timeout_ms); }
+
+void AanderaaSensor::printLongCommand(void) {
+  uint32_t read_duration_ms = 2000;
+  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+  static constexpr uint8_t max_count = 2;
+  uint8_t count = 0;
+
+  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+    if (PLUART::lineAvailable()) {
+      uint16_t read_len = PLUART::readLine(_cmd_buffer, sizeof(_cmd_buffer));
+      if (read_len > 0) {
+        debug_printf("%.*s\n", read_len, _cmd_buffer);
+      }
+
+      // Cmd is over once # is received
+      if (_cmd_buffer[0] == '#' && ++count == max_count) {
+        break;
+      }
+    }
+  }
+}
+
+void AanderaaSensor::getMultiLineOutputAbstract(const char *command) {
+  PLUART::write((uint8_t *)command, strlen(command));
+  clearCmdBuffer();
+  printLongCommand();
+}
+
+void AanderaaSensor::getSensorHelp(void) { getMultiLineOutputAbstract("help\r\n"); }
+
+void AanderaaSensor::getAllConfigurationParameters(void) {
+  getMultiLineOutputAbstract(CMD_GET_ALL);
+}
 
 /*!
  @brief Parse And Assign Unsigned Integer Value From Sensor Output String
