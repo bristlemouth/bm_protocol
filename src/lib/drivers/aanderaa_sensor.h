@@ -52,6 +52,7 @@ public:
   typedef float AanderaaFloat;
   typedef char AanderaaString[64];
 
+  BmErr wakeSensor(void);
   void startStreaming(void);
   void stopStreaming(void);
   BmErr setDefaultConfigs(void);

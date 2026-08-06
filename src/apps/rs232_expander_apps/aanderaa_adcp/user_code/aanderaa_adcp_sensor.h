@@ -37,6 +37,7 @@
 #define CMD_DISTANCE_FIRST_CELL "Distance First Cell"
 #define CMD_CELL_OVERLAP "Cell Overlap"
 #endif
+#define CMD_ENABLE_COLUMN "Enable Column"
 #define CMD_NUMBER_OF_CELLS "Number Of Cells"
 
 #define COLUMN_1(cmd) "C1 " cmd
