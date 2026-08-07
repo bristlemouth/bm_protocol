@@ -45,6 +45,7 @@
 #include "gpioISR.h"
 #include "l2.h"
 #include "memfault_platform_core.h"
+#include "memory_metrics.h"
 #include "messages/neighbors.h"
 #include "metrics_sampler.h"
 #include "ncp_uart.h"
@@ -445,7 +446,8 @@ static void defaultTask(void *parameters) {
   topology_sampler_init(&bridge_power_controller);
   #if (bm_metrics_enabled != 0)
   metrics_sampler_init();
-  #endif
+  memory_metrics_init();
+#endif
   debug_ncp_init();
   debugBmServiceInit();
   sys_info_service_init();
