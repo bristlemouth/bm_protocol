@@ -4,7 +4,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-//Bufferless circular statistics via running sin/cos sums.
+/*
+  This file deals with Circular statistics (NOT a circular buffer). Used for angular
+  readings like current/wave direction, where a plain average is wrong: 359 deg
+  and 1 deg should average to 0, not 180.
+  It does this by running sums of sin and cos of each angle (radians):
+      circular mean = atan2(sum_sin, sum_cos), shifted to [0, 2*pi)
+      circular std  = sqrt(2 - 2*R),  R = |resultant| / n
+  O(1) memory, no stored samples.
+*/
 class AveragingSamplerCircular {
 public:
   AveragingSamplerCircular() { clear(); }

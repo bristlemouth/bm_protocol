@@ -214,8 +214,7 @@ void AanderaaSensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms,
-                              uint32_t averager_max_samples) {
+Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms) {
   Aanderaa_t *new_sub = static_cast<Aanderaa_t *>(pvPortMalloc(sizeof(Aanderaa_t)));
   new_sub = new (new_sub) Aanderaa_t();
   configASSERT(new_sub);
@@ -227,7 +226,6 @@ Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms,
   new_sub->type = SENSOR_TYPE_AANDERAA;
   new_sub->next = NULL;
   new_sub->current_agg_period_ms = current_agg_period_ms;
-  (void)averager_max_samples;
   new_sub->reading_count = 0;
   return new_sub;
 }

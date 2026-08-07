@@ -164,8 +164,7 @@ void SeapointTurbiditySensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-SeapointTurbidity_t *createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_period_ms,
-                                                uint32_t averager_max_samples) {
+SeapointTurbidity_t *createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_period_ms) {
   SeapointTurbidity_t *new_sub =
       static_cast<SeapointTurbidity_t *>(pvPortMalloc(sizeof(SeapointTurbidity_t)));
   new_sub = new (new_sub) SeapointTurbidity_t();
@@ -178,7 +177,6 @@ SeapointTurbidity_t *createSeapointTurbiditySub(uint64_t node_id, uint32_t agg_p
   new_sub->type = SENSOR_TYPE_SEAPOINT_TURBIDITY;
   new_sub->next = NULL;
   new_sub->agg_period_ms = agg_period_ms;
-  (void)averager_max_samples;
   new_sub->reading_count = 0;
   return new_sub;
 }

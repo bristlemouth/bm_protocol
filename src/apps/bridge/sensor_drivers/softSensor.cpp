@@ -144,8 +144,7 @@ void SoftSensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
-                      uint32_t averager_max_samples) {
+Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms) {
   Soft_t *new_sub = static_cast<Soft_t *>(pvPortMalloc(sizeof(Soft_t)));
   new_sub = new (new_sub) Soft_t();
   configASSERT(new_sub);
@@ -157,7 +156,6 @@ Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
   new_sub->type = SENSOR_TYPE_SOFT;
   new_sub->next = NULL;
   new_sub->current_agg_period_ms = current_agg_period_ms;
-  (void)averager_max_samples;
   new_sub->reading_count = 0;
   return new_sub;
 }

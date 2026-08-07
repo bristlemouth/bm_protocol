@@ -4,7 +4,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-//Bufferless mean + population variance/std plus running min/max. O(1) memory, single pass.
+/*
+  Welford's algorithm: keeps a running mean and M2 (sum of squared
+  deviations), updated one sample at a time so there's no stored buffer.
+  Per sample:
+      delta = x - mean
+      mean += delta / n
+      M2   += delta * (x - mean)   // old delta * new deviation
+  variance = M2 / n (population). Also tracks running min/max. O(1) memory.
+*/
 class AveragingSamplerStats {
 public:
   AveragingSamplerStats() { clear(); }

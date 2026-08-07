@@ -198,7 +198,7 @@ void RbrCodaSensor::aggregate(void) {
 }
 
 RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
-                            uint32_t averager_max_samples, uint32_t configured_reading_period_ms) {
+                            uint32_t configured_reading_period_ms) {
   RbrCoda_t *new_sub = static_cast<RbrCoda_t *>(pvPortMalloc(sizeof(RbrCoda_t)));
   new_sub = new (new_sub) RbrCoda_t();
   configASSERT(new_sub);
@@ -210,7 +210,6 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   new_sub->type = SENSOR_TYPE_RBR_CODA;
   new_sub->next = NULL;
   new_sub->rbr_coda_agg_period_ms = rbr_coda_agg_period_ms;
-  (void)averager_max_samples;
   new_sub->reading_count = 0;
   new_sub->configured_reading_period_ms = configured_reading_period_ms;
   return new_sub;

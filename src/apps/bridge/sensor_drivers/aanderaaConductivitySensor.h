@@ -168,7 +168,6 @@ public:
    * Default: 1Hz * 120s + 30s = 150 samples
    * Accounts for timing slop between sensor sampling and bridge aggregation periods.
    */
-  static constexpr uint32_t N_SAMPLES_PAD = 150;
   static constexpr double SALINITY_STD_DEV_MAX = 0.506;
 
   /**
@@ -178,8 +177,7 @@ public:
    */
   static constexpr AanderaaConductivityAggregations aanderaa_conductivity_NAN_AGG = {};
 
-  AanderaaConductivitySensor(uint64_t conductivity_node_id, uint32_t agg_period_ms,
-                             uint32_t averager_max_samples);
+  AanderaaConductivitySensor(uint64_t conductivity_node_id, uint32_t agg_period_ms);
   bool subscribe(void) override;
   void aggregate(void);
   static void get_report_builder_sample_params(void *sensor_data, uint32_t sample_index,
@@ -205,5 +203,4 @@ public:
 
 } AanderaaConductivity_t;
 
-AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms,
-                                                      uint32_t averager_max_samples);
+AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms);
