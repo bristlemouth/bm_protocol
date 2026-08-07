@@ -90,7 +90,7 @@
             "cacheVariables": {
                 "APP": "bringup_bridge",
                 "BSP": "bridge_v1_0"
-                }
+            }
         },
         {
             "name": "bringup-mote",
