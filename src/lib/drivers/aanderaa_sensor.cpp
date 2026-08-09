@@ -113,6 +113,7 @@ void AanderaaSensor::resetSensor(uint32_t timeout_ms) { sendCommand(CMD_RESET, t
           lines to the terminal
  */
 void AanderaaSensor::printLongOutput(const char *command) {
+  PLUART::flush();
   PLUART::write((uint8_t *)command, strlen(command));
   clearCmdBuffer();
   uint32_t read_duration_ms = 2000;
