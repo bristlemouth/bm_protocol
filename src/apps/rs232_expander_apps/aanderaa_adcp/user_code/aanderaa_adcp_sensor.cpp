@@ -58,29 +58,20 @@ void AanderaaAdcpSensor::init() {
           they have been validated and/or written.
  */
 void AanderaaAdcpSensor::configureSensor(void) {
-  uint16_t read_len = 0;
-
   wakeSensor();
 
   // send stop command to stop streaming
-  sendCommand(CMD_STOP);
+  sendCommand(CMD_STOP, 10000);
 
-  PLUART::write((uint8_t *)"Get SW Version\r\n", strlen("Get SW Version\r\n"));
-  uint32_t read_duration_ms = 2000;
-  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
-  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
-    if (PLUART::lineAvailable()) {
-      read_len = PLUART::readLine(_payload_buffer, sizeof(_payload_buffer));
-      if (read_len > 0) {
-        debug_printf("%.*s\n", read_len, _payload_buffer);
-      }
-    }
+  AanderaaString fw_vers_str = {};
+  if (sendCommand(CMD_GET_FW_VERSION, &fw_vers_str) == BmOK) {
+    debug_printf("ADCP fw version is %s\n", fw_vers_str);
   }
   clearPayloadBuffer();
   getSensorHelp();
 
   if (sendCommand(CMD_GET_SERIAL_NUMBER, &_serialNumber) == BmOK) {
-    debug_printf("Serial number is %" PRIu32 "\n", _serialNumber);
+    sensor_log("ADCP serial number is %" PRIu32 "\n", _serialNumber);
     get_config_uint(BM_CFG_PARTITION_SYSTEM, SENSOR_SERIAL_NUMBER, strlen(SENSOR_SERIAL_NUMBER),
                     &_serialNumber);
   } else {
@@ -101,7 +92,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
 #if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(CMD_INTERVAL, "1 min");
 #else
-  readValidateWriteValue(CMD_INTERVAL, "3 min");
+  readValidateWriteValue(CMD_INTERVAL, "10 min");
 #endif
   readValidateWriteValue(CMD_PING_COUNT, static_cast<AanderaaUint>(600));
 

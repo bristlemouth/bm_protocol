@@ -16,6 +16,8 @@ extern "C" {
 #define CMD_SET_PASSKEY_1 "Set Passkey(1)\r\n"
 #define CMD_SET_PASSKEY_1000 "Set Passkey(1000)\r\n"
 
+#define CMD_GET_FW_VERSION "Get SW Version\r\n"
+
 #define CMD_FLOW_CONTROL "Flow Control"
 #define CMD_MODE "Mode"
 
