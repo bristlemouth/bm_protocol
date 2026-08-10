@@ -160,7 +160,7 @@
 - name: borealis2
   type: ext_fw
   repo: git@github.com:appliedoceansciences/borealis_mote_firmware.git
-  sha: 624b349
+  sha: aefeefa
   args:
     app: borealis2
     bsp: bm_mote_v1.0
