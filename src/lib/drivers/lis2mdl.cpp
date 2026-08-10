@@ -61,7 +61,7 @@ BmErr LIS2MDL::init(void) {
 
  @details If using the LIS2MDL from the LSM6DSV's (or another ST product's)
           sensor hub functionality. This will enqueue the data directly from
-          there as it is required in AbstractSensorInterface. 
+          there as it is required in AbstractSensorInterface.
 
  @param timestamp_ns timestamp in nanoseconds the reading was taken
  @param buf data received from the sensor hub

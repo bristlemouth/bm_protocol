@@ -78,6 +78,7 @@ set(LIB_FILES
     ${LIB_DIR}/drivers/ina232.cpp
     ${LIB_DIR}/drivers/bq25820.cpp
     ${LIB_DIR}/drivers/lsm6dsv.cpp
+    ${LIB_DIR}/drivers/bno085.cpp
     ${LIB_DIR}/drivers/lis2mdl.cpp
     ${LIB_DIR}/drivers/xld.cpp
     ${LIB_DIR}/drivers/nau7802.cpp
@@ -99,8 +100,11 @@ set(LIB_FILES
     ${LIB_DIR}/sensor_sampler/sensorSampler.cpp
     ${LIB_DIR}/sensor_sampler/powerSampler.cpp
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
+    ${LIB_DIR}/sensor_sampler/kellerSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
     ${LIB_DIR}/sensor_sampler/pressureSampler.cpp
+    ${LIB_DIR}/sensor_sampler/motionSampler.cpp
+    ${LIB_DIR}/sensor_sampler/bno085Sampler.cpp
     ${TINYUSB_FILES}
     ${BM_SERIAL_FILES}
     ${BM_INTEGRATION_FILES}
