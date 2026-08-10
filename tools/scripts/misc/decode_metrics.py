@@ -23,44 +23,61 @@ from decode_metrics_log import decode_metrics_log
 LINK_QUALITY = {0: "poor", 1: "marginal", 2: "good"}
 
 
-def load_metrics(log_path: str) -> pd.DataFrame:
-    rows = []
+def load_metrics_by_component(log_path: str) -> dict[str, pd.DataFrame]:
+    """Decode a network_metrics.log into one DataFrame per component family."""
+    groups: dict[str, list[dict]] = {}
     for r in decode_metrics_log(log_path):
+        comp = r["component"]
+        # Fold a trailing "_<n>" into a `port` column
+        family, _, tail = comp.rpartition("_")
+        if family and tail.isdigit():
+            port = int(tail)
+        else:
+            family, port = comp, None
+
         row = {
             "tick_ms": r["tick_ms"],
             "timestamp_utc": r["timestamp_utc"],
             "node_id": r["node_id"],
             "version": r["version"],
             "uptime_ms": r["uptime_ms"],
-            "component": r["component"],
         }
+        if port is not None:
+            row["port"] = port
         fields = r["fields"]
         row.update(fields)
-        # Component-specific niceties, added only where they apply:
-        if r["component"].startswith("adin_port_stats_"):
-            row["port"] = int(r["component"].rsplit("_", 1)[1])
         if "lq" in fields:
-            # mse==0 means no link partner even though lq/sqi read "good"
             row["lq_label"] = (
                 "no-link"
                 if fields.get("mse") == 0
                 else LINK_QUALITY.get(fields["lq"], "?")
             )
-        rows.append(row)
-    return pd.DataFrame(rows)
+        groups.setdefault(family, []).append(row)
+
+    tables = {}
+    for name, rows in groups.items():
+        df = pd.DataFrame(rows).dropna(axis=1, how="all")  # drop empty columns
+        sort_cols = [c for c in ("node_id", "port", "tick_ms") if c in df.columns]
+        tables[name] = df.sort_values(sort_cols).reset_index(drop=True)
+    return tables
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Decode a Bristlemouth network_metrics.log"
+        description="Decode a Bristlemouth network_metrics.log to per-component CSVs"
     )
     parser.add_argument("log_file", help="path to network_metrics.log")
     args = parser.parse_args()
 
-    df = load_metrics(args.log_file)
-    csv_path = args.log_file.rsplit(".", 1)[0] + ".csv"
-    df.to_csv(csv_path, index=False)
-    print(f"Wrote {csv_path} ({len(df)} rows)")
+    base = args.log_file.rsplit(".", 1)[0]
+    tables = load_metrics_by_component(args.log_file)
+    if not tables:
+        print("No decodable metrics found.")
+        return
+    for name, df in tables.items():
+        out = f"{base}_{name}.csv"
+        df.to_csv(out, index=False)
+        print(f"Wrote {out} ({len(df)} rows)")
 
 
 if __name__ == "__main__":
