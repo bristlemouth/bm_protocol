@@ -25,7 +25,7 @@ BmErr AanderaaSensor::wakeSensor(void) {
 /*!
  @brief Start streaming data from the sensor at the configured interval
  */
-void AanderaaSensor::startStreaming(void) { sendCommand(CMD_START); }
+void AanderaaSensor::startStreaming(uint32_t timeout_ms) { sendCommand(CMD_START, timeout_ms); }
 
 /*!
  @brief Stop streaming data from the sensor

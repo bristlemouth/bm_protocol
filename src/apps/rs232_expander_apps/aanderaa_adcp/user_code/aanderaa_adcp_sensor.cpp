@@ -81,10 +81,6 @@ void AanderaaAdcpSensor::configureSensor(void) {
   setDefaultConfigs();
 
   // Setup tilt parameters
-#if AANDERAA_5400_FW_VERSION > 80129
-  sendCommand(CMD_SET_PASSKEY_1000);
-  readValidateWriteValue(CMD_TILT_PING_DISCARD, CMD_NO);
-#endif
   sendCommand(CMD_SET_PASSKEY_1);
   readValidateWriteValue(CMD_ENABLE_TILT_COMPENSATION, CMD_YES);
 
@@ -171,7 +167,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
   if (saveConfiguration() == BmOK) {
     resetSensor(10000);
     wakeSensor();
-    sendCommand(CMD_STOP);
+    sendCommand(CMD_STOP, 10000);
   }
 
   // send get_all command
@@ -232,17 +228,17 @@ void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
   Value horizontal_speed = _parser.getValue(idx++);
   Value direction = _parser.getValue(idx++);
 
-  bm_debug("tick: %" PRIu64 ", column: %" PRIu16 ", cell_state_1: %" PRIu32
+  raw_log("tick: %" PRIu64 ", column: %" PRIu16 ", cell_state_1: %" PRIu32
 #if AANDERAA_5400_FW_VERSION > 80129
-           ", cell_state_2: %" PRIu32
+          ", cell_state_2: %" PRIu32
 #endif
-           ", speed: %0.3f, direction: %0.3f\n",
-           uptimeGetMs(), static_cast<uint16_t>(column.data.uint64_val),
-           static_cast<uint32_t>(cell_state_1.data.uint64_val),
+          ", speed: %0.3f, direction: %0.3f\n",
+          uptimeGetMs(), static_cast<uint16_t>(column.data.uint64_val),
+          static_cast<uint32_t>(cell_state_1.data.uint64_val),
 #if AANDERAA_5400_FW_VERSION > 80129
-           static_cast<uint32_t>(cell_state_2.data.uint64_val),
+          static_cast<uint32_t>(cell_state_2.data.uint64_val),
 #endif
-           horizontal_speed.data.double_val, direction.data.double_val);
+          horizontal_speed.data.double_val, direction.data.double_val);
 }
 
 /*!
@@ -251,7 +247,7 @@ void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
  @details The output from the ADCP will have all of the cells readings in a 
           single message. The output format is as follows:
 
-            MEASUREMENT 5400 {serial_number} {record_state} {ping_count}
+            5400 {serial_number} {record_state} {ping_count}
               {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
               {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
               {{cell_number} {cell_state_1} {cell_state_2} {speed_cm/s} {direction_deg_m}}
@@ -269,17 +265,10 @@ void AanderaaAdcpSensor::handleMeasurement(const char *begin, const char *end) {
  */
 BmErr AanderaaAdcpSensor::parseMeasurements(const char *line) {
   static const char *field_lut[] = {
-#if AANDERAA_5400_FW_VERSION > 80129
-      "MEASUREMENT",
-#endif
       "5400",
   };
 
-#if AANDERAA_5400_FW_VERSION > 80129
-  static constexpr uint8_t throwaway_fields = 4;
-#else
   static constexpr uint8_t throwaway_fields = 3;
-#endif
 
   uint8_t ireading = 0;
   const char *reading_start = NULL;

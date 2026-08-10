@@ -5,6 +5,10 @@
 #include "aanderaa_sensor.h"
 #include <stdint.h>
 
+#ifndef AANDERAA_5400_FW_VERSION
+#define AANDERAA_5400_FW_VERSION 200813
+#endif
+
 #define CMD_ENABLE_TILT_COMPENSATION "Enable Tilt Compensation"
 
 // Broadband (30-70m) or Narrowband (35-80m)
@@ -17,7 +21,6 @@
 
 // Tilt limit in degress for when to discard a ping, default is 60 degrees,
 // reference table 1-9 in TD 304
-#define CMD_TILT_PING_DISCARD "Enable Max Tilt Ping Discard "
 #define CMD_MAX_TILT_LIMIT "Max Tilt Limit Ping Discard "
 
 // Whether readings should happen at the beginning or end of an interval

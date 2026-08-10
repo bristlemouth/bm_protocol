@@ -33,7 +33,7 @@ void setup(void) {
   IOWrite(&PL_BUCK_EN, 0);
 
   aanderaa_sensor.configureSensor();
-  aanderaa_sensor.startStreaming();
+  aanderaa_sensor.startStreaming(10000);
 }
 
 void loop(void) {

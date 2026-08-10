@@ -55,7 +55,7 @@ public:
   typedef char AanderaaString[64];
 
   BmErr wakeSensor(void);
-  void startStreaming(void);
+  void startStreaming(uint32_t timeout_ms = 1000);
   void stopStreaming(void);
   BmErr setDefaultConfigs(void);
   BmErr saveConfiguration(void);
