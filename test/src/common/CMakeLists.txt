@@ -243,3 +243,54 @@ add_test(
     COMMAND
     lineParsers
 )
+
+#
+# PLUART Queue tests
+#
+add_executable(payload_uart_queue_tests)
+target_include_directories(payload_uart_queue_tests
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+)
+
+target_sources(payload_uart_queue_tests
+    PRIVATE
+    # Real FreeRTOS queue and list implementation
+    ${SRC_DIR}/third_party/FreeRTOS/Source/queue.c
+    ${SRC_DIR}/third_party/FreeRTOS/Source/list.c
+
+    # FreeRTOS stubs for task/timer functions we don't use
+    ${TEST_DIR}/stubs/FreeRTOSStubs.c
+
+    # Unit test wrapper for test
+    payload_uart_queue_ut.cpp
+)
+
+# Disable specific warnings for FreeRTOS source files
+# Use compiler-specific flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set_source_files_properties(
+        ${SRC_DIR}/third_party/FreeRTOS/Source/queue.c
+        ${SRC_DIR}/third_party/FreeRTOS/Source/list.c
+        PROPERTIES
+        COMPILE_FLAGS "-Wno-tautological-constant-out-of-range-compare"
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set_source_files_properties(
+        ${SRC_DIR}/third_party/FreeRTOS/Source/queue.c
+        ${SRC_DIR}/third_party/FreeRTOS/Source/list.c
+        PROPERTIES
+        COMPILE_FLAGS "-Wno-type-limits"
+    )
+endif()
+
+target_link_libraries(payload_uart_queue_tests gtest gmock gtest_main)
+
+add_test(
+    NAME
+    payload_uart_queue_tests
+    COMMAND
+    payload_uart_queue_tests
+)

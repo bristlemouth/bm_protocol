@@ -7,6 +7,7 @@
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
+#include "queue.h"
 #include "semphr.h"
 
 namespace PLUART {
@@ -15,13 +16,19 @@ namespace PLUART {
 // Stream buffer for user bytes
 static StreamBufferHandle_t user_byte_stream_buffer = NULL;
 
-static struct {
-  // This mutex protects the buffer, len, and ready flag
-  SemaphoreHandle_t mutex;
+// Queue configuration for line buffering
+#define LINE_QUEUE_DEPTH 8 // Number of lines that can be queued
+
+// Structure to hold a single line in the queue
+typedef struct {
   uint8_t buffer[LPUART1_LINE_BUFF_LEN];
-  uint16_t len = 0;
-  bool ready = false;
-} _user_line;
+  uint16_t len;
+} QueuedLine_t;
+
+// Queue for storing multiple lines
+static QueueHandle_t _line_queue = NULL;
+// Counter for tracking dropped lines (overflow detection)
+static volatile uint32_t _dropped_lines = 0;
 
 // Line termination character
 static char terminationCharacter = 0;
@@ -169,14 +176,13 @@ static void processLine(void *serialHandle, uint8_t *line, size_t len) {
   configASSERT(line != NULL);
   (void)serialHandle;
 
-  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
-  // if the last line has not been read, lets reset the buffer
-  memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
-  // lets copy over the line to the user mutex protected buffer
-  memcpy(_user_line.buffer, line, len);
-  _user_line.len = len;
-  _user_line.ready = true;
-  xSemaphoreGive(_user_line.mutex);
+  QueuedLine_t queued_line;
+  memcpy(queued_line.buffer, line, len);
+  queued_line.len = len;
+
+  if (xQueueSend(_line_queue, &queued_line, 0) != pdTRUE) {
+    _dropped_lines = _dropped_lines + 1;
+  }
 }
 
 char getTerminationCharacter() { return terminationCharacter; }
@@ -193,13 +199,7 @@ void setUseByteStreamBuffer(bool enable) { _useByteStreamBuffer = enable; }
 
 bool byteAvailable(void) { return (!xStreamBufferIsEmpty(user_byte_stream_buffer)); }
 
-bool lineAvailable(void) {
-  bool rval = false;
-  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
-  rval = _user_line.ready;
-  xSemaphoreGive(_user_line.mutex);
-  return rval;
-}
+bool lineAvailable(void) { return (uxQueueMessagesWaiting(_line_queue) > 0); }
 
 void reset(void) {
   disable(); // Disable the UART
@@ -208,12 +208,10 @@ void reset(void) {
 }
 
 void flush(void) {
-  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
-  // Clear the line buffer state
-  memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
-  _user_line.len = 0;
-  _user_line.ready = false;
-  xSemaphoreGive(_user_line.mutex);
+  // Clear the line queue
+  xQueueReset(_line_queue);
+  // Reset the dropped lines counter
+  _dropped_lines = 0;
   // Clear the user byte stream buffer
   xStreamBufferReset(user_byte_stream_buffer);
 }
@@ -225,23 +223,26 @@ uint8_t readByte(void) {
 }
 
 uint16_t readLine(char *buffer, size_t len) {
-  int16_t rval = 0;
-  size_t copy_len;
+  QueuedLine_t queued_line;
 
-  configASSERT(xSemaphoreTake(_user_line.mutex, portMAX_DELAY) == pdTRUE);
-  if (len > _user_line.len) {
-    copy_len = _user_line.len;
-  } else {
-    copy_len = len;
+  // Try to dequeue a line (non-blocking)
+  if (xQueueReceive(_line_queue, &queued_line, 0) == pdTRUE) {
+    size_t copy_len;
+    if (len > queued_line.len) {
+      copy_len = queued_line.len;
+    } else {
+      copy_len = len;
+    }
+    memcpy(buffer, queued_line.buffer, copy_len);
+    return copy_len;
   }
 
-  memcpy(buffer, _user_line.buffer, copy_len);
-  memset(_user_line.buffer, 0, LPUART1_LINE_BUFF_LEN);
-  _user_line.ready = false;
-  rval = copy_len;
-  xSemaphoreGive(_user_line.mutex);
-  return rval;
+  return 0; // No line available
 }
+
+uint32_t getDroppedLineCount(void) { return _dropped_lines; }
+
+void resetDroppedLineCount(void) { _dropped_lines = 0; }
 
 // TODO - change to bool and return false if transactions are enabled, but no transaciton is in progress?
 void write(uint8_t *buffer, size_t len) {
@@ -386,9 +387,9 @@ BaseType_t init(uint8_t task_priority) {
   user_byte_stream_buffer = xStreamBufferCreate(USER_BYTE_BUFFER_LEN, 1);
   configASSERT(user_byte_stream_buffer != NULL);
 
-  // Create the mutex used by the payload_uart namespace for users to safely access lines from the payload
-  _user_line.mutex = xSemaphoreCreateMutex();
-  configASSERT(_user_line.mutex != NULL);
+  // Create the line queue for storing multiple lines
+  _line_queue = xQueueCreate(LINE_QUEUE_DEPTH, sizeof(QueuedLine_t));
+  configASSERT(_line_queue != NULL);
 
   // Create the postTxFunction callback trigger semaphore
   _postTxSemaphore = xSemaphoreCreateBinary();

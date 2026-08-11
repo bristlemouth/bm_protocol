@@ -76,12 +76,15 @@
     #define portDONT_DISCARD      __attribute__( ( used ) )
 /*-----------------------------------------------------------*/
 
-    #define portSET_INTERRUPT_MASK_FROM_ISR()
-    #define portCLEAR_INTERRUPT_MASK_FROM_ISR( x )
+    #define portSET_INTERRUPT_MASK_FROM_ISR() 0
+    #define portCLEAR_INTERRUPT_MASK_FROM_ISR( x ) ((void)(x))
     #define portDISABLE_INTERRUPTS()
     #define portENABLE_INTERRUPTS()
     #define portENTER_CRITICAL()
     #define portEXIT_CRITICAL()
+    #define portYIELD()
+    #define portYIELD_WITHIN_API()
+    #define portYIELD_FROM_ISR(x) ((void)(x))
 
     #ifdef __cplusplus
         }

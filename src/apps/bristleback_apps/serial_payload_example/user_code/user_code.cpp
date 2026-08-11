@@ -46,8 +46,8 @@ void setup(void) {
   // Enable passing raw bytes to user app.
   PLUART::setUseByteStreamBuffer(true);
   // Enable parsing lines and passing to user app.
-  /// Warning: PLUART only stores a single line at a time. If your attached payload sends lines
-  /// faster than the app reads them, they will be overwritten and data will be lost.
+  /// PLUART buffers up to 8 lines. If the queue fills, incoming lines are dropped
+  /// and the dropped line counter is incremented. Use getDroppedLineCount() to check for overflow.
   PLUART::setUseLineBuffer(true);
   // Set a line termination character per protocol of the sensor.
   PLUART::setTerminationCharacter((char)line_term_config);
@@ -102,6 +102,14 @@ void loop(void) {
       printf("\n");
       readingBytesTimer = -1;
     }
+
+    // Check for dropped lines and report if any
+    uint32_t dropped = PLUART::getDroppedLineCount();
+    if (dropped > 0) {
+      printf("WARNING: %lu lines dropped due to queue overflow!\n", dropped);
+      PLUART::resetDroppedLineCount();
+    }
+
     uint16_t read_len = PLUART::readLine(payload_buffer, sizeof(payload_buffer));
 
     // Get the RTC if available
@@ -113,9 +121,9 @@ void loop(void) {
     // Based on configuration, print the payload data to a file, to the spotter_log_console console, and to the printf console.
     if (bm_log_enable) {
       spotter_log(0, "payload_data.log", USE_TIMESTAMP, "tick: %llu, rtc: %s, line: %.*s\n",
-                 uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
-      spotter_log_console(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(), rtcTimeBuffer,
-                read_len, payload_buffer);
+                  uptimeGetMs(), rtcTimeBuffer, read_len, payload_buffer);
+      spotter_log_console(0, "[payload] | tick: %llu, rtc: %s, line: %.*s", uptimeGetMs(),
+                          rtcTimeBuffer, read_len, payload_buffer);
     }
     printf("[payload-line] | tick: %llu, rtc: %s, line: %.*s\n", uptimeGetMs(), rtcTimeBuffer,
            read_len, payload_buffer);
