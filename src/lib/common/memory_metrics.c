@@ -43,6 +43,8 @@ static BmErr memory_metrics_data(const char *metric_key, const BmEncoderTableEnt
   mem_values.heap_free = (uint32_t)s.xAvailableHeapSpaceInBytes;
   mem_values.heap_min_free = (uint32_t)s.xMinimumEverFreeBytesRemaining;
   mem_values.heap_largest_block = (uint32_t)s.xSizeOfLargestFreeBlockInBytes;
+  mem_values.heap_total_allocs = (uint32_t)s.xNumberOfSuccessfulAllocations;
+  mem_values.heap_total_frees = (uint32_t)s.xNumberOfSuccessfulFrees;
 
   *lut = mem_lut;
   *num_fields = MEMORY_FIELD_COUNT;
