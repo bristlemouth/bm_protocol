@@ -8,6 +8,7 @@ set(BM_NCP_FILES
     ${BM_NCP_DIR}/ncp_uart.cpp
     ${BM_NCP_DIR}/ncp_dfu.cpp
     ${BM_NCP_DIR}/ncp_config.cpp
+    ${BM_NCP_DIR}/ncp_metrics.cpp
 
     PARENT_SCOPE)
 
