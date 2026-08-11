@@ -36,6 +36,7 @@
 #include "gpioISR.h"
 #include "l2.h"
 #include "memfault_platform_core.h"
+#include "memory_metrics.h"
 #include "nvmPartition.h"
 #include "pcap.h"
 #include "printf.h"
@@ -310,6 +311,9 @@ static void defaultTask(void *parameters) {
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init();
+#if (bm_metrics_enabled != 0)
+  memory_metrics_init();
+#endif
   debugConfigurationInit();
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
                   strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
