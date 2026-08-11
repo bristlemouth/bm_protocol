@@ -100,6 +100,7 @@ set(LIB_FILES
     ${LIB_DIR}/sensor_sampler/sensorSampler.cpp
     ${LIB_DIR}/sensor_sampler/powerSampler.cpp
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
+    ${LIB_DIR}/sensor_sampler/kellerSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
     ${LIB_DIR}/sensor_sampler/pressureSampler.cpp
     ${TINYUSB_FILES}
