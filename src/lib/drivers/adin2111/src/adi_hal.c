@@ -16,6 +16,12 @@ static HAL_Callback_t ADIN2111_MAC_SPI_CALLBACK = NULL;
 static void *ADIN2111_MAC_SPI_CALLBACK_PARAM = NULL;
 extern adin_pins_t adin_pins;
 
+// Trampoline state for HAL_SpiReadWrite()'s callback dispatch - see the long
+// comment at the dispatch site for why the callback must not be invoked
+// recursively.
+static bool s_spi_callback_dispatching = false;
+static uint32_t s_spi_callbacks_pending = 0;
+
 uint32_t HAL_EnterCriticalSection(void) {
   __disable_irq();
   return 0;
@@ -88,7 +94,39 @@ uint32_t HAL_SpiReadWrite(uint8_t *pBufferTx, uint8_t *pBufferRx, uint32_t nByte
 
   if (status == SPI_OK) {
     if (ADIN2111_MAC_SPI_CALLBACK) {
-      ADIN2111_MAC_SPI_CALLBACK(ADIN2111_MAC_SPI_CALLBACK_PARAM, 0, NULL);
+      // Dispatch the OA-SPI completion callback ITERATIVELY, never recursively.
+      //
+      // The vendor driver expects this callback to arrive from an SPI/DMA
+      // completion interrupt, so spiCallback() -> oaStateMachine() is meant to
+      // be the NEXT iteration of the state machine. This HAL is a blocking
+      // implementation, so calling it directly from here instead nests one
+      // more oaStateMachine()/HAL_SpiReadWrite() frame pair every time a state
+      // issues another transfer - and the chain only unwinds once the
+      // ADIN2111 has nothing left to move. Under sustained RX load it never
+      // does, so depth tracks the device's backlog rather than the protocol,
+      // at ~32 words (~130 bytes) of caller stack per level. Measured on the
+      // bench: 20 levels at ambient traffic, 185 under ping flood - which is
+      // what overflows the L2 task (l2.c) and shows up as a StackOverflow
+      // (0x800B) or a HardFault on a garbage return address (0x9400).
+      //
+      // Flattening is safe because every ADI_HAL_SPI_READ_WRITE() call site in
+      // oaStateMachine() (adi_spi_oa.c) sets hDevice->state BEFORE the
+      // transfer and does nothing after it but `break` - so there is no
+      // caller-frame work that has to happen between one transfer completing
+      // and the next state running. Running the callback from the outermost
+      // frame's loop preserves the exact same call order at constant depth.
+      //
+      // The recursive reg-access lock (below) still serializes tasks, so these
+      // statics are only ever touched by the one task inside that lock.
+      s_spi_callbacks_pending++;
+      if (!s_spi_callback_dispatching) {
+        s_spi_callback_dispatching = true;
+        while (s_spi_callbacks_pending > 0) {
+          s_spi_callbacks_pending--;
+          ADIN2111_MAC_SPI_CALLBACK(ADIN2111_MAC_SPI_CALLBACK_PARAM, 0, NULL);
+        }
+        s_spi_callback_dispatching = false;
+      }
     }
   } else {
     printf("Network SPI Read/Write Failed\n");

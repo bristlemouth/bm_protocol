@@ -97,7 +97,16 @@ extern "C" {
 #define configUSE_TIMERS                         1
 #define configTIMER_TASK_PRIORITY                ( 2 )
 #define configTIMER_QUEUE_LENGTH                 32
-#define configTIMER_TASK_STACK_DEPTH             256
+/* Raised from 256 words (1 kB). Timer callbacks are not shallow here:
+ * bm_l2_renegotiate (l2.c) runs on this task and descends through
+ * retry_negotiation -> adin2111_AutoNegotiateStatus -> the ADI PHY driver ->
+ * HAL_SpiReadWrite -> the STM32 HAL, each frame carrying its own SPI buffers,
+ * and port_monitor_timer_handler calls spotter_log() with varargs formatting.
+ * At 256 words the timer task was observed peaking at 130 words used with only
+ * 126 free, and a stack overflow there (kMfltRebootReason_StackOverflow) shows
+ * up as an intermittent reboot because the deepest callback only runs when a
+ * link is down. */
+#define configTIMER_TASK_STACK_DEPTH             512
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */

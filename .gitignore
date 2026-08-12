@@ -30,3 +30,7 @@ src/bsp/sunflower_v3.3/*.ld
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+CLAUDE.md
+adin_init_time_testing.diff
+NOTES.txt

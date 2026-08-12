@@ -62,6 +62,14 @@
             }
         },
         {
+            "name": "adin-init-time-testing",
+            "inherits": "default",
+            "cacheVariables": {
+                "APP": "adin_init_time_testing",
+                "BSP": "bm_mote_v1.0"
+            }
+        },
+        {
             "name": "adin-test",
             "inherits": "default",
             "cacheVariables": {
@@ -301,6 +309,11 @@
         {
             "configurePreset": "aanderaa-salinity-rs232",
             "name": "aanderaa-salinity-rs232",
+            "jobs": 8
+        },
+        {
+            "configurePreset": "adin-init-time-testing",
+            "name": "adin-init-time-testing",
             "jobs": 8
         },
         {

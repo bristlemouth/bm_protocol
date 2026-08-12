@@ -200,3 +200,13 @@
     defines: -DCMAKE_APP_TYPE=rs232_expander
              -DCMAKE_AANDERAA_TYPE=4830
     sub: rs232
+
+# Top-level app (src/apps/), so no CMAKE_APP_TYPE - it shares bm_devkit/bmdk_common
+# by path from its own CMakeLists.txt instead.
+- name: adin_init_time_testing on bm_mote_v1.0
+  type: build_fw
+  args:
+    app: adin_init_time_testing
+    bsp: bm_mote_v1.0
+    build_type: Release
+    use_bootloader: True
