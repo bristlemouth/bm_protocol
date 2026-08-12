@@ -17,6 +17,7 @@
 
 #include "app_pub_sub.h"
 #include "app_util.h"
+#include "bm_config.h"
 #include "bristlefin.h"
 #include "bristlemouth_client.h"
 #include "bsp.h"
