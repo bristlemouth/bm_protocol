@@ -32,6 +32,8 @@ set(LIB_FILES
     ${LIB_DIR}/common/OrderedSeparatorLineParser.cpp
     ${LIB_DIR}/common/lpm_u5.c
     ${LIB_DIR}/common/lptimTick_u5.c
+    ${LIB_DIR}/common/memory_metrics.c
+    ${LIB_DIR}/common/metrics_log.cpp
     ${LIB_DIR}/common/nvmPartition.cpp
     ${LIB_DIR}/common/pcap.c
     ${LIB_DIR}/common/port_monitor.c
@@ -98,6 +100,7 @@ set(LIB_FILES
     ${LIB_DIR}/sensor_sampler/sensorSampler.cpp
     ${LIB_DIR}/sensor_sampler/powerSampler.cpp
     ${LIB_DIR}/sensor_sampler/htuSampler.cpp
+    ${LIB_DIR}/sensor_sampler/kellerSampler.cpp
     ${LIB_DIR}/sensor_sampler/loadCellSampler.cpp
     ${LIB_DIR}/sensor_sampler/pressureSampler.cpp
     ${TINYUSB_FILES}
