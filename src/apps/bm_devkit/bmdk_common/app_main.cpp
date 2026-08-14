@@ -396,11 +396,11 @@ static void defaultTask(void *parameters) {
   };
   NvmPartition ftp_poc_partition(debugW25, ftp_poc_flash_partition);
   dfu_partition_global = &dfu_partition;
-  ftp_poc_flash_endpoint_init(&ftp_poc_partition);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);
   bcl_init();
+  ftp_poc_flash_endpoint_init(&ftp_poc_partition);
 #if (bm_metrics_enabled != 0)
   memory_metrics_init();
 #endif
