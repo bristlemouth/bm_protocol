@@ -39,6 +39,7 @@ extern "C" {
 #include "debug_sys.h"
 #include "debug_w25.h"
 #include "external_flash_partitions.h"
+#include "ftp_poc_endpoint.h"
 #include "gpdma.h"
 #include "gpioISR.h"
 #include "memfault_platform_core.h"
@@ -388,7 +389,14 @@ static void defaultTask(void *parameters) {
   hardwareConfigurationPartition = &debug_hardware_partition;
   NvmPartition debug_cli_partition(debugW25, cli_configuration);
   NvmPartition dfu_partition(debugW25, dfu_configuration);
+  // Temporary FTP POC storage: the final 4 KiB of DFU staging flash. Do not use while staging DFU.
+  ext_flash_partition_t ftp_poc_flash_partition = {
+      .fa_off = dfu_configuration.fa_off + dfu_configuration.fa_size - 4096,
+      .fa_size = 4096,
+  };
+  NvmPartition ftp_poc_partition(debugW25, ftp_poc_flash_partition);
   dfu_partition_global = &dfu_partition;
+  ftp_poc_flash_endpoint_init(&ftp_poc_partition);
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugPlUartCliInit();
   debugDfuInit(&dfu_partition);

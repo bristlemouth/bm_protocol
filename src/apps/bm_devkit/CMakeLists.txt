@@ -1,5 +1,6 @@
 set(DEV_KIT_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/bmdk_common/app_main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bmdk_common/ftp_poc_endpoint.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/bmdk_common/sensors/sensors.cpp
 )
 
