@@ -1,5 +1,6 @@
 #include "aanderaa_adcp_sensor.h"
 #include "FreeRTOS.h"
+#include "app_util.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "configuration.h"
@@ -8,7 +9,11 @@
 #include "stm32_rtc.h"
 #include "task_priorities.h"
 #include "uptime.h"
+#include <math.h>
 #include <string>
+#include <type_traits>
+
+using namespace std;
 
 extern "C" {
 #include "bm_rtc.h"
@@ -21,6 +26,58 @@ extern "C" {
 
 #define raw_log(fmt, ...) spotter_log(0, RAW_LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
 #define sensor_log(fmt, ...) spotter_log(0, LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
+
+template <typename T>
+static void round_to_lowest_param(T &value, const char *acceptable_values[], size_t n) {
+  static_assert(is_same<T, float>::value || is_same<T, uint32_t>::value,
+                "Type is not supported");
+
+  T compared_value = 0;
+  for (size_t i = 0; i < n; i++) {
+    T converted_value;
+    if (is_same<T, float>::value) {
+      converted_value = strtof(acceptable_values[i], NULL);
+    } else if (is_same<T, uint32_t>::value) {
+      converted_value = strtoul(acceptable_values[i], NULL, 10);
+    }
+
+    if (!i) {
+      compared_value = converted_value;
+    }
+
+    if (converted_value > value) {
+      break;
+    }
+    compared_value = converted_value;
+  }
+  value = compared_value;
+}
+
+static void get_acceptable_cell_sizes(float &size) {
+  const char *cell_size[] = {
+      "0.5m", "1.0m", "1.5m", "2.0m", "2.5m", "3.0m", "3.5m", "4.0m", "4.5m", "5.0m",
+  };
+  round_to_lowest_param(size, cell_size, array_size(cell_size));
+}
+
+static void get_acceptable_cell_count(uint32_t &depth) {
+  const char *depths[] = {
+      "1",  "2",  "3",  "4",  "5",  "6",  "7",  "8",  "9",  "10", "12", "15",
+      "20", "25", "30", "35", "40", "45", "50", "55", "60", "65", "70", "75",
+  };
+  round_to_lowest_param(depth, depths, array_size(depths));
+}
+
+static void get_acceptable_first_cell_distance(float &distance) {
+  const char *distances[]{
+      "1.5m",  "1.6m",  "1.7m",  "1.8m",  "1.9m",  "2.0m",  "2.1m",  "2.2m",  "2.3m",
+      "2.4m",  "2.5m",  "2.6m",  "2.7m",  "2.8m",  "2.9m",  "3.0m",  "3.5m",  "4.0m",
+      "4.5m",  "5.0m",  "5.5m",  "6.0m",  "6.5m",  "7.0m",  "7.5m",  "8.0m",  "8.5m",
+      "9.0m",  "9.5m",  "10.0m", "11.0m", "12.0m", "13.0m", "14.0m", "15.0m", "16.0m",
+      "17.0m", "18.0m", "19.0m", "20.0m", "22.0m",
+  };
+  round_to_lowest_param(distance, distances, array_size(distances));
+}
 
 AanderaaAdcpSensor::AanderaaAdcpSensor()
     : _parser("\t", 256, PARSER_VALUE_TYPE, FIELDS_PER_MEASUREMENT) {};
@@ -39,6 +96,15 @@ void AanderaaAdcpSensor::init() {
   get_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
                    &_sensorDepthM);
   debug_printf("sensorDepthM: %f\n", _sensorDepthM);
+  if (_sensorDepthM > MAX_MEASURING_DEPTH) {
+    _sensorDepthM = MAX_MEASURING_DEPTH;
+    set_config_float(BM_CFG_PARTITION_SYSTEM, SENSOR_DEPTH_M, strlen(SENSOR_DEPTH_M),
+                     _sensorDepthM);
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  }
+
+  get_config_float(BM_CFG_PARTITION_SYSTEM, CELL_SIZE_M, strlen(CELL_SIZE_M), &_cellSizeM);
+  debug_printf("cellSizeM: %f\n", _cellSizeM);
 
   PLUART::init(USER_TASK_PRIORITY);
   PLUART::setBaud(BAUD_RATE);
@@ -99,7 +165,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
   // Perform in burst mode to optimize sleep time of the ADCP
   readValidateWriteValue(CMD_ENABLE_BURST_MODE, CMD_YES);
 #if AANDERAA_5400_FW_VERSION > 80129
-  readValidateWriteValue(CMD_BURST_PERIOD_PLACEMENT, "End of Interval");
+  readValidateWriteValue(CMD_BURST_PERIOD_PLACEMENT, "End Of Interval");
 
   // Set simple output
   readValidateWriteValue(CMD_SELECT_PROFILE_PARAMETERS, "Simple Output");
@@ -115,18 +181,44 @@ void AanderaaAdcpSensor::configureSensor(void) {
   //   - set the cell size
   //   - set the cell distance apart
   // num_cells * (cell_size + center_cell_spacing) + distance_first_cell
-  // must be below 80m
+  // must be below MAX_MEASURING_DEPTH
+  float cell_size = _cellSizeM;
+  get_acceptable_cell_sizes(cell_size);
+  printf("Cell size: %.02f\n", cell_size);
+  uint32_t num_cells = ceil(_sensorDepthM / cell_size);
+  get_acceptable_cell_count(num_cells);
+  printf("Cell count: %" PRIu32 "\n", num_cells);
+
+  // Reference 4.10.6 in TD 304: If instrument referenced the minimum distance
+  // to first cell should be 1 meter blanking zone for 5400 and 2 meter for
+  // 5402 and 5403, plus half the cell size
+  float blanking_zone = 1 + (0.5 * cell_size);
+  // Round  up to nearest tenths place hack
+  blanking_zone = floor(10 * blanking_zone + 0.5f) / 10;
+
+  float first_cell_distance = _sensorDepthM - static_cast<float>(num_cells) * cell_size;
+  if (first_cell_distance < blanking_zone) {
+    first_cell_distance += blanking_zone;
+  }
+  get_acceptable_first_cell_distance(first_cell_distance);
+  printf("First cell distance: %.02f\n", first_cell_distance);
+
+  if (cell_size != _cellSizeM) {
+    _cellSizeM = cell_size;
+    set_config_float(BM_CFG_PARTITION_SYSTEM, CELL_SIZE_M, strlen(CELL_SIZE_M), _cellSizeM);
+    save_config(BM_CFG_PARTITION_SYSTEM, false);
+  }
+
   readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
 #if AANDERAA_5400_FW_VERSION > 80129
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), "1.5m");
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), first_cell_distance);
   readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");
 #else
   readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL), "1.0m");
   readValidateWriteValue(COLUMN_1(CMD_CELL_OVERLAP), "0%");
 #endif
-  AanderaaUint cell_count = static_cast<AanderaaUint>(_sensorDepthM);
-  readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), cell_count);
-  readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), "1.0m");
+  readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), num_cells);
+  readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), cell_size);
   readValidateWriteValue(COLUMN_2(CMD_ENABLE_COLUMN), CMD_NO);
   readValidateWriteValue(COLUMN_3(CMD_ENABLE_COLUMN), CMD_NO);
 
