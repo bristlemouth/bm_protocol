@@ -83,14 +83,18 @@ private:
   // reference Table 1-9 in TD 304
   static constexpr uint32_t BAUD_RATE = 115200;
 
+  static constexpr float MAX_MEASURING_DEPTH = 80.0;
+
   static constexpr char SENSOR_BM_LOG_ENABLE[] = "sensorBmLogEnable";
   static constexpr char SENSOR_INTERVAL_S[] = "readingPeriodS";
   static constexpr char SENSOR_SERIAL_NUMBER[] = "sensorSerialNum";
   static constexpr char SENSOR_DEPTH_M[] = "sensorDepthM";
+  static constexpr char CELL_SIZE_M[] = "cellSizeM";
 
   uint32_t _sensorBmLogEnable = 0;
   uint32_t _readingPeriodS = 2;
-  float _sensorDepthM = 0;
+  float _cellSizeM = 1.0;
+  float _sensorDepthM = 50.0;
   OrderedSeparatorLineParser _parser;
   char _payload_buffer[8192] = {};
   uint32_t _payload_idx = 0;
