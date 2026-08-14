@@ -55,7 +55,7 @@ static void round_to_lowest_param(T &value, const char *acceptable_values[], siz
 
 static void get_acceptable_cell_sizes(float &size) {
   const char *cell_size[] = {
-      "0.5m", "1.0m", "1.5m", "2.0m", "2.5m", "3.0m", "3.5m", "4.0m", "4.5m", "5.0m",
+      "0.5m", "1.0m", "1.5m", "2.0m", "2.5m", "3.0m", "4.0m", "5.0m",
   };
   round_to_lowest_param(size, cell_size, array_size(cell_size));
 }
@@ -212,9 +212,9 @@ void AanderaaAdcpSensor::configureSensor(void) {
   readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
 #if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), first_cell_distance);
-  readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), "1.0m");
+  readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), cell_size);
 #else
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL), "1.0m");
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL), first_cell_distance);
   readValidateWriteValue(COLUMN_1(CMD_CELL_OVERLAP), "0%");
 #endif
   readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), num_cells);
