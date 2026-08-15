@@ -43,7 +43,7 @@ TEST_F(NvmPartitionTest, BasicTest)
   };
   MockStorageDriver _storage;
   EXPECT_CALL(_storage, getAlignmentBytes())
-    .Times(2)
+    .Times(1)
     .WillRepeatedly(Return(4096));
   EXPECT_CALL(_storage, getStorageSizeBytes())
     .Times(1)
@@ -52,7 +52,7 @@ TEST_F(NvmPartitionTest, BasicTest)
   EXPECT_CALL(_storage, write)
     .Times(1)
     .WillRepeatedly(Return(true));
-  uint8_t testbuf[10]; 
+  uint8_t testbuf[10];
   testPartition.write(1000, testbuf, sizeof(testbuf),100);
   EXPECT_CALL(_storage, read)
     .Times(1)
@@ -63,6 +63,26 @@ TEST_F(NvmPartitionTest, BasicTest)
     .WillRepeatedly(Return(true));
   uint16_t crc;
   testPartition.crc16(1000, 20, crc,100);
+}
+
+TEST_F(NvmPartitionTest, Crc16AllowsNonAlignedLength)
+{
+  const ext_flash_partition_t test_configuration = {
+      .fa_off = 4096,
+      .fa_size = 4096,
+  };
+  MockStorageDriver _storage;
+  EXPECT_CALL(_storage, getAlignmentBytes())
+    .Times(1)
+    .WillRepeatedly(Return(4096));
+  EXPECT_CALL(_storage, getStorageSizeBytes())
+    .Times(1)
+    .WillRepeatedly(Return(8000000));
+  NvmPartition testPartition(_storage, test_configuration);
+  EXPECT_CALL(_storage, crc16(4096, 2560, _, _))
+    .WillOnce(Return(true));
+  uint16_t crc;
+  EXPECT_TRUE(testPartition.crc16(0, 2560, crc, 100));
 }
 
 TEST_F(NvmPartitionTest, BadInit)

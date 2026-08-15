@@ -2,7 +2,7 @@
 #include "FreeRTOS.h"
 #include <stdio.h>
 
-NvmPartition::NvmPartition(AbstractStorageDriver& storage_driver, const ext_flash_partition_t &partition): 
+NvmPartition::NvmPartition(AbstractStorageDriver& storage_driver, const ext_flash_partition_t &partition):
         _storage_driver(storage_driver), _partition(partition) {
     configASSERT((_partition.fa_off + _partition.fa_size < storage_driver.getStorageSizeBytes()));
     configASSERT(_partition.fa_off % storage_driver.getAlignmentBytes() == 0);
@@ -32,6 +32,6 @@ uint32_t NvmPartition::alignment(void) {
 }
 
 bool NvmPartition::crc16(uint32_t offset, size_t len, uint16_t &crc, uint32_t timeoutMs) {
-    configASSERT(offset + len + (len % _storage_driver.getAlignmentBytes()) < _partition.fa_size);
+    configASSERT(offset + len < _partition.fa_size);
     return _storage_driver.crc16(_partition.fa_off + offset, len, crc, timeoutMs);
 }

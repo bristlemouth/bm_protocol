@@ -11,6 +11,7 @@
 
 #include "app_util.h"
 #include "dfu.h"
+#include "ftp.h"
 #include "messages.h"
 #include "pubsub.h"
 #include "serial_console.h"
@@ -57,13 +58,28 @@ static const CLI_Command_Definition_t cmd_bcmp = {
     " * bm pub <topic> <data> <type> <version>\n"
     " * bm dfu start <node_id> <size> <crc> <major> <minor> <sha>\n"
     " * bm dfu byte <data>\n"
-    " * bm dfu finish\n",
+    " * bm dfu finish\n"
+    " * bm ftp pull <node_id> <source_kind> <source_spec> <sink_kind> <sink_spec>\n",
     // Command function
     cmd_bcmp_fn,
     // Number of parameters
     -1};
 
 static uint8_t rb_buf[CHUNK_SIZE_DFU] = {0};
+
+static bool ftp_endpoint_kind_from_string(const char *kind, BaseType_t kind_len,
+                                          BmFtpEndpointKind *endpoint_kind) {
+  if (strncmp("flash", kind, kind_len) == 0) {
+    *endpoint_kind = BmFtpEndpointFlash;
+  } else if (strncmp("nvm", kind, kind_len) == 0) {
+    *endpoint_kind = BmFtpEndpointNvm;
+  } else if (strncmp("serial", kind, kind_len) == 0) {
+    *endpoint_kind = BmFtpEndpointBmSerial;
+  } else {
+    return false;
+  }
+  return true;
+}
 
 static void updateSuccessCallback(bool success, BmDfuErr err, uint64_t node_id) {
   if (success) {
@@ -516,6 +532,42 @@ static BaseType_t cmd_bcmp_fn(char *writeBuffer, size_t writeBufferLen,
       }
       vPortFree(topic);
       vPortFree(data);
+    } else if (strncmp("ftp", command, command_str_len) == 0) {
+      BaseType_t sub_command_len = 0;
+      const char *sub_command = FreeRTOS_CLIGetParameter(commandString, 2, &sub_command_len);
+      if (!sub_command || strncmp("pull", sub_command, sub_command_len) != 0) {
+        printf("ERR Invalid ftp command\n");
+        break;
+      }
+      BaseType_t node_id_len = 0;
+      BaseType_t source_kind_len = 0;
+      BaseType_t source_spec_len = 0;
+      BaseType_t sink_kind_len = 0;
+      BaseType_t sink_spec_len = 0;
+      const char *node_id_str = FreeRTOS_CLIGetParameter(commandString, 3, &node_id_len);
+      const char *source_kind_str =
+          FreeRTOS_CLIGetParameter(commandString, 4, &source_kind_len);
+      const char *source_spec = FreeRTOS_CLIGetParameter(commandString, 5, &source_spec_len);
+      const char *sink_kind_str = FreeRTOS_CLIGetParameter(commandString, 6, &sink_kind_len);
+      const char *sink_spec = FreeRTOS_CLIGetParameter(commandString, 7, &sink_spec_len);
+      BmFtpEndpointKind source_kind;
+      BmFtpEndpointKind sink_kind;
+      if (!node_id_str || !source_kind_str || !source_spec || !sink_kind_str || !sink_spec ||
+          !ftp_endpoint_kind_from_string(source_kind_str, source_kind_len, &source_kind) ||
+          !ftp_endpoint_kind_from_string(sink_kind_str, sink_kind_len, &sink_kind)) {
+        printf("ERR Invalid ftp pull arguments\n");
+        break;
+      }
+      static uint32_t ftp_transfer_id;
+      uint64_t node_id = strtoull(node_id_str, NULL, 16);
+      if (bm_ftp_start_fetch(node_id, ++ftp_transfer_id, source_kind,
+                             reinterpret_cast<const uint8_t *>(source_spec), source_spec_len,
+                             sink_kind, reinterpret_cast<const uint8_t *>(sink_spec),
+                             sink_spec_len) != BmOK) {
+        printf("Failed to start ftp pull\n");
+      } else {
+        printf("Started ftp pull transfer %" PRIu32 "\n", ftp_transfer_id);
+      }
     } else if (strncmp("dfu", command, command_str_len) == 0) {
       const char *sub_command = FreeRTOS_CLIGetParameter(commandString, 2, &command_str_len);
       static uint32_t idx = 0;
