@@ -17,7 +17,7 @@ namespace {
 
 constexpr uint32_t kOperationTimeoutMs = 5000;
 constexpr char kEndpointName[] = "poc";
-constexpr size_t kPocTextCapacity = 256;
+constexpr size_t kPocTextLength = 2560;
 
 NvmPartition *poc_partition;
 uint32_t poc_length;
@@ -139,16 +139,19 @@ const CLI_Command_Definition_t ftp_poc_cli_command = {
 void ftp_poc_flash_endpoint_init(NvmPartition *partition) {
   configASSERT(partition);
   poc_partition = partition;
-  char poc_text[kPocTextCapacity];
+  static char poc_text[kPocTextLength];
   int poc_text_length = snprintf(
       poc_text, sizeof(poc_text),
-      "Bristlemouth FTP proof of concept from mote %016" PRIx64 ".",
+      "Bristlemouth FTP multi-chunk proof of concept from mote %016" PRIx64 ".\n",
       node_id());
   if (poc_text_length < 0 || static_cast<size_t>(poc_text_length) >= sizeof(poc_text)) {
     printf("Failed to format FTP POC flash text\n");
     return;
   }
-  poc_length = static_cast<uint32_t>(poc_text_length);
+  for (size_t index = static_cast<size_t>(poc_text_length); index < sizeof(poc_text); index++) {
+    poc_text[index] = static_cast<char>('A' + ((index - poc_text_length) % 26));
+  }
+  poc_length = sizeof(poc_text);
 
   if (!poc_partition->write(0, reinterpret_cast<uint8_t *>(poc_text), poc_length,
                             kOperationTimeoutMs)) {
