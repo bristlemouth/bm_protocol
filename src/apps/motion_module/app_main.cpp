@@ -9,6 +9,7 @@
 #include "bristlemouth_client.h"
 #include "bsp.h"
 #include "cli.h"
+#include "io.h"
 extern "C" {
 #include "config_cbor_map_service.h"
 #include "echo_service.h"
@@ -230,8 +231,8 @@ static void defaultTask(void *parameters) {
       .Pull = LL_GPIO_PULL_NO,
       .Alternate = 0,
   };
-  IOConfigure(PAYLOAD_TX, &pin_cfg);
-  IOWrite(PAYLOAD_TX, 1);
+  IOConfigure(&PAYLOAD_TX, &pin_cfg);
+  IOWrite(&PAYLOAD_TX, 1);
 
   // Initialize low power manager
   lpmInit();
