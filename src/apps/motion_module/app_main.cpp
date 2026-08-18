@@ -222,6 +222,17 @@ static void defaultTask(void *parameters) {
 
   rtcInit();
 
+  LL_GPIO_InitTypeDef pin_cfg = {
+      .Pin = PAYLOAD_TX_Pin,
+      .Mode = LL_GPIO_MODE_OUTPUT,
+      .Speed = LL_GPIO_SPEED_FREQ_LOW,
+      .OutputType = LL_GPIO_OUTPUT_PUSHPULL,
+      .Pull = LL_GPIO_PULL_NO,
+      .Alternate = 0,
+  };
+  IOConfigure(PAYLOAD_TX, &pin_cfg);
+  IOWrite(PAYLOAD_TX, 1);
+
   // Initialize low power manager
   lpmInit();
 
