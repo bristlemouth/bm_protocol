@@ -28,12 +28,13 @@ extern "C" {
 #define sensor_log(fmt, ...) spotter_log(0, LOG, USE_TIMESTAMP, fmt, ##__VA_ARGS__)
 
 template <typename T>
-static void round_to_lowest_param(T &value, const char *acceptable_values[], size_t n) {
+static size_t round_to_lowest_param(T &value, const char *acceptable_values[], size_t n) {
   static_assert(is_same<T, float>::value || is_same<T, uint32_t>::value,
                 "Type is not supported");
 
   T compared_value = 0;
-  for (size_t i = 0; i < n; i++) {
+  size_t i;
+  for (i = 0; i < n; i++) {
     T converted_value;
     if (is_same<T, float>::value) {
       converted_value = strtof(acceptable_values[i], NULL);
@@ -51,13 +52,16 @@ static void round_to_lowest_param(T &value, const char *acceptable_values[], siz
     compared_value = converted_value;
   }
   value = compared_value;
+
+  return i >= n ? n - 1 : i - 1;
 }
 
-static void get_acceptable_cell_sizes(float &size) {
+static void get_acceptable_cell_sizes(float &size, const char **output_str) {
   const char *cell_size[] = {
       "0.5m", "1.0m", "1.5m", "2.0m", "2.5m", "3.0m", "4.0m", "5.0m",
   };
-  round_to_lowest_param(size, cell_size, array_size(cell_size));
+  size_t idx = round_to_lowest_param(size, cell_size, array_size(cell_size));
+  *output_str = cell_size[idx];
 }
 
 static void get_acceptable_cell_count(uint32_t &depth) {
@@ -68,7 +72,7 @@ static void get_acceptable_cell_count(uint32_t &depth) {
   round_to_lowest_param(depth, depths, array_size(depths));
 }
 
-static void get_acceptable_first_cell_distance(float &distance) {
+static void get_acceptable_first_cell_distance(float &distance, const char **output_str) {
   const char *distances[]{
       "1.5m",  "1.6m",  "1.7m",  "1.8m",  "1.9m",  "2.0m",  "2.1m",  "2.2m",  "2.3m",
       "2.4m",  "2.5m",  "2.6m",  "2.7m",  "2.8m",  "2.9m",  "3.0m",  "3.5m",  "4.0m",
@@ -76,7 +80,8 @@ static void get_acceptable_first_cell_distance(float &distance) {
       "9.0m",  "9.5m",  "10.0m", "11.0m", "12.0m", "13.0m", "14.0m", "15.0m", "16.0m",
       "17.0m", "18.0m", "19.0m", "20.0m", "22.0m",
   };
-  round_to_lowest_param(distance, distances, array_size(distances));
+  size_t idx = round_to_lowest_param(distance, distances, array_size(distances));
+  *output_str = distances[idx];
 }
 
 AanderaaAdcpSensor::AanderaaAdcpSensor()
@@ -152,7 +157,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   // Set interval and ping count
 #if AANDERAA_5400_FW_VERSION > 80129
-  readValidateWriteValue(CMD_INTERVAL, "1 min");
+  readValidateWriteValue(CMD_INTERVAL, "1 hour");
 #else
   readValidateWriteValue(CMD_INTERVAL, "10 min");
 #endif
@@ -165,7 +170,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
   // Perform in burst mode to optimize sleep time of the ADCP
   readValidateWriteValue(CMD_ENABLE_BURST_MODE, CMD_YES);
 #if AANDERAA_5400_FW_VERSION > 80129
-  readValidateWriteValue(CMD_BURST_PERIOD_PLACEMENT, "End Of Interval");
+  readValidateWriteValue(CMD_BURST_PERIOD_PLACEMENT, "Start Of Interval");
 
   // Set simple output
   readValidateWriteValue(CMD_SELECT_PROFILE_PARAMETERS, "Simple Output");
@@ -183,7 +188,8 @@ void AanderaaAdcpSensor::configureSensor(void) {
   // num_cells * (cell_size + center_cell_spacing) + distance_first_cell
   // must be below MAX_MEASURING_DEPTH
   float cell_size = _cellSizeM;
-  get_acceptable_cell_sizes(cell_size);
+  const char *cell_size_str = NULL;
+  get_acceptable_cell_sizes(cell_size, &cell_size_str);
   printf("Cell size: %.02f\n", cell_size);
   uint32_t num_cells = ceil(_sensorDepthM / cell_size);
   get_acceptable_cell_count(num_cells);
@@ -200,7 +206,8 @@ void AanderaaAdcpSensor::configureSensor(void) {
   if (first_cell_distance < blanking_zone) {
     first_cell_distance += blanking_zone;
   }
-  get_acceptable_first_cell_distance(first_cell_distance);
+  const char *first_cell_distance_str = NULL;
+  get_acceptable_first_cell_distance(first_cell_distance, &first_cell_distance_str);
   printf("First cell distance: %.02f\n", first_cell_distance);
 
   if (cell_size != _cellSizeM) {
@@ -211,14 +218,14 @@ void AanderaaAdcpSensor::configureSensor(void) {
 
   readValidateWriteValue(COLUMN_1(CMD_ENABLE_SURFACE_REFERENCE), CMD_NO);
 #if AANDERAA_5400_FW_VERSION > 80129
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), first_cell_distance);
-  readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), cell_size);
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL_CENTER), first_cell_distance_str);
+  readValidateWriteValue(COLUMN_1(CMD_CELL_CENTER_SPACING), cell_size_str);
 #else
-  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL), first_cell_distance);
+  readValidateWriteValue(COLUMN_1(CMD_DISTANCE_FIRST_CELL), first_cell_distance_str);
   readValidateWriteValue(COLUMN_1(CMD_CELL_OVERLAP), "0%");
 #endif
   readValidateWriteValue(COLUMN_1(CMD_NUMBER_OF_CELLS), num_cells);
-  readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), cell_size);
+  readValidateWriteValue(COLUMN_1(CMD_CELL_SIZE), cell_size_str);
   readValidateWriteValue(COLUMN_2(CMD_ENABLE_COLUMN), CMD_NO);
   readValidateWriteValue(COLUMN_3(CMD_ENABLE_COLUMN), CMD_NO);
 
