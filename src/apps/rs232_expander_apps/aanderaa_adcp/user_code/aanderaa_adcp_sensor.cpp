@@ -156,11 +156,7 @@ void AanderaaAdcpSensor::configureSensor(void) {
   readValidateWriteValue(CMD_ENABLE_TILT_COMPENSATION, CMD_YES);
 
   // Set interval and ping count
-#if AANDERAA_5400_FW_VERSION > 80129
   readValidateWriteValue(CMD_INTERVAL, "1 hour");
-#else
-  readValidateWriteValue(CMD_INTERVAL, "10 min");
-#endif
   readValidateWriteValue(CMD_PING_COUNT, static_cast<AanderaaUint>(600));
 
   // Narrowband is recommended to use If the sensor is moving (as under a buoy
