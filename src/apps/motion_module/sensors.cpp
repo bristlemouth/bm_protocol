@@ -5,6 +5,7 @@
 #include "ina232.h"
 #include "kellerSampler.h"
 #include "lpm.h"
+#include "spotter.h"
 #include <stdbool.h>
 #include <stdint.h>
 #if defined(IMU_BNO085)
@@ -14,7 +15,8 @@
 #endif
 
 static void keller_sample_cb(float mbar, float temp) {
-  bm_debug("pressure: %" PRIu64 ",%f,%f\n", uptimeGetMicroSeconds(), mbar, temp);
+  spotter_log(0, "pressure_raw.log", USE_TIMESTAMP, "pressure: %" PRIu64 ",%f,%f\n",
+              uptimeGetMicroSeconds(), mbar, temp);
 }
 
 // Sampler initialization functions (so we don't need individual headers)
@@ -69,9 +71,10 @@ void sensorsHandle(void) {
   if (imu.data_ready()) {
     IMUReading reading = {};
     while (imu.data_get(&reading) == BmOK) {
-      bm_debug("imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x,
-               reading.acc.y, reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z,
-               reading.mag.x, reading.mag.y, reading.mag.z);
+      spotter_log(0, "imu_raw.log", USE_TIMESTAMP,
+                  "imu: %" PRIu64 ",%f,%f,%f,%f,%f,%f,%f,%f,%f\n", reading.ns, reading.acc.x,
+                  reading.acc.y, reading.acc.z, reading.gyro.x, reading.gyro.y, reading.gyro.z,
+                  reading.mag.x, reading.mag.y, reading.mag.z);
     }
   }
 }
