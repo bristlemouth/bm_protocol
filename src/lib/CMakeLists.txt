@@ -73,6 +73,7 @@ set(LIB_FILES
     ${LIB_DIR}/drivers/abstract/abstract_st_sensor.cpp
     ${LIB_DIR}/drivers/bm_dfu_wrapper.cpp
     ${LIB_DIR}/drivers/bm_rtc_wrapper.c
+    ${LIB_DIR}/drivers/aanderaa_sensor.cpp
     ${LIB_DIR}/drivers/adin2111/src/adi_hal.c
     ${LIB_DIR}/drivers/bme280driver.cpp
     ${LIB_DIR}/drivers/htu21d.cpp
