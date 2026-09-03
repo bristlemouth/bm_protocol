@@ -2,6 +2,10 @@
 # NOTE: Bootloader must be built first so it can be included in
 # unified image for later builds
 #
+# NOTE: Changing the names for the builds in this file can break
+# automation steps that rely on these names remaining consistent.
+# Change carefully.
+#
 - name: bootloader_signing_required
   description: Production Bootloader - Requires Sofar Signed App Images
   type: build_fw
