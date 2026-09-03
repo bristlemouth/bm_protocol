@@ -201,7 +201,13 @@ class AutoBuilder:
         if self.version and len(self.version):
             cmd += [f"--version={self.version}"]
 
-        cmd += ["--output-name", config["name"]]
+        output_name = ""
+        if config["args"]["build_type"]:
+            output_name = f"{config["name"]}-{config["args"]["build_type"].lower()}"
+        else:
+            output_name = config["name"]
+
+        cmd += ["--output-name", output_name]
 
         result = self.run_command(cmd)
 
@@ -339,7 +345,7 @@ class AutoBuilder:
             self._setup_keys(tmpdirname)
 
             for name, config in self._configs.items():
-                print(f"Building: {name}")
+                print(f"Building: {name} - {config["args"]["build_type"]}")
                 external_dir_name = None
                 external_dir = self._setup_external_dir(config)
                 if external_dir:
