@@ -4,7 +4,7 @@
 #
 # NOTE: Changing the names for the builds in this file can break
 # automation steps that rely on these names remaining consistent.
-# Change carefully.
+# Change names carefully.
 #
 - name: bootloader_signing_required
   description: Production Bootloader - Requires Sofar Signed App Images
