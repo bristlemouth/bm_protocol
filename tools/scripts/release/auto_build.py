@@ -249,7 +249,6 @@ class AutoBuilder:
         try:
             # Run cmake setup commands
             self.setup_cmake_dir(config, ext_dir)
-
             # Compile firmware
             self.build_fw(config)
 
@@ -262,6 +261,7 @@ class AutoBuilder:
             if self.out_dir and os.path.exists(config["zip"]):
                 src = config["zip"]
                 dest = os.path.join(self.out_dir, os.path.basename(config["zip"]))
+                # dest = self.out_dir
                 print(f"Copying {src} to {dest}")
                 shutil.copy(src, dest)
 
@@ -398,7 +398,7 @@ if args.out_dir:
         print(f"Creating {args.out_dir}")
         pathlib.Path(args.out_dir).mkdir(parents=True, exist_ok=True)
 
-    builder.out_dir = args.out_dir
+    builder.out_dir = os.path.abspath(args.out_dir)
 
 builder.is_prod = args.prod
 builder.version = args.version
