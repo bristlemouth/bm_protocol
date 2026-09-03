@@ -29,7 +29,7 @@
     build_type: Debug
   sign: true
 
-- name: bridge_release
+- name: bridge-release
   description: Sofar BM Bridge - Release
   type: build_fw
   args:
@@ -47,7 +47,7 @@
     build_type: Debug
   sign: false
 
-- name: bm_soft_module_release
+- name: bm_soft_module-release
   description: BM Soft Module - Release
   type: build_fw
   args:
@@ -103,7 +103,7 @@
   sign: false
   legacy: true
 
-- name: bm_rbr_release
+- name: bm_rbr-release
   description: BM RBR - Release
   type: build_fw
   args:
@@ -112,7 +112,7 @@
     build_type: Release
   sign: true
 
-- name: seapoint_turbidity_release
+- name: seapoint_turbidity-release
   description: BM Seapoint Turbidity - Release
   type: build_fw
   args:
@@ -121,7 +121,7 @@
     build_type: Release
   sign: true
 
-- name: aanderaa_release
+- name: aanderaa-release
   description: Aanderaa Current Meter - Release
   type: build_fw
   args:
@@ -130,7 +130,7 @@
     build_type: Release
   sign: true
 
-- name: aanderaa_salinity_release
+- name: aanderaa_salinity-release
   description: Aanderaa Salinity Sensor - Release
   type: build_fw
   args:
@@ -139,7 +139,7 @@
     build_type: Release
   sign: true
 
-- name: pme_do_sensor_release
+- name: pme_do_sensor-release
   type: build_fw
   args:
     app: pme_do_sensor
@@ -168,7 +168,7 @@
     external_init: true
   sign: false
 
-- name: mavlink_bridge_release
+- name: mavlink_bridge-release
   type: build_fw
   args:
     app: mavlink_bridge
