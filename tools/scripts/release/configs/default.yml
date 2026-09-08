@@ -2,6 +2,19 @@
 # NOTE: Bootloader must be built first so it can be included in
 # unified image for later builds
 #
+# NOTE: Changing the names for the builds in this file can break
+# automation steps that rely on these names remaining consistent.
+# Change names carefully.
+#
+# Output files are created with this format:
+# ${name}-${build type}-${version tag}.${file extension}
+#
+# Build type is pulled from this config file and appended
+# to the output naming in auto_build.py,
+# the script that uses this config file.
+#
+# The version tag is provided as an input into auto_build.py.
+#
 - name: bootloader_signing_required
   description: Production Bootloader - Requires Sofar Signed App Images
   type: build_fw
@@ -20,7 +33,7 @@
     build_type: Release
   sign: false
 
-- name: bridge_debug
+- name: bridge
   description: Sofar BM Bridge - Debug
   type: build_fw
   args:
@@ -29,7 +42,7 @@
     build_type: Debug
   sign: true
 
-- name: bridge_release
+- name: bridge
   description: Sofar BM Bridge - Release
   type: build_fw
   args:
@@ -38,7 +51,7 @@
     build_type: Release
   sign: true
 
-- name: hello_world_debug
+- name: hello_world
   description: Hello World - Debug
   type: build_fw
   args:
@@ -47,7 +60,7 @@
     build_type: Debug
   sign: false
 
-- name: bm_soft_module_release
+- name: bm_soft_module
   description: BM Soft Module - Release
   type: build_fw
   args:
@@ -56,7 +69,7 @@
     build_type: Release
   sign: true
 
-- name: serial_bridge_debug
+- name: serial_bridge
   description: Serial Bridge - Debug
   type: build_fw
   args:
@@ -65,7 +78,7 @@
     build_type: Debug
   sign: false
 
-- name: bringup_mote_debug
+- name: bringup_mote
   description: Bringup Mote - Debug
   type: build_fw
   args:
@@ -84,7 +97,7 @@
   sign: false
   legacy: true
 
-- name: bringup_bridge_debug
+- name: bringup_bridge
   description: Bringup Bridge - Debug
   type: build_fw
   args:
@@ -103,7 +116,7 @@
   sign: false
   legacy: true
 
-- name: bm_rbr_release
+- name: bm_rbr
   description: BM RBR - Release
   type: build_fw
   args:
@@ -112,7 +125,7 @@
     build_type: Release
   sign: true
 
-- name: seapoint_turbidity_release
+- name: seapoint_turbidity
   description: BM Seapoint Turbidity - Release
   type: build_fw
   args:
@@ -121,7 +134,7 @@
     build_type: Release
   sign: true
 
-- name: aanderaa_release
+- name: aanderaa
   description: Aanderaa Current Meter - Release
   type: build_fw
   args:
@@ -130,7 +143,7 @@
     build_type: Release
   sign: true
 
-- name: aanderaa_salinity_release
+- name: aanderaa_salinity
   description: Aanderaa Salinity Sensor - Release
   type: build_fw
   args:
@@ -139,7 +152,7 @@
     build_type: Release
   sign: true
 
-- name: pme_do_sensor_release
+- name: pme_do_sensor
   type: build_fw
   args:
     app: pme_do_sensor
@@ -168,7 +181,7 @@
     external_init: true
   sign: false
 
-- name: mavlink_bridge_release
+- name: mavlink_bridge
   type: build_fw
   args:
     app: mavlink_bridge
