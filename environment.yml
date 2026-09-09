@@ -31,6 +31,7 @@ dependencies:
       - gitpython
       - intelhex
       - memfault-cli==1.0
+      - notehub-py==6.5.0
       - pytest
       - python-dotenv
       - regex

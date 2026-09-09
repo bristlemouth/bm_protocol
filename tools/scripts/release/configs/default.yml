@@ -45,6 +45,7 @@
 - name: bridge
   description: Sofar BM Bridge - Release
   type: build_fw
+  notehub: true
   args:
     app: bridge
     bsp: bridge_v1_0
@@ -63,6 +64,7 @@
 - name: bm_soft_module
   description: BM Soft Module - Release
   type: build_fw
+  notehub: true
   args:
     app: bm_soft_module
     bsp: bm_mote_spi_v1_0
@@ -119,6 +121,7 @@
 - name: bm_rbr
   description: BM RBR - Release
   type: build_fw
+  notehub: true
   args:
     app: bm_rbr
     bsp: bm_mote_rs232
@@ -128,6 +131,7 @@
 - name: seapoint_turbidity
   description: BM Seapoint Turbidity - Release
   type: build_fw
+  notehub: true
   args:
     app: seapoint_turbidity
     bsp: bm_mote_rs232
@@ -137,6 +141,7 @@
 - name: aanderaa
   description: Aanderaa Current Meter - Release
   type: build_fw
+  notehub: true
   args:
     app: aanderaa
     bsp: bm_mote_rs232
@@ -146,6 +151,7 @@
 - name: aanderaa_salinity
   description: Aanderaa Salinity Sensor - Release
   type: build_fw
+  notehub: true
   args:
     app: aanderaa_salinity
     bsp: bm_mote_rs232
@@ -154,6 +160,7 @@
 
 - name: pme_do_sensor
   type: build_fw
+  notehub: true
   args:
     app: pme_do_sensor
     bsp: bm_mote_bristleback_v1_0
@@ -162,6 +169,7 @@
 
 - name: borealis
   type: ext_fw
+  notehub: true
   repo: git@github.com:appliedoceansciences/borealis_mote_firmware.git
   sha: 4c61e0c
   args:
@@ -172,6 +180,7 @@
 
 - name: borealis2
   type: ext_fw
+  notehub: true
   repo: git@github.com:appliedoceansciences/borealis_mote_firmware.git
   sha: aefeefa
   args:
@@ -183,6 +192,7 @@
 
 - name: mavlink_bridge
   type: build_fw
+  notehub: true
   args:
     app: mavlink_bridge
     bsp: bm_mote_v1.0

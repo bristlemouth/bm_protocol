@@ -15,7 +15,12 @@ import subprocess
 import sys
 import tempfile
 import yaml
+import zipfile
 from pprint import pprint
+
+NOTEHUB_IMAGE_SUFFIX = ".elf.dfu.bin"
+NOTEHUB_NOTES = "{name} {release} {version}"
+NOTEHUB_LOCAL_NOTES = "Local {name} Build {version}"
 
 
 def get_project_root():
@@ -50,6 +55,7 @@ class AutoBuilder:
         self.verbose = verbose
         self.out_dir = None
         self.is_prod = False
+        self.notehub = False
         self.version = None
         self.ed25519_priv_key: str | None = None
         self.ed25519_priv_key_file = None
@@ -201,9 +207,8 @@ class AutoBuilder:
         if self.version and len(self.version):
             cmd += [f"--version={self.version}"]
 
-        output_name = ""
         if config["args"]["build_type"]:
-            output_name = f"{config["name"]}-{config["args"]["build_type"].lower()}"
+            output_name = f"{config['name']}-{config['args']['build_type'].lower()}"
         else:
             output_name = config["name"]
 
@@ -224,6 +229,45 @@ class AutoBuilder:
         # Make sure we were able to read out the .elf file
         if "zip" not in config:
             raise ValueError("Unable to read .zip archive filename from output")
+
+    # Publish the packaged and correctly named image to Notehub
+    def notehub_upload(self, config):
+        from notehub_upload import release_version_from_filename, upload_firmware
+
+        name = config.get("notehub_name") or config.get("description") or config["name"]
+        notes_template = (
+            NOTEHUB_NOTES if os.getenv("GITHUB_ACTIONS") else NOTEHUB_LOCAL_NOTES
+        )
+
+        with zipfile.ZipFile(config["zip"]) as release_zip:
+            images = [
+                image
+                for image in release_zip.namelist()
+                if image.endswith(NOTEHUB_IMAGE_SUFFIX)
+            ]
+
+            if not images:
+                raise ValueError(
+                    f"No {NOTEHUB_IMAGE_SUFFIX} image found in {config['zip']}"
+                )
+
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                for image in images:
+                    path = release_zip.extract(image, tmpdirname)
+                    filename = os.path.basename(path)
+                    version = release_version_from_filename(filename) or self.version or ""
+                    release = (
+                        "Release Candidate" if "-rc" in version.lower() else "Release"
+                    )
+
+                    upload_firmware(
+                        path,
+                        notes=notes_template.format(
+                            name=name,
+                            release=release,
+                            version=version,
+                        ),
+                    )
 
     def run_command(self, command):
         if self.verbose:
@@ -264,6 +308,9 @@ class AutoBuilder:
                 self.memfault_upload(config)
 
             self.package_release(config)
+
+            if self.notehub and config.get("notehub"):
+                self.notehub_upload(config)
 
             if self.out_dir and os.path.exists(config["zip"]):
                 src = config["zip"]
@@ -345,7 +392,7 @@ class AutoBuilder:
             self._setup_keys(tmpdirname)
 
             for name, config in self._configs.items():
-                print(f"Building: {name} - {config["args"]["build_type"]}")
+                print(f"Building: {name} - {config['args']['build_type']}")
                 external_dir_name = None
                 external_dir = self._setup_external_dir(config)
                 if external_dir:
@@ -390,6 +437,11 @@ parser.add_argument(
 parser.add_argument(
     "--prod", action="store_true", help="This is a production (non-eng) build"
 )
+parser.add_argument(
+    "--notehub",
+    action="store_true",
+    help="Upload images to Notehub (for configs with notehub: true)",
+)
 parser.add_argument("--version", help="Version to use for release")
 parser.add_argument(
     "config",
@@ -407,6 +459,7 @@ if args.out_dir:
     builder.out_dir = os.path.abspath(args.out_dir)
 
 builder.is_prod = args.prod
+builder.notehub = args.notehub
 builder.version = args.version
 
 # Get signing/encryption keys from env variables(optional)
