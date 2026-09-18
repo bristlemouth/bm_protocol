@@ -1,0 +1,329 @@
+#include "aanderaa_sensor.h"
+#include "bm_config.h"
+#include "bm_os.h"
+
+/*!
+ @brief Wake the aanderaa sensor
+
+ @return BmOK on success
+         BmErr on failure
+ */
+BmErr AanderaaSensor::wakeSensor(void) {
+  constexpr uint8_t wake_retry_max = 3;
+  constexpr uint32_t wake_wait_ms = 1000;
+  uint8_t retries = 0;
+
+  BmErr err;
+  do {
+    bm_delay(wake_wait_ms);
+    err = sendCommand(CMD_WAKE);
+  } while (err != BmOK && retries++ < wake_retry_max);
+
+  return err;
+}
+
+/*!
+ @brief Start streaming data from the sensor at the configured interval
+ */
+void AanderaaSensor::startStreaming(uint32_t timeout_ms) { sendCommand(CMD_START, timeout_ms); }
+
+/*!
+ @brief Stop streaming data from the sensor
+
+ @details This is useful for setting configurations and reading command output
+          from the sensor.
+ */
+void AanderaaSensor::stopStreaming(void) { sendCommand(CMD_STOP); }
+
+/*!
+ @brief Set default configurations for aanderaa sensors
+
+ @details The configurations set here align with how bristlemouth devices will
+          poll data from the sensor.
+
+ @return BmOK on success
+         BmErr on failure
+ */
+BmErr AanderaaSensor::setDefaultConfigs(void) {
+  // passkey command
+  BmErr err = sendCommand(CMD_SET_PASSKEY_1000);
+
+  // enable sleep
+  bm_err_check(err, readValidateWriteValue(CMD_ENABLE_SLEEP, CMD_YES));
+
+  // set mode
+  bm_err_check(err, readValidateWriteValue(CMD_MODE, "Smart Sensor Terminal"));
+
+  // enable xon/xoff
+  bm_err_check(err, readValidateWriteValue(CMD_FLOW_CONTROL, "Xon/Xoff"));
+
+  // set sleep timeout to 10s
+  bm_err_check(err, readValidateWriteValue(CMD_COMM_TIMEOUT, "10 s"));
+
+  // set lower priveledge level
+  bm_err_check(err, sendCommand(CMD_SET_PASSKEY_1));
+
+  //  disable Polled Mode
+  bm_err_check(err, readValidateWriteValue(CMD_ENABLE_POLLEDMODE, CMD_NO));
+
+  // disable text
+  bm_err_check(err, readValidateWriteValue(CMD_ENABLE_TEXT, CMD_NO));
+
+  // enable decimalformat
+  bm_err_check(err, readValidateWriteValue(CMD_ENABLE_DECIMALFORMAT, CMD_YES));
+
+  return err;
+}
+
+/*!
+ @brief Save the configuration to the sensor
+
+ @details Will only save the configuration if it is marked dirty, AKA an actual
+          config value has been written to the sensor.
+
+ @return BmOK on success
+         BmEALREADY if the configs are not dirty
+         BmErr on another failure
+ */
+BmErr AanderaaSensor::saveConfiguration(void) {
+  if (!_sensorConfigDirty) {
+    return BmEALREADY;
+  }
+
+  BmErr err = sendCommand(CMD_SAVE, _saveTimeMs);
+  _sensorConfigDirty = false;
+
+  return err;
+}
+
+/*!
+ @brief Resets the sensor
+
+ @details This is important to do after the sensor's configuration has been
+          saved
+
+ @param timeout_ms timeout to wait for sensor to reset in milliseconds
+ */
+void AanderaaSensor::resetSensor(uint32_t timeout_ms) { sendCommand(CMD_RESET, timeout_ms); }
+
+/*!
+ @brief Prints a long output command from a device
+
+ @details This includes the help and Get All command which print many
+          lines to the terminal
+ */
+void AanderaaSensor::printLongOutput(const char *command) {
+  PLUART::flush();
+  PLUART::write((uint8_t *)command, strlen(command));
+  clearCmdBuffer();
+  uint32_t read_duration_ms = 2000;
+  uint32_t start_time = pdTICKS_TO_MS(xTaskGetTickCount());
+  static constexpr uint8_t max_count = 2;
+  uint8_t count = 0;
+
+  while ((pdTICKS_TO_MS(xTaskGetTickCount()) - start_time) < read_duration_ms) {
+    if (PLUART::lineAvailable()) {
+      uint16_t read_len = PLUART::readLine(_cmd_buffer, sizeof(_cmd_buffer));
+      if (read_len > 0) {
+        debug_printf("%.*s\n", read_len, _cmd_buffer);
+      }
+
+      // Cmd is over once 2 # are received
+      if (_cmd_buffer[0] == '#' && ++count == max_count) {
+        break;
+      }
+    }
+  }
+}
+
+/*!
+ @brief Print help command to console, debug builds only
+ */
+void AanderaaSensor::getSensorHelp(void) { printLongOutput("help\r\n"); }
+
+/*!
+ @brief Print get all command to console, debug builds only
+ */
+void AanderaaSensor::getAllConfigurationParameters(void) { printLongOutput(CMD_GET_ALL); }
+
+/*!
+ @brief Parse And Assign Unsigned Integer Value From Sensor Output String
+
+ @param output the output string from the sensor to parse
+ @param length the length of the output string
+ @param value pointer to store the parsed unsigned integer value
+ */
+void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
+                                        AanderaaSensor::AanderaaUint *value) {
+  (void)length;
+
+  if (value) {
+    *value = (uint32_t)strtoul(output, NULL, 10);
+  }
+}
+
+/*!
+ @brief Parse And Assign Float Value From Sensor Output String
+
+ @param output the output string from the sensor to parse
+ @param length unused
+ @param value pointer to store the parsed float value
+ */
+void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
+                                        AanderaaSensor::AanderaaFloat *value) {
+  (void)length;
+
+  if (value) {
+    *value = strtof(output, NULL);
+  }
+}
+
+/*!
+ @brief Copy And Assign String Value From Sensor Output String
+
+ @param output the output string from the sensor to copy
+ @param length the length of the output string
+ @param value pointer to string buffer to store the copied string
+ */
+void AanderaaSensor::checkTypeAndAssign(const char *output, uint16_t length,
+                                        AanderaaSensor::AanderaaString *value) {
+  const size_t copy_len = sizeof(AanderaaString) - 1;
+
+  if (length > copy_len) {
+    return;
+  }
+
+  if (value) {
+    strncpy(*value, output, copy_len);
+    (*value)[copy_len] = '\0';
+  }
+}
+
+/*!
+ @brief Send Command To Aanderaa Sensor Without Retrieving Response Value
+
+ @details Sends a command string to the Aanderaa sensor via UART and waits for
+          an acknowledgment response. This is a convenience wrapper for commands
+          that don't need to retrieve a value.
+
+ @param command the command string to send to the sensor
+ @param timeout_ms timeout in milliseconds to wait for sensor acknowledgment
+
+ @return BmOK on success
+ @return BmEINVAL if command is NULL or timeout_ms is 0
+ @return BmETIMEDOUT if no response received within timeout
+ @return BmEBADMSG if sensor responds with error acknowledgment
+ */
+BmErr AanderaaSensor::sendCommand(const char *command, uint32_t timeout_ms) {
+  return sendCommand(command, static_cast<uint32_t *>(nullptr), timeout_ms);
+}
+
+/*!
+ @brief Clear buffer used for 
+ */
+void AanderaaSensor::clearCmdBuffer(void) { memset(_cmd_buffer, 0, sizeof(_cmd_buffer)); }
+
+/*!
+ @brief Compares UINT Values And Populates Set Buffer To Send Values
+
+ @details If the values for read and expected do not match, the buffer used to
+          set the parameter is populated.
+
+ @param parameter parameter to set if values do not match
+ @param buf buffer to populate to send the set command
+ @param read read value from 5990
+ @param expected expected value
+
+ @return true if the read value matches the expected value
+         false if the read value does not match the expected value
+ */
+bool AanderaaSensor::compareValuesPopulateBuffer(const char *parameter,
+                                                 AanderaaSensor::AanderaaString *buf,
+                                                 const AanderaaSensor::AanderaaUint read,
+                                                 const AanderaaSensor::AanderaaUint expected) {
+
+  if (read == expected) {
+    return true;
+  }
+
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%" PRIu32 ")\r\n", CMD_SET, parameter,
+           expected);
+  return false;
+}
+
+/*!
+ @brief Compares Float Values And Populates Set Buffer To Send Values
+
+ @details If the values for read and expected do not match, the buffer used to
+          set the parameter is populated.
+
+ @param parameter parameter to set if values do not match
+ @param buf buffer to populate to send the set command
+ @param read read value from 5990
+ @param expected expected value
+
+ @return true if the read value matches the expected value
+         false if the read value does not match the expected value
+ */
+bool AanderaaSensor::compareValuesPopulateBuffer(const char *parameter,
+                                                 AanderaaSensor::AanderaaString *buf,
+                                                 const AanderaaSensor::AanderaaFloat read,
+                                                 const AanderaaSensor::AanderaaFloat expected) {
+
+  constexpr float epsilon = 0.0001f;
+  if (fabs(read - expected) < epsilon) {
+    return true;
+  }
+
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%f)\r\n", CMD_SET, parameter, expected);
+  return false;
+}
+
+/*!
+ @brief Compares String Values And Populates Set Buffer To Send Values
+
+ @details If the values for read and expected do not match, the buffer used to
+          set the parameter is populated.
+
+ @param parameter parameter to set if values do not match
+ @param buf buffer to populate to send the set command
+ @param read read value from 5990
+ @param expected expected value
+
+ @return true if the read value matches the expected value
+         false if the read value does not match the expected value
+ */
+bool AanderaaSensor::compareValuesPopulateBuffer(
+    const char *parameter, AanderaaSensor::AanderaaString *buf,
+    const AanderaaSensor::AanderaaString read, const AanderaaSensor::AanderaaString expected) {
+
+  if (!strncmp(read, expected, sizeof(AanderaaString))) {
+    return true;
+  }
+
+  snprintf(*buf, sizeof(AanderaaString), "%s %s(%s)\r\n", CMD_SET, parameter, expected);
+  return false;
+}
+
+/*!
+ @brief Overloaded Wrapper To Accept String Literals For Expected Value
+
+ @param parameter parameter to get/set
+ @param expected_val expected value from get command
+ @param retries number of times to retry getting/setting the parameter
+
+ @return BmOk on success,
+         BmEINVAL if expected value is longer than AanderaaString
+ */
+BmErr AanderaaSensor::readValidateWriteValue(const char *parameter, const char *expected_val,
+                                             uint8_t retries) {
+  AanderaaString str_buf = {};
+
+  if (strlen(expected_val) > sizeof(str_buf)) {
+    return BmEINVAL;
+  }
+
+  strncpy(str_buf, expected_val, sizeof(str_buf));
+
+  return readValidateWriteValue<AanderaaString>(parameter, str_buf, retries);
+}
