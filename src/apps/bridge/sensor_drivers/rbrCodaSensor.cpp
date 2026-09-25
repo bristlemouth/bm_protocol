@@ -1,17 +1,16 @@
 #include "rbrCodaSensor.h"
 #include "app_config.h"
-#include "avgSampler.h"
-#include "spotter.h"
-#include "pubsub.h"
+#include "app_util.h"
 #include "bm_rbr_data_msg.h"
 #include "bridgeLog.h"
 #include "cbor.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <new>
 #ifdef RAW_PRESSURE_ENABLE
 #include "rbrPressureProcessor.h"
@@ -128,7 +127,7 @@ void RbrCodaSensor::aggregate(void) {
     if (temp_deg_c.getNumSamples() >= MIN_READINGS_FOR_AGGREGATION) {
       aggs.temp_mean_deg_c = temp_deg_c.getMean();
       aggs.pressure_mean_deci_bar = pressure_deci_bar.getMean();
-      aggs.pressure_stdev_deci_bar = pressure_deci_bar.getStd(aggs.pressure_mean_deci_bar);
+      aggs.pressure_stdev_deci_bar = pressure_deci_bar.getStd();
       aggs.reading_count = reading_count;
 
       if (aggs.temp_mean_deg_c < TEMP_SAMPLE_MEMBER_MIN) {
@@ -199,7 +198,7 @@ void RbrCodaSensor::aggregate(void) {
 }
 
 RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
-                            uint32_t averager_max_samples, uint32_t configured_reading_period_ms) {
+                            uint32_t configured_reading_period_ms) {
   RbrCoda_t *new_sub = static_cast<RbrCoda_t *>(pvPortMalloc(sizeof(RbrCoda_t)));
   new_sub = new (new_sub) RbrCoda_t();
   configASSERT(new_sub);
@@ -211,8 +210,6 @@ RbrCoda_t *createRbrCodaSub(uint64_t node_id, uint32_t rbr_coda_agg_period_ms,
   new_sub->type = SENSOR_TYPE_RBR_CODA;
   new_sub->next = NULL;
   new_sub->rbr_coda_agg_period_ms = rbr_coda_agg_period_ms;
-  new_sub->temp_deg_c.initBuffer(averager_max_samples);
-  new_sub->pressure_deci_bar.initBuffer(averager_max_samples);
   new_sub->reading_count = 0;
   new_sub->configured_reading_period_ms = configured_reading_period_ms;
   return new_sub;

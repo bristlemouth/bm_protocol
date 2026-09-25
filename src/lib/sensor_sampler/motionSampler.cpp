@@ -167,7 +167,6 @@ static void motion_task(void *arg) {
 
   static constexpr uint8_t num_fifo_readings = 12;
 
-  //TODO: add LISM compass to sensor hub
   std::array<LSM6DSV::LSM6DSVSensorHub, 1> sensor_hub = {lis2mdl->m_sensor_hub};
 
   lsm6dsv->start_stream(sensor_hub, num_fifo_readings);

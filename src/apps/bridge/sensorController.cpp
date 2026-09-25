@@ -54,8 +54,7 @@ template <typename T> struct SensorSubscriptionCtx {
     uint32_t *ms;
     uint32_t default_ms;
   } reading_period;
-  uint32_t samples_pad;
-  T *(*create_fn)(uint64_t node_id, uint32_t sample_duration_ms, uint32_t max_samples);
+  T *(*create_fn)(uint64_t node_id, uint32_t sample_duration_ms);
 };
 
 static sensorsControllerCtx_t _ctx;
@@ -69,7 +68,6 @@ static const SensorSubscriptionCtx<AanderaaConductivity_t> aanderaa_conductivity
             .ms = &_ctx.aanderaa_conductivity_reading_period_ms,
             .default_ms = AanderaaConductivitySensor::get_default_reading_period_ms(),
         },
-    .samples_pad = AanderaaConductivity_t::N_SAMPLES_PAD,
     .create_fn = createAanderaaConductivitySub,
 };
 
@@ -117,11 +115,8 @@ create_and_configure_sensor_subscription(const SensorSubscriptionCtx<T> &subscri
                         strlen(subscription_config.app_name))) {
     if (!sensorControllerFindSensorById(reply.node_id, subscription_config.sensor_type) &&
         *subscription_config.reading_period.ms) {
-      uint32_t AVERAGER_MAX_SAMPLES =
-          (sample_duration_ms / *subscription_config.reading_period.ms) +
-          subscription_config.samples_pad;
-      AbstractSensor *sensor_sub = subscription_config.create_fn(
-          reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+      AbstractSensor *sensor_sub =
+          subscription_config.create_fn(reply.node_id, sample_duration_ms);
       if (sensor_sub) {
         abstractSensorAddSensorSub(sensor_sub);
       }
@@ -352,10 +347,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "aanderaa",
                          MIN(reply.app_name_strlen, strlen("aanderaa"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_AANDERAA)) {
-          uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.current_reading_period_ms) + Aanderaa_t::N_SAMPLES_PAD;
-          Aanderaa_t *aanderaa_sub =
-              createAanderaaSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          Aanderaa_t *aanderaa_sub = createAanderaaSub(reply.node_id, sample_duration_ms);
           if (aanderaa_sub) {
             abstractSensorAddSensorSub(aanderaa_sub);
           }
@@ -363,10 +355,7 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "bm_soft_module",
                          MIN(reply.app_name_strlen, strlen("bm_soft_module"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_SOFT)) {
-          uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.soft_reading_period_ms) + Soft_t::N_SAMPLES_PAD;
-          Soft_t *soft_sub =
-              createSoftSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          Soft_t *soft_sub = createSoftSub(reply.node_id, sample_duration_ms);
           if (soft_sub) {
             abstractSensorAddSensorSub(soft_sub);
           }
@@ -374,11 +363,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "bm_rbr",
                          MIN(reply.app_name_strlen, strlen("bm_rbr"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_RBR_CODA)) {
-          uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.rbr_coda_reading_period_ms) + RbrCoda_t::N_SAMPLES_PAD;
-          RbrCoda_t *rbr_coda_sub =
-              createRbrCodaSub(reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES,
-                               _ctx.rbr_coda_reading_period_ms);
+          RbrCoda_t *rbr_coda_sub = createRbrCodaSub(reply.node_id, sample_duration_ms,
+                                                     _ctx.rbr_coda_reading_period_ms);
           if (rbr_coda_sub) {
             abstractSensorAddSensorSub(rbr_coda_sub);
           }
@@ -386,11 +372,8 @@ static bool node_info_reply_cb(bool ack, uint32_t msg_id, size_t service_strlen,
       } else if (strncmp(reply.app_name, "seapoint_turbidity",
                          MIN(reply.app_name_strlen, strlen("seapoint_turbidity"))) == 0) {
         if (!sensorControllerFindSensorById(reply.node_id, SENSOR_TYPE_SEAPOINT_TURBIDITY)) {
-          uint32_t AVERAGER_MAX_SAMPLES =
-              (sample_duration_ms / _ctx.seapoint_turbidity_reading_period_ms) +
-              SeapointTurbidity_t::N_SAMPLES_PAD;
-          SeapointTurbidity_t *seapoint_turbidity_sub = createSeapointTurbiditySub(
-              reply.node_id, sample_duration_ms, AVERAGER_MAX_SAMPLES);
+          SeapointTurbidity_t *seapoint_turbidity_sub =
+              createSeapointTurbiditySub(reply.node_id, sample_duration_ms);
           if (seapoint_turbidity_sub) {
             abstractSensorAddSensorSub(seapoint_turbidity_sub);
           }

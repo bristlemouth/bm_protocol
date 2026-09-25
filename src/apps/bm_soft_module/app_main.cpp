@@ -17,6 +17,7 @@
 
 #include "app_pub_sub.h"
 #include "app_util.h"
+#include "bm_config.h"
 #include "bristlefin.h"
 #include "bristlemouth_client.h"
 #include "bsp.h"
@@ -38,6 +39,7 @@
 #include "gpioISR.h"
 #include "l2.h"
 #include "memfault_platform_core.h"
+#include "memory_metrics.h"
 #include "ms5803.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
@@ -389,6 +391,9 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init();
+#if (bm_metrics_enabled != 0)
+  memory_metrics_init();
+#endif
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsPollIntervalMs",
                   strlen("sensorsPollIntervalMs"), &sys_cfg_sensorsPollIntervalMs);
   get_config_uint(BM_CFG_PARTITION_SYSTEM, "sensorsCheckIntervalS",

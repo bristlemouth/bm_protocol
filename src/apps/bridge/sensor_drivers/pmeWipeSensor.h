@@ -26,7 +26,6 @@ typedef struct PmeWipeSensor : public AbstractSensor {
 
   // 4 hours default wiper reading period
   static constexpr uint32_t DEFAULT_PME_WIPER_READING_PERIOD_MS = 4 * 60 * 60 * 1000;
-  static constexpr uint32_t N_SAMPLES_PAD = 2;
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 1;
 
 public:

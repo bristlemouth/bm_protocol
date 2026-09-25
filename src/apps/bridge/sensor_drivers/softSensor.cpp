@@ -1,16 +1,15 @@
 #include "softSensor.h"
 #include "app_config.h"
-#include "avgSampler.h"
-#include "spotter.h"
-#include "pubsub.h"
+#include "app_util.h"
 #include "bm_soft_data_msg.h"
 #include "bridgeLog.h"
 #include "device_info.h"
+#include "pubsub.h"
 #include "reportBuilder.h"
 #include "semphr.h"
+#include "spotter.h"
 #include "stm32_rtc.h"
 #include "topology_sampler.h"
-#include "app_util.h"
 #include <new>
 
 // TODO - get this from the sensor node itself
@@ -145,8 +144,7 @@ void SoftSensor::aggregate(void) {
   vPortFree(log_buf);
 }
 
-Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
-                      uint32_t averager_max_samples) {
+Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms) {
   Soft_t *new_sub = static_cast<Soft_t *>(pvPortMalloc(sizeof(Soft_t)));
   new_sub = new (new_sub) Soft_t();
   configASSERT(new_sub);
@@ -158,7 +156,6 @@ Soft_t *createSoftSub(uint64_t node_id, uint32_t current_agg_period_ms,
   new_sub->type = SENSOR_TYPE_SOFT;
   new_sub->next = NULL;
   new_sub->current_agg_period_ms = current_agg_period_ms;
-  new_sub->temp_deg_c.initBuffer(averager_max_samples);
   new_sub->reading_count = 0;
   return new_sub;
 }

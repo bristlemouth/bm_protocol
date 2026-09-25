@@ -6,6 +6,7 @@ doc/
 *.idea*
 tmpbuild_*/
 *.pyc
+.worktrees
 
 *.swp
 .cache/
@@ -19,6 +20,7 @@ tools/bin/mpy-cross
 cli-cmake-debug-build/
 *build/
 preset-builds
+CMakeUserPresets.json
 
 src/bsp/pluteus_v3.1/*.s
 src/bsp/pluteus_v3.1/*.ld

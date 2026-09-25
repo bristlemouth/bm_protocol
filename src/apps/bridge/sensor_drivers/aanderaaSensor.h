@@ -1,7 +1,9 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "abstractSensor.h"
-#include "avgSampler.h"
+#include "avgSamplerCircular.h"
+#include "avgSamplerStats.h"
+#include "avgSamplerUnbuffered.h"
 #include "sensorController.h"
 #include <cmath>
 #include <stdint.h>
@@ -27,17 +29,15 @@ typedef struct aanderaa_aggregations_s {
 
 typedef struct AanderaaSensor : public AbstractSensor {
   uint32_t current_agg_period_ms;
-  AveragingSampler abs_speed_cm_s;
-  AveragingSampler direction_rad;
-  AveragingSampler temp_deg_c;
-  AveragingSampler abs_tilt_rad;
-  AveragingSampler std_tilt_rad;
+  AveragingSamplerStats abs_speed_cm_s;
+  AveragingSamplerCircular direction_rad;
+  AveragingSamplerUnbuffered temp_deg_c;
+  AveragingSamplerUnbuffered abs_tilt_rad;
+  AveragingSamplerUnbuffered std_tilt_rad;
   uint32_t reading_count;
   int8_t node_position;
   uint32_t last_timestamp;
 
-  static constexpr uint32_t N_SAMPLES_PAD =
-      10; // Extra sample padding to account for timing slop.
   static constexpr uint8_t MIN_READINGS_FOR_AGGREGATION = 3;
   static constexpr double DIRECTION_SAMPLE_MEMBER_MIN = 0.0;
   static constexpr double DIRECTION_SAMPLE_MEMBER_MAX = M_TWOPI;
@@ -71,5 +71,4 @@ private:
   static constexpr char subtag[] = "/sofar/aanderaa";
 } Aanderaa_t;
 
-Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms,
-                              uint32_t averager_max_samples);
+Aanderaa_t *createAanderaaSub(uint64_t node_id, uint32_t current_agg_period_ms);

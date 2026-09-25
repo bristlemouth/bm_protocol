@@ -1,7 +1,6 @@
 #include "pmeDissolvedOxygenSensor.h"
 #include "FreeRTOS.h"
 #include "app_config.h"
-#include "avgSampler.h"
 #include "bm_config.h"
 #include "bm_os.h"
 #include "bridgeLog.h"
@@ -166,26 +165,9 @@ static BmErr pmeDissolvedOxygenCfgGetCb(uint8_t *payload) {
     if (CURRENT_SUB->m_reading_period_ms != reading_period_s * 1000) {
       CURRENT_SUB->m_reading_period_ms = reading_period_s * 1000;
       if (err == BmOK) {
-        uint32_t averager_max_samples = 0;
-        if (CURRENT_SUB->m_subsample_enabled) {
-          averager_max_samples =
-              CURRENT_SUB->m_subsample_duration_ms / CURRENT_SUB->m_reading_period_ms +
-              CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_subsample_interval_ms +
-              PmeDissolvedOxygen_t::N_SAMPLES_PAD;
-        } else {
-          averager_max_samples =
-              (CURRENT_SUB->m_sample_duration_ms / CURRENT_SUB->m_reading_period_ms) +
-              PmeDissolvedOxygen_t::N_SAMPLES_PAD;
-        }
-
         bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, USE_HEADER,
-                       "Updating the PME Dissolved Oxygen buffers with max samples  %" PRIu32
-                       "\n",
-                       averager_max_samples);
-        CURRENT_SUB->temperature_deg_c.initBuffer(averager_max_samples);
-        CURRENT_SUB->do_mg_per_l.initBuffer(averager_max_samples);
-        CURRENT_SUB->quality.initBuffer(averager_max_samples);
-        CURRENT_SUB->do_saturation_pct.initBuffer(averager_max_samples);
+                       "PME Dissolved Oxygen reading period updated to %" PRIu32 "ms\n",
+                       CURRENT_SUB->m_reading_period_ms);
       } else {
         bm_debug("Failed to decode PME Dissolved Oxygen config get, err: %d\n", err);
       }
@@ -221,26 +203,7 @@ PmeDissolvedOxygen_t *createPmeDissolvedOxygenSub(uint64_t node_id, uint32_t sam
       new_sub->m_subsample_interval_ms = subsample_interval_ms;
       new_sub->m_subsample_duration_ms = subsample_duration_ms;
 
-      uint32_t averager_max_samples = 0;
-
-      if (subsample_enabled) {
-        averager_max_samples =
-            new_sub->m_subsample_duration_ms / new_sub->m_reading_period_ms +
-            new_sub->m_sample_duration_ms / new_sub->m_subsample_interval_ms +
-            PmeDissolvedOxygen_t::N_SAMPLES_PAD;
-      } else {
-        averager_max_samples =
-            static_cast<uint32_t>(ceil((sample_duration_ms / new_sub->m_reading_period_ms) +
-                                       PmeDissolvedOxygenSensor::N_SAMPLES_PAD));
-      }
-
-      new_sub->temperature_deg_c.initBuffer(averager_max_samples);
-      new_sub->do_mg_per_l.initBuffer(averager_max_samples);
-      new_sub->quality.initBuffer(averager_max_samples);
-      new_sub->do_saturation_pct.initBuffer(averager_max_samples);
-      new_sub->salinity_ppt.initBuffer(averager_max_samples);
       new_sub->reading_count = 0;
-
       CURRENT_SUB = new_sub;
       BmErr err = BmOK;
       if (!bcmp_config_get(node_id, BM_CFG_PARTITION_SYSTEM,

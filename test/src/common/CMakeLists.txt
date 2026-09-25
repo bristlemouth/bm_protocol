@@ -243,3 +243,87 @@ add_test(
     COMMAND
     lineParsers
 )
+
+#
+# avgSamplerUnbuffered tests
+#
+add_executable(avgSamplerUnbuffered)
+target_include_directories(avgSamplerUnbuffered
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${TEST_DIR}/third_party/fff
+)
+target_sources(avgSamplerUnbuffered
+    PRIVATE
+    # Support files
+    ${SRC_DIR}/lib/common/util.c
+
+    # Unit test wrapper for test
+    avgSamplerUnbuffered_ut.cpp
+)
+target_link_libraries(avgSamplerUnbuffered gtest gmock gtest_main)
+add_test(
+  NAME
+    avgSamplerUnbuffered
+  COMMAND
+    avgSamplerUnbuffered
+  )
+
+#
+# avgSamplerStats tests
+#
+add_executable(avgSamplerStats)
+target_include_directories(avgSamplerStats
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${TEST_DIR}/third_party/fff
+)
+target_sources(avgSamplerStats
+    PRIVATE
+    # Support files
+    ${SRC_DIR}/lib/common/util.c
+
+    # Unit test wrapper for test
+    avgSamplerStats_ut.cpp
+)
+target_link_libraries(avgSamplerStats gtest gmock gtest_main)
+add_test(
+  NAME
+    avgSamplerStats
+  COMMAND
+    avgSamplerStats
+  )
+
+#
+# avgSamplerCircular tests
+#
+add_executable(avgSamplerCircular)
+target_include_directories(avgSamplerCircular
+    PRIVATE
+    ${SRC_DIR}/lib/common
+    ${TEST_DIR}/header_overrides
+    ${TEST_DIR}/mocks
+    ${SRC_DIR}/third_party/FreeRTOS/Source/include
+    ${TEST_DIR}/third_party/fff
+)
+target_sources(avgSamplerCircular
+    PRIVATE
+    # Support files
+    ${SRC_DIR}/lib/common/util.c
+
+    # Unit test wrapper for test
+    avgSamplerCircular_ut.cpp
+)
+target_link_libraries(avgSamplerCircular gtest gmock gtest_main)
+add_test(
+  NAME
+    avgSamplerCircular
+  COMMAND
+    avgSamplerCircular
+  )

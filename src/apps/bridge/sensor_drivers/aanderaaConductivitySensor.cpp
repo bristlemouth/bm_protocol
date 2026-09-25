@@ -23,12 +23,7 @@
  * @brief Constructor - initializes all samplers and counters
  */
 AanderaaConductivitySensor::AanderaaConductivitySensor(uint64_t conductivity_node_id,
-                                                       uint32_t agg_period_ms,
-                                                       uint32_t averager_max_samples) {
-
-  for (auto &sampler : samplers.data) {
-    sampler.initBuffer(averager_max_samples);
-  }
+                                                       uint32_t agg_period_ms) {
 
   reading_count = 0;
   last_timestamp = 0;
@@ -347,16 +342,15 @@ void AanderaaConductivitySensor::sub_callback(uint64_t node_id, const char *topi
  *
  * @param node_id Target node ID to monitor
  * @param agg_period_ms Aggregation period in milliseconds
- * @param averager_max_samples Maximum samples for averaging
  * @return Pointer to configured sensor instance, or nullptr on failure
  */
-AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id, uint32_t agg_period_ms,
-                                                      uint32_t averager_max_samples) {
+AanderaaConductivity_t *createAanderaaConductivitySub(uint64_t node_id,
+                                                      uint32_t agg_period_ms) {
   // Allocate memory and construct sensor instance
   AanderaaConductivity_t *new_sub =
       static_cast<AanderaaConductivity_t *>(bm_malloc(sizeof(AanderaaConductivity_t)));
   configASSERT(new_sub);
-  new_sub = new (new_sub) AanderaaConductivity_t(node_id, agg_period_ms, averager_max_samples);
+  new_sub = new (new_sub) AanderaaConductivity_t(node_id, agg_period_ms);
   configASSERT(new_sub);
 
   // Moved everything else to the constructor

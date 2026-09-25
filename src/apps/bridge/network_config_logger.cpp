@@ -24,7 +24,7 @@ static CborError print_stream_handler(void *out, const char *fmt, ...) {
   size_t space_left = CHUNK_SIZE - state->pos;
 
   // If cannot fit into chunked buffer, send now
-  if (space_left < static_cast<size_t>(n)) {
+  if (space_left < static_cast<size_t>(n) + 1) {
     size_t to_write = state->pos;
     bridgeLogPrint(BRIDGE_CFG, BM_COMMON_LOG_LEVEL_INFO, NO_HEADER, "%.*s", to_write,
                    state->buf);
