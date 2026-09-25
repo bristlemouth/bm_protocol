@@ -30,10 +30,10 @@ typedef struct {
 bool spiInit(SPIInterface_t *interface);
 SPIResponse_t spiTxRx(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t len, uint8_t *txBuff, uint8_t *rxBuff, uint32_t timeoutMs);
 SPIResponse_t spiTxRxNonblocking(SPIInterface_t *interface, IOPinHandle_t *csPin, size_t len, uint8_t *txBuff, uint8_t *rxBuff, uint32_t timeoutMs);
-#define spiTx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, buff, NULL, timeout);
-#define spiRx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, NULL, buff, timeout);
-#define spiTxNonblocking(interface, csPin, len, buff, timeout) spiTxRxNonblocking(interface, csPin, len, buff, NULL, timeout);
-#define spiRxNonblocking(interface, csPin, len, buff, timeout) spiTxRxNonblocking(interface, csPin, len, NULL, buff, timeout);
+#define spiTx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, buff, NULL, timeout)
+#define spiRx(interface, csPin, len, buff, timeout) spiTxRx(interface, csPin, len, NULL, buff, timeout)
+#define spiTxNonblocking(interface, csPin, len, buff, timeout) spiTxRxNonblocking(interface, csPin, len, buff, NULL, timeout)
+#define spiRxNonblocking(interface, csPin, len, buff, timeout) spiTxRxNonblocking(interface, csPin, len, NULL, buff, timeout)
 #ifdef __cplusplus
 }
 #endif
