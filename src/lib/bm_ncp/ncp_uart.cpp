@@ -3,6 +3,8 @@
 #include "task.h"
 #include <string.h>
 
+#include "adin2111.h"
+#include "app_pub_sub.h"
 #include "app_util.h"
 #include "bcmp.h"
 #include "bm_serial.h"
@@ -18,6 +20,8 @@ extern "C" {
 #include "messages/info.h"
 #include "messages/resource_discovery.h"
 #include "topology.h"
+// ADIN2111 driver handle, set by adin2111_Init()
+extern adin2111_DeviceHandle_t pDeviceHandle;
 }
 #include "ncp_config.h"
 #include "ncp_dfu.h"
@@ -87,6 +91,31 @@ static const uint32_t acceptable_bauds[] = {
     115200,
     1000000,
 };
+
+static constexpr int64_t ADIN_PTP_NS_PER_S = 1000000000LL;
+// Phase errors larger than this step the ADIN2111 timer instead of slewing it
+static constexpr int64_t ADIN_PTP_STEP_THRESHOLD_NS = 1000000;
+// PI loop gains, applied as divisors on the phase error (in ns). The PPS period
+// is one second, so a phase error in ns is also a frequency error in ppb.
+// Kp = 1/4, Ki = 1/64 gives an overdamped loop (~10s time constant).
+static constexpr int64_t ADIN_PTP_PI_KP_DIV = 4;
+static constexpr int64_t ADIN_PTP_PI_KI_DIV = 64;
+// Maximum per-period correction from the proportional term. Phase errors
+// larger than this are slewed out at this rate.
+static constexpr int64_t ADIN_PTP_MAX_SLEW_PPB = 100000;
+// Maximum frequency correction from the integral term
+static constexpr int64_t ADIN_PTP_MAX_FREQ_PPB = 100000;
+static constexpr int64_t ADIN_PTP_MAX_PHASE_ERR_NS = ADIN_PTP_MAX_SLEW_PPB * ADIN_PTP_PI_KP_DIV;
+static constexpr int64_t ADIN_PTP_MAX_FREQ_ACC = ADIN_PTP_MAX_FREQ_PPB * ADIN_PTP_PI_KI_DIV;
+
+typedef struct {
+  bool time_set;
+  uint64_t last_utc_us;
+  uint32_t last_capt_lo;
+  uint32_t last_capt_hi;
+  int64_t freq_acc;
+} AdinPtpContext_t;
+static AdinPtpContext_t adin_ptp_ctx = {};
 
 // Send out cobs encoded message over serial port
 static bool queue_tx(const uint8_t *buff, size_t len, bm_serial_message_t message) {
@@ -173,6 +202,167 @@ static bool bm_serial_rtc_cb(bm_serial_time_t *time) {
 
   // NOTE: rtcSet ignores milliseconds right now
   return (rtcSet(&rtc_time) == pdPASS);
+}
+
+// Set the ADIN2111 timer frequency offset from nominal, in ppb
+static bool adin_ptp_set_freq(int64_t ppb) {
+  int64_t nominal = static_cast<int64_t>(RSTVAL_MAC_TS_ADDEND);
+  int64_t addend = nominal + (nominal * ppb) / ADIN_PTP_NS_PER_S;
+  return adin2111_WriteRegister(pDeviceHandle, ADDR_MAC_TS_ADDEND,
+                                static_cast<uint32_t>(addend)) == ADI_ETH_SUCCESS;
+}
+
+// Step the ADIN2111 timer by offset_ns
+static bool adin_ptp_step(int64_t offset_ns) {
+  uint32_t sec, nsec, sec_check;
+  if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_SEC_CNT, &sec) != ADI_ETH_SUCCESS ||
+      adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_NS_CNT, &nsec) != ADI_ETH_SUCCESS ||
+      adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_SEC_CNT, &sec_check) !=
+          ADI_ETH_SUCCESS) {
+    return false;
+  }
+  // Seconds rolled over between reads, re-read nanoseconds for the new second
+  if (sec_check != sec) {
+    sec = sec_check;
+    if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_NS_CNT, &nsec) != ADI_ETH_SUCCESS) {
+      return false;
+    }
+  }
+  int64_t t_ns = static_cast<int64_t>(sec) * ADIN_PTP_NS_PER_S + nsec + offset_ns;
+  return adin2111_TsSetTimerAbsolute(pDeviceHandle,
+                                     static_cast<uint32_t>(t_ns / ADIN_PTP_NS_PER_S),
+                                     static_cast<uint32_t>(t_ns % ADIN_PTP_NS_PER_S)) ==
+         ADI_ETH_SUCCESS;
+}
+
+/*!
+ @brief Callback For UTC Time Of Each GPS PPS Edge From Spotter
+
+ @details The first time is used to set the ADIN2111 1588 timer. After that, the
+          ADIN2111 TS_CAPT snapshot of its timer on each PPS edge is compared to
+          the UTC time of that edge, and a PI loop adjusts the timer addend to
+          keep its phase and frequency locked to the PPS. The integral term holds
+          the frequency through a loss of PPS, and on regaining it the phase is
+          slewed back in unless the error is large enough to need a step.
+ */
+static bool bm_serial_adin_utc_cb(const char *topic, uint16_t topic_len, uint64_t node_id,
+                                  const uint8_t *payload, size_t len, uint8_t type,
+                                  uint8_t version) {
+  (void)node_id;
+  bool rval = false;
+
+  if (strncmp(APP_PUB_SUB_UTC_PPS_TOPIC, topic, topic_len) == 0) {
+    if (type == APP_PUB_SUB_UTC_PPS_TYPE && version == APP_PUB_SUB_UTC_PPS_VERSION &&
+        len >= sizeof(bm_common_pub_sub_utc_t)) {
+      do {
+        const bm_common_pub_sub_utc_t *utc =
+            reinterpret_cast<const bm_common_pub_sub_utc_t *>(payload);
+        adi_mac_TsTimespec_t pps_utc = {
+            .sec = static_cast<uint32_t>(utc->utc_us / 1000000ULL),
+            .nsec = static_cast<uint32_t>((utc->utc_us % 1000000ULL) * 1000ULL),
+        };
+
+        // The ADIN2111 is reset when the bus powers back up, so set the time again then
+        if (!pDeviceHandle ||
+            (ncp_power_controller && !ncp_power_controller->isBridgePowerOn())) {
+          adin_ptp_ctx.time_set = false;
+          break;
+        }
+
+        // The timer (enabled in adin2111 init) restarts from zero if the ADIN2111 was reset
+        uint32_t adin_sec;
+        if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_SEC_CNT, &adin_sec) !=
+            ADI_ETH_SUCCESS) {
+          printf("Failed to read ADIN2111 timer\n");
+          break;
+        }
+        if (adin_sec + 1 < pps_utc.sec || adin_sec > pps_utc.sec + 1) {
+          adin_ptp_ctx.time_set = false;
+        }
+
+        if (!adin_ptp_ctx.time_set) {
+          if (!adin_ptp_set_freq(adin_ptp_ctx.freq_acc / ADIN_PTP_PI_KI_DIV) ||
+              adin2111_TsSetTimerAbsolute(pDeviceHandle, pps_utc.sec, pps_utc.nsec) !=
+                  ADI_ETH_SUCCESS ||
+              adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_EXT_CAPT0,
+                                    &adin_ptp_ctx.last_capt_lo) != ADI_ETH_SUCCESS ||
+              adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_EXT_CAPT1,
+                                    &adin_ptp_ctx.last_capt_hi) != ADI_ETH_SUCCESS) {
+            printf("Failed to set ADIN2111 timer\n");
+            break;
+          }
+          adin_ptp_ctx.time_set = true;
+          adin_ptp_ctx.last_utc_us = utc->utc_us;
+          printf("Set ADIN2111 timer to %" PRIu32 ".%09" PRIu32 "\n", pps_utc.sec,
+                 pps_utc.nsec);
+          // TODO - signal the PTP task (step 3) to start the peer delay and Sync handshake
+          rval = true;
+          break;
+        }
+
+        bool consecutive = (utc->utc_us - adin_ptp_ctx.last_utc_us) == 1000000ULL;
+        adin_ptp_ctx.last_utc_us = utc->utc_us;
+
+        // TS_CAPT has no status bit, a new capture is detected by its value changing
+        uint32_t capt_lo, capt_hi;
+        if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_EXT_CAPT0, &capt_lo) !=
+                ADI_ETH_SUCCESS ||
+            adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_EXT_CAPT1, &capt_hi) !=
+                ADI_ETH_SUCCESS) {
+          printf("Failed to read ADIN2111 TS_CAPT timestamp\n");
+          break;
+        }
+        if (capt_lo == adin_ptp_ctx.last_capt_lo && capt_hi == adin_ptp_ctx.last_capt_hi) {
+          printf("No ADIN2111 TS_CAPT timestamp for PPS edge\n");
+          break;
+        }
+        adin_ptp_ctx.last_capt_lo = capt_lo;
+        adin_ptp_ctx.last_capt_hi = capt_hi;
+
+        adi_mac_TsTimespec_t capt;
+        if (adin2111_TsConvert(capt_lo, capt_hi, ADI_MAC_TS_FORMAT_64B_1588, &capt) !=
+            ADI_ETH_SUCCESS) {
+          break;
+        }
+
+        // Positive error means the ADIN2111 timer is behind UTC (running slow)
+        int64_t err = adin2111_TsSubtract(&pps_utc, &capt);
+
+        if (err > ADIN_PTP_STEP_THRESHOLD_NS || err < -ADIN_PTP_STEP_THRESHOLD_NS) {
+          printf("Stepping ADIN2111 timer by %" PRId64 " ns\n", err);
+          rval = adin_ptp_step(err);
+          break;
+        }
+
+        bool err_in_range = (err <= ADIN_PTP_MAX_PHASE_ERR_NS) &&
+                            (err >= -ADIN_PTP_MAX_PHASE_ERR_NS);
+
+        // Only integrate small errors measured over a single period, otherwise the
+        // frequency estimate would wind up while slewing or after a PPS gap
+        if (consecutive && err_in_range) {
+          adin_ptp_ctx.freq_acc += err;
+          if (adin_ptp_ctx.freq_acc > ADIN_PTP_MAX_FREQ_ACC) {
+            adin_ptp_ctx.freq_acc = ADIN_PTP_MAX_FREQ_ACC;
+          } else if (adin_ptp_ctx.freq_acc < -ADIN_PTP_MAX_FREQ_ACC) {
+            adin_ptp_ctx.freq_acc = -ADIN_PTP_MAX_FREQ_ACC;
+          }
+        }
+
+        if (err > ADIN_PTP_MAX_PHASE_ERR_NS) {
+          err = ADIN_PTP_MAX_PHASE_ERR_NS;
+        } else if (err < -ADIN_PTP_MAX_PHASE_ERR_NS) {
+          err = -ADIN_PTP_MAX_PHASE_ERR_NS;
+        }
+
+        rval = adin_ptp_set_freq(adin_ptp_ctx.freq_acc / ADIN_PTP_PI_KI_DIV +
+                                 err / ADIN_PTP_PI_KP_DIV);
+      } while (0);
+    } else {
+      printf("Unrecognized version: %u and type: %u\n", version, type);
+    }
+  }
+
+  return rval;
 }
 
 // TODO - redefine, or define in a spot where this is only needed once!
@@ -479,6 +669,7 @@ void ncpInit(SerialHandle_t *ncpUartHandle, NvmPartition *dfu_partition,
   bm_serial_callbacks.power_stats_reply_fn = NULL;
   bm_serial_callbacks.metrics_request_fn = ncp_metrics_request_cb;
   bm_serial_callbacks.metrics_reply_fn = NULL;
+  bm_serial_callbacks.ptp_fn = bm_serial_adin_utc_cb;
   bm_serial_set_callbacks(&bm_serial_callbacks);
   IORegisterCallback(&BM_INT, bm_int_gpio_callback_fromISR, NULL);
 

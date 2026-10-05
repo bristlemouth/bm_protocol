@@ -41,6 +41,8 @@ set(APP_DEFINES
     APP_NAME="${APP_NAME}"
     # Add network stress test functions
     STRESS_TEST_ENABLE
+    # Enable ADIN2111 IEEE 1588 timer and timestamps (bm_core)
+    bm_adin2111_ptp_enabled=1
     )
 
 if (BRIDGE_AUTO_ENABLE STREQUAL 1)
