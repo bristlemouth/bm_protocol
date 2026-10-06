@@ -22,6 +22,7 @@ extern "C" {
 #define LPM_USART3_RX   (1UL << 9)
 #define LPM_USART3      (LPM_USART3_TX | LPM_USART3_RX)
 #define LPM_DFU_BRISTLEMOUTH (1UL << 10)
+#define LPM_TIM2        (1UL << 11)
 #define LPM_I2S         (1UL << 30)
 
 // If any of the above peripherals are ok in STOP1 mode, add them to LPM_OK_IN_STOP1

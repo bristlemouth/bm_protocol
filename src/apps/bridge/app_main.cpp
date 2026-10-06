@@ -53,6 +53,7 @@
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
+#include "pps_timer.h"
 #include "printf.h"
 #include "pubsub.h"
 #include "ram_partitions.h"
@@ -328,7 +329,6 @@ static const DebugGpio_t debugGpioPins[] = {
     {"vbus_sw_en", &VBUS_SW_EN, GPIO_OUT},
     {"led_g", &LED_G, GPIO_OUT},
     {"led_r", &LED_R, GPIO_OUT},
-    {"tp10", &TP10, GPIO_OUT},
 };
 
 static void neighborDiscoveredCb(bool discovered, BcmpNeighbor *neighbor) {
@@ -352,6 +352,9 @@ static void defaultTask(void *parameters) {
 
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
+
+  // Discipline TIM2 to the GPS PPS on PA0
+  ppsTimerInit();
 
   bridgeLogInit();
 
