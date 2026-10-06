@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "adin2111.h"
+#include "adin_ptp.h"
 #include "app_pub_sub.h"
 #include "app_util.h"
 #include "bcmp.h"
@@ -295,7 +296,7 @@ static bool bm_serial_adin_utc_cb(const char *topic, uint16_t topic_len, uint64_
           adin_ptp_ctx.last_utc_us = utc->utc_us;
           printf("Set ADIN2111 timer to %" PRIu32 ".%09" PRIu32 "\n", pps_utc.sec,
                  pps_utc.nsec);
-          // TODO - signal the PTP task (step 3) to start the peer delay and Sync handshake
+          adinPtpTimeSet();
           rval = true;
           break;
         }

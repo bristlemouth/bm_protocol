@@ -15,6 +15,7 @@
 #include "task.h"
 #include "task_priorities.h"
 
+#include "adin_ptp.h"
 #include "app_config.h"
 #include "app_pub_sub.h"
 #include "app_util.h"
@@ -442,6 +443,7 @@ static void defaultTask(void *parameters) {
 
   reportBuilderInit();
   sensorControllerInit(&bridge_power_controller);
+  adinPtpInit(&bridge_power_controller);
   ncpInit(&usart3, &dfu_partition, &bridge_power_controller);
   topology_sampler_init(&bridge_power_controller);
   #if (bm_metrics_enabled != 0)
