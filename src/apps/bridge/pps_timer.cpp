@@ -267,3 +267,24 @@ void ppsTimerGetStatus(PpsTimerStatus_t *status) {
   status->pps_count = ctx.pps_count;
   status->rejected_count = ctx.rejected_count;
 }
+
+bool ppsTimerGetTimeSincePps(uint64_t *ns) {
+  configASSERT(ns);
+  taskENTER_CRITICAL();
+  uint32_t cnt = TIM2->CNT;
+  uint32_t sr = TIM2->SR;
+  uint64_t ticks = pps_ctx.ticks_since_capture + cnt - pps_ctx.last_capture;
+  // The counter wrapped before it was read, but the update interrupt has not run yet
+  if ((sr & TIM_SR_UIF) && cnt < (TIM2->ARR + 1ULL) / 2) {
+    ticks += TIM2->ARR + 1ULL;
+  }
+  bool have_capture = pps_ctx.have_last_capture;
+  int64_t nominal_ticks = pps_ctx.nominal_ticks;
+  taskEXIT_CRITICAL();
+
+  if (!have_capture || nominal_ticks == 0 || ticks >= static_cast<uint64_t>(nominal_ticks)) {
+    return false;
+  }
+  *ns = ticks * PPS_TIMER_NS_PER_S / nominal_ticks;
+  return true;
+}

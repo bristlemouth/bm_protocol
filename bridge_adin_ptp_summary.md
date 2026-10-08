@@ -4,7 +4,7 @@ This is a complete account of the work on branch `mbella/claude_bridge_fw_ptp` (
 
 ## Goal
 
-The bridge must carry GPS time onto the Bristlemouth network with roughly 100 µs accuracy. The work had four steps, all set out in `bm-f+l_md_claude_prompt.md`, which is committed on the branch:
+The bridge must carry GPS time onto the Bristlemouth network with 100 µs accuracy or better. The work had four steps, all set out in `bm-f+l_md_claude_prompt.md`, which is committed on the branch:
 
 1. Receive the spotter's UTC timestamp for each GPS PPS edge over bm_serial, as a new `BM_SERIAL_PTP` message on topic `spotter/utc-pps-time`.
 2. Use that timestamp to set the ADIN2111 IEEE 1588 timer, then discipline the timer in phase and frequency with a PI loop. The loop compares each UTC value with the ADIN2111's own `TS_CAPT` snapshot of the same PPS edge.

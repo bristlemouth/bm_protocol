@@ -34,3 +34,5 @@ typedef struct {
 
 void ppsTimerInit(void);
 void ppsTimerGetStatus(PpsTimerStatus_t *status);
+// Time since the last PPS edge, false if there was no edge in the last second
+bool ppsTimerGetTimeSincePps(uint64_t *ns);

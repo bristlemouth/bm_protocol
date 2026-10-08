@@ -28,6 +28,7 @@ extern adin2111_DeviceHandle_t pDeviceHandle;
 #include "ncp_dfu.h"
 #include "ncp_metrics.h"
 #include "ncp_uart.h"
+#include "pps_timer.h"
 #include "pubsub.h"
 #include "reset_reason.h"
 #include "stm32_rtc.h"
@@ -213,23 +214,16 @@ static bool adin_ptp_set_freq(int64_t ppb) {
                                 static_cast<uint32_t>(addend)) == ADI_ETH_SUCCESS;
 }
 
-// Step the ADIN2111 timer by offset_ns
-static bool adin_ptp_step(int64_t offset_ns) {
-  uint32_t sec, nsec, sec_check;
-  if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_SEC_CNT, &sec) != ADI_ETH_SUCCESS ||
-      adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_NS_CNT, &nsec) != ADI_ETH_SUCCESS ||
-      adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_SEC_CNT, &sec_check) !=
-          ADI_ETH_SUCCESS) {
-    return false;
+// Set the ADIN2111 timer to the current UTC time, the UTC of the last PPS edge plus
+// the time since that edge from the PPS timer. TS_SEC_CNT and TS_NS_CNT only load
+// the timer, reading them does not return the running time.
+static bool adin_ptp_set_time(const adi_mac_TsTimespec_t *pps_utc) {
+  uint64_t since_pps_ns = 0;
+  if (!ppsTimerGetTimeSincePps(&since_pps_ns)) {
+    printf("No PPS timer edge, setting ADIN2111 timer to the PPS edge time\n");
   }
-  // Seconds rolled over between reads, re-read nanoseconds for the new second
-  if (sec_check != sec) {
-    sec = sec_check;
-    if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_NS_CNT, &nsec) != ADI_ETH_SUCCESS) {
-      return false;
-    }
-  }
-  int64_t t_ns = static_cast<int64_t>(sec) * ADIN_PTP_NS_PER_S + nsec + offset_ns;
+  uint64_t t_ns = pps_utc->sec * static_cast<uint64_t>(ADIN_PTP_NS_PER_S) + pps_utc->nsec +
+                  since_pps_ns;
   return adin2111_TsSetTimerAbsolute(pDeviceHandle,
                                      static_cast<uint32_t>(t_ns / ADIN_PTP_NS_PER_S),
                                      static_cast<uint32_t>(t_ns % ADIN_PTP_NS_PER_S)) ==
@@ -270,21 +264,9 @@ static bool bm_serial_adin_utc_cb(const char *topic, uint16_t topic_len, uint64_
           break;
         }
 
-        // The timer (enabled in adin2111 init) restarts from zero if the ADIN2111 was reset
-        uint32_t adin_sec;
-        if (adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_SEC_CNT, &adin_sec) !=
-            ADI_ETH_SUCCESS) {
-          printf("Failed to read ADIN2111 timer\n");
-          break;
-        }
-        if (adin_sec + 1 < pps_utc.sec || adin_sec > pps_utc.sec + 1) {
-          adin_ptp_ctx.time_set = false;
-        }
-
         if (!adin_ptp_ctx.time_set) {
           if (!adin_ptp_set_freq(adin_ptp_ctx.freq_acc / ADIN_PTP_PI_KI_DIV) ||
-              adin2111_TsSetTimerAbsolute(pDeviceHandle, pps_utc.sec, pps_utc.nsec) !=
-                  ADI_ETH_SUCCESS ||
+              !adin_ptp_set_time(&pps_utc) ||
               adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_EXT_CAPT0,
                                     &adin_ptp_ctx.last_capt_lo) != ADI_ETH_SUCCESS ||
               adin2111_ReadRegister(pDeviceHandle, ADDR_MAC_TS_EXT_CAPT1,
@@ -329,9 +311,10 @@ static bool bm_serial_adin_utc_cb(const char *topic, uint16_t topic_len, uint64_
         // Positive error means the ADIN2111 timer is behind UTC (running slow)
         int64_t err = adin2111_TsSubtract(&pps_utc, &capt);
 
+        // Any other ADIN2111 reset restarts its timer from zero, which shows up here
         if (err > ADIN_PTP_STEP_THRESHOLD_NS || err < -ADIN_PTP_STEP_THRESHOLD_NS) {
-          printf("Stepping ADIN2111 timer by %" PRId64 " ns\n", err);
-          rval = adin_ptp_step(err);
+          printf("Setting ADIN2111 timer, error %" PRId64 " ns\n", err);
+          rval = adin_ptp_set_time(&pps_utc);
           break;
         }
 
