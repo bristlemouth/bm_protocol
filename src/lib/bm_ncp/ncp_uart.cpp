@@ -310,6 +310,8 @@ static bool bm_serial_adin_utc_cb(const char *topic, uint16_t topic_len, uint64_
 
         // Positive error means the ADIN2111 timer is behind UTC (running slow)
         int64_t err = adin2111_TsSubtract(&pps_utc, &capt);
+        printf("ADIN2111 PPS capture: %" PRIu32 ".%09" PRIu32 ", error: %" PRId64 " ns\n",
+            capt.sec, capt.nsec, err);
 
         // Any other ADIN2111 reset restarts its timer from zero, which shows up here
         if (err > ADIN_PTP_STEP_THRESHOLD_NS || err < -ADIN_PTP_STEP_THRESHOLD_NS) {
