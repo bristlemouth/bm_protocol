@@ -19,6 +19,8 @@ set(APP_DEFINES
     APP_NAME="${APP_NAME}"
     # Add network stress test functions
     STRESS_TEST_ENABLE
+    # Enable ADIN2111 1 PPS TS_TIMER output on P1_LED_0 (bm_core)
+    bm_adin2111_ts_timer_enabled=1
     )
 
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
