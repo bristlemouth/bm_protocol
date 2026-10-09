@@ -32,6 +32,12 @@ Next configure timer 2 channel 2 to capture rising edges from the input on PA1.
 
 The rising edges of these timing pulses are going to come in 10ms past each second boundary.
 
+These time pulses are going to come in exactly once a second. Use them to keep the timer disciplined so we can use it as a high accuracy real time clock. The disciplining should be done using a PI loop so that the timing doesn’t drift too much between second pulses.
+
+The existing firmware uses the RTC hardware in the STM32U575 to keep track of the current time but the resolution of that hardware is too low for this application.
+
+Do not do any work on the rest of the codebase to start using this timer module as a timebase yet.
+
 Part 3
 
 Update the adin initialization and configuration code to enable capturing both the incoming and outgoing packet timestamps to enable using IEEE 1588 to synchronize the clocks across the network.
@@ -42,7 +48,7 @@ Please write a new task for the mote app `bm_soft_module` called `handle_ptp`. T
 
 After each transaction is completed (Sync packet + follow_up to get current time along with the peer to peer handshake to measure the link delay) this task needs to use the measured times to calculate the current time, and then it needs to use this to initialize or servo the ADIN2111 using it’s ADDEND register and the TS_TIMER output on the ADIN2111 that was configured in part 1 of these instructions.
 
-The exact math needed is detailed in many places. This website has a clear explanation if you need more details: https://networklessons.com/ip-services/precision-time-protocol-ptp-explained . We can either take the sync packet time and add the delay or we can use the offset result to servo the ADIN on the mote depending on which step of the process we are doing now.
+The exact math needed is detailed in many places online. This website has a clear explanation if you need more details: https://networklessons.com/ip-services/precision-time-protocol-ptp-explained.
 
 Our design uses the ADIN2111 which makes this time propagation process more precise. It does this by capturing the value of its timer when sending and receiving packets. Please use a subagent to read and summarize the important parts of the ADIN2111 datasheet PDF in this folder to fully understand how to use it when implementing IEEE 1588. The 100us timing accuracy requirement for this design isn’t achievable without using these features so it is critical that they are used correctly.
 
