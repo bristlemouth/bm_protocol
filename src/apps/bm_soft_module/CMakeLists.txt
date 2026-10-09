@@ -22,6 +22,8 @@ set(APP_DEFINES
     STRESS_TEST_ENABLE
     # Enable ADIN2111 1 PPS TS_TIMER output on P1_LED_0 (bm_core)
     bm_adin2111_ts_timer_enabled=1
+    # Enable ADIN2111 IEEE 1588 timer and timestamps (bm_core)
+    bm_adin2111_ptp_enabled=1
     )
 
 # PPS input filter on TIM2, disabled unless set (see pps_timer.h)
