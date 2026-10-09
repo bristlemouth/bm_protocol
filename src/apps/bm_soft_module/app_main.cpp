@@ -44,6 +44,7 @@
 #include "nvmPartition.h"
 #include "pca9535.h"
 #include "pcap.h"
+#include "pps_timer.h"
 #include "printf.h"
 #include "pubsub.h"
 #include "ram_partitions.h"
@@ -282,7 +283,6 @@ static const DebugGpio_t debugGpioPins[] = {
     {"adin_int", &ADIN_INT, GPIO_IN},
     {"adin_pwr", &ADIN_PWR, GPIO_OUT},
     {"adin_rst", &ADIN_RST, GPIO_OUT},
-    {"i2c_mux_rst", &I2C_MUX_RESET, GPIO_OUT},
     {"gpio1", &GPIO1, GPIO_OUT},
     {"gpio2", &GPIO2, GPIO_OUT},
     {"bm_int", &BM_INT, GPIO_IN},
@@ -349,6 +349,9 @@ static void defaultTask(void *parameters) {
 
   // Inhibit low power mode during boot process
   lpmPeripheralActive(LPM_BOOT);
+
+  // Discipline TIM2 to the ADIN2111 TS_TIMER PPS on PA1
+  ppsTimerInit();
 
   startSerial();
 

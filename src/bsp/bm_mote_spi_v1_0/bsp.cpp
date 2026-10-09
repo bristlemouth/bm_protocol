@@ -71,8 +71,6 @@ void bspInit() {
   // Turn on Adin2111
   IOWrite(&ADIN_PWR, 1);
 
-  IOWrite(&I2C_MUX_RESET, 1);
-
   // Initialize the IO Expander
   if (pca9535Init(&bristlefinIOExpander) == pdPASS) {
     IORegisterCallback(&IOEXP_INT, pca9535IRQHandler, &bristlefinIOExpander);
