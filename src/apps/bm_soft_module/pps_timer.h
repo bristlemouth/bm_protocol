@@ -36,3 +36,6 @@ void ppsTimerInit(void);
 void ppsTimerGetStatus(PpsTimerStatus_t *status);
 // Time since the timer second boundary, false until the first PPS edge has set the timer
 bool ppsTimerGetTimeSinceSecond(uint64_t *ns);
+// The PPS phase was stepped (ADIN2111 timer set), step the timer phase and frequency
+// to the PPS again like after boot
+void ppsTimerReacquire(void);

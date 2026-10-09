@@ -37,6 +37,7 @@
 #include "external_flash_partitions.h"
 #include "gpdma.h"
 #include "gpioISR.h"
+#include "handle_ptp.h"
 #include "l2.h"
 #include "memfault_platform_core.h"
 #include "memory_metrics.h"
@@ -394,6 +395,7 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bcl_init();
+  handlePtpInit();
 #if (bm_metrics_enabled != 0)
   memory_metrics_init();
 #endif

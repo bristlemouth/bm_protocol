@@ -277,6 +277,16 @@ void ppsTimerGetStatus(PpsTimerStatus_t *status) {
   status->rejected_count = ctx.rejected_count;
 }
 
+void ppsTimerReacquire(void) {
+  taskENTER_CRITICAL();
+  pps_ctx.acquired = false;
+  pps_ctx.locked = false;
+  pps_ctx.outliers = 0;
+  // The next PPS interval spans the phase change, don't measure the frequency with it
+  pps_ctx.have_last_capture = false;
+  taskEXIT_CRITICAL();
+}
+
 bool ppsTimerGetTimeSinceSecond(uint64_t *ns) {
   configASSERT(ns);
   taskENTER_CRITICAL();
