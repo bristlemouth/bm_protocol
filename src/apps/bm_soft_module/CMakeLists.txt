@@ -36,6 +36,18 @@ if (DEFINED PPS_TIMER_INPUT_FILTER_CKD)
 list(APPEND APP_DEFINES "PPS_TIMER_INPUT_FILTER_CKD=${PPS_TIMER_INPUT_FILTER_CKD}")
 endif()
 
+# Debug: never step the ADIN2111 timer from PTP (see handle_ptp.cpp)
+if (DEFINED PTP_DISABLE_STEP)
+list(APPEND APP_DEFINES "PTP_DISABLE_STEP=${PTP_DISABLE_STEP}")
+message(STATUS "PTP DISABLE STEP ${PTP_DISABLE_STEP}")
+endif()
+
+# Debug: don't restart TS_TIMER when PTP steps the ADIN2111 timer (see handle_ptp.cpp)
+if (DEFINED PTP_SKIP_TS_TIMER_RESTART)
+list(APPEND APP_DEFINES "PTP_SKIP_TS_TIMER_RESTART=${PTP_SKIP_TS_TIMER_RESTART}")
+message(STATUS "PTP SKIP TS_TIMER RESTART ${PTP_SKIP_TS_TIMER_RESTART}")
+endif()
+
 # Send APP_DEFINES to parent scope (otherwise we can't append to the
 # list above)
 set(APP_DEFINES "${APP_DEFINES}" PARENT_SCOPE)

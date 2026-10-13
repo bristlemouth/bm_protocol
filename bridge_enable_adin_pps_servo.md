@@ -1,0 +1,12 @@
+- Please use the bridge app as the starting point for this work.
+    - To be extremely clear this code is going to run on the bridge PCB which is going to be connected to the spotter main deck PCB running the branch `feature/spotter_test_gps_pps`
+- Make a branch of this repo before starting work. Please call it feature/bridge-plus-adin-pps-sync
+    - As you make progress I need you to commit your changes frequently. Please also work on related changes in groups so the commit history is easier to follow.
+- The main deck MCU feeds this bridge MCU most of the information it needs for its job using publish/subscribe topics. 
+    - The main deck MCU is now keeping its RTC synchronized with GPS time. (See the notes in the file context-for-bridge-fw.md)
+        - The notes in that markdown file are missing details on how the spotter_test_gps_pps has had the required FreeRTOS tasks added back in. A more recent claude instance worked on this, but the notes haven't been updated.
+    - It is however important to understand that the RTC drift can be ±200us which is beyond the total timing budget for this project (100us). We need to make sure the timestamp from the main deck MCU is only used to determine which second marker the PPS rising edge corresponds to.
+- As far as wiring goes I need you to also change the ADIN2111_TS_CAPT_MUX from NA to use the TEST_1 pin in bm_adin2111.c in the bm_core submodule.
+    - Once this change is made you should be able to read the timer values captured from the ADIN.
+- Once you've confirmed the ADIN2111 is getting PPS signal by doing the above you should implement a PI servo scheme to keep the ADIN's timer synchronized with GPS time.
+- In the checked-in version of the bridge app the pin PA0 is an output. In this local version the pin has been changed to an input in order to unblock other work for the moment. The end goal however is to have the pin muxed to be an input for TIM2_CH1. Once this is done it can be used to capture precision timing from the GPS module's PPS signal.

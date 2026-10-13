@@ -30,12 +30,21 @@ typedef struct {
   int64_t freq_offset_ppb;
   uint32_t pps_count;
   uint32_t rejected_count;
+  // Debug: last measured PPS interval and the nominal one, in timer ticks
+  int64_t last_interval_ticks;
+  int64_t nominal_ticks;
 } PpsTimerStatus_t;
 
 void ppsTimerInit(void);
 void ppsTimerGetStatus(PpsTimerStatus_t *status);
-// Time since the timer second boundary, false until the first PPS edge has set the timer
+// Time since the timer second boundary, false until a PPS edge has set the timer phase
+// and the period carrying that phase step has ended
 bool ppsTimerGetTimeSinceSecond(uint64_t *ns);
 // The PPS phase was stepped (ADIN2111 timer set), step the timer phase and frequency
 // to the PPS again like after boot
 void ppsTimerReacquire(void);
+// Debug: mask the TIM2 interrupt so PA1 edges are only flagged (true), or
+// unmask it and reacquire the PPS (false)
+void ppsTimerDebugMask(bool mask);
+// Debug: a PA1 rising edge was captured since the last call, while masked
+bool ppsTimerDebugEdge(void);

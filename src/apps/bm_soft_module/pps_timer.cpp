@@ -33,8 +33,9 @@ static constexpr int64_t PPS_TIMER_PI_KI_DIV = 64;
 // The frequency estimate moves this fraction of the way to each PPS interval measurement
 static constexpr int64_t PPS_TIMER_FLL_DIV = 16;
 // Largest frequency offset from nominal the timer clock (MSI based) is expected to have.
-// PPS intervals further than this from one second are rejected.
-static constexpr int64_t PPS_TIMER_MAX_FREQ_PPM = 10000;
+// PPS intervals further than this from one second are rejected. The mote's MSI has
+// measured about +1.6% (TIM2 counting ~162.5M ticks per second instead of 160M).
+static constexpr int64_t PPS_TIMER_MAX_FREQ_PPM = 30000;
 // Largest change of the frequency estimate per PPS edge from the interval measurement
 static constexpr int64_t PPS_TIMER_MAX_FREQ_STEP_PPM = 1;
 // Largest period change from the proportional term. Larger phase errors are slewed
@@ -72,9 +73,13 @@ typedef struct {
   uint32_t periods_since_pps;
   uint8_t outliers;
   bool acquired;
+  // Wraps until the acquisition phase step has taken effect and CNT counts from
+  // the second boundary
+  uint8_t phase_wraps;
   bool locked;
   int64_t phase_err;
   uint32_t pps_count;
+  int64_t last_interval_ticks;
   uint32_t rejected_count;
 } PpsTimerContext_t;
 static PpsTimerContext_t pps_ctx = {};
@@ -101,6 +106,9 @@ static void handle_update(void) {
   pps_ctx.ticks_since_capture += TIM2->ARR + 1ULL;
   TIM2->ARR = static_cast<uint32_t>(base_arr() + pps_ctx.pending_trim);
   pps_ctx.pending_trim = 0;
+  if (pps_ctx.phase_wraps > 0) {
+    pps_ctx.phase_wraps--;
+  }
 
   if (pps_ctx.periods_since_pps < UINT32_MAX) {
     pps_ctx.periods_since_pps++;
@@ -122,6 +130,9 @@ static void handle_capture(uint32_t capture, bool overcapture) {
   int64_t interval = static_cast<int64_t>(pps_ctx.ticks_since_capture) + capture -
                      pps_ctx.last_capture;
   bool have_interval = pps_ctx.have_last_capture && !overcapture;
+  if (have_interval) {
+    pps_ctx.last_interval_ticks = interval;
+  }
   bool prev_accepted = pps_ctx.last_capture_accepted;
   pps_ctx.ticks_since_capture = 0;
   pps_ctx.last_capture = capture;
@@ -146,7 +157,8 @@ static void handle_capture(uint32_t capture, bool overcapture) {
   pps_ctx.pps_count++;
 
   int64_t trim;
-  if (!pps_ctx.acquired) {
+  bool acquiring = !pps_ctx.acquired;
+  if (acquiring) {
     // Nothing is using the timer yet, so jump straight to the PPS frequency and phase
     pps_ctx.freq_q = meas_freq << PPS_TIMER_FREQ_FRAC_BITS;
     trim = err;
@@ -174,10 +186,15 @@ static void handle_capture(uint32_t capture, bool overcapture) {
   // after the wrap that is the current period. For an edge before the wrap it is the
   // period the wrap starts, which handle_update() sets up.
   int64_t arr = base_arr() + trim;
-  if (after_wrap && static_cast<int64_t>(TIM2->CNT) + pps_ctx.arr_margin_ticks < arr) {
+  bool trim_now = after_wrap && static_cast<int64_t>(TIM2->CNT) + pps_ctx.arr_margin_ticks < arr;
+  if (trim_now) {
     TIM2->ARR = static_cast<uint32_t>(arr);
   } else {
     pps_ctx.pending_trim = trim;
+  }
+  if (acquiring) {
+    // The phase is right from the end of the trimmed period
+    pps_ctx.phase_wraps = trim_now ? 1 : 2;
   }
 }
 
@@ -274,6 +291,8 @@ void ppsTimerGetStatus(PpsTimerStatus_t *status) {
   status->freq_offset_ppb = ctx.freq_q * PPS_TIMER_NS_PER_S /
                             (ctx.nominal_ticks << PPS_TIMER_FREQ_FRAC_BITS);
   status->pps_count = ctx.pps_count;
+  status->last_interval_ticks = ctx.last_interval_ticks;
+  status->nominal_ticks = ctx.nominal_ticks;
   status->rejected_count = ctx.rejected_count;
 }
 
@@ -287,11 +306,28 @@ void ppsTimerReacquire(void) {
   taskEXIT_CRITICAL();
 }
 
+void ppsTimerDebugMask(bool mask) {
+  if (mask) {
+    NVIC_DisableIRQ(TIM2_IRQn);
+    TIM2->SR = ~(TIM_SR_CC2IF | TIM_SR_CC2OF);
+  } else {
+    TIM2->SR = ~(TIM_SR_UIF | TIM_SR_CC2IF | TIM_SR_CC2OF);
+    ppsTimerReacquire();
+    NVIC_EnableIRQ(TIM2_IRQn);
+  }
+}
+
+bool ppsTimerDebugEdge(void) {
+  bool edge = TIM2->SR & TIM_SR_CC2IF;
+  TIM2->SR = ~(TIM_SR_CC2IF | TIM_SR_CC2OF);
+  return edge;
+}
+
 bool ppsTimerGetTimeSinceSecond(uint64_t *ns) {
   configASSERT(ns);
   taskENTER_CRITICAL();
   uint32_t cnt = TIM2->CNT;
-  bool acquired = pps_ctx.acquired;
+  bool acquired = pps_ctx.acquired && pps_ctx.phase_wraps == 0;
   // Timer ticks per second at the current frequency estimate
   int64_t ticks_per_s =
       pps_ctx.nominal_ticks + (pps_ctx.freq_q >> PPS_TIMER_FREQ_FRAC_BITS);

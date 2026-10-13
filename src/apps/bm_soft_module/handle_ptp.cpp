@@ -17,11 +17,13 @@
 // boundary from TIM2, which pps_timer locks to the ADIN2111 TS_TIMER pulse.
 //
 #include "FreeRTOS.h"
+#include "FreeRTOS_CLI.h"
 #include "queue.h"
 #include "task.h"
 #include "task_priorities.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "bm_adin2111.h"
@@ -43,6 +45,16 @@ extern adin2111_DeviceHandle_t pDeviceHandle;
 #endif
 #ifndef ADIN_PTP_RX_LATENCY_NS
 #define ADIN_PTP_RX_LATENCY_NS 0
+#endif
+// Debug: set to 1 to leave TS_TIMER running when the ADIN2111 timer is stepped,
+// instead of stopping and restarting it
+#ifndef PTP_SKIP_TS_TIMER_RESTART
+#define PTP_SKIP_TS_TIMER_RESTART 0
+#endif
+// Debug: set to 1 to never step the ADIN2111 timer, Syncs with an error over the
+// step threshold are only logged
+#ifndef PTP_DISABLE_STEP
+#define PTP_DISABLE_STEP 0
 #endif
 
 static constexpr uint8_t PTP_NUM_PORTS = ADIN2111_PORT_NUM;
@@ -351,11 +363,12 @@ static void step_job(void *arg) {
   adi_mac_TsTimespec_t target = ts_add_ns(&now, job->offset_ns);
   // TS_TIMER doesn't realign to the new second boundary on its own
   if (adin2111_TsSetTimerAbsolute(pDeviceHandle, target.sec, target.nsec) != ADI_ETH_SUCCESS ||
-      adin2111_ts_timer_restart() != BmOK) {
+      (!PTP_SKIP_TS_TIMER_RESTART && adin2111_ts_timer_restart() != BmOK)) {
     printf("PTP failed to set ADIN2111 timer\n");
   } else {
-    printf("PTP set ADIN2111 timer to %" PRIu32 ".%09" PRIu32 "%s\n", target.sec, target.nsec,
-           precise ? "" : ", no PPS timer");
+    printf("PTP set ADIN2111 timer to %" PRIu32 ".%09" PRIu32 "%s%s\n", target.sec, target.nsec,
+           precise ? "" : ", no PPS timer",
+           PTP_SKIP_TS_TIMER_RESTART ? ", TS_TIMER not restarted" : "");
   }
   // The TS_TIMER pulse phase moved with the timer
   ppsTimerReacquire();
@@ -364,6 +377,249 @@ static void step_job(void *arg) {
   xTaskNotify(_task_handle, PTP_NOTIFY_STEP, eSetBits);
   vPortFree(job);
 }
+
+/*!
+  @brief Called from the L2 thread to print the ADIN2111 TS_TIMER registers
+
+  @details TS_SEC_CNT and TS_NS_CNT are never read.
+ */
+static void print_ts_regs_job(void *arg) {
+  (void)arg;
+  static const struct {
+    const char *name;
+    uint16_t addr;
+  } mac_regs[] = {
+      {"TS_ADDEND", ADDR_MAC_TS_ADDEND},
+      {"TS_CFG", ADDR_MAC_TS_CFG},
+      {"TS_TIMER_HI", ADDR_MAC_TS_TIMER_HI},
+      {"TS_TIMER_LO", ADDR_MAC_TS_TIMER_LO},
+      {"TS_TIMER_QE_CORR", ADDR_MAC_TS_TIMER_QE_CORR},
+      {"TS_TIMER_START", ADDR_MAC_TS_TIMER_START},
+  };
+  static const struct {
+    const char *name;
+    uint32_t addr;
+  } phy_regs[] = {
+      {"DIGIO_PINMUX", ADDR_DIGIO_PINMUX},
+      {"LED_CNTRL", ADDR_LED_CNTRL},
+      {"LED_POLARITY", ADDR_LED_POLARITY},
+  };
+
+  for (size_t i = 0; i < sizeof(mac_regs) / sizeof(mac_regs[0]); i++) {
+    uint32_t val = 0;
+    if (adin2111_ReadRegister(pDeviceHandle, mac_regs[i].addr, &val) == ADI_ETH_SUCCESS) {
+      printf("%s (0x%02X): 0x%08" PRIX32 " (%" PRIu32 ")\n", mac_regs[i].name, mac_regs[i].addr,
+             val, val);
+    } else {
+      printf("%s (0x%02X): read failed\n", mac_regs[i].name, mac_regs[i].addr);
+    }
+  }
+  for (size_t i = 0; i < sizeof(phy_regs) / sizeof(phy_regs[0]); i++) {
+    uint16_t val = 0;
+    if (adin2111_PhyRead(pDeviceHandle, ADIN2111_PORT_1, phy_regs[i].addr, &val) ==
+        ADI_ETH_SUCCESS) {
+      printf("P1 %s (0x%06" PRIX32 "): 0x%04X\n", phy_regs[i].name, phy_regs[i].addr, val);
+    } else {
+      printf("P1 %s (0x%06" PRIX32 "): read failed\n", phy_regs[i].name, phy_regs[i].addr);
+    }
+  }
+}
+
+/*!
+  @brief Called from the L2 thread to stop TS_TIMER and/or write TS_TIMER_START
+
+  @param arg TS_TIMER_START value, or 0 to only stop TS_TIMER. Bit 0 set also
+             stops TS_TIMER first (the value is a multiple of 16 otherwise).
+ */
+static void ts_timer_job(void *arg) {
+  uint32_t val = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(arg));
+  bool stop = (val == 0) || (val & 1);
+  uint32_t start = val & ~1UL;
+  if (stop && adin2111_TsTimerStop(pDeviceHandle) != ADI_ETH_SUCCESS) {
+    printf("TS_TIMER stop failed\n");
+    return;
+  }
+  if (start && adin2111_WriteRegister(pDeviceHandle, ADDR_MAC_TS_TIMER_START, start) !=
+                   ADI_ETH_SUCCESS) {
+    printf("TS_TIMER_START write failed\n");
+    return;
+  }
+  printf("TS_TIMER%s%s%" PRIu32 "\n", stop ? " stopped" : "", start ? ", TS_TIMER_START = " : "",
+         start);
+}
+
+/*!
+  @brief Called from the L2 thread to set the ADIN2111 timer, without
+         restarting TS_TIMER
+
+  @param arg heap allocated adi_mac_TsTimespec_t, freed here
+ */
+static void set_time_job(void *arg) {
+  adi_mac_TsTimespec_t *ts = static_cast<adi_mac_TsTimespec_t *>(arg);
+  if (adin2111_TsSetTimerAbsolute(pDeviceHandle, ts->sec, ts->nsec) != ADI_ETH_SUCCESS) {
+    printf("ADIN2111 timer set failed\n");
+  } else {
+    printf("ADIN2111 timer set to %" PRIu32 ".%09" PRIu32 "\n", ts->sec, ts->nsec);
+  }
+  vPortFree(ts);
+}
+
+/*!
+  @brief Called from the L2 thread to write TS_TIMER_HI and TS_TIMER_LO
+
+  @param arg heap allocated uint32_t[2] {hi, lo}, freed here
+ */
+static void hilo_job(void *arg) {
+  uint32_t *hilo = static_cast<uint32_t *>(arg);
+  if (adin2111_WriteRegister(pDeviceHandle, ADDR_MAC_TS_TIMER_HI, hilo[0]) != ADI_ETH_SUCCESS ||
+      adin2111_WriteRegister(pDeviceHandle, ADDR_MAC_TS_TIMER_LO, hilo[1]) != ADI_ETH_SUCCESS) {
+    printf("TS_TIMER_HI/LO write failed\n");
+  } else {
+    printf("TS_TIMER_HI = %" PRIu32 ", TS_TIMER_LO = %" PRIu32 "\n", hilo[0], hilo[1]);
+  }
+  vPortFree(hilo);
+}
+
+static BaseType_t ts_regs_command(char *writeBuffer, size_t writeBufferLen,
+                                  const char *commandString) {
+  (void)writeBuffer;
+  (void)writeBufferLen;
+  BaseType_t len;
+  const char *param = FreeRTOS_CLIGetParameter(commandString, 1, &len);
+  BmErr err = BmOK;
+  if (param == NULL) {
+    PpsTimerStatus_t pps = {};
+    ppsTimerGetStatus(&pps);
+    printf("PPS timer: acquired %d, locked %d, pps_count %" PRIu32 ", rejected %" PRIu32
+           ", phase_err %" PRId64 " ns, last interval %" PRId64 " / nominal %" PRId64
+           " ticks\n",
+           pps.acquired, pps.locked, pps.pps_count, pps.rejected_count, pps.phase_err_ns,
+           pps.last_interval_ticks, pps.nominal_ticks);
+    err = bm_l2_run_in_thread(print_ts_regs_job, NULL);
+  } else if (strncmp("watch", param, len) == 0) {
+    // Mask the PPS interrupt so a TS_TIMER storm can't starve the system, then
+    // report how many 10ms windows per second had a PA1 edge
+    const char *s_str = FreeRTOS_CLIGetParameter(commandString, 2, &len);
+    uint32_t seconds = s_str ? static_cast<uint32_t>(strtoul(s_str, NULL, 10)) : 0;
+    const char *action = FreeRTOS_CLIGetParameter(commandString, 3, &len);
+    uintptr_t job_arg = 0;
+    if (action && strncmp("restart", action, len) == 0) {
+      job_arg = 10000000UL | 1;
+    } else if (action && strncmp("start", action, len) == 0) {
+      const char *ns_str = FreeRTOS_CLIGetParameter(commandString, 4, &len);
+      job_arg = ns_str ? static_cast<uintptr_t>(strtoul(ns_str, NULL, 10)) & ~0xFUL : 0;
+      if (job_arg < 16 || job_arg >= PTP_NS_PER_S) {
+        printf("ERR start needs a ns value from 16 to 999999999\n");
+        return pdFALSE;
+      }
+    } else if (action) {
+      printf("ERR Invalid watch action\n");
+      return pdFALSE;
+    }
+    if (seconds == 0 || seconds > 600) {
+      printf("ERR watch needs 1-600 seconds\n");
+      return pdFALSE;
+    }
+    bool storming = false;
+    ppsTimerDebugMask(true);
+    for (uint32_t sec = 0; sec < seconds; sec++) {
+      if (sec == 2 && action) {
+        if (bm_l2_run_in_thread(ts_timer_job, reinterpret_cast<void *>(job_arg)) != BmOK) {
+          printf("Failed to queue ADIN2111 job\n");
+        }
+      }
+      uint32_t windows = 0;
+      for (int i = 0; i < 100; i++) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+        windows += ppsTimerDebugEdge();
+      }
+      printf("watch %" PRIu32 " s: PA1 edges in %" PRIu32 "/100 windows\n", sec, windows);
+      storming = (windows > 50);
+    }
+    // Unmasking the PPS interrupt into an edge storm starves the system
+    if (storming) {
+      if (bm_l2_run_in_thread(ts_timer_job, NULL) == BmOK) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+      }
+    }
+    ppsTimerDebugMask(false);
+  } else if (strncmp("hilo", param, len) == 0) {
+    const char *hi_str = FreeRTOS_CLIGetParameter(commandString, 2, &len);
+    const char *lo_str = FreeRTOS_CLIGetParameter(commandString, 3, &len);
+    if (!hi_str || !lo_str) {
+      printf("ERR hilo needs <hi> <lo>\n");
+      return pdFALSE;
+    }
+    uint32_t *hilo = static_cast<uint32_t *>(pvPortMalloc(2 * sizeof(uint32_t)));
+    if (!hilo) {
+      printf("ERR out of memory\n");
+      return pdFALSE;
+    }
+    hilo[0] = static_cast<uint32_t>(strtoul(hi_str, NULL, 10));
+    hilo[1] = static_cast<uint32_t>(strtoul(lo_str, NULL, 10));
+    err = bm_l2_run_in_thread(hilo_job, hilo);
+    if (err != BmOK) {
+      vPortFree(hilo);
+    }
+  } else if (strncmp("settime", param, len) == 0) {
+    const char *sec_str = FreeRTOS_CLIGetParameter(commandString, 2, &len);
+    const char *ns_str = FreeRTOS_CLIGetParameter(commandString, 3, &len);
+    if (!sec_str || !ns_str) {
+      printf("ERR settime needs <sec> <ns>\n");
+      return pdFALSE;
+    }
+    adi_mac_TsTimespec_t *ts =
+        static_cast<adi_mac_TsTimespec_t *>(pvPortMalloc(sizeof(adi_mac_TsTimespec_t)));
+    if (!ts) {
+      printf("ERR out of memory\n");
+      return pdFALSE;
+    }
+    ts->sec = static_cast<uint32_t>(strtoul(sec_str, NULL, 10));
+    ts->nsec = static_cast<uint32_t>(strtoul(ns_str, NULL, 10)) % PTP_NS_PER_S;
+    err = bm_l2_run_in_thread(set_time_job, ts);
+    if (err != BmOK) {
+      vPortFree(ts);
+    }
+  } else if (strncmp("stop", param, len) == 0) {
+    err = bm_l2_run_in_thread(ts_timer_job, NULL);
+  } else if (strncmp("restart", param, len) == 0) {
+    err = bm_l2_run_in_thread(ts_timer_job, reinterpret_cast<void *>(10000000UL | 1));
+  } else if (strncmp("start", param, len) == 0) {
+    const char *ns_str = FreeRTOS_CLIGetParameter(commandString, 2, &len);
+    uint32_t ns = ns_str ? static_cast<uint32_t>(strtoul(ns_str, NULL, 10)) & ~0xFUL : 0;
+    if (ns < 16 || ns >= PTP_NS_PER_S) {
+      printf("ERR start needs a ns value from 16 to 999999999\n");
+      return pdFALSE;
+    }
+    err = bm_l2_run_in_thread(ts_timer_job, reinterpret_cast<void *>(static_cast<uintptr_t>(ns)));
+  } else {
+    printf("ERR Invalid parameter\n");
+    return pdFALSE;
+  }
+  if (err != BmOK) {
+    printf("Failed to queue ADIN2111 job\n");
+  }
+  return pdFALSE;
+}
+
+static const CLI_Command_Definition_t cmd_ts_regs = {
+    // Command string
+    "adints",
+    // Help string
+    "adints:\n"
+    " * adints - print the PPS timer status and the ADIN2111 TS_TIMER, TS_CFG,\n"
+    "            TS_ADDEND and P1 LED/pinmux registers\n"
+    " * adints stop - stop TS_TIMER (TS_CFG.TS_TIMER_STOP)\n"
+    " * adints start <ns> - write TS_TIMER_START (starts TS_TIMER)\n"
+    " * adints restart - stop TS_TIMER, then write TS_TIMER_START = 10000000\n"
+    " * adints watch <s> [restart | start <ns>] - mask the PPS interrupt and print\n"
+    "            the 10ms windows with a PA1 edge each second, doing the action at 2 s\n"
+    " * adints hilo <hi> <lo> - write TS_TIMER_HI and TS_TIMER_LO\n"
+    " * adints settime <sec> <ns> - set the ADIN2111 timer (TS_TIMER not restarted)\n",
+    // Command function
+    ts_regs_command,
+    // Number of parameters
+    -1};
 
 /*!
   @brief Called from the L2 thread to send a PTP frame
@@ -576,6 +832,9 @@ static void sync_complete(uint8_t idx, const adi_mac_TsTimespec_t *t1, int64_t f
     // so this step can use the precise current ADIN2111 time
     if (!pps_ok && _servo.step_holdoff > 0) {
       _servo.step_holdoff--;
+      return;
+    }
+    if (PTP_DISABLE_STEP) {
       return;
     }
     request_step(port, err);
@@ -945,4 +1204,6 @@ void handlePtpInit(void) {
   configASSERT(err == BmOK);
   err = bm_l2_register_link_change_callback(link_change_cb);
   configASSERT(err == BmOK);
+
+  FreeRTOS_CLIRegisterCommand(&cmd_ts_regs);
 }
