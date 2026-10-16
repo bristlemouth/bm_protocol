@@ -1,5 +1,7 @@
 # Bristlemouth
 
+[![MemBrowse](https://membrowse.com/badge.svg)](https://membrowse.com/public/bristlemouth/bm_protocol)
+
 For information on the Bristlemouth project, check out the official website [bristlemouth.org](https://bristlemouth.org)
 
 ## Developing
