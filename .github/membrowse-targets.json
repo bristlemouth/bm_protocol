@@ -1,7 +1,6 @@
 [
   {
     "target_name": "bridge",
-    "setup_cmd": "curl -sSL https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz | tar -xJ -C \"$RUNNER_TEMP\" && echo \"$RUNNER_TEMP/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-eabi/bin\" >> \"$GITHUB_PATH\" && pip install \"cmake~=3.29.0\" cbor2 click \"cryptography>=42.0\" gitpython intelhex python-dotenv \"bitstring==4.2\" pyserial regex crcmod \"memfault-cli==1.0\"",
     "build_cmd": "git submodule update --init && git submodule update --init --recursive src/lib/bm_core src/lib/bm_serial && rm -rf cmake-build-membrowse && cmake -B cmake-build-membrowse -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Release -DUSE_BOOTLOADER=1 && cmake --build cmake-build-membrowse -j$(nproc) --target bridge_v1_0-bridge.elf",
     "elf": "cmake-build-membrowse/src/bridge_v1_0-bridge.elf",
     "ld": "cmake-build-membrowse/src/bs_stm32u575.lds",

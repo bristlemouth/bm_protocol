@@ -38,13 +38,19 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up conda environment
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: '3.12'
+          miniconda-version: "latest"
+          activate-environment: bristlemouth
+          environment-file: environment_ci.yml
+          auto-activate-base: false
 
-      - name: Install packages
-        run: ${{ matrix.setup_cmd }}
+      # The MemBrowse actions run in a non-login shell, where the conda
+      # environment is not activated.
+      - name: Add conda environment to PATH
+        shell: bash -l {0}
+        run: echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
 
       - name: Build
         run: ${{ matrix.build_cmd }}
