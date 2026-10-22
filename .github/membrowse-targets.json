@@ -1,0 +1,10 @@
+[
+  {
+    "target_name": "bridge",
+    "build_cmd": "git submodule update --init && git submodule update --init --recursive src/lib/bm_core src/lib/bm_serial && rm -rf cmake-build-membrowse && cmake -B cmake-build-membrowse -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/arm-none-eabi-gcc.cmake -DBSP=bridge_v1_0 -DAPP=bridge -DCMAKE_BUILD_TYPE=Release -DUSE_BOOTLOADER=1 && cmake --build cmake-build-membrowse -j$(nproc) --target bridge_v1_0-bridge.elf",
+    "elf": "cmake-build-membrowse/src/bridge_v1_0-bridge.elf",
+    "ld": "cmake-build-membrowse/src/bs_stm32u575.lds",
+    "map_file": "cmake-build-membrowse/src/bridge_v1_0-bridge.elf.map",
+    "linker_vars": ""
+  }
+]
