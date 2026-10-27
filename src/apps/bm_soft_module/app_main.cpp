@@ -17,6 +17,7 @@
 
 #include "app_pub_sub.h"
 #include "app_util.h"
+#include "bm_adin2111.h"
 #include "bm_config.h"
 #include "bristlefin.h"
 #include "bristlemouth_client.h"
@@ -40,6 +41,7 @@
 #include "l2.h"
 #include "memfault_platform_core.h"
 #include "memory_metrics.h"
+#include "lwip/tcpip.h"
 #include "ms5803.h"
 #include "nvmPartition.h"
 #include "pca9535.h"
@@ -52,13 +54,20 @@
 #include "sensors.h"
 #include "serial.h"
 #include "serial_console.h"
+#include "spi.h"
 #include "stm32_rtc.h"
 #include "stress.h"
 #include "sys_info_service.h"
 #include "timer_callback_handler.h"
+#include "uptime.h"
 #include "usb.h"
 #include "w25.h"
 #include "watchdog.h"
+
+extern "C" {
+#include "bm_ip.h"
+#include "bristlemouth.h"
+}
 
 /* USER FILE INCLUDES */
 #include "user_code.h"
@@ -71,10 +80,21 @@
 #define LED_ON (0)
 #define LED_OFF (1)
 
+// ADIN2111 duty cycling (power testing)
+#define ADIN_DUTY_CYCLE_ENABLE (1)
+#define ADIN_DUTY_CYCLE_PERIOD_S (60)
+#define ADIN_DUTY_CYCLE_ON_S (20)
+#define ADIN_DUTY_CYCLE_SETTLE_MS (50) // let in-flight TX/IRQ work drain before teardown
+static_assert(ADIN_DUTY_CYCLE_ON_S > 0 && ADIN_DUTY_CYCLE_ON_S < ADIN_DUTY_CYCLE_PERIOD_S,
+              "ADIN on-time must be within the period");
+
 #include <stdio.h>
 #include <string.h>
 
 static void defaultTask(void *parameters);
+#if ADIN_DUTY_CYCLE_ENABLE
+static void adin_duty_cycle_task(void *parameters);
+#endif
 
 // Serial console (when no usb present)
 SerialHandle_t usart3 = {
@@ -335,6 +355,87 @@ static void user_task(void *parameters) {
 }
 /* USER CODE EXECUTED HERE END */
 
+#if ADIN_DUTY_CYCLE_ENABLE
+// Power down the ADIN2111 following §5 "Clean teardown sequence" of mote_bu_adin_teardown.md.
+// The IRQ is disarmed (§5 step 5) before L2 is stopped (§5 step 4) so the L2 task is idle on
+// its queue, and not holding the SPI3 mutex, when it gets deleted.
+static void adin_teardown(void) {
+  // Step 1: stop app traffic (safe if not running)
+  stress_stop_tx();
+
+  // Step 2: netif down, then let queued TX frames finish while the IRQ is still armed
+  LOCK_TCPIP_CORE();
+  bm_l2_set_netif(false);
+  UNLOCK_TCPIP_CORE();
+  vTaskDelay(pdMS_TO_TICKS(ADIN_DUTY_CYCLE_SETTLE_MS));
+
+  // Step 3: PHY software power-down, port 2 first
+  bm_l2_netif_enable_disable_port(2, false);
+  bm_l2_netif_enable_disable_port(1, false);
+
+  // Step 5 (part): disarm the IRQ and let L2 drain any queued interrupt events
+  bcl_set_network_interrupt(false);
+  NVIC_DisableIRQ(ADIN_INT_EXTI_IRQn);
+  vTaskDelay(pdMS_TO_TICKS(ADIN_DUTY_CYCLE_SETTLE_MS));
+
+  // Step 4: stop L2 (task, then timers, then queue). Registered callbacks are kept
+  bm_l2_stop();
+
+  // Step 6: un-init the driver
+  adin2111_deinit();
+
+  // Step 7: park pins. Taking the mutex waits out any in-flight SPI transfer
+  IOWrite(&ADIN_CS, 0);
+  IOWrite(&ADIN_RST, 0);
+  xSemaphoreTake(spi3.mutex, portMAX_DELAY);
+  HAL_SPI_DeInit(&hspi3);
+  xSemaphoreGive(spi3.mutex);
+
+  // Step 8: cut power and clear any edge latched while powering down
+  bcl_power_callback(false);
+  LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_8);
+  NVIC_ClearPendingIRQ(ADIN_INT_EXTI_IRQn);
+
+  printf("ADIN duty: off (uptime %lu ms)\n", (unsigned long)uptimeGetMs());
+}
+
+// Bring the ADIN2111 back up through the same high-level path as boot.
+// Never call bm_ip_init()/bristlemouth_init() again, they are one-time stack setup.
+static void adin_bringup(void) {
+  // Restore SPI3 clock, pins and DMA links. Not spiInit(&spi3), which would create a new
+  // mutex and assert on MAX_NUM_SPI
+  MX_SPI3_Init();
+
+  LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_8);
+  NVIC_ClearPendingIRQ(ADIN_INT_EXTI_IRQn);
+  bcl_set_network_interrupt(true);
+
+  // Power, reset, MAC/PHY init, RX buffers, SyncConfig (re-enables EXTI8) and ports 1 -> 2
+  BmErr err = bm_l2_init(bristlemouth_network_device());
+  if (err == BmOK) {
+    LOCK_TCPIP_CORE();
+    bm_l2_set_netif(true);
+    UNLOCK_TCPIP_CORE();
+    printf("ADIN duty: on (uptime %lu ms)\n", (unsigned long)uptimeGetMs());
+  } else {
+    // enable() has already powered the device off. The next teardown tolerates this state
+    printf("ADIN duty: on failed, err %d (uptime %lu ms)\n", err, (unsigned long)uptimeGetMs());
+  }
+}
+
+static void adin_duty_cycle_task(void *parameters) {
+  (void)parameters;
+  TickType_t wake = xTaskGetTickCount();
+  for (;;) {
+    vTaskDelayUntil(&wake, pdMS_TO_TICKS(ADIN_DUTY_CYCLE_ON_S * 1000));
+    adin_teardown();
+    vTaskDelayUntil(&wake,
+                    pdMS_TO_TICKS((ADIN_DUTY_CYCLE_PERIOD_S - ADIN_DUTY_CYCLE_ON_S) * 1000));
+    adin_bringup();
+  }
+}
+#endif
+
 static void defaultTask(void *parameters) {
   (void)parameters;
 
@@ -416,6 +517,17 @@ static void defaultTask(void *parameters) {
   micropython_freertos_init(&usbCLI);
 #endif
   user_code_start();
+
+#if ADIN_DUTY_CYCLE_ENABLE
+  // bcl_init() doesn't return a status. L2 only knows its port count if bm_l2_init() ran
+  if (bm_l2_get_port_count() > 0) {
+    BaseType_t duty_rval = xTaskCreate(adin_duty_cycle_task, "adin_duty", 1024, NULL,
+                                       ADIN_DUTY_CYCLE_TASK_PRIORITY, NULL);
+    configASSERT(duty_rval == pdPASS);
+  } else {
+    printf("ADIN duty: not started, bristlemouth init failed\n");
+  }
+#endif
 
   // Re-enable low power mode
   lpmPeripheralInactive(LPM_BOOT);
