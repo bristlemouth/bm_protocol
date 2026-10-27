@@ -40,6 +40,10 @@ static bool network_device_interrupt(const void *pinHandle, uint8_t value, void 
   return bm_l2_handle_device_interrupt() == BmOK;
 }
 
+void bcl_set_network_interrupt(bool enable) {
+  IORegisterCallback(adin_pins.interrupt, enable ? network_device_interrupt : NULL, NULL);
+}
+
 void bcl_power_callback(bool on) {
   IOWrite(&ADIN_PWR, on);
   if (on) {
@@ -52,7 +56,7 @@ void bcl_power_callback(bool on) {
 }
 
 void bcl_init(void) {
-  IORegisterCallback(adin_pins.interrupt, network_device_interrupt, NULL);
+  bcl_set_network_interrupt(true);
   HAL_Init_Hook();
   config_init();
   port_monitor_init();
