@@ -491,7 +491,7 @@ static void defaultTask(void *parameters) {
   dfu_partition_global = &dfu_partition;
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
-  bcl_init();
+  bool bcl_ok = bcl_init();
 #if (bm_metrics_enabled != 0)
   memory_metrics_init();
 #endif
@@ -519,14 +519,15 @@ static void defaultTask(void *parameters) {
   user_code_start();
 
 #if ADIN_DUTY_CYCLE_ENABLE
-  // bcl_init() doesn't return a status. L2 only knows its port count if bm_l2_init() ran
-  if (bm_l2_get_port_count() > 0) {
+  if (bcl_ok) {
     BaseType_t duty_rval = xTaskCreate(adin_duty_cycle_task, "adin_duty", 1024, NULL,
                                        ADIN_DUTY_CYCLE_TASK_PRIORITY, NULL);
     configASSERT(duty_rval == pdPASS);
   } else {
     printf("ADIN duty: not started, bristlemouth init failed\n");
   }
+#else
+  (void)bcl_ok;
 #endif
 
   // Re-enable low power mode

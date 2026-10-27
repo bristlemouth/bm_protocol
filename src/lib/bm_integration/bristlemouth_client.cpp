@@ -55,7 +55,7 @@ void bcl_power_callback(bool on) {
   }
 }
 
-void bcl_init(void) {
+bool bcl_init(void) {
   bcl_set_network_interrupt(true);
   HAL_Init_Hook();
   config_init();
@@ -93,6 +93,8 @@ void bcl_init(void) {
   } else {
     printf("Failed to initialize bristlemouth\n");
   }
+
+  return err == BmOK;
 }
 
 /*!
