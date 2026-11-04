@@ -83,7 +83,7 @@ extern "C" {
 // ADIN2111 duty cycling (power testing)
 #define ADIN_DUTY_CYCLE_ENABLE (1)
 #define ADIN_DUTY_CYCLE_PERIOD_S (60)
-#define ADIN_DUTY_CYCLE_ON_S (20)
+#define ADIN_DUTY_CYCLE_ON_S (2)
 #define ADIN_DUTY_CYCLE_SETTLE_MS (50) // let in-flight TX/IRQ work drain before teardown
 static_assert(ADIN_DUTY_CYCLE_ON_S > 0 && ADIN_DUTY_CYCLE_ON_S < ADIN_DUTY_CYCLE_PERIOD_S,
               "ADIN on-time must be within the period");
