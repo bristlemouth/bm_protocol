@@ -257,6 +257,25 @@ uint32_t BridgePowerController::handleInitState(void) {
 }
 
 /*!
+ @brief Checks to see if the RTC time is accurate if not adjusts next interval
+
+ @details The RTC/tick time should not adjust by a vast amount, if it does jump
+          backwards by a significant amount, re-align the next sample interval
+          to the current reported RTC time.
+
+ @param current_cycle_s Current RTC/tick time in milliseconds
+ */
+void BridgePowerController::checkSaneTimeAndAdjust(uint32_t current_cycle_s) {
+  if (_sampleIntervalStartS - current_cycle_s > _sampleIntervalS) {
+    bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
+                   "Timebase jumped, next sample %" PRIu32 " vs now %" PRIu32 ", realigning\n",
+                   _sampleIntervalStartS, current_cycle_s);
+    _sampleIntervalStartS = _alignNextInterval(current_cycle_s, 0, _sampleIntervalS);
+    _subsampleIntervalStartS = _sampleIntervalStartS;
+  }
+}
+
+/*!
  @brief Handles Sub Sampling Of The Bridge Power Controller
 
  @details Subsampling is very similar to how sampling works on the bridge power
@@ -341,6 +360,7 @@ uint32_t BridgePowerController::handleSampleState(void) {
   uint32_t currentCycleS = getCurrentTimeS();
 
   if (currentCycleS < _sampleIntervalStartS) {
+    checkSaneTimeAndAdjust(currentCycleS);
     time_to_sleep_ms = (_sampleIntervalStartS - currentCycleS) * 1000;
     bridgeLogPrint(BRIDGE_SYS, BM_COMMON_LOG_LEVEL_WARNING, USE_HEADER,
                    "Controller task woke early at %" PRIu32 ", will wait %" PRIu32 " ms\n",
@@ -465,13 +485,13 @@ bool BridgePowerController::isInInitializationPeriod(void) {
  */
 BridgePowerController::PowerTimings
 BridgePowerController::calculateInitializationTimings(void) {
-    static constexpr uint32_t rtc_not_set_ncp_power_check_s = 1;
+  static constexpr uint32_t rtc_not_set_ncp_power_check_s = 1;
   static constexpr uint64_t init_uptime_s = 0;
   static constexpr uint32_t init_total_on_s = ms_to_s(INIT_POWER_ON_TIMEOUT_MS);
   uint64_t current_uptime_s = uptimeGetMs() / 1000;
 
   uint32_t remaining_s = timeRemainingGeneric(init_uptime_s, current_uptime_s, init_total_on_s);
-  
+
   // Remaining time on is indefinite, but the NCP device should check in often until
   // the timebase is set
   if (!remaining_s && _sampleIntervalS == _sampleDurationS) {
@@ -573,7 +593,7 @@ BridgePowerController::PowerTimings BridgePowerController::calculateSampleTiming
  */
 BridgePowerController::PowerTimings BridgePowerController::calculatePowerTimings(void) {
   if (!_powerControlEnabled) {
-      return calculateDisabledTimings();
+    return calculateDisabledTimings();
   }
 
   if (isInInitializationPeriod()) {

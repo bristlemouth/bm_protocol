@@ -44,11 +44,11 @@ private:
   void setBusPowerAndSetSignal(bool busOn, bool notifyL2 = true);
   static void powerControllerRun(void *arg);
   static PowerInfoReplyData powerInfoStatsCb(void *arg);
+  void checkSaneTimeAndAdjust(uint32_t current_cycle_s);
   void checkAndUpdateTimebase();
   uint32_t getCurrentTimeS();
   void stateLogPrintTarget(const char *state, uint32_t target);
   uint32_t handleInitState(void);
-  bool bridgePowerControllerHandleEarlyWake(uint32_t intervalStartS, uint32_t currentCycleS);
   uint32_t handleSubsamplingState(uint32_t sampleTimeRemainingS, uint32_t currentCycleS);
   uint32_t handleSampleState(void);
 
