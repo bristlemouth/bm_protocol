@@ -96,6 +96,58 @@ static void defaultTask(void *parameters);
 static void adin_duty_cycle_task(void *parameters);
 #endif
 
+// PC13 (BSP name GPIO2): high while the mote can send/receive BM packets, i.e. the netif is up
+// and at least one ADIN port has link. Low otherwise.
+// NOTE: Bristlefin::setRS485Tx/Rx() also drive GPIO2 (RS485 RE), user code using RS485 would
+// conflict with this indicator.
+#define NET_READY_PIN GPIO2
+
+static uint8_t net_ready_ports_up_mask; // bit (port - 1) set while that port has link
+static bool net_ready_netif_up;
+
+// Caller must be in a critical section
+static void net_ready_apply(void) {
+  IOWrite(&NET_READY_PIN, (net_ready_netif_up && net_ready_ports_up_mask) ? 1 : 0);
+}
+
+// L2 link change callback, port is 1-based. Called from task context only
+// (L2 task, adin_duty task via bm_l2_netif_enable_disable_port, or registration replay)
+static void net_ready_link_change(uint8_t port, bool up) {
+  if (port == 0 || port > 8) {
+    return;
+  }
+  taskENTER_CRITICAL();
+  if (up) {
+    net_ready_ports_up_mask |= (uint8_t)(1U << (port - 1));
+  } else {
+    net_ready_ports_up_mask &= (uint8_t)~(1U << (port - 1));
+  }
+  net_ready_apply();
+  taskEXIT_CRITICAL();
+}
+
+static void net_ready_set_netif(bool up) {
+  taskENTER_CRITICAL();
+  net_ready_netif_up = up;
+  if (!up) {
+    net_ready_ports_up_mask = 0; // ports are about to be torn down
+  }
+  net_ready_apply();
+  taskEXIT_CRITICAL();
+}
+
+static void net_ready_init(void) {
+  net_ready_set_netif(true); // bm_ip_init() left the netif up
+  // Don't race ll_item_add with an ll_traverse on the L2 task
+  vTaskSuspendAll();
+  // Replays link-up for ports that are already up
+  BmErr err = bm_l2_register_link_change_callback(net_ready_link_change);
+  xTaskResumeAll();
+  if (err != BmOK) {
+    printf("net ready: link callback register failed %d\n", err);
+  }
+}
+
 // Serial console (when no usb present)
 SerialHandle_t usart3 = {
     .device = USART3,
@@ -304,6 +356,8 @@ static const DebugGpio_t debugGpioPins[] = {
     {"adin_rst", &ADIN_RST, GPIO_OUT},
     {"i2c_mux_rst", &I2C_MUX_RESET, GPIO_OUT},
     {"gpio1", &GPIO1, GPIO_OUT},
+    // gpio2 (PC13) is the network ready indicator, manual writes are overwritten on the next
+    // link or ADIN duty cycle transition
     {"gpio2", &GPIO2, GPIO_OUT},
     {"bm_int", &BM_INT, GPIO_IN},
     {"bm_cs", &BM_CS, GPIO_OUT},
@@ -360,6 +414,9 @@ static void user_task(void *parameters) {
 // The IRQ is disarmed (§5 step 5) before L2 is stopped (§5 step 4) so the L2 task is idle on
 // its queue, and not holding the SPI3 mutex, when it gets deleted.
 static void adin_teardown(void) {
+  // PC13 low: stop advertising "can send/receive" before the stack goes down
+  net_ready_set_netif(false);
+
   // Step 1: stop app traffic (safe if not running)
   stress_stop_tx();
 
@@ -416,6 +473,8 @@ static void adin_bringup(void) {
     LOCK_TCPIP_CORE();
     bm_l2_set_netif(true);
     UNLOCK_TCPIP_CORE();
+    // PC13 goes high once (or if already) a port reports link
+    net_ready_set_netif(true);
     printf("ADIN duty: on (uptime %lu ms)\n", (unsigned long)uptimeGetMs());
   } else {
     // enable() has already powered the device off. The next teardown tolerates this state
@@ -492,6 +551,9 @@ static void defaultTask(void *parameters) {
   debugNvmCliInit(&debug_cli_partition, &dfu_partition);
   debugDfuInit(&dfu_partition);
   bool bcl_ok = bcl_init();
+  if (bcl_ok) {
+    net_ready_init();
+  }
 #if (bm_metrics_enabled != 0)
   memory_metrics_init();
 #endif
