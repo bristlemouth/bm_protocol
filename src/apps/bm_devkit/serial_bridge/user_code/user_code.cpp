@@ -1,16 +1,46 @@
+#include "bm_os.h"
 #include "bm_serial.h"
+#include "bristlefin.h"
 #include "cobs.h"
 #include "payload_uart.h"
 #include "pubsub.h"
+#include "sensors.h"
 #include "task_priorities.h"
+#include <inttypes.h>
 #include <string.h>
 
+typedef enum {
+  BM_NONE,
+  BM_SUB,
+} __attribute__((__packed__)) bm_serial_tx_message_t;
+typedef struct {
+  uint8_t type;
+  uint32_t length;
+  uint8_t data[0];
+} bm_serial_tx_t;
 static bm_serial_callbacks_t callbacks;
 static constexpr size_t rx_buf_size = 2048;
 static uint8_t rx_buffer[rx_buf_size];
 static size_t rx_idx = 0;
 static constexpr size_t packet_buf_size = rx_buf_size;
 static uint8_t packet_buffer[rx_buf_size];
+
+static bool tx_cb(const uint8_t *buff, size_t len, bm_serial_message_t message) {
+  (void)message;
+  PLUART::write((uint8_t *)buff, len);
+  return true;
+}
+
+static void sub_message_cb(uint64_t node_id, const char *topic, uint16_t topic_len,
+                           const uint8_t *data, uint16_t data_len, uint8_t type,
+                           uint8_t version) {
+  printf("Publishing To Topic: %s\n", topic);
+  bm_serial_pub(node_id, topic, topic_len, data, data_len, type, version);
+}
+
+static bool sub_cb(const char *topic, uint16_t topic_len) {
+  return bm_sub_wl(topic, topic_len, sub_message_cb);
+}
 
 static bool pub_cb(const char *topic, uint16_t topic_len, uint64_t node_id,
                    const uint8_t *payload, size_t len, uint8_t type, uint8_t version) {
@@ -28,7 +58,17 @@ void setup() {
 
   memset(&callbacks, 0, sizeof(bm_serial_callbacks_t));
   callbacks.pub_fn = pub_cb;
+  callbacks.sub_fn = sub_cb;
+  callbacks.tx_fn = tx_cb;
   bm_serial_set_callbacks(&callbacks);
+  bristlefin.enableVbus();
+  // ensure Vbus stable before enable Vout with a 5ms delay.
+  vTaskDelay(pdMS_TO_TICKS(5));
+  // enable Vout, 12V by default.
+  bristlefin.enableVout();
+  // enable 5V out.
+  bristlefin.enable5V();
+  bristlefin.enable3V();
 }
 
 static void reset() {
