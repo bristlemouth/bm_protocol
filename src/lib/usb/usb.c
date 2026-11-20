@@ -162,15 +162,13 @@ void tud_cdc_tx_complete_cb(uint8_t itf) {
     bytesToSend = MIN(bytesToSend, sizeof(usbTxBuff));
     bytesToSend = serialGenericGetTxBytes(handle, usbTxBuff, bytesToSend);
 
-    if(bytesToSend == 0) {
-      handle->flags &= ~SERIAL_TX_IN_PROGRESS;
-    }
-
     volatile uint32_t bytesSent = tud_cdc_n_write(itf, usbTxBuff, bytesToSend);
 
     // Why is this happening? bytesToSend2 > bytesToSend so this shouldn't happen
     // The fifo indices are sus
-    configASSERT(bytesSent == bytesToSend);
+    if (!bytesSent || !bytesToSend) {
+      handle->flags &= ~SERIAL_TX_IN_PROGRESS;
+    }
     tud_cdc_n_write_flush(itf);
 
   } while(0);
