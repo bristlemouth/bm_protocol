@@ -993,3 +993,52 @@ TEST_F(BridgePowerControllerTest, goldenPathIntervalEqualsDurationPowerControlle
     run_update(curtimeMs, BridgePowerController::TIMEBASE_NOT_SET_SLEEP_MS, 1);
   }
 }
+
+TEST_F(BridgePowerControllerTest, large_rtc_time_jump) {
+  BridgePowerController::Config config = {
+      .BusLoadSwitchEnablePin = FAKE_VBUS_EN,
+      .BoostEnablePin = FAKE_BOOST_EN,
+      .sampleIntervalMs = BridgePowerController::DEFAULT_SAMPLE_INTERVAL_S * 1000,
+      .sampleDurationMs = SAMPLE_DURATION_S * 1000,
+      .subsampleIntervalMs = BridgePowerController::DEFAULT_SUBSAMPLE_INTERVAL_S * 1000,
+      .subsampleDurationMs = BridgePowerController::DEFAULT_SUBSAMPLE_DURATION_S * 1000,
+      .powerControllerEnabled = true,
+      .ticksSamplingEnabled = false,
+  };
+
+  bridge_power_controller = std::make_unique<BridgePowerController>(config);
+  uint64_t curtimeMs = 0;
+
+  run_update(curtimeMs, init_overall_delay(), 1, 1, true);
+  EXPECT_EQ(isRTCSet_fake.call_count, 1);
+
+  // RTC gets set, align to the first reading
+  isRTCSet_fake.return_val = true;
+  run_update(curtimeMs,
+             config.sampleIntervalMs - curtimeMs +
+                 BridgePowerController::CAPACITOR_CHARGE_DELAY_MS,
+             2, 1);
+  EXPECT_EQ(isRTCSet_fake.call_count, 3);
+
+  for (uint8_t i = 0; i < 10; i++) {
+    // Interval start
+    run_update(curtimeMs, duration_start_overall_delay(config), 1, 1, true);
+
+    // Interval interval end
+    run_update(curtimeMs, duration_end_overall_delay(config), 1, 1);
+  }
+
+  // RTC gets goes back in the past, ensure that it waits and we can power on the future
+  // curTimeMs is actually what gets returned from RTC in run_update, so adjust this by
+  // multiple interval lengths
+  uint32_t diff = (uint32_t)(5.555 * (float)config.sampleIntervalMs);
+  uint64_t original = curtimeMs;
+  curtimeMs -= diff;
+  uint32_t sleep = ((original - curtimeMs) % config.sampleIntervalMs);
+  sleep = sleep ? sleep : config.sampleIntervalMs;
+  xTaskSetTickCount(curtimeMs);
+  run_update(curtimeMs, sleep);
+
+  // Interval can actually start up again after
+  run_update(curtimeMs, duration_start_overall_delay(config), 1, 1, true);
+}
